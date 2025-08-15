@@ -1,0 +1,37 @@
+# R specific
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+
+# Shiny specific  
+rsconnect/
+.secrets
+
+# Data files (for privacy)
+data/*.csv
+data/*.xlsx
+data/*.rds
+
+# Logs
+*.log
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# renv (uncomment if you add renv later)
+# renv/library/
+# renv/local/
+# renv/cellar/
+# renv/lock/
+# renv/python/
+# renv/staging/
+.Rproj.user
+.Rdata
+.httr-oauth
+.quarto
