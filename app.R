@@ -116,6 +116,30 @@ ui <- page_navbar(
       .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
       .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
       .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
+      
+      /* rhandsontable styling */
+      .handsontable {
+        font-size: 12px !important;
+      }
+      
+      .handsontable .htCore td {
+        border-color: #ddd !important;
+      }
+      
+      .handsontable .htCore th {
+        background-color: ", HOSPITAL_COLORS$light, " !important;
+        color: ", HOSPITAL_COLORS$dark, " !important;
+        font-weight: 600 !important;
+      }
+      
+      /* Validation styling for table cells */
+      .htInvalid {
+        background-color: ", HOSPITAL_COLORS$danger, "20 !important;
+      }
+      
+      .htChanged {
+        background-color: ", HOSPITAL_COLORS$warning, "20 !important;
+      }
     ")))
   ),
   
@@ -287,7 +311,7 @@ ui <- page_navbar(
   ),
   
   # -------------------------------------------------------------------------
-  # TAB 2: DATA
+  # TAB 2: DATA REDIGERING (Updated with editable table!)
   # -------------------------------------------------------------------------
   nav_panel(
     title = "Data",
@@ -296,60 +320,8 @@ ui <- page_navbar(
     div(
       style = "padding: 20px;",
       
-      card(
-        card_header(
-          div(
-            icon("info-circle"),
-            " Data Status",
-            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-          )
-        ),
-        card_body(
-          div(
-            span(class = "status-indicator status-warning"),
-            strong("Ingen data uploadet endnu"),
-            style = "font-size: 1.1rem;"
-          ),
-          br(),
-          p("Upload en CSV eller Excel fil i Analyse-fanen for at komme i gang.", 
-            style = "margin-top: 10px; color: #666;")
-        )
-      ),
-      
-      br(),
-      
-      card(
-        full_screen = TRUE,
-        card_header(
-          div(
-            icon("edit"),
-            " Editérbar Data Tabel",
-            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-          )
-        ),
-        card_body(
-          min_height = "400px",
-          div(
-            style = "text-align: center; margin-top: 100px;",
-            h4("Data Redigering", style = paste("color:", HOSPITAL_COLORS$primary)),
-            p("Interaktiv tabel med validering kommer i Phase 2.2", 
-              style = paste("color:", HOSPITAL_COLORS$secondary)),
-            br(),
-            div(
-              style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 15px; border-radius: 8px; max-width: 500px; margin: 0 auto;"),
-              h6("Kommende features:", style = paste("color:", HOSPITAL_COLORS$primary)),
-              tags$ul(
-                style = "text-align: left; color: #666; font-size: 0.9rem;",
-                tags$li("Tilføj/slet rækker og kolonner"),
-                tags$li("Real-time validering"), 
-                tags$li("Undo/redo funktionalitet"),
-                tags$li("Batch-operationer"),
-                tags$li("Beregnede felter")
-              )
-            )
-          )
-        )
-      )
+      # NEW: Editable table interface
+      editableTableUI("editable_data")
     )
   ),
   
@@ -509,7 +481,7 @@ ui <- page_navbar(
               tags$ol(
                 style = "font-size: 0.9rem;",
                 tags$li("Upload din CSV/Excel fil i Analyse-fanen"),
-                tags$li("Vælg relevante kolonner for analyse"),
+                tags$li(strong("Redigér data"), " i Data-fanen efter behov"),
                 tags$li("Vælg passende diagram-type"),
                 tags$li("Gennemgå diagnostik resultaterne"),
                 tags$li("Download graf eller rapport")
@@ -518,10 +490,56 @@ ui <- page_navbar(
               div(
                 style = paste("background-color:", HOSPITAL_COLORS$success, "20; padding: 10px; border-radius: 5px; margin-top: 15px;"),
                 icon("lightbulb"),
-                strong(" Tip: "), "Start altid med et seriediagram (run chart) før du går videre til kontrolkort.",
+                strong(" Nyt i v2.2: "), "Du kan nu redigere data direkte i appen med Excel-lignende funktionalitet!",
                 style = "font-size: 0.85rem;"
               )
             )
+          )
+        )
+      ),
+      
+      br(),
+      
+      # NEW: Data redigering help section
+      card(
+        card_header(
+          div(
+            icon("edit"),
+            " Data Redigering Guide",
+            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+          )
+        ),
+        card_body(
+          fluidRow(
+            column(
+              6,
+              h6("Grundlæggende redigering:", style = "font-weight: 500;"),
+              tags$ul(
+                style = "font-size: 0.9rem;",
+                tags$li(strong("Dobbeltklik"), " på celle for at redigere"),
+                tags$li(strong("Tab/Enter"), " for at gå til næste celle"),
+                tags$li(strong("Ctrl+Z"), " for fortryd (eller brug Fortryd-knappen)"),
+                tags$li(strong("Højreklik"), " for kontekstmenu med copy/paste")
+              )
+            ),
+            column(
+              6,
+              h6("Avancerede funktioner:", style = "font-weight: 500;"),
+              tags$ul(
+                style = "font-size: 0.9rem;",
+                tags$li(strong("Tilføj rækker"), " med plus-knappen"),
+                tags$li(strong("Slet rækker"), " med minus-knappen"),
+                tags$li(strong("Beregnede kolonner"), " (procent, rater, gennemsnit)"),
+                tags$li(strong("Reset til original"), " hvis du fortryder alt")
+              )
+            )
+          ),
+          
+          div(
+            style = paste("background-color:", HOSPITAL_COLORS$warning, "20; padding: 10px; border-radius: 5px; margin-top: 15px;"),
+            icon("exclamation-triangle"),
+            strong(" Vigtigt: "), "Ændringer er midlertidige indtil du eksporterer den modificerede data. Brug Reset-knappen for at gå tilbage til original.",
+            style = "font-size: 0.85rem;"
           )
         )
       ),
@@ -543,13 +561,17 @@ ui <- page_navbar(
               h6("Version Information:", style = "font-weight: 500;"),
               p(paste("Udviklet til", HOSPITAL_NAME), style = "font-size: 0.9rem;"),
               p("Baseret på qicharts2 og Anhøj-metoderne", style = "font-size: 0.9rem;"),
-              p(paste("Bygget med R Shiny og bslib"), style = "font-size: 0.9rem;"),
+              p(paste("Bygget med R Shiny, bslib og rhandsontable"), style = "font-size: 0.9rem;"),
               
               br(),
               
               div(
+                style = paste("color:", HOSPITAL_COLORS$success, "; font-size: 0.9rem; font-weight: 500;"),
+                "✅ Phase 2.2: Data redigering implementeret!"
+              ),
+              div(
                 style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.85rem;"),
-                "Aktuelt i udvikling - flere funktioner kommer løbende..."
+                "Næste: Graf-generering og SPC-analyse..."
               )
             ),
             column(
@@ -582,6 +604,9 @@ server <- function(input, output, session) {
   # Initialize data module
   data_module <- dataModuleServer("data_upload")
   
+  # Initialize editable table module (NEW!)
+  edited_data <- editableTableServer("editable_data", data_module$data)
+  
   # Reaktiv status tracking
   status <- reactiveValues(
     data_uploaded = FALSE,
@@ -594,9 +619,26 @@ server <- function(input, output, session) {
     if(!is.null(data_module$upload_success()) && data_module$upload_success()) {
       status$data_uploaded <- TRUE
       showNotification(
-        "Data uploadet succesfuldt! Graf-funktionalitet kommer i næste fase.",
-        type = "message",  # Fix: changed from "success" to "message"
-        duration = 5
+        div(
+          icon("check-circle"),
+          strong("Data uploadet succesfuldt!"),
+          br(),
+          "Gå til Data-fanen for at redigere tabellen direkte."
+        ),
+        type = "message",
+        duration = 8
+      )
+    }
+  })
+  
+  # Monitor edited data changes (NEW!)
+  observe({
+    if(!is.null(edited_data()) && status$data_uploaded) {
+      # Data has been edited
+      showNotification(
+        "Data modificeret - ændringer er synlige i editerings-tabellen",
+        type = "message",
+        duration = 3
       )
     }
   })
@@ -608,10 +650,10 @@ server <- function(input, output, session) {
         icon("check-circle"),
         paste("Velkommen til", HOSPITAL_NAME, "SPC Analyse App!"),
         br(),
-        "Upload data for at komme i gang."
+        strong("Nyt: "), "Du kan nu redigere data direkte i Data-fanen!"
       ),
       type = "message",
-      duration = 6,
+      duration = 10,
       closeButton = TRUE
     )
   }) %>% 
@@ -635,7 +677,19 @@ server <- function(input, output, session) {
   output$download_data <- downloadHandler(
     filename = function() paste0("spc_data_", Sys.Date(), ".csv"),
     content = function(file) {
-      showNotification("Data eksport kommer i Phase 2", type = "warning")
+      # NEW: Download edited data if available
+      data_to_export <- if(!is.null(edited_data())) {
+        edited_data()
+      } else {
+        data_module$data()
+      }
+      
+      if(!is.null(data_to_export)) {
+        write.csv(data_to_export, file, row.names = FALSE)
+        showNotification("Data eksporteret med alle redigeringer", type = "message", duration = 3)
+      } else {
+        showNotification("Ingen data at eksportere", type = "warning")
+      }
     }
   )
 }
