@@ -1,6 +1,17 @@
 source("global.R")
-source("R/modules/data_module.R")
-source("R/modules/visualization_module.R")
+
+# Try different source paths to find modules
+if(file.exists("R/modules/data_module.R")) {
+  source("R/modules/data_module.R")
+  source("R/modules/visualization_module.R")
+  cat("✅ Loaded modules from R/modules/\n")
+} else if(file.exists("data_module.R")) {
+  source("data_module.R")
+  source("visualization_module.R")
+  cat("✅ Loaded modules from root directory\n")
+} else {
+  stop("❌ Could not find module files. Check your directory structure.")
+}
 
 # Define UI with enhanced bslib theming
 ui <- page_navbar(
@@ -182,7 +193,7 @@ ui <- page_navbar(
                 "chart_type",
                 "Diagram type:",
                 choices = CHART_TYPES_DA,
-                selected = "run"
+                selected = "Seriediagram (Run Chart)"
               ),
               
               checkboxInput(
@@ -761,23 +772,59 @@ server <- function(input, output, session) {
   # Initialize data module
   data_module <- dataModuleServer("data_upload")
   
-  # Initialize editable table module
-  edited_data <- editableTableServer("editable_data", data_module$data)
+  # Initialize editable table module with debug
+  edited_data <- editableTableServer("editable_data", reactive({
+    cat("DEBUG: edited_data input reactive called\n")
+    original_data <- data_module$data()
+    if (!is.null(original_data)) {
+      cat("DEBUG: edited_data - passing data with", nrow(original_data), "rows\n")
+    } else {
+      cat("DEBUG: edited_data - passing NULL data\n")
+    }
+    return(original_data)
+  }))
   
   # Use edited data if available, otherwise use original data
   active_data <- reactive({
-    if(!is.null(edited_data()) && !is.null(data_module$data())) {
-      edited_data()
-    } else {
-      data_module$data()
+    # Debug output
+    has_original <- !is.null(data_module$data())
+    has_edited <- !is.null(edited_data())
+    
+    cat("DEBUG: active_data() called\n")
+    cat("DEBUG: has_original:", has_original, "\n")
+    cat("DEBUG: has_edited:", has_edited, "\n")
+    
+    # Prioritize original data first, then edited if available
+    if (has_original) {
+      original_data <- data_module$data()
+      if (!is.null(original_data) && nrow(original_data) > 0) {
+        cat("DEBUG: Using original data with", nrow(original_data), "rows\n")
+        return(original_data)
+      }
     }
+    
+    if (has_edited) {
+      edited <- edited_data()
+      if (!is.null(edited) && nrow(edited) > 0) {
+        cat("DEBUG: Using edited data with", nrow(edited), "rows\n")
+        return(edited)
+      }
+    }
+    
+    cat("DEBUG: No valid data available\n")
+    return(NULL)
   })
   
   # Initialize visualization module
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = active_data,
-    chart_type_reactive = reactive(input$chart_type),
+    chart_type_reactive = reactive({
+      chart_selection <- input$chart_type %||% "run"
+      qic_chart_type <- get_qic_chart_type(chart_selection)
+      cat("DEBUG: chart_type conversion:", chart_selection, "->", qic_chart_type, "\n")
+      return(qic_chart_type)
+    }),
     show_targets_reactive = reactive(input$show_targets),
     show_phases_reactive = reactive(input$show_phases)
   )
