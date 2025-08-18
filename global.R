@@ -10,6 +10,7 @@ library(readxl)
 library(shinycssloaders)
 library(shinyWidgets)
 library(shinyjs)
+library(zoo)  # For rolling means in calculated fields
 
 # -----------------------------------------------------------------------------
 # HOSPITAL BRANDING CONFIGURATION
