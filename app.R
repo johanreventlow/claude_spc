@@ -1,5 +1,6 @@
 source("global.R")
 source("R/modules/data_module.R")
+source("R/modules/visualization_module.R")
 
 # Define UI with enhanced bslib theming
 ui <- page_navbar(
