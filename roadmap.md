@@ -109,9 +109,9 @@ output$editable_table <- renderRHandsontable({
 
 ---
   
-  ## Phase 3: Visualization Core (Uge 3-4)
+## Phase 3: Visualization Core (Uge 3-4)
   
-  ### 3.1 Basic qicharts2 Integration
+### 3.1 Basic qicharts2 Integration
 **Focus:** Få første grafer til at virke
 
 ```r
@@ -164,9 +164,9 @@ test_anhoej_rules <- function(data) {
 
 ---
   
-  ## Phase 4: Export & Branding (Uge 4-5)
+## Phase 4: Export & Branding (Uge 4-5)
   
-  ### 4.1 PNG Export
+### 4.1 PNG Export
 **Focus:** High-quality graf export
 
 ```r
@@ -217,9 +217,9 @@ output: pdf_document
 
 ---
   
-  ## Phase 5: Enhanced Features (Uge 5-6)
+## Phase 5: Enhanced Features (Uge 5-6)
   
-  ### 5.1 Multiple Chart Types
+### 5.1 Multiple Chart Types
 **Focus:** P', U', C, G charts
 
 ```r
@@ -256,9 +256,9 @@ qic(..., facets = ~ afdeling)
 
 ---
   
-  ## Phase 6: Polish & Production Ready (Uge 6-7)
+## Phase 6: Polish & Production Ready (Uge 6-7)
   
-  ### 6.1 Error Handling & User Experience
+### 6.1 Error Handling & User Experience
 **Focus:** Robust production app
 
 ```r
@@ -300,10 +300,10 @@ reactive_data <- reactive({
 
 ---
   
-  ## 🔍 Løbende Kvalitetssikringsproces
+## 🔍 Løbende Kvalitetssikringsproces
   
-  ### Weekly Quality Checks:
-  1. **Funktional test** med rigtige hospital data
+### Weekly Quality Checks:
+1. **Funktional test** med rigtige hospital data
 2. **Performance test** med realistiske datasæt
 3. **UX review** med potentielle brugere
 4. **Code review** og refactoring
@@ -325,7 +325,7 @@ testthat::test_that("Anhøj rules work correctly", {
 
 ---
   
-  ## 📝 Success Criteria Per Phase
+## 📝 Success Criteria Per Phase
   
 **Phase 1**: ✅ App starter, UI ser professionel ud
 **Phase 2**: ✅ Kan importere og redigere hospital data
