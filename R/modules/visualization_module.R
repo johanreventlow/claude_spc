@@ -3,6 +3,7 @@ library(shiny)
 library(qicharts2)
 library(ggplot2)
 library(dplyr)
+library(scales)  # For percent formatting
 
 # Visualization Module UI
 visualizationModuleUI <- function(id) {
@@ -32,6 +33,7 @@ visualizationModuleUI <- function(id) {
       plotOutput(
         ns("spc_plot"),
         height = "500px",
+        width = "100%",
         brush = brushOpts(id = ns("plot_brush"), resetOnNew = TRUE),
         hover = hoverOpts(id = ns("plot_hover"), delay = 100, delayType = "debounce")
       )
@@ -132,7 +134,6 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
         
         cat("DEBUG: spc_plot - Plot generated successfully\n")
         
-        # Apply hospital branding with error handling
         tryCatch({
           cat("DEBUG: spc_plot - Applying hospital theme\n")
           plot <- applyHospitalTheme(plot)
@@ -147,6 +148,8 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
         values$plot_ready <- TRUE
         
         cat("DEBUG: spc_plot - Plot ready set to TRUE\n")
+        cat("DEBUG: spc_plot - Final plot class before return:", paste(class(plot), collapse = ", "), "\n")
+        cat("DEBUG: spc_plot - Final plot is null before return:", is.null(plot), "\n")
         
         # Calculate Anhøj rules for run charts
         if (chart_type == "run") {
@@ -167,16 +170,53 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
       })
     })
     
-    # Render plot
+    # Render plot with multiple fallback methods
     output$spc_plot <- renderPlot({
+      cat("DEBUG: renderPlot called\n")
+      
       plot <- spc_plot()
-      if (is.null(plot)) {
-        # Show placeholder when no plot available
-        showPlaceholder()
-      } else {
-        plot
+      cat("DEBUG: renderPlot - received plot, is null:", is.null(plot), "\n")
+      
+      if (!is.null(plot)) {
+        cat("DEBUG: renderPlot - plot class:", paste(class(plot), collapse = ", "), "\n")
       }
-    }, res = 96)
+      
+      if (is.null(plot)) {
+        cat("DEBUG: renderPlot - plot is NULL, showing placeholder\n")
+        return(showPlaceholder())
+      }
+      
+      # Handle different plot object types
+      if (inherits(plot, "ggplot")) {
+        cat("DEBUG: renderPlot - rendering ggplot object successfully\n")
+        return(plot)
+      } else if (is.function(plot)) {
+        cat("DEBUG: renderPlot - plot is a function, attempting to call it\n")
+        tryCatch({
+          result <- plot()
+          if (inherits(result, "ggplot")) {
+            cat("DEBUG: renderPlot - function call returned ggplot\n")
+            return(result)
+          } else {
+            cat("DEBUG: renderPlot - function call did not return ggplot, showing placeholder\n")
+            return(showPlaceholder())
+          }
+        }, error = function(e) {
+          cat("DEBUG: renderPlot - function call failed:", e$message, "\n")
+          return(showPlaceholder())
+        })
+      } else {
+        cat("DEBUG: renderPlot - unknown plot type:", paste(class(plot), collapse = ", "), "attempting print method\n")
+        tryCatch({
+          print(plot)
+          return(invisible())
+        }, error = function(e) {
+          cat("DEBUG: renderPlot - print method failed:", e$message, "\n")
+          return(showPlaceholder())
+        })
+      }
+      
+    }, height = 500, width = 800, res = 96)
     
     # Explicit observer for chart type changes
     observe({
@@ -767,7 +807,6 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
     cat("DEBUG: generateSPCPlot - qicharts2 basic test failed:", e$message, "\n")
   })
   
-  # Try explicit qic() call first for better error handling
   tryCatch({
     if (chart_type == "run") {
       cat("DEBUG: generateSPCPlot - Calling qic() with explicit run chart parameters\n")
@@ -782,6 +821,27 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
     } else {
       cat("DEBUG: generateSPCPlot - Calling qic() with do.call for chart type:", chart_type, "\n")
       plot <- do.call(qicharts2::qic, qic_args)
+      
+      # For P charts, qicharts2 sometimes returns a different object structure
+      if (chart_type %in% c("p", "pp") && !inherits(plot, "ggplot")) {
+        cat("DEBUG: generateSPCPlot - P-chart plot needs conversion\n")
+        
+        # Try alternative qic call for P-charts
+        tryCatch({
+          plot <- qicharts2::qic(
+            x = qic_args$x,
+            y = qic_args$y,
+            n = qic_args$n,
+            chart = chart_type,
+            title = qic_args$title,
+            ylab = qic_args$ylab,
+            xlab = qic_args$xlab
+          )
+          cat("DEBUG: generateSPCPlot - Alternative P-chart call successful\n")
+        }, error = function(e3) {
+          cat("DEBUG: generateSPCPlot - Alternative P-chart call failed:", e3$message, "\n")
+        })
+      }
     }
   }, error = function(e) {
     cat("DEBUG: generateSPCPlot - qic() failed with error:", e$message, "\n")
