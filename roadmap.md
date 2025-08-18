@@ -4,32 +4,33 @@
 
 **Princip**: Build → Test → Validate → Iterate
 - Hver fase har klare **succeskriterier** og **testpunkter**
-  - **Løbende kvalitetssikring** med rigtige data
+- **Løbende kvalitetssikring** med rigtige data
 - **Modulær udvikling** - et modul ad gangen
 - **Early prototyping** for at fange UX-problemer tidligt
 
 ---
   
-  ## Phase 1: Foundation & Core Infrastructure (Uge 1-2)
+## Phase 1: Foundation & Core Infrastructure (Uge 1-2)
   
-  ### 1.1 Project Setup & Struktur
-  ```r
+### 1.1 Project Setup & Struktur
+
+```r
 # Mappestruktur
 spc_app/
-  ├── R/
-  │   ├── app.R              # Main app entry
+├── R/
+│   ├── app.R              # Main app entry
 │   ├── global.R           # Global variables & functions
 │   ├── modules/           # Shiny modules
-  │   ├── utils/             # Helper functions
-  │   └── data/              # Test data
-  ├── www/                   # Static assets (logo, CSS)
-  ├── reports/               # R Markdown templates
-  ├── tests/                 # Unit tests
-  └── docs/                  # Documentation
-  ```
+│   ├── utils/             # Helper functions
+│   └── data/              # Test data
+├── www/                   # Static assets (logo, CSS)
+├── reports/               # R Markdown templates
+├── tests/                 # Unit tests
+└── docs/                  # Documentation
+```
 
 **Deliverables:**
-  - [ ] RStudio projekt setup med renv
+- [ ] RStudio projekt setup med renv
 - [ ] Git repository med .gitignore
 - [ ] Basic package dependencies (shiny, bslib, qicharts2, rhandsontable)
 - [ ] Global.R med hospital branding variabler
@@ -46,7 +47,7 @@ ui <- bslib::page_sidebar(
 ```
 
 **Deliverables:**
-  - [ ] Responsive layout med bslib
+- [ ] Responsive layout med bslib
 - [ ] Hospital branding (farver, fonts)
 - [ ] Navigation struktur (faner)
 - [ ] Basic CSS styling
@@ -55,10 +56,10 @@ ui <- bslib::page_sidebar(
 
 ---
   
-  ## Phase 2: Data Module (Uge 2-3)
+## Phase 2: Data Module (Uge 2-3)
   
-  ### 2.1 File Upload & Preview
-  **Focus:** Få data ind i appen
+### 2.1 File Upload & Preview
+**Focus:** Få data ind i appen
 
 ```r
 # Første iteration: Simpel CSV upload
@@ -69,13 +70,13 @@ dataModuleUI <- function(id) {
 ```
 
 **Deliverables:**
-  - [ ] File upload (CSV/XLSX)
+- [ ] File upload (CSV/XLSX)
 - [ ] Data preview tabel
 - [ ] Basic data validation og fejlmeddelelser
 - [ ] Import indstillinger (separator, decimal, encoding)
 
 **Test med rigtige data:**
-  - [ ] Hospital infektionsdata (anonymiseret)
+- [ ] Hospital infektionsdata (anonymiseret)
 - [ ] Ventetider fra ambulatorium
 - [ ] Test fejlhåndtering med korrupte filer
 
@@ -91,18 +92,18 @@ output$editable_table <- renderRHandsontable({
 ```
 
 **Deliverables:**
-  - [ ] rhandsontable implementation
+- [ ] rhandsontable implementation
 - [ ] Cell validation med advarsler
 - [ ] Add/delete rows funktionalitet
 - [ ] Basic undo/redo
 
 **Test:**
-  - [ ] Redigér eksisterende data og verificér ændringer
+- [ ] Redigér eksisterende data og verificér ændringer
 - [ ] Test store datasæt (500+ rækker)
 - [ ] Test performance ved real-time beregninger
 
 **Kvalitetssikring checkpoints:**
-  - ✅ Kan uploade hospital CSV-filer uden fejl
+- ✅ Kan uploade hospital CSV-filer uden fejl
 - ✅ Kan redigere data og se ændringer med det samme
 - ✅ Validering fanger typiske dataproblemer
 
@@ -111,7 +112,7 @@ output$editable_table <- renderRHandsontable({
   ## Phase 3: Visualization Core (Uge 3-4)
   
   ### 3.1 Basic qicharts2 Integration
-  **Focus:** Få første grafer til at virke
+**Focus:** Få første grafer til at virke
 
 ```r
 # Minimalist graf-generation
@@ -125,13 +126,13 @@ output$plot <- renderPlot({
 ```
 
 **Deliverables:**
-  - [ ] Run chart (default)
+- [ ] Run chart (default)
 - [ ] I-chart og MR-chart
 - [ ] P-chart for proportioner
 - [ ] Basic plot styling
 
 **Test med hospital data:**
-  - [ ] Månedlige infektionsrater
+- [ ] Månedlige infektionsrater
 - [ ] Gennemsnitlige ventetider
 - [ ] Andel patienter behandlet indenfor målsætning
 
@@ -146,18 +147,18 @@ test_anhoej_rules <- function(data) {
 ```
 
 **Deliverables:**
-  - [ ] Automatisk runs-test
+- [ ] Automatisk runs-test
 - [ ] Crossings-test
 - [ ] Visual highlighting af signals
 - [ ] Signal-rapportering tekst
 
 **Kritisk test:**
-  - [ ] Sammenlign resultater med qicharts2 reference
+- [ ] Sammenlign resultater med qicharts2 reference
 - [ ] Test med datasæt hvor du kender det forventede resultat
 - [ ] Verificér matematik bag signal-detektion
 
 **Kvalitetssikring checkpoints:**
-  - ✅ qicharts2 grafer vises korrekt
+- ✅ qicharts2 grafer vises korrekt
 - ✅ Anhøj regler giver samme resultater som reference
 - ✅ Signals markeres tydeligt og forklares
 
@@ -166,7 +167,7 @@ test_anhoej_rules <- function(data) {
   ## Phase 4: Export & Branding (Uge 4-5)
   
   ### 4.1 PNG Export
-  **Focus:** High-quality graf export
+**Focus:** High-quality graf export
 
 ```r
 # PNG eksport med branding
@@ -177,13 +178,13 @@ export_png <- function(plot, filename) {
 ```
 
 **Deliverables:**
-  - [ ] PNG eksport med hospital logo
+- [ ] PNG eksport med hospital logo
 - [ ] Konsistent branding (farver, fonts)
 - [ ] Konfigurérbar størrelse og DPI
 - [ ] Automatisk footer med metadata
 
 **Test:**
-  - [ ] Export til forskellige størrelser
+- [ ] Export til forskellige størrelser
 - [ ] Print-kvalitet output
 - [ ] Logo placering og synlighed
 
@@ -199,18 +200,18 @@ output: pdf_document
   ```
 
 **Deliverables:**
-  - [ ] R Markdown template med hospital branding
+- [ ] R Markdown template med hospital branding
 - [ ] Automatisk plot inclusion
 - [ ] Basic metadata (dato, afdeling, etc.)
 - [ ] PDF generation pipeline
 
 **Test:**
-  - [ ] Generér rapport med rigtige hospital data
+- [ ] Generér rapport med rigtige hospital data
 - [ ] Verificér branding konsistens
 - [ ] Test forskellige graf-typer i rapport
 
 **Kvalitetssikring checkpoints:**
-  - ✅ PNG eksport med korrekt hospital branding
+- ✅ PNG eksport med korrekt hospital branding
 - ✅ PDF rapport ser professionel ud
 - ✅ Metadata og footer er korrekte
 
@@ -219,7 +220,7 @@ output: pdf_document
   ## Phase 5: Enhanced Features (Uge 5-6)
   
   ### 5.1 Multiple Chart Types
-  **Focus:** P', U', C, G charts
+**Focus:** P', U', C, G charts
 
 ```r
 # Udvid chart type support
@@ -227,7 +228,7 @@ supported_charts <- c("run", "i", "mr", "p", "pp", "u", "up", "c", "g")
 ```
 
 **Deliverables:**
-  - [ ] Alle qicharts2 chart types
+- [ ] Alle qicharts2 chart types
 - [ ] Automatisk chart type forslag baseret på data
 - [ ] Proper handling af count vs. rate data
 
@@ -240,16 +241,16 @@ qic(..., facets = ~ afdeling)
 ```
 
 **Deliverables:**
-  - [ ] Facetting by afdeling/enhed
+- [ ] Facetting by afdeling/enhed
 - [ ] Individuelle kontrolgrænser
 - [ ] Sammenlignelig akse-skalering
 
 **Test med multi-afdeling data:**
-  - [ ] Forskellige afdelinger på samme hospital
+- [ ] Forskellige afdelinger på samme hospital
 - [ ] Sammenlignelig data på tværs af enheder
 
 **Kvalitetssikring checkpoints:**
-  - ✅ Alle chart types fungerer korrekt
+- ✅ Alle chart types fungerer korrekt
 - ✅ Facetting viser meningsfulde sammenligninger
 - ✅ Kontrolgrænser beregnes korrekt per enhed
 
@@ -258,7 +259,7 @@ qic(..., facets = ~ afdeling)
   ## Phase 6: Polish & Production Ready (Uge 6-7)
   
   ### 6.1 Error Handling & User Experience
-  **Focus:** Robust production app
+**Focus:** Robust production app
 
 ```r
 # Comprehensive error handling
@@ -270,7 +271,7 @@ tryCatch({
 ```
 
 **Deliverables:**
-  - [ ] Comprehensive error handling
+- [ ] Comprehensive error handling
 - [ ] Loading indicators og progress bars
 - [ ] Input validation og user feedback
 - [ ] Help tooltips og documentation
@@ -287,13 +288,13 @@ reactive_data <- reactive({
 ```
 
 **Deliverables:**
-  - [ ] Debounced reactives for store datasæt
+- [ ] Debounced reactives for store datasæt
 - [ ] Caching af beregnede resultater
 - [ ] Memory management
 - [ ] Concurrent user handling
 
 **Final stress test:**
-  - [ ] 1000+ datapoint datasets
+- [ ] 1000+ datapoint datasets
 - [ ] Multiple concurrent users
 - [ ] Edge cases og error scenarios
 
@@ -326,7 +327,7 @@ testthat::test_that("Anhøj rules work correctly", {
   
   ## 📝 Success Criteria Per Phase
   
-  **Phase 1**: ✅ App starter, UI ser professionel ud
+**Phase 1**: ✅ App starter, UI ser professionel ud
 **Phase 2**: ✅ Kan importere og redigere hospital data
 **Phase 3**: ✅ Korrekte SPC grafer med signal-detektion
 **Phase 4**: ✅ Professional eksport med hospital branding
@@ -342,4 +343,4 @@ testthat::test_that("Anhøj rules work correctly", {
 
 ---
   
-  *Dette roadmap giver dig en solid foundation til at bygge og kvalitetssikre SPC appen systematisk, med hyppige testpunkter og validation mod rigtige hospital data.*
+*Dette roadmap giver dig en solid foundation til at bygge og kvalitetssikre SPC appen systematisk, med hyppige testpunkter og validation mod rigtige hospital data.*
