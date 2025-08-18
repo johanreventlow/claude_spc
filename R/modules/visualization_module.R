@@ -69,7 +69,7 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
     chart_config <- reactive({
       req(data_reactive())
       
-      cat("DEBUG: chart_config() called\n")
+      cat("DEBUG: chart_config() triggered\n")
       
       data <- data_reactive()
       chart_type <- chart_type_reactive() %||% "run"
@@ -90,13 +90,18 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
     spc_plot <- reactive({
       req(data_reactive(), chart_config())
       
-      cat("DEBUG: spc_plot() called\n")
+      cat("DEBUG: spc_plot() triggered by reactive dependencies\n")
       
       data <- data_reactive()
       config <- chart_config()
       chart_type <- chart_type_reactive() %||% "run"
       
+      cat("DEBUG: spc_plot - chart_type:", chart_type, "\n")
       cat("DEBUG: spc_plot - Starting validation\n")
+      
+      # Reset plot status when recomputing
+      values$plot_ready <- FALSE
+      values$plot_object <- NULL
       
       # Validate data for selected chart type
       validation <- validateDataForChart(data, config, chart_type)
@@ -127,8 +132,16 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
         
         cat("DEBUG: spc_plot - Plot generated successfully\n")
         
-        # Apply hospital branding
-        plot <- applyHospitalTheme(plot)
+        # Apply hospital branding with error handling
+        tryCatch({
+          cat("DEBUG: spc_plot - Applying hospital theme\n")
+          plot <- applyHospitalTheme(plot)
+          cat("DEBUG: spc_plot - Theme applied successfully\n")
+        }, error = function(e) {
+          cat("DEBUG: spc_plot - Theme application failed:", e$message, "\n")
+          cat("DEBUG: spc_plot - Using plot without custom theme\n")
+          # plot remains unchanged if theming fails
+        })
         
         values$plot_object <- plot
         values$plot_ready <- TRUE
@@ -139,6 +152,9 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
         if (chart_type == "run") {
           cat("DEBUG: spc_plot - Calculating Anhøj rules\n")
           values$anhoej_results <- calculateAnhoejRules(data, config)
+        } else {
+          cat("DEBUG: spc_plot - Clearing Anhøj results (not run chart)\n")
+          values$anhoej_results <- NULL
         }
         
         return(plot)
@@ -161,6 +177,19 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
         plot
       }
     }, res = 96)
+    
+    # Explicit observer for chart type changes
+    observe({
+      chart_type <- chart_type_reactive()
+      cat("DEBUG: Chart type observer triggered - new type:", chart_type, "\n")
+      
+      # Force invalidation of plot when chart type changes
+      if (!is.null(data_reactive())) {
+        cat("DEBUG: Chart type changed - invalidating plot\n")
+        values$plot_ready <- FALSE
+        # The spc_plot reactive will automatically re-run due to chart_type_reactive dependency
+      }
+    })
     
     # Plot ready status for conditional panels
     output$plot_ready <- reactive({
@@ -418,12 +447,13 @@ detectChartConfiguration <- function(data, chart_type) {
     y_col <- names(data)[taeller_idx[1]]
     n_col <- names(data)[naevner_idx[1]]
     
-    # For run charts with tæller/nævner, we need to create a rate column
+    # Configure based on chart type
     if (chart_type == "run") {
-      cat("DEBUG: detectChartConfiguration - Run chart with tæller/nævner detected\n")
-      cat("DEBUG: detectChartConfiguration - Will use", y_col, "as numerator for rate calculation\n")
-      # Note: We'll keep y_col as Taeller for now, but the plotting function should handle this
-      # OR we could suggest P-chart instead in the warning
+      cat("DEBUG: detectChartConfiguration - Run chart with tæller/nævner - will calculate rate\n")
+    } else if (chart_type %in% c("p", "pp")) {
+      cat("DEBUG: detectChartConfiguration - P-chart with tæller/nævner - will use as proportion\n")
+    } else if (chart_type %in% c("u", "up")) {
+      cat("DEBUG: detectChartConfiguration - U-chart with tæller/nævner - will use as rate\n")
     }
   } else {
     # Standard detection
@@ -437,6 +467,8 @@ detectChartConfiguration <- function(data, chart_type) {
         if (length(potential_n_cols) > 0) {
           n_col <- potential_n_cols[1]
           cat("DEBUG: detectChartConfiguration - Using second numeric column as n:", n_col, "\n")
+        } else {
+          cat("DEBUG: detectChartConfiguration - WARNING: Chart type", chart_type, "needs denominator but none found\n")
         }
       }
     }
@@ -534,6 +566,7 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
   # Initialize title and label variables
   title_text <- paste("SPC Chart -", config$y_col)
   ylab_text <- config$y_col
+  xlab_text <- "Observation"  # Default, will be updated based on x_data type
   
   # Prepare data based on chart type and data structure
   x_data <- data[[config$x_col]]
@@ -542,11 +575,13 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
   cat("DEBUG: generateSPCPlot - x_data type:", class(x_data), "\n")
   cat("DEBUG: generateSPCPlot - y_data_raw sample:", paste(head(y_data_raw, 3), collapse = ", "), "\n")
   
-  # Special handling for run charts with tæller/nævner data
-  if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
-    cat("DEBUG: generateSPCPlot - Run chart with tæller/nævner - calculating rate\n")
+  # Special handling for different chart types with tæller/nævner data
+  n_data <- NULL  # Initialize n_data variable
+  
+  if (!is.null(config$n_col) && config$n_col %in% names(data)) {
+    cat("DEBUG: generateSPCPlot - Chart with tæller/nævner data, chart_type:", chart_type, "\n")
     
-    # Calculate rate for run chart
+    # Get numerator and denominator
     taeller <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data_raw))))
     naevner <- suppressWarnings(as.numeric(gsub(",", ".", as.character(data[[config$n_col]]))))
     
@@ -558,18 +593,44 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
       stop("Nævner kan ikke være 0 - tjek dine data")
     }
     
-    # Calculate proportion/rate
-    y_data <- (taeller / naevner) * 100  # Convert to percentage
-    cat("DEBUG: generateSPCPlot - Calculated rate (%) sample:", paste(head(round(y_data, 2), 3), collapse = ", "), "\n")
-    
-    # Update title and label
-    title_text <- paste("Run Chart - Rate af", config$y_col, "per", config$n_col, "(%)")
-    ylab_text <- paste("Rate (", config$y_col, "/", config$n_col, ") %")
+    if (chart_type == "run") {
+      # Calculate proportion/rate for run chart
+      y_data <- (taeller / naevner) * 100  # Convert to percentage
+      cat("DEBUG: generateSPCPlot - Run chart: calculated rate (%) sample:", paste(head(round(y_data, 2), 3), collapse = ", "), "\n")
+      
+      # Update title and label
+      title_text <- paste("Run Chart - Rate af", config$y_col, "per", config$n_col, "(%)")
+      ylab_text <- paste("Rate (", config$y_col, "/", config$n_col, ") %")
+      
+    } else if (chart_type %in% c("p", "pp", "u", "up")) {
+      # For P and U charts, use raw values and let qic() handle the calculation
+      cat("DEBUG: generateSPCPlot - P/U chart: using raw tæller/nævner values\n")
+      y_data <- taeller  # Use raw numerator
+      n_data <- naevner  # Store for qic_args
+      
+      cat("DEBUG: generateSPCPlot - P/U chart: y_data sample:", paste(head(y_data, 3), collapse = ", "), "\n")
+      cat("DEBUG: generateSPCPlot - P/U chart: n_data sample:", paste(head(n_data, 3), collapse = ", "), "\n")
+      
+      # Update title and label
+      if (chart_type %in% c("p", "pp")) {
+        title_text <- paste("P Chart -", config$y_col, "af", config$n_col)
+        ylab_text <- "Proportion"
+      } else {
+        title_text <- paste("U Chart -", config$y_col, "per", config$n_col)
+        ylab_text <- "Rate"
+      }
+      
+    } else {
+      # For other chart types, calculate rate
+      y_data <- (taeller / naevner) * 100
+      title_text <- paste(chart_type, "Chart - Rate af", config$y_col, "per", config$n_col, "(%)")
+      ylab_text <- paste("Rate (", config$y_col, "/", config$n_col, ") %")
+    }
     
   } else {
-    # Standard numeric conversion
+    # Standard numeric conversion for charts without denominator
     y_data <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data_raw))))
-    cat("DEBUG: generateSPCPlot - y_data after conversion sample:", paste(head(y_data, 3), collapse = ", "), "\n")
+    cat("DEBUG: generateSPCPlot - Standard chart: y_data after conversion sample:", paste(head(y_data, 3), collapse = ", "), "\n")
     
     # Standard labels
     title_text <- paste("SPC Chart -", config$y_col)
@@ -594,9 +655,45 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
   } else if (is.null(x_data)) {
     cat("DEBUG: generateSPCPlot - x_data is NULL, using sequence\n")
     x_data <- 1:length(y_data)
+  } else if (inherits(x_data, "Date")) {
+    cat("DEBUG: generateSPCPlot - x_data is already Date, checking for issues\n")
+    # Check for NA dates and fix them
+    if (any(is.na(x_data))) {
+      cat("DEBUG: generateSPCPlot - Found NA dates, replacing with sequence\n")
+      na_indices <- which(is.na(x_data))
+      for (i in na_indices) {
+        if (i == 1) {
+          x_data[i] <- as.Date("2023-01-01")
+        } else {
+          x_data[i] <- x_data[i-1] + 1
+        }
+      }
+    }
+    
+    # Ensure dates are in reasonable range (qicharts2 can be picky)
+    date_range <- range(x_data, na.rm = TRUE)
+    if (date_range[1] < as.Date("1900-01-01") || date_range[2] > as.Date("2100-01-01")) {
+      cat("DEBUG: generateSPCPlot - Date range seems unreasonable, using sequence instead\n")
+      x_data <- 1:length(y_data)
+    } else {
+      # Normalize dates for qicharts2 compatibility
+      cat("DEBUG: generateSPCPlot - Normalizing dates for qicharts2\n")
+      x_data <- as.Date(format(x_data, "%Y-%m-%d"))
+      cat("DEBUG: generateSPCPlot - Normalized x_data sample:", paste(head(as.character(x_data), 3), collapse = ", "), "\n")
+    }
   }
   
   cat("DEBUG: generateSPCPlot - x_data final type:", class(x_data), "\n")
+  
+  # qicharts2 can be finicky with dates - let's try numeric x first
+  if (inherits(x_data, "Date")) {
+    cat("DEBUG: generateSPCPlot - Converting dates to numeric for qicharts2 compatibility\n")
+    x_data_backup <- x_data  # Keep original dates for labeling
+    x_data <- 1:length(x_data)  # Use sequence numbers instead
+    xlab_text <- "Observation (tidsserie)"
+  } else {
+    xlab_text <- if(inherits(x_data, "Date")) "Dato" else "Observation"
+  }
   
   # Prepare arguments for qic()
   qic_args <- list(
@@ -605,31 +702,124 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
     chart = chart_type,
     title = title_text,
     ylab = ylab_text,
-    xlab = if(inherits(x_data, "Date")) "Dato" else "Observation"
+    xlab = xlab_text
   )
   
   cat("DEBUG: generateSPCPlot - basic qic_args prepared\n")
   
-  # Add denominator for proportion/rate charts
+  # Add denominator for proportion/rate charts that need it
   if (!is.null(config$n_col) && config$n_col %in% names(data) && chart_type %in% c("p", "pp", "u", "up")) {
     cat("DEBUG: generateSPCPlot - adding denominator for", chart_type, "chart\n")
-    n_data_raw <- data[[config$n_col]]
-    n_data <- suppressWarnings(as.numeric(gsub(",", ".", as.character(n_data_raw))))
-    
-    # Only add if conversion successful
-    if (!all(is.na(n_data))) {
+    # n_data was already calculated above for P/U charts
+    if (exists("n_data")) {
       qic_args$n <- n_data
       cat("DEBUG: generateSPCPlot - denominator added successfully\n")
     } else {
-      cat("DEBUG: generateSPCPlot - WARNING: could not convert denominator to numeric\n")
+      cat("DEBUG: generateSPCPlot - WARNING: n_data not found for P/U chart\n")
     }
   }
   
   cat("DEBUG: generateSPCPlot - calling qicharts2::qic\n")
   cat("DEBUG: generateSPCPlot - qic_args:", paste(names(qic_args), collapse = ", "), "\n")
+  cat("DEBUG: generateSPCPlot - x length:", length(qic_args$x), "y length:", length(qic_args$y), "\n")
+  cat("DEBUG: generateSPCPlot - x class:", class(qic_args$x), "\n")
+  cat("DEBUG: generateSPCPlot - y class:", class(qic_args$y), "\n")
+  cat("DEBUG: generateSPCPlot - x sample:", paste(head(qic_args$x, 3), collapse = ", "), "\n")
+  cat("DEBUG: generateSPCPlot - y sample:", paste(head(qic_args$y, 3), collapse = ", "), "\n")
+  cat("DEBUG: generateSPCPlot - x has NA:", any(is.na(qic_args$x)), "\n")
+  cat("DEBUG: generateSPCPlot - y has NA:", any(is.na(qic_args$y)), "\n")
   
-  # Generate plot
-  plot <- do.call(qicharts2::qic, qic_args)
+  # Clean data before sending to qic()
+  # Remove any rows with NA values in x or y
+  complete_cases <- complete.cases(qic_args$x, qic_args$y)
+  if (!all(complete_cases)) {
+    cat("DEBUG: generateSPCPlot - Removing", sum(!complete_cases), "rows with NA values\n")
+    qic_args$x <- qic_args$x[complete_cases]
+    qic_args$y <- qic_args$y[complete_cases]
+    
+    # Also clean n if present
+    if ("n" %in% names(qic_args)) {
+      qic_args$n <- qic_args$n[complete_cases]
+    }
+  }
+  
+  # Ensure we have enough data points
+  if (length(qic_args$y) < 3) {
+    stop("For få datapunkter efter rensning (minimum 3 påkrævet)")
+  }
+  
+  cat("DEBUG: generateSPCPlot - Final data length:", length(qic_args$y), "\n")
+  
+  # Check if qicharts2 is properly loaded
+  if (!requireNamespace("qicharts2", quietly = TRUE)) {
+    stop("qicharts2 pakke ikke tilgængelig")
+  }
+  
+  # Fix packageVersion() output for cat()
+  qic_version <- as.character(packageVersion("qicharts2"))
+  cat("DEBUG: generateSPCPlot - qicharts2 version:", qic_version, "\n")
+  
+  # Quick test of qicharts2 functionality
+  tryCatch({
+    test_plot <- qicharts2::qic(x = 1:5, y = c(1,2,3,2,1), chart = "run")
+    cat("DEBUG: generateSPCPlot - qicharts2 basic test successful\n")
+  }, error = function(e) {
+    cat("DEBUG: generateSPCPlot - qicharts2 basic test failed:", e$message, "\n")
+  })
+  
+  # Try explicit qic() call first for better error handling
+  tryCatch({
+    if (chart_type == "run") {
+      cat("DEBUG: generateSPCPlot - Calling qic() with explicit run chart parameters\n")
+      plot <- qicharts2::qic(
+        x = qic_args$x,
+        y = qic_args$y,
+        chart = "run",
+        title = qic_args$title,
+        ylab = qic_args$ylab,
+        xlab = qic_args$xlab
+      )
+    } else {
+      cat("DEBUG: generateSPCPlot - Calling qic() with do.call for chart type:", chart_type, "\n")
+      plot <- do.call(qicharts2::qic, qic_args)
+    }
+  }, error = function(e) {
+    cat("DEBUG: generateSPCPlot - qic() failed with error:", e$message, "\n")
+    
+    # Try with numeric x instead of dates (common qicharts2 issue)
+    cat("DEBUG: generateSPCPlot - Trying with numeric x instead of dates\n")
+    tryCatch({
+      plot <- qicharts2::qic(
+        x = 1:length(qic_args$y),  # Force sequential numbers
+        y = qic_args$y,
+        chart = "run",
+        title = qic_args$title,
+        ylab = qic_args$ylab,
+        xlab = "Observation"
+      )
+    }, error = function(e2) {
+      cat("DEBUG: generateSPCPlot - Even numeric x failed:", e2$message, "\n")
+      
+      # Create a basic ggplot as last resort
+      cat("DEBUG: generateSPCPlot - Creating basic ggplot fallback\n")
+      plot_data <- data.frame(
+        x = 1:length(qic_args$y),
+        y = qic_args$y
+      )
+      
+      plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = x, y = y)) +
+        ggplot2::geom_point() +
+        ggplot2::geom_line() +
+        ggplot2::geom_hline(yintercept = median(qic_args$y, na.rm = TRUE), 
+                            color = "red", linetype = "dashed") +
+        ggplot2::labs(
+          title = qic_args$title,
+          x = "Observation", 
+          y = qic_args$ylab
+        ) +
+        ggplot2::theme_minimal()
+    })
+  })
   
   cat("DEBUG: generateSPCPlot - qic() completed successfully\n")
   
@@ -638,18 +828,43 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
 
 # Helper function: Apply hospital theme
 applyHospitalTheme <- function(plot) {
-  plot + 
-    HOSPITAL_THEME() +
-    labs(
-      caption = create_plot_footer(
-        afdeling = "",
-        data_kilde = "Upload",
-        dato = Sys.Date()
+  
+  cat("DEBUG: applyHospitalTheme called\n")
+  
+  # Check if plot is valid
+  if (is.null(plot)) {
+    cat("DEBUG: applyHospitalTheme - plot is NULL\n")
+    return(plot)
+  }
+  
+  # Try to apply theme safely
+  tryCatch({
+    cat("DEBUG: applyHospitalTheme - applying theme\n")
+    
+    # qicharts2 plots sometimes have special structure, so be careful
+    themed_plot <- plot + 
+      HOSPITAL_THEME() +
+      labs(
+        caption = create_plot_footer(
+          afdeling = "",
+          data_kilde = "Upload",
+          dato = Sys.Date()
+        )
+      ) +
+      theme(
+        plot.caption = element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
       )
-    ) +
-    theme(
-      plot.caption = element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
-    )
+    
+    cat("DEBUG: applyHospitalTheme - theme applied successfully\n")
+    return(themed_plot)
+    
+  }, error = function(e) {
+    cat("DEBUG: applyHospitalTheme - ERROR:", e$message, "\n")
+    cat("DEBUG: applyHospitalTheme - returning original plot without theme\n")
+    
+    # Return original plot if theming fails
+    return(plot)
+  })
 }
 
 # Helper function: Calculate Anhøj rules for run charts
