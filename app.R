@@ -820,9 +820,9 @@ server <- function(input, output, session) {
     "visualization",
     data_reactive = active_data,
     chart_type_reactive = reactive({
-      chart_selection <- input$chart_type %||% "run"
+      chart_selection <- input$chart_type %||% "Seriediagram (Run Chart)"
       qic_chart_type <- get_qic_chart_type(chart_selection)
-      cat("DEBUG: chart_type conversion:", chart_selection, "->", qic_chart_type, "\n")
+      cat("DEBUG: chart_type_reactive triggered - selection:", chart_selection, "-> qic:", qic_chart_type, "\n")
       return(qic_chart_type)
     }),
     show_targets_reactive = reactive(input$show_targets),
@@ -861,6 +861,19 @@ server <- function(input, output, session) {
         ),
         type = "message",
         duration = 8
+      )
+    }
+  })
+  
+  # Monitor chart type changes explicitly
+  observe({
+    cat("DEBUG: app.R - Chart type input changed to:", input$chart_type, "\n")
+    # Force UI update notification
+    if (!is.null(input$chart_type) && !is.null(active_data())) {
+      showNotification(
+        paste("Skifter til", input$chart_type, "- genererer ny graf..."),
+        type = "message",
+        duration = 2
       )
     }
   })
