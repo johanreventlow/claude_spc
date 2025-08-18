@@ -167,83 +167,114 @@ ui <- page_navbar(
         dataModuleUI("data_upload"),
         
         # VISUALISERING SEKTION  
-        card(
-          card_header(
-            div(
-              icon("chart-bar"), 
-              " Visualisering",
-              style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
-            )
-          ),
-          card_body(
-            selectInput(
-              "chart_type",
-              "Diagram type:",
-              choices = CHART_TYPES_DA,
-              selected = "run"
+        conditionalPanel(
+          condition = "output.has_data == true",
+          card(
+            card_header(
+              div(
+                icon("chart-bar"), 
+                " Visualisering",
+                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+              )
             ),
-            
-            checkboxInput(
-              "show_targets",
-              "Vis målsætninger",
-              value = FALSE
-            ),
-            
-            checkboxInput(
-              "show_phases", 
-              "Vis faser/interventioner",
-              value = FALSE
-            ),
-            
-            hr(),
-            
-            div(
-              style = "font-size: 0.85rem; color: #666;",
-              icon("info-circle"),
-              " Yderligere indstillinger kommer når data er uploadet"
+            card_body(
+              selectInput(
+                "chart_type",
+                "Diagram type:",
+                choices = CHART_TYPES_DA,
+                selected = "run"
+              ),
+              
+              checkboxInput(
+                "show_targets",
+                "Vis målsætninger",
+                value = FALSE
+              ),
+              
+              checkboxInput(
+                "show_phases", 
+                "Vis faser/interventioner",
+                value = FALSE
+              ),
+              
+              hr(),
+              
+              h6("Avancerede indstillinger:", style = "font-weight: 500; font-size: 0.9rem;"),
+              div(
+                style = "font-size: 0.85rem; color: #666;",
+                icon("info-circle"),
+                " Grafen opdateres automatisk når indstillinger ændres"
+              )
             )
           )
         ),
         
         # EKSPORT SEKTION
-        card(
-          card_header(
-            div(
-              icon("download"), 
-              " Eksport",
-              style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+        conditionalPanel(
+          condition = "output.plot_ready == true",
+          card(
+            card_header(
+              div(
+                icon("download"), 
+                " Eksport",
+                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+              )
+            ),
+            card_body(
+              div(
+                span(class = "status-indicator status-ready"),
+                "Graf klar til eksport",
+                style = "font-size: 0.9rem; color: #666; margin-bottom: 15px;"
+              ),
+              
+              downloadButton(
+                "download_png",
+                "Download PNG",
+                icon = icon("image"),
+                class = "btn-outline-primary w-100 mb-2"
+              ),
+              
+              downloadButton(
+                "download_pdf",
+                "Download PDF Rapport", 
+                icon = icon("file-pdf"),
+                class = "btn-outline-primary w-100 mb-2"
+              ),
+              
+              downloadButton(
+                "download_data",
+                "Download Data",
+                icon = icon("table"),
+                class = "btn-outline-primary w-100"
+              )
             )
-          ),
-          card_body(
-            div(
-              span(class = "status-indicator status-warning"),
-              "Venter på graf...",
-              style = "font-size: 0.9rem; color: #666;"
+          )
+        ),
+        
+        # EXPORT PLACEHOLDER når ingen graf
+        conditionalPanel(
+          condition = "output.plot_ready == false",
+          card(
+            card_header(
+              div(
+                icon("download"), 
+                " Eksport",
+                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+              )
             ),
-            br(), br(),
-            
-            downloadButton(
-              "download_png",
-              "Download PNG",
-              icon = icon("image"),
-              class = "btn-outline-primary w-100 mb-2",
-              style = "pointer-events: none; opacity: 0.5;"
-            ),
-            
-            downloadButton(
-              "download_pdf",
-              "Download PDF Rapport", 
-              icon = icon("file-pdf"),
-              class = "btn-outline-primary w-100 mb-2",
-              style = "pointer-events: none; opacity: 0.5;"
-            ),
-            
-            downloadButton(
-              "download_data",
-              "Download Data",
-              icon = icon("table"),
-              class = "btn-outline-primary w-100",
-              style = "pointer-events: none; opacity: 0.5;"
+            card_body(
+              div(
+                span(class = "status-indicator status-warning"),
+                "Venter på graf...",
+                style = "font-size: 0.9rem; color: #666; margin-bottom: 15px;"
+              ),
+              
+              div(
+                style = "opacity: 0.5;",
+                div("Download PNG", class = "btn btn-outline-secondary w-100 mb-2", style = "pointer-events: none;"),
+                div("Download PDF Rapport", class = "btn btn-outline-secondary w-100 mb-2", style = "pointer-events: none;"),
+                div("Download Data", class = "btn btn-outline-secondary w-100", style = "pointer-events: none;")
+              )
             )
           )
         )
@@ -261,48 +292,74 @@ ui <- page_navbar(
               style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
             ),
             div(
-              span(class = "status-indicator status-warning"),
-              "Venter på data",
-              style = "font-size: 0.9rem;"
+              # Dynamic status based on data and plot readiness
+              conditionalPanel(
+                condition = "output.plot_ready == true",
+                span(class = "status-indicator status-ready"),
+                "Graf klar",
+                style = "font-size: 0.9rem;"
+              ),
+              conditionalPanel(
+                condition = "output.has_data == true && output.plot_ready == false",
+                span(class = "status-indicator status-processing"),
+                "Genererer graf...",
+                style = "font-size: 0.9rem;"
+              ),
+              conditionalPanel(
+                condition = "output.has_data == false",
+                span(class = "status-indicator status-warning"),
+                "Venter på data",
+                style = "font-size: 0.9rem;"
+              )
             )
           )
         ),
         card_body(
           min_height = "500px",
           
-          div(
-            id = "plot_container",
-            style = "text-align: center; margin-top: 80px;",
-            
-            img(
-              src = basename(HOSPITAL_LOGO_PATH), 
-              height = "80px", 
-              style = "opacity: 0.2; margin-bottom: 30px;",
-              onerror = "this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjhGOUZBIiBzdHJva2U9IiNEQ0REREYiIHN0cm9rZS13aWR0aD0iMiIvPgo8dGV4dCB4PSI0MCIgeT0iNDUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPHN2Zz4K'; this.style.opacity='0.1';"
-            ),
-            
-            h3(
-              "SPC Analyse Dashboard", 
-              style = paste("color:", HOSPITAL_COLORS$primary, "; margin-bottom: 20px;")
-            ),
-            
-            p(
-              "Upload data i sidepanelet for at begynde analysen",
-              style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 1.1rem;")
-            ),
-            
-            br(),
-            
+          # Conditional content: show visualization when data is available
+          conditionalPanel(
+            condition = "output.has_data == true",
+            visualizationModuleUI("visualization")
+          ),
+          
+          # Placeholder when no data
+          conditionalPanel(
+            condition = "output.has_data == false",
             div(
-              style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;"),
-              h5("Kommende funktioner:", style = paste("color:", HOSPITAL_COLORS$primary)),
-              tags$ul(
-                style = "text-align: left; color: #666;",
-                tags$li("Automatisk seriediagram generering"),
-                tags$li("Anhøj-regler for signaldetektion"), 
-                tags$li("Interaktive kontrolkort"),
-                tags$li("Real-time dataredigering"),
-                tags$li("Professionel rapport-eksport")
+              id = "plot_container",
+              style = "text-align: center; margin-top: 80px;",
+              
+              img(
+                src = basename(HOSPITAL_LOGO_PATH), 
+                height = "80px", 
+                style = "opacity: 0.2; margin-bottom: 30px;",
+                onerror = "this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjhGOUZBIiBzdHJva2U9IiNEQ0REREYiIHN0cm9rZS13aWR0aD0iMiIvPgo8dGV4dCB4PSI0MCIgeT0iNDUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPHN2Zz4K'; this.style.opacity='0.1';"
+              ),
+              
+              h3(
+                "SPC Analyse Dashboard", 
+                style = paste("color:", HOSPITAL_COLORS$primary, "; margin-bottom: 20px;")
+              ),
+              
+              p(
+                "Upload data i sidepanelet for at begynde analysen",
+                style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 1.1rem;")
+              ),
+              
+              br(),
+              
+              div(
+                style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;"),
+                h5("SPC funktioner:", style = paste("color:", HOSPITAL_COLORS$primary)),
+                tags$ul(
+                  style = "text-align: left; color: #666;",
+                  tags$li("✅ Automatisk seriediagram generering"),
+                  tags$li("✅ Anhøj-regler for signaldetektion"), 
+                  tags$li("✅ Interaktive kontrolkort"),
+                  tags$li("✅ Real-time dataredigering"),
+                  tags$li("⚙️ Professionel rapport-eksport")
+                )
               )
             )
           )
@@ -312,7 +369,7 @@ ui <- page_navbar(
   ),
   
   # -------------------------------------------------------------------------
-  # TAB 2: DATA REDIGERING (Updated with editable table!)
+  # TAB 2: DATA REDIGERING
   # -------------------------------------------------------------------------
   nav_panel(
     title = "Data",
@@ -321,7 +378,7 @@ ui <- page_navbar(
     div(
       style = "padding: 20px;",
       
-      # NEW: Editable table interface
+      # Editable table interface
       editableTableUI("editable_data")
     )
   ),
@@ -336,58 +393,130 @@ ui <- page_navbar(
     div(
       style = "padding: 20px;",
       
-      fluidRow(
-        column(
-          6,
-          card(
-            card_header(
-              div(
-                icon("search"),
-                " Anhøj Regler",
-                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-              )
-            ),
-            card_body(
-              div(
-                span(class = "status-indicator status-warning"),
-                "Venter på data for analyse",
-                style = "font-size: 1rem; margin-bottom: 15px;"
+      # Show diagnostics when plot is ready
+      conditionalPanel(
+        condition = "output.plot_ready == true",
+        
+        fluidRow(
+          column(
+            6,
+            card(
+              card_header(
+                div(
+                  icon("search"),
+                  " Anhøj Regler",
+                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+                )
               ),
-              br(),
-              h6("Tests der vil blive udført:", style = "font-weight: 500;"),
-              tags$ul(
-                style = "color: #666;",
-                tags$li("Unusually long runs"),
-                tags$li("Unusually few crossings"),
-                tags$li("Shift detection")
+              card_body(
+                div(
+                  span(class = "status-indicator status-ready"),
+                  "Analyse komplet",
+                  style = "font-size: 1rem; margin-bottom: 15px;"
+                ),
+                h6("Tests udført:", style = "font-weight: 500;"),
+                tags$ul(
+                  style = "color: #666;",
+                  tags$li("✅ Unusually long runs"),
+                  tags$li("✅ Unusually few crossings"),
+                  tags$li("✅ Shift detection")
+                ),
+                br(),
+                div(
+                  style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 10px; border-radius: 5px;"),
+                  icon("info-circle"),
+                  " Se detaljerede resultater i Analyse-fanen under grafen."
+                )
+              )
+            )
+          ),
+          
+          column(
+            6,
+            card(
+              card_header(
+                div(
+                  icon("exclamation-triangle"),
+                  " Signal Detektion",
+                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+                )
+              ),
+              card_body(
+                div(id = "signal_summary"),
+                h6("Signal typer:", style = "font-weight: 500;"),
+                tags$ul(
+                  style = "color: #666;",
+                  tags$li("Special cause variation"),
+                  tags$li("Systematic patterns"),
+                  tags$li("Process shifts")
+                ),
+                br(),
+                div(
+                  style = paste("background-color:", HOSPITAL_COLORS$success, "20; padding: 10px; border-radius: 5px;"),
+                  icon("check-circle"),
+                  " Signaler markeres visuelt på grafen med farver og forklaringer."
+                )
               )
             )
           )
-        ),
+        )
+      ),
+      
+      # Show placeholder when no analysis available
+      conditionalPanel(
+        condition = "output.plot_ready == false",
         
-        column(
-          6,
-          card(
-            card_header(
-              div(
-                icon("exclamation-triangle"),
-                " Signal Detektion",
-                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-              )
-            ),
-            card_body(
-              div(
-                span(class = "status-indicator status-warning"),
-                "Ingen signaler at rapportere",
-                style = "font-size: 1rem; margin-bottom: 15px;"
+        fluidRow(
+          column(
+            6,
+            card(
+              card_header(
+                div(
+                  icon("search"),
+                  " Anhøj Regler",
+                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+                )
               ),
-              br(),
-              h6("Signal typer:", style = "font-weight: 500;"),
-              tags$ul(
-                style = "color: #666;",
-                tags$li("Points beyond control limits"),
-                tags$li("Systematic patterns"),
-                tags$li("Special cause variation")
+              card_body(
+                div(
+                  span(class = "status-indicator status-warning"),
+                  "Venter på data for analyse",
+                  style = "font-size: 1rem; margin-bottom: 15px;"
+                ),
+                h6("Tests der vil blive udført:", style = "font-weight: 500;"),
+                tags$ul(
+                  style = "color: #666;",
+                  tags$li("Unusually long runs"),
+                  tags$li("Unusually few crossings"),
+                  tags$li("Shift detection")
+                )
+              )
+            )
+          ),
+          
+          column(
+            6,
+            card(
+              card_header(
+                div(
+                  icon("exclamation-triangle"),
+                  " Signal Detektion",
+                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+                )
+              ),
+              card_body(
+                div(
+                  span(class = "status-indicator status-warning"),
+                  "Ingen signaler at rapportere",
+                  style = "font-size: 1rem; margin-bottom: 15px;"
+                ),
+                h6("Signal typer:", style = "font-weight: 500;"),
+                tags$ul(
+                  style = "color: #666;",
+                  tags$li("Points beyond control limits"),
+                  tags$li("Systematic patterns"),
+                  tags$li("Special cause variation")
+                )
               )
             )
           )
@@ -407,22 +536,49 @@ ui <- page_navbar(
         ),
         card_body(
           min_height = "300px",
-          div(
-            style = "text-align: center; margin-top: 80px;",
-            h4("SPC Diagnostik", style = paste("color:", HOSPITAL_COLORS$primary)),
-            p("Automatisk signal-analyse kommer i Phase 3", 
-              style = paste("color:", HOSPITAL_COLORS$secondary)),
-            br(),
+          
+          conditionalPanel(
+            condition = "output.plot_ready == true",
             div(
-              style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;"),
-              h6("Kommende analyse:", style = paste("color:", HOSPITAL_COLORS$primary)),
-              tags$ul(
-                style = "text-align: left; color: #666;",
-                tags$li("Automatisk Anhøj-regel evaluering"),
-                tags$li("Statistisk signifikans tests"),
-                tags$li("Process capability analyse"),
-                tags$li("Trend og shift detektion"),
-                tags$li("Forklarende tekst og anbefalinger")
+              style = "text-align: center; margin-top: 50px;",
+              h4("📊 SPC Analyse Komplet", style = paste("color:", HOSPITAL_COLORS$primary)),
+              p("Detaljerede Anhøj-regel resultater vises under grafen i Analyse-fanen.", 
+                style = paste("color:", HOSPITAL_COLORS$secondary)),
+              br(),
+              div(
+                style = paste("background-color:", HOSPITAL_COLORS$success, "20; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;"),
+                h6("✅ Implementeret analyse:", style = paste("color:", HOSPITAL_COLORS$primary)),
+                tags$ul(
+                  style = "text-align: left; color: #666;",
+                  tags$li("✅ Automatisk Anhøj-regel evaluering"),
+                  tags$li("✅ Statistisk signifikans tests"),
+                  tags$li("✅ Runs og crossings analyse"),
+                  tags$li("✅ Visual signal markering"),
+                  tags$li("✅ Forklarende tekst og anbefalinger")
+                )
+              )
+            )
+          ),
+          
+          conditionalPanel(
+            condition = "output.plot_ready == false",
+            div(
+              style = "text-align: center; margin-top: 80px;",
+              h4("SPC Diagnostik", style = paste("color:", HOSPITAL_COLORS$primary)),
+              p("Upload data og vælg diagram-type for at starte analysen", 
+                style = paste("color:", HOSPITAL_COLORS$secondary)),
+              br(),
+              div(
+                style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;"),
+                h6("Kommende analyse:", style = paste("color:", HOSPITAL_COLORS$primary)),
+                tags$ul(
+                  style = "text-align: left; color: #666;",
+                  tags$li("Automatisk Anhøj-regel evaluering"),
+                  tags$li("Statistisk signifikans tests"),
+                  tags$li("Process capability analyse"),
+                  tags$li("Trend og shift detektion"),
+                  tags$li("Forklarende tekst og anbefalinger")
+                )
               )
             )
           )
@@ -491,7 +647,7 @@ ui <- page_navbar(
               div(
                 style = paste("background-color:", HOSPITAL_COLORS$success, "20; padding: 10px; border-radius: 5px; margin-top: 15px;"),
                 icon("lightbulb"),
-                strong(" Nyt i v2.2: "), "Du kan nu redigere data direkte i appen med Excel-lignende funktionalitet!",
+                strong(" Nyt i v3.0: "), "Fuld SPC graf-generering med Anhøj-regler implementeret!",
                 style = "font-size: 0.85rem;"
               )
             )
@@ -501,7 +657,7 @@ ui <- page_navbar(
       
       br(),
       
-      # NEW: Data redigering help section
+      # Data redigering help section
       card(
         card_header(
           div(
@@ -568,11 +724,11 @@ ui <- page_navbar(
               
               div(
                 style = paste("color:", HOSPITAL_COLORS$success, "; font-size: 0.9rem; font-weight: 500;"),
-                "✅ Phase 2.2: Data redigering implementeret!"
+                "✅ Phase 3: SPC grafer og Anhøj-regler implementeret!"
               ),
               div(
                 style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.85rem;"),
-                "Næste: Graf-generering og SPC-analyse..."
+                "Næste: PDF rapport-generering og avanceret eksport..."
               )
             ),
             column(
@@ -605,8 +761,38 @@ server <- function(input, output, session) {
   # Initialize data module
   data_module <- dataModuleServer("data_upload")
   
-  # Initialize editable table module (NEW!)
+  # Initialize editable table module
   edited_data <- editableTableServer("editable_data", data_module$data)
+  
+  # Use edited data if available, otherwise use original data
+  active_data <- reactive({
+    if(!is.null(edited_data()) && !is.null(data_module$data())) {
+      edited_data()
+    } else {
+      data_module$data()
+    }
+  })
+  
+  # Initialize visualization module
+  visualization <- visualizationModuleServer(
+    "visualization",
+    data_reactive = active_data,
+    chart_type_reactive = reactive(input$chart_type),
+    show_targets_reactive = reactive(input$show_targets),
+    show_phases_reactive = reactive(input$show_phases)
+  )
+  
+  # Has data check for conditional panels
+  output$has_data <- reactive({
+    !is.null(active_data())
+  })
+  outputOptions(output, "has_data", suspendWhenHidden = FALSE)
+  
+  # Plot ready check for conditional panels
+  output$plot_ready <- reactive({
+    !is.null(visualization$plot_ready()) && visualization$plot_ready()
+  })
+  outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   
   # Reaktiv status tracking
   status <- reactiveValues(
@@ -632,12 +818,30 @@ server <- function(input, output, session) {
     }
   })
   
-  # Monitor edited data changes (NEW!)
+  # Monitor plot readiness
+  observe({
+    if(!is.null(visualization$plot_ready()) && visualization$plot_ready()) {
+      status$plot_ready <- TRUE
+      status$export_ready <- TRUE
+      showNotification(
+        div(
+          icon("chart-line"),
+          strong("SPC graf genereret!"),
+          br(),
+          "Graf er klar til eksport og videre analyse."
+        ),
+        type = "message",
+        duration = 5
+      )
+    }
+  })
+  
+  # Monitor edited data changes
   observe({
     if(!is.null(edited_data()) && status$data_uploaded) {
-      # Data has been edited
+      # Data has been edited - plot will regenerate automatically
       showNotification(
-        "Data modificeret - ændringer er synlige i editerings-tabellen",
+        "Data modificeret - graf opdateres automatisk",
         type = "message",
         duration = 3
       )
@@ -651,7 +855,7 @@ server <- function(input, output, session) {
         icon("check-circle"),
         paste("Velkommen til", HOSPITAL_NAME, "SPC Analyse App!"),
         br(),
-        strong("Nyt: "), "Du kan nu redigere data direkte i Data-fanen!"
+        strong("Nyt: "), "Fuld SPC graf-generering med Anhøj-regler!"
       ),
       type = "message",
       duration = 10,
@@ -660,11 +864,17 @@ server <- function(input, output, session) {
   }) %>% 
     bindEvent(session$clientData, once = TRUE)
   
-  # Placeholder download handlers
+  # Download handlers
   output$download_png <- downloadHandler(
     filename = function() paste0("spc_plot_", Sys.Date(), ".png"),
     content = function(file) {
-      showNotification("PNG eksport kommer i Phase 4", type = "warning")
+      if(!is.null(visualization$plot()) && status$plot_ready) {
+        ggsave(file, visualization$plot(), 
+               width = 12, height = 8, dpi = 300, units = "in")
+        showNotification("PNG eksporteret succesfuldt", type = "message", duration = 3)
+      } else {
+        showNotification("Ingen graf tilgængelig til eksport", type = "warning")
+      }
     }
   )
   
@@ -678,12 +888,7 @@ server <- function(input, output, session) {
   output$download_data <- downloadHandler(
     filename = function() paste0("spc_data_", Sys.Date(), ".csv"),
     content = function(file) {
-      # NEW: Download edited data if available
-      data_to_export <- if(!is.null(edited_data())) {
-        edited_data()
-      } else {
-        data_module$data()
-      }
+      data_to_export <- active_data()
       
       if(!is.null(data_to_export)) {
         write.csv(data_to_export, file, row.names = FALSE)
