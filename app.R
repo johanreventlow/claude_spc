@@ -377,9 +377,9 @@ ui <- page_navbar(
               div(
                 style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
                 icon("info-circle"),
-                " Dobbeltklik på celle for at redigere • Tab/Enter for næste celle • Højreklik for menu",
+                " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
                 br(),
-                " Brug redigér-knappen for at ændre kolonnenavne"
+                " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog"
               )
             )
           ),
@@ -398,6 +398,7 @@ ui <- page_navbar(
                 )
               ),
               card_body(
+                # Chart type selection
                 selectInput(
                   "chart_type",
                   "Diagram type:",
@@ -405,6 +406,56 @@ ui <- page_navbar(
                   selected = "Seriediagram (Run Chart)"
                 ),
                 
+                # Column mapping section
+                div(
+                  style = "margin: 15px 0; padding: 10px; background-color: #f8f9fa; border-radius: 5px;",
+                  h6("Kolonne Mapping:", style = "font-weight: 500; margin-bottom: 10px;"),
+                  
+                  # X-axis column
+                  selectInput(
+                    "x_column",
+                    "X-akse (tid/observation):",
+                    choices = NULL,  # Will be populated server-side
+                    selected = NULL
+                  ),
+                  
+                  # Y-axis column  
+                  selectInput(
+                    "y_column",
+                    "Y-akse (værdi):",
+                    choices = NULL,
+                    selected = NULL
+                  ),
+                  
+                  # N column (for P/U charts)
+                  conditionalPanel(
+                    condition = "input.chart_type == 'P-kort (Andele)' || input.chart_type == 'P\'-kort (Andele, standardiseret)' || input.chart_type == 'U-kort (Rater)' || input.chart_type == 'U\'-kort (Rater, standardiseret)'",
+                    selectInput(
+                      "n_column",
+                      "Nævner (n):",
+                      choices = NULL,
+                      selected = NULL
+                    )
+                  ),
+                  
+                  # Auto-detect button
+                  actionButton(
+                    "auto_detect_columns",
+                    "Auto-detektér kolonner",
+                    icon = icon("magic"),
+                    class = "btn-outline-secondary btn-sm w-100",
+                    style = "margin-top: 10px;"
+                  ),
+                  
+                  # Column validation feedback
+                  div(
+                    id = "column_validation",
+                    style = "margin-top: 10px;",
+                    uiOutput("column_validation_messages")
+                  )
+                ),
+                
+                # Additional options
                 fluidRow(
                   column(6,
                          checkboxInput(
@@ -649,6 +700,52 @@ ui <- page_navbar(
       
       br(),
       
+      # Kolonne mapping help section
+      card(
+        card_header(
+          div(
+            icon("columns"),
+            " Kolonne Mapping Guide",
+            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+          )
+        ),
+        card_body(
+          fluidRow(
+            column(
+              6,
+              h6("Kolonne-valg:", style = "font-weight: 500;"),
+              tags$ul(
+                style = "font-size: 0.9rem;",
+                tags$li(strong("X-akse"), " for tid/observation (datoer eller sekvensnumre)"),
+                tags$li(strong("Y-akse"), " for værdier der skal analyseres"),
+                tags$li(strong("Nævner (N)"), " kun for P/U-charts (totaler/denominators)"),
+                tags$li(strong("Auto-detektér"), " finder intelligente forslag automatisk")
+              )
+            ),
+            column(
+              6,
+              h6("Validering:", style = "font-weight: 500;"),
+              tags$ul(
+                style = "font-size: 0.9rem;",
+                tags$li(strong("Numeriske kolonner"), " påkrævet for Y og N"),
+                tags$li(strong("Unikke valg"), " - samme kolonne kan ikke bruges flere gange"),
+                tags$li(strong("Chart-kompatibilitet"), " - P/U charts kræver nævner"),
+                tags$li(strong("Øjeblikkelig feedback"), " viser advarsler eller bekræftelse")
+              )
+            )
+          ),
+          
+          div(
+            style = paste("background-color:", HOSPITAL_COLORS$primary, "10; padding: 10px; border-radius: 5px; margin-top: 15px;"),
+            icon("magic"),
+            strong(" Pro tip: "), "Brug Auto-detektér knappen for intelligente forslag baseret på kolonnenavne og datatyper. Du kan altid justere valgene manuelt bagefter.",
+            style = "font-size: 0.85rem;"
+          )
+        )
+      ),
+      
+      br(),
+      
       card(
         full_screen = TRUE,
         card_header(
@@ -762,7 +859,8 @@ ui <- page_navbar(
               tags$ol(
                 style = "font-size: 0.9rem;",
                 tags$li("Upload din CSV/Excel fil i Analyse-fanen"),
-                tags$li(strong("Redigér data"), " i Data-fanen efter behov"),
+                tags$li(strong("Vælg kolonner"), " for X-akse, Y-akse og Nævner (eller brug Auto-detektér)"),
+                tags$li(strong("Redigér data"), " efter behov direkte i tabellen"),
                 tags$li("Vælg passende diagram-type"),
                 tags$li("Gennemgå diagnostik resultaterne"),
                 tags$li("Download graf eller rapport")
@@ -771,7 +869,7 @@ ui <- page_navbar(
               div(
                 style = paste("background-color:", HOSPITAL_COLORS$success, "20; padding: 10px; border-radius: 5px; margin-top: 15px;"),
                 icon("lightbulb"),
-                strong(" Nyt i v3.0: "), "Fuld SPC graf-generering med Anhøj-regler implementeret!",
+                strong(" Nyt i v3.1: "), "Eksplicit kolonne-valg! Vælg præcis hvilke kolonner der skal bruges til X, Y og N.",
                 style = "font-size: 0.85rem;"
               )
             )
@@ -797,9 +895,9 @@ ui <- page_navbar(
               h6("Grundlæggende redigering:", style = "font-weight: 500;"),
               tags$ul(
                 style = "font-size: 0.9rem;",
-                tags$li(strong("Dobbeltklik"), " på celle for at redigere"),
+                tags$li(strong("Dobbeltklik kolonnenavn"), " for at redigere headers direkte"),
+                tags$li(strong("Dobbeltklik celle"), " for at redigere data"),
                 tags$li(strong("Tab/Enter"), " for at gå til næste celle"),
-                tags$li(strong("Ctrl+Z"), " for fortryd (eller brug Fortryd-knappen)"),
                 tags$li(strong("Højreklik"), " for kontekstmenu med copy/paste")
               )
             ),
@@ -808,9 +906,9 @@ ui <- page_navbar(
               h6("Avancerede funktioner:", style = "font-weight: 500;"),
               tags$ul(
                 style = "font-size: 0.9rem;",
-                tags$li(strong("Tilføj rækker"), " med plus-knappen"),
-                tags$li(strong("Slet rækker"), " med minus-knappen"),
-                tags$li(strong("Beregnede kolonner"), " (procent, rater, gennemsnit)"),
+                tags$li(strong("Redigér kolonnenavne"), " direkte i headers eller via modal"),
+                tags$li(strong("Tilføj rækker/kolonner"), " med plus-knapperne"),
+                tags$li(strong("Validering"), " forhindrer dubletter og tomme navne"),
                 tags$li(strong("Reset til original"), " hvis du fortryder alt")
               )
             )
@@ -1059,7 +1157,7 @@ server <- function(input, output, session) {
     })
   })
   
-  # Hovedtabel rendering med simplificeret header-redigering
+  # Hovedtabel rendering med aktiveret header-redigering
   output$main_data_table <- rhandsontable::renderRHandsontable({
     req(values$current_data)
     
@@ -1075,11 +1173,15 @@ server <- function(input, output, session) {
     ) %>%
       rhandsontable::hot_context_menu(
         allowRowEdit = TRUE,
-        allowColEdit = TRUE
+        allowColEdit = TRUE  # Tillader header-redigering
       ) %>%
       rhandsontable::hot_table(
         highlightCol = TRUE,
         highlightRow = TRUE
+      ) %>%
+      rhandsontable::hot_cols(
+        columnHeaderHeight = 50,  # Gør headers højere for bedre redigering
+        manualColumnResize = TRUE
       )
     
     # Kolonne-specifik formatting
@@ -1101,14 +1203,58 @@ server <- function(input, output, session) {
     return(hot)
   })
   
-  # Håndter tabel ændringer
+  # Forbedret håndtering af tabel ændringer (både data og headers)
   observeEvent(input$main_data_table, {
     req(input$main_data_table)
     
     # Konverter hot til data.frame
     new_data <- rhandsontable::hot_to_r(input$main_data_table)
     
-    # Opdater data
+    # Tjek om kolonnenavne er ændret
+    current_names <- names(values$current_data)
+    new_names <- names(new_data)
+    
+    if (!identical(current_names, new_names)) {
+      cat("DEBUG: Column names changed from:", paste(current_names, collapse = ", "), "\n")
+      cat("DEBUG: Column names changed to:", paste(new_names, collapse = ", "), "\n")
+      
+      # Valider nye kolonnenavne
+      if (length(new_names) != length(unique(new_names))) {
+        showNotification(
+          "Kolonnenavne skal være unikke. Ændring ignoreret.",
+          type = "error",
+          duration = 4
+        )
+        return()  # Ignorer ændringen hvis der er dubletter
+      }
+      
+      # Tjek for tomme kolonnenavne
+      if (any(is.na(new_names) | new_names == "" | trimws(new_names) == "")) {
+        showNotification(
+          "Kolonnenavne kan ikke være tomme. Ændring ignoreret.",
+          type = "error", 
+          duration = 4
+        )
+        return()
+      }
+      
+      # Vis bekræftelse af kolonnenavn-ændringer
+      changed_indices <- which(current_names != new_names)
+      if (length(changed_indices) > 0) {
+        change_summary <- paste(
+          paste0("'", current_names[changed_indices], "' → '", new_names[changed_indices], "'"),
+          collapse = ", "
+        )
+        
+        showNotification(
+          paste("Kolonnenavne opdateret:", change_summary),
+          type = "message",
+          duration = 4
+        )
+      }
+    }
+    
+    # Opdater data med eventuelle nye kolonnenavne
     values$current_data <- new_data
   })
   
@@ -1277,6 +1423,123 @@ server <- function(input, output, session) {
     )
   })
   
+  # Opdater kolonne-valg når data ændres
+  observe({
+    req(values$current_data)
+    
+    data <- values$current_data
+    
+    # Få alle kolonnenavne
+    all_cols <- names(data)
+    
+    if (length(all_cols) > 0) {
+      # Lav choices list med "Vælg..." som første option
+      col_choices <- setNames(c("", all_cols), c("Vælg kolonne...", all_cols))
+      
+      # Opdater dropdown menuer
+      updateSelectInput(session, "x_column", choices = col_choices)
+      updateSelectInput(session, "y_column", choices = col_choices)
+      updateSelectInput(session, "n_column", choices = col_choices)
+      
+      # Auto-detektér kolonner første gang data indlæses
+      if (is.null(input$x_column) || input$x_column == "") {
+        auto_detect_and_update_columns()
+      }
+    }
+  })
+  
+  # Auto-detect kolonne funktion
+  auto_detect_and_update_columns <- function() {
+    req(values$current_data)
+    
+    data <- values$current_data
+    col_names <- names(data)
+    
+    # Detektér potentielle dato-kolonner
+    x_col <- NULL
+    for (col_name in col_names) {
+      col_data <- data[[col_name]]
+      
+      # Tjek for dato patterns eller "dato" i navnet
+      if (grepl("dato|date|tid|time", col_name, ignore.case = TRUE)) {
+        x_col <- col_name
+        break
+      }
+      
+      # Tjek for dato-format i data
+      char_data <- as.character(col_data)[!is.na(col_data)]
+      if (length(char_data) > 0 && 
+          any(grepl("\\d{4}-\\d{2}-\\d{2}|\\d{2}/\\d{2}/\\d{4}|\\d{2}-\\d{2}-\\d{4}", char_data))) {
+        x_col <- col_name
+        break
+      }
+    }
+    
+    # Hvis ingen dato-kolonne fundet, brug første kolonne
+    if (is.null(x_col) && length(col_names) > 0) {
+      x_col <- col_names[1]
+    }
+    
+    # Detektér numeriske kolonner (ekskludér x_col)
+    numeric_cols <- character(0)
+    for (col_name in col_names) {
+      if (col_name != x_col) {
+        col_data <- data[[col_name]]
+        if (is.numeric(col_data) || 
+            sum(!is.na(suppressWarnings(as.numeric(gsub(",", ".", as.character(col_data)))))) > length(col_data) * 0.8) {
+          numeric_cols <- c(numeric_cols, col_name)
+        }
+      }
+    }
+    
+    # Smart detektér tæller/nævner
+    col_names_lower <- tolower(col_names)
+    taeller_col <- NULL
+    naevner_col <- NULL
+    
+    # Look for Danish tæller/nævner patterns
+    taeller_idx <- which(grepl("t.ller|tael|num|count", col_names_lower, ignore.case = TRUE))
+    naevner_idx <- which(grepl("n.vner|naev|denom|total", col_names_lower, ignore.case = TRUE))
+    
+    if (length(taeller_idx) > 0 && length(naevner_idx) > 0) {
+      taeller_col <- col_names[taeller_idx[1]]
+      naevner_col <- col_names[naevner_idx[1]]
+    } else if (length(numeric_cols) >= 2) {
+      # Hvis ikke tæller/nævner pattern, brug første to numeriske
+      taeller_col <- numeric_cols[1]
+      naevner_col <- numeric_cols[2]
+    } else if (length(numeric_cols) >= 1) {
+      taeller_col <- numeric_cols[1]
+    }
+    
+    # Opdater UI med detekterede kolonner
+    if (!is.null(x_col)) {
+      updateSelectInput(session, "x_column", selected = x_col)
+    }
+    
+    if (!is.null(taeller_col)) {
+      updateSelectInput(session, "y_column", selected = taeller_col)
+    }
+    
+    if (!is.null(naevner_col)) {
+      updateSelectInput(session, "n_column", selected = naevner_col)
+    }
+    
+    # Vis bekræftelse
+    detected_msg <- paste0(
+      "Auto-detekteret: ",
+      "X=", x_col %||% "ingen", ", ",
+      "Y=", taeller_col %||% "ingen",
+      if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ""
+    )
+    
+    showNotification(
+      detected_msg,
+      type = "message",
+      duration = 3
+    )
+  }
+  
   # Data for visualization modul
   active_data <- reactive({
     req(values$current_data)
@@ -1292,6 +1555,100 @@ server <- function(input, output, session) {
     }
   })
   
+  # Kolonne konfiguration for visualization
+  column_config <- reactive({
+    req(values$current_data)
+    
+    # Brug brugerens valg hvis tilgængelige
+    x_col <- if (!is.null(input$x_column) && input$x_column != "") input$x_column else NULL
+    y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL
+    n_col <- if (!is.null(input$n_column) && input$n_column != "") input$n_column else NULL
+    
+    return(list(
+      x_col = x_col,
+      y_col = y_col,
+      n_col = n_col,
+      chart_type = get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
+    ))
+  })
+  
+  # Kolonne validering output
+  output$column_validation_messages <- renderUI({
+    req(values$current_data)
+    
+    # Kun vis hvis vi har nogle kolonnevalg
+    if (is.null(input$x_column) || input$x_column == "" ||
+        is.null(input$y_column) || input$y_column == "") {
+      return(NULL)
+    }
+    
+    chart_type <- get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
+    messages <- character(0)
+    warnings <- character(0)
+    
+    # Tjek om Y-kolonne er numerisk
+    if (!is.null(input$y_column) && input$y_column != "" && input$y_column %in% names(values$current_data)) {
+      y_data <- values$current_data[[input$y_column]]
+      if (!is.numeric(y_data)) {
+        # Prøv at konvertere
+        numeric_test <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data))))
+        if (sum(!is.na(numeric_test)) < length(y_data) * 0.8) {
+          warnings <- c(warnings, paste("Y-kolonne '", input$y_column, "' er ikke numerisk"))
+        }
+      }
+    }
+    
+    # Tjek P/U chart requirements
+    if (chart_type %in% c("p", "pp", "u", "up")) {
+      if (is.null(input$n_column) || input$n_column == "") {
+        warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne (N)"))
+      } else if (input$n_column %in% names(values$current_data)) {
+        n_data <- values$current_data[[input$n_column]]
+        if (!is.numeric(n_data)) {
+          numeric_test <- suppressWarnings(as.numeric(gsub(",", ".", as.character(n_data))))
+          if (sum(!is.na(numeric_test)) < length(n_data) * 0.8) {
+            warnings <- c(warnings, paste("Nævner-kolonne '", input$n_column, "' er ikke numerisk"))
+          }
+        }
+      }
+    }
+    
+    # Tjek for samme kolonne valgt flere gange
+    selected_cols <- c(input$x_column, input$y_column, input$n_column)
+    selected_cols <- selected_cols[!is.null(selected_cols) & selected_cols != ""]
+    
+    if (length(selected_cols) != length(unique(selected_cols))) {
+      warnings <- c(warnings, "Samme kolonne kan ikke bruges til flere formål")
+    }
+    
+    # Vis resultater
+    if (length(warnings) > 0) {
+      div(
+        class = "alert alert-warning",
+        style = "font-size: 0.85rem; padding: 8px; margin: 5px 0;",
+        icon("exclamation-triangle"),
+        strong(" Kolonne advarsler:"),
+        tags$ul(
+          style = "margin: 5px 0; padding-left: 20px;",
+          lapply(warnings, function(warn) tags$li(warn))
+        )
+      )
+    } else if (length(selected_cols) >= 2) {
+      div(
+        class = "alert alert-success",
+        style = "font-size: 0.85rem; padding: 8px; margin: 5px 0;",
+        icon("check-circle"),
+        strong(" Kolonner valideret! "),
+        sprintf("Klar til %s chart", chart_type)
+      )
+    }
+  })
+  
+  # Auto-detect button handler
+  observeEvent(input$auto_detect_columns, {
+    auto_detect_and_update_columns()
+  })
+  
   # Has data check
   output$has_data <- reactive({
     !is.null(active_data()) && nrow(active_data()) > 0
@@ -1302,6 +1659,7 @@ server <- function(input, output, session) {
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = active_data,
+    column_config_reactive = column_config,  # Eksplicit kolonne konfiguration
     chart_type_reactive = reactive({
       chart_selection <- input$chart_type %||% "Seriediagram (Run Chart)"
       get_qic_chart_type(chart_selection)
