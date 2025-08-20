@@ -165,83 +165,147 @@ ui <- page_navbar(
     title = "Analyse",
     icon = icon("chart-line"),
     
-    # Layout med collapsible sidebar
+    # Layout med smal sidebar + 2-kolonne main area
     layout_sidebar(
       sidebar = sidebar(
         title = div(
-          icon("table"), 
-          " Data & Upload",
+          icon("upload"), 
+          " Upload & Metadata",
           style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
         ),
-        width = "60%",
+        width = "400px",
         position = "left",
         open = TRUE,
         collapsible = TRUE,
         
         # Upload sektion
-        fluidRow(
-          column(
-            6,
-            fileInput(
-              "data_file",
-              "Upload CSV/Excel:",
-              accept = c(".csv", ".xlsx", ".xls"),
-              placeholder = "Vælg fil..."
+        div(
+          h6("Data Upload:", style = "font-weight: 500; margin-bottom: 10px;"),
+          
+          fileInput(
+            "data_file",
+            NULL,
+            accept = c(".csv", ".xlsx", ".xls"),
+            placeholder = "Vælg fil..."
+          ),
+          
+          # Collapsible import indstillinger
+          div(
+            actionButton(
+              "toggle_import_settings",
+              "Import indstillinger",
+              icon = icon("cog"),
+              class = "btn-outline-secondary btn-sm w-100"
             )
           ),
-          column(
-            6,
-            # Collapsible import indstillinger
+          
+          # Collapsible import settings panel
+          conditionalPanel(
+            condition = "input.toggle_import_settings % 2 == 1",
             div(
+              style = "border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; background-color: #f8f9fa;",
+              
+              selectInput(
+                "separator",
+                "Separator:",
+                choices = list(
+                  "Semikolon (;)" = ";",
+                  "Komma (,)" = ",", 
+                  "Tab" = "\t"
+                ),
+                selected = ";"
+              ),
+              
+              selectInput(
+                "decimal",
+                "Decimal:",
+                choices = list(
+                  "Komma (,)" = ",",
+                  "Punktum (.)" = "."
+                ),
+                selected = ","
+              ),
+              
               actionButton(
-                "toggle_import_settings",
-                "Import indstillinger",
-                icon = icon("cog"),
-                class = "btn-outline-secondary btn-sm",
-                style = "margin-top: 25px;"
+                "reimport",
+                "Genindlæs fil",
+                icon = icon("refresh"),
+                class = "btn-outline-primary btn-sm w-100"
               )
             )
           )
         ),
         
-        # Collapsible import settings panel
-        conditionalPanel(
-          condition = "input.toggle_import_settings % 2 == 1",
+        hr(),
+        
+        # Indikator metadata
+        div(
+          h6("Indikator Information:", style = "font-weight: 500; margin-bottom: 15px;"),
+          
+          # Titel
+          textInput(
+            "indicator_title",
+            "Indikator titel:",
+            value = "",
+            placeholder = "F.eks. Infektionsrate pr. 1000 patientdage"
+          ),
+          
+          # Organisatorisk enhed
           div(
-            style = "border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; background-color: #f8f9fa;",
-            
-            fluidRow(
-              column(6,
-                     selectInput(
-                       "separator",
-                       "Separator:",
-                       choices = list(
-                         "Semikolon (;)" = ";",
-                         "Komma (,)" = ",", 
-                         "Tab" = "\t"
-                       ),
-                       selected = ";"
-                     )
-              ),
-              column(6,
-                     selectInput(
-                       "decimal",
-                       "Decimal:",
-                       choices = list(
-                         "Komma (,)" = ",",
-                         "Punktum (.)" = "."
-                       ),
-                       selected = ","
-                     )
+            style = "margin-bottom: 15px;",
+            tags$label("Organisatorisk enhed:", style = "font-weight: 500;"),
+            div(
+              style = "margin-top: 5px;",
+              radioButtons(
+                "unit_type",
+                NULL,
+                choices = list(
+                  "Vælg fra liste" = "select",
+                  "Indtast selv" = "custom"
+                ),
+                selected = "select",
+                inline = TRUE
               )
             ),
             
-            actionButton(
-              "reimport",
-              "Genindlæs fil",
-              icon = icon("refresh"),
-              class = "btn-outline-primary btn-sm"
+            # Dropdown for standard enheder
+            conditionalPanel(
+              condition = "input.unit_type == 'select'",
+              selectInput(
+                "unit_select",
+                NULL,
+                choices = list(
+                  "Vælg enhed..." = "",
+                  "Medicinsk Afdeling" = "med",
+                  "Kirurgisk Afdeling" = "kir", 
+                  "Intensiv Afdeling" = "icu",
+                  "Ambulatorie" = "amb",
+                  "Akutmodtagelse" = "akut",
+                  "Pædiatrisk Afdeling" = "paed",
+                  "Gynækologi/Obstetrik" = "gyn"
+                )
+              )
+            ),
+            
+            # Custom input
+            conditionalPanel(
+              condition = "input.unit_type == 'custom'",
+              textInput(
+                "unit_custom",
+                NULL,
+                placeholder = "Indtast enhedsnavn..."
+              )
             )
+          ),
+          
+          # Beskrivelse
+          textAreaInput(
+            "indicator_description",
+            "Indikatorbeskrivelse:",
+            value = "",
+            placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
+            height = "100px",
+            resize = "vertical"
           )
         ),
         
@@ -249,24 +313,24 @@ ui <- page_navbar(
         
         # Data status
         div(
-          id = "data_status",
           uiOutput("data_status_display")
-        ),
-        
-        # Editérbar tabel
-        div(
-          style = "margin-top: 15px;",
-          
-          # Tabel kontrols
-          fluidRow(
-            column(
-              8,
-              h6("Data tabel:", style = "margin-bottom: 10px; font-weight: 500;")
-            ),
-            column(
-              4,
+        )
+      ),
+      
+      # Main content area - 2 kolonner
+      fluidRow(
+        # VENSTRE: Data tabel (~50%)
+        column(
+          6,
+          card(
+            card_header(
               div(
-                style = "text-align: right;",
+                style = "display: flex; justify-content: space-between; align-items: center;",
+                div(
+                  icon("table"),
+                  " Data Tabel",
+                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+                ),
                 div(
                   class = "btn-group",
                   actionButton(
@@ -292,119 +356,135 @@ ui <- page_navbar(
                   )
                 )
               )
+            ),
+            card_body(
+              style = "padding: 10px;",
+              
+              # Rhandsontable
+              div(
+                style = "border: 1px solid #ddd; border-radius: 5px; background-color: white;",
+                rhandsontable::rHandsontableOutput("main_data_table", height = "500px")
+              ),
+              
+              # Tabel info
+              div(
+                style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
+                icon("info-circle"),
+                " Dobbeltklik for at redigere • Tab/Enter for næste celle • Højreklik for menu"
+              )
+            )
+          )
+        ),
+        
+        # HØJRE: Graf og indstillinger (~50%)
+        column(
+          6,
+          # Graf sektion
+          card(
+            card_header(
+              div(
+                icon("chart-line"),
+                " SPC Visualisering",
+                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+              )
+            ),
+            card_body(
+              min_height = "400px",
+              
+              # Graf output
+              conditionalPanel(
+                condition = "output.has_data == true",
+                visualizationModuleUI("visualization")
+              ),
+              
+              # Placeholder når ingen data
+              conditionalPanel(
+                condition = "output.has_data == false",
+                div(
+                  style = "text-align: center; margin-top: 80px;",
+                  icon("chart-line", style = "font-size: 3em; color: #ccc; margin-bottom: 20px;"),
+                  h5("Ingen graf endnu", style = paste("color:", HOSPITAL_COLORS$secondary)),
+                  p("Indtast data i tabellen til venstre eller upload en fil", style = "color: #666;")
+                )
+              )
             )
           ),
           
-          # Rhandsontable
-          div(
-            style = "border: 1px solid #ddd; border-radius: 5px; background-color: white;",
-            rhandsontable::rHandsontableOutput("main_data_table", height = "400px")
-          )
-        )
-      ),
-      
-      # Main content area (højre side)
-      div(
-        # Graf sektion
-        card(
-          card_header(
-            div(
-              icon("chart-line"),
-              " SPC Visualisering",
-              style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+          br(),
+          
+          # Graf indstillinger
+          conditionalPanel(
+            condition = "output.has_data == true",
+            card(
+              card_header(
+                div(
+                  icon("sliders-h"), 
+                  " Graf Indstillinger",
+                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+                )
+              ),
+              card_body(
+                selectInput(
+                  "chart_type",
+                  "Diagram type:",
+                  choices = CHART_TYPES_DA,
+                  selected = "Seriediagram (Run Chart)"
+                ),
+                
+                fluidRow(
+                  column(6,
+                         checkboxInput(
+                           "show_targets",
+                           "Vis målsætninger",
+                           value = FALSE
+                         )
+                  ),
+                  column(6,
+                         checkboxInput(
+                           "show_phases",
+                           "Vis faser",
+                           value = FALSE
+                         )
+                  )
+                )
+              )
             )
           ),
-          card_body(
-            min_height = "400px",
-            
-            # Graf output
-            conditionalPanel(
-              condition = "output.has_data == true",
-              visualizationModuleUI("visualization")
-            ),
-            
-            # Placeholder når ingen data
-            conditionalPanel(
-              condition = "output.has_data == false",
-              div(
-                style = "text-align: center; margin-top: 80px;",
-                icon("chart-line", style = "font-size: 3em; color: #ccc; margin-bottom: 20px;"),
-                h5("Ingen graf endnu", style = paste("color:", HOSPITAL_COLORS$secondary)),
-                p("Indtast data i tabellen eller upload en fil", style = "color: #666;")
-              )
-            )
-          )
-        ),
-        
-        br(),
-        
-        # Visualiserings indstillinger
-        conditionalPanel(
-          condition = "output.has_data == true",
-          card(
-            card_header(
-              div(
-                icon("sliders-h"), 
-                " Graf Indstillinger",
-                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
-              )
-            ),
-            card_body(
-              selectInput(
-                "chart_type",
-                "Diagram type:",
-                choices = CHART_TYPES_DA,
-                selected = "Seriediagram (Run Chart)"
+          
+          br(),
+          
+          # Eksport sektion
+          conditionalPanel(
+            condition = "output.plot_ready == true",
+            card(
+              card_header(
+                div(
+                  icon("download"), 
+                  " Eksport",
+                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+                )
               ),
-              
-              checkboxInput(
-                "show_targets",
-                "Vis målsætninger",
-                value = FALSE
-              ),
-              
-              checkboxInput(
-                "show_phases",
-                "Vis faser/interventioner", 
-                value = FALSE
-              )
-            )
-          )
-        ),
-        
-        br(),
-        
-        # Eksport sektion
-        conditionalPanel(
-          condition = "output.plot_ready == true",
-          card(
-            card_header(
-              div(
-                icon("download"), 
-                " Eksport",
-                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
-              )
-            ),
-            card_body(
-              downloadButton(
-                "download_png",
-                "Download PNG",
-                icon = icon("image"),
-                class = "btn-outline-primary w-100 mb-2"
-              ),
-              
-              downloadButton(
-                "download_pdf", 
-                "Download PDF Rapport",
-                icon = icon("file-pdf"),
-                class = "btn-outline-primary w-100 mb-2"
-              ),
-              
-              downloadButton(
-                "download_data",
-                "Download Data",
-                icon = icon("table"),
-                class = "btn-outline-primary w-100"
+              card_body(
+                downloadButton(
+                  "download_png",
+                  "Download PNG",
+                  icon = icon("image"),
+                  class = "btn-outline-primary w-100 mb-2"
+                ),
+                
+                downloadButton(
+                  "download_pdf", 
+                  "Download PDF Rapport",
+                  icon = icon("file-pdf"),
+                  class = "btn-outline-primary w-100 mb-2"
+                ),
+                
+                downloadButton(
+                  "download_data",
+                  "Download Data",
+                  icon = icon("table"),
+                  class = "btn-outline-primary w-100"
+                )
               )
             )
           )
@@ -791,6 +871,9 @@ ui <- page_navbar(
 )
 
 # Define server
+# Forbedret server logic til app.R
+# Erstat server function med denne kode
+
 server <- function(input, output, session) {
   
   # Reactive values for data håndtering
@@ -854,6 +937,45 @@ server <- function(input, output, session) {
           style = "font-size: 0.9rem;"
         )
       }
+    }
+  })
+  
+  # Reactive for aktuel organisatorisk enhed
+  current_unit <- reactive({
+    if (input$unit_type == "select") {
+      unit_names <- list(
+        "med" = "Medicinsk Afdeling",
+        "kir" = "Kirurgisk Afdeling", 
+        "icu" = "Intensiv Afdeling",
+        "amb" = "Ambulatorie",
+        "akut" = "Akutmodtagelse",
+        "paed" = "Pædiatrisk Afdeling",
+        "gyn" = "Gynækologi/Obstetrik"
+      )
+      selected_unit <- input$unit_select %||% ""
+      if (selected_unit != "" && selected_unit %in% names(unit_names)) {
+        return(unit_names[[selected_unit]])
+      } else {
+        return("")
+      }
+    } else {
+      return(input$unit_custom %||% "")
+    }
+  })
+  
+  # Reactive for komplet graf titel
+  chart_title <- reactive({
+    base_title <- input$indicator_title %||% "SPC Analyse"
+    unit_name <- current_unit()
+    
+    if (base_title != "" && unit_name != "") {
+      return(paste(base_title, "-", unit_name))
+    } else if (base_title != "") {
+      return(base_title)
+    } else if (unit_name != "") {
+      return(paste("SPC Analyse -", unit_name))
+    } else {
+      return("SPC Analyse")
     }
   })
   
@@ -1072,7 +1194,8 @@ server <- function(input, output, session) {
       get_qic_chart_type(chart_selection)
     }),
     show_targets_reactive = reactive(input$show_targets %||% FALSE),
-    show_phases_reactive = reactive(input$show_phases %||% FALSE)
+    show_phases_reactive = reactive(input$show_phases %||% FALSE),
+    chart_title_reactive = chart_title  # Send custom title til visualization module
   )
   
   # Plot ready check
@@ -1081,28 +1204,65 @@ server <- function(input, output, session) {
   })
   outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   
-  # Download handlers (simpel versioner)
+  # Download handlers med metadata
   output$download_png <- downloadHandler(
-    filename = function() paste0("spc_plot_", Sys.Date(), ".png"),
+    filename = function() {
+      title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title())
+      title_clean <- gsub(" ", "_", title_clean)
+      paste0(title_clean, "_", Sys.Date(), ".png")
+    },
     content = function(file) {
       if (!is.null(visualization$plot())) {
         ggsave(file, visualization$plot(), width = 12, height = 8, dpi = 300)
+        
+        # Show success message with metadata
+        showNotification(
+          paste("PNG eksporteret:", chart_title()),
+          type = "message",
+          duration = 3
+        )
       }
     }
   )
   
   output$download_pdf <- downloadHandler(
-    filename = function() paste0("spc_rapport_", Sys.Date(), ".pdf"),
+    filename = function() {
+      title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title())
+      title_clean <- gsub(" ", "_", title_clean)
+      paste0("rapport_", title_clean, "_", Sys.Date(), ".pdf")
+    },
     content = function(file) {
       showNotification("PDF rapport kommer i næste fase", type = "message")
     }
   )
   
   output$download_data <- downloadHandler(
-    filename = function() paste0("spc_data_", Sys.Date(), ".csv"),
+    filename = function() {
+      title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title())
+      title_clean <- gsub(" ", "_", title_clean)
+      paste0("data_", title_clean, "_", Sys.Date(), ".csv")
+    },
     content = function(file) {
       if (!is.null(active_data())) {
-        write.csv(active_data(), file, row.names = FALSE)
+        # Add metadata as comments in CSV
+        metadata_header <- paste0(
+          "# Indikator: ", input$indicator_title %||% "Ikke angivet", "\n",
+          "# Enhed: ", current_unit(), "\n",
+          "# Beskrivelse: ", input$indicator_description %||% "Ikke angivet", "\n",
+          "# Eksporteret: ", Sys.time(), "\n",
+          "# ---\n"
+        )
+        
+        # Write metadata + data
+        cat(metadata_header, file = file)
+        write.table(active_data(), file = file, append = TRUE, sep = ",", 
+                    row.names = FALSE, quote = TRUE)
+        
+        showNotification(
+          paste("Data eksporteret med metadata:", chart_title()),
+          type = "message",
+          duration = 3
+        )
       }
     }
   )
@@ -1116,61 +1276,6 @@ server <- function(input, output, session) {
     )
   }) %>% 
     bindEvent(session$clientData, once = TRUE)
-  
-  # Data overview outputs
-  output$data_row_count <- renderText({
-    data <- active_data()
-    if (is.null(data)) "0" else as.character(nrow(data))
-  })
-  
-  output$data_col_count <- renderText({
-    data <- active_data()
-    if (is.null(data)) "0" else as.character(ncol(data))
-  })
-  
-  output$data_quality <- renderText({
-    data <- active_data()
-    if (is.null(data)) {
-      "N/A"
-    } else {
-      missing_pct <- round(sum(is.na(data)) / (nrow(data) * ncol(data)) * 100)
-      if (missing_pct < 10) {
-        "God"
-      } else if (missing_pct < 25) {
-        "OK"
-      } else {
-        "Lav"
-      }
-    }
-  })
-  
-  # Read-only data table
-  output$readonly_data_table <- DT::renderDataTable({
-    req(active_data())
-    
-    DT::datatable(
-      active_data(),
-      options = list(
-        pageLength = 15,
-        scrollX = TRUE,
-        scrollY = "300px",
-        searching = TRUE,
-        ordering = TRUE,
-        info = TRUE,
-        dom = 'frtip',
-        columnDefs = list(
-          list(className = 'dt-center', targets = '_all')
-        )
-      ),
-      rownames = FALSE,
-      class = 'cell-border stripe hover compact'
-    )
-  })
-  
-  # Navigation to Analyse tab
-  observeEvent(input$go_to_analyse, {
-    updateNavbarPage(session, inputId = "navbar", selected = "Analyse")
-  })
 }
 
 # Run the application
