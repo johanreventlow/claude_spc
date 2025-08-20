@@ -15,11 +15,11 @@ visualizationModuleUI <- function(id) {
       id = ns("plot_container"),
       style = "position: relative;",
       
-      # Loading overlay
+      # Loading overlay - only show when we have data but plot is not ready
       conditionalPanel(
-        condition = paste0("output['", ns("plot_ready"), "'] == false"),
+        condition = paste0("output['has_data'] == true && output['", ns("plot_ready"), "'] == false"),
         div(
-          style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;",
+          style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: rgba(255,255,255,0.9); padding: 20px; border-radius: 8px;",
           div(
             class = "text-center",
             div(class = "spinner-border text-primary", role = "status"),
@@ -63,7 +63,7 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
     # Reactive values
     values <- reactiveValues(
       plot_object = NULL,
-      plot_ready = FALSE,
+      plot_ready = FALSE,  # Start with FALSE
       anhoej_results = NULL,
       plot_warnings = character(0)
     )
@@ -99,7 +99,15 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
       config <- chart_config()
       chart_type <- chart_type_reactive() %||% "run"
       
+      # Explicit dependency on title to ensure reactivity
+      title_dependency <- if (!is.null(chart_title_reactive)) {
+        chart_title_reactive()
+      } else {
+        "SPC Analyse"
+      }
+      
       cat("DEBUG: spc_plot - chart_type:", chart_type, "\n")
+      cat("DEBUG: spc_plot - title_dependency:", title_dependency, "\n")
       cat("DEBUG: spc_plot - Starting validation\n")
       
       # Reset plot status when recomputing
@@ -131,7 +139,8 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
         cat("DEBUG: spc_plot - Calling generateSPCPlot\n")
         plot <- generateSPCPlot(data, config, chart_type, 
                                 show_targets = show_targets_reactive(),
-                                show_phases = show_phases_reactive())
+                                show_phases = show_phases_reactive(),
+                                chart_title_reactive = chart_title_reactive)
         
         cat("DEBUG: spc_plot - Plot generated successfully\n")
         
@@ -589,7 +598,7 @@ validateDataForChart <- function(data, config, chart_type) {
 }
 
 # Helper function: Generate SPC plot using qicharts2
-generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show_phases = FALSE) {
+generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show_phases = FALSE, chart_title_reactive = NULL) {
   
   cat("DEBUG: generateSPCPlot called\n")
   cat("DEBUG: generateSPCPlot - chart_type:", chart_type, "\n")
@@ -604,20 +613,33 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
     stop("Y-kolonne ikke fundet i data")
   }
   
-  # Initialize title and label variables
-  title_text <- if (!is.null(chart_title_reactive) && !is.null(chart_title_reactive())) {
-    # Brug custom titel hvis tilgængelig
-    custom_title <- chart_title_reactive()
-    if (custom_title != "" && custom_title != "SPC Analyse") {
-      custom_title
+  # Initialize title and label variables - PRESERVE custom title
+  custom_title_text <- tryCatch({
+    if (!is.null(chart_title_reactive)) {
+      custom_title <- chart_title_reactive()
+      if (!is.null(custom_title) && custom_title != "" && custom_title != "SPC Analyse") {
+        custom_title
+      } else {
+        NULL  # No custom title
+      }
     } else {
-      paste("SPC Chart -", config$y_col)
+      NULL  # No custom title
     }
+  }, error = function(e) {
+    NULL  # No custom title on error
+  })
+  
+  # Start with default title, will be updated based on chart type
+  title_text <- if (!is.null(custom_title_text)) {
+    custom_title_text
   } else {
     paste("SPC Chart -", config$y_col)
   }
   ylab_text <- config$y_col
   xlab_text <- "Observation"  # Default, will be updated based on x_data type
+  
+  cat("DEBUG: generateSPCPlot - Custom title:", ifelse(is.null(custom_title_text), "NONE", custom_title_text), "\n")
+  cat("DEBUG: generateSPCPlot - Initial title_text:", title_text, "\n")
   
   # Prepare data based on chart type and data structure
   x_data <- data[[config$x_col]]
@@ -649,8 +671,10 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
       y_data <- (taeller / naevner) * 100  # Convert to percentage
       cat("DEBUG: generateSPCPlot - Run chart: calculated rate (%) sample:", paste(head(round(y_data, 2), 3), collapse = ", "), "\n")
       
-      # Update title and label
-      title_text <- paste("Run Chart - Rate af", config$y_col, "per", config$n_col, "(%)")
+      # Update title and label - PRESERVE custom title
+      if (is.null(custom_title_text)) {
+        title_text <- paste("Run Chart - Rate af", config$y_col, "per", config$n_col, "(%)")
+      }
       ylab_text <- paste("Rate (", config$y_col, "/", config$n_col, ") %")
       
     } else if (chart_type %in% c("p", "pp", "u", "up")) {
@@ -662,19 +686,29 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
       cat("DEBUG: generateSPCPlot - P/U chart: y_data sample:", paste(head(y_data, 3), collapse = ", "), "\n")
       cat("DEBUG: generateSPCPlot - P/U chart: n_data sample:", paste(head(n_data, 3), collapse = ", "), "\n")
       
-      # Update title and label
+      # Update title and label - PRESERVE custom title
+      if (is.null(custom_title_text)) {
+        if (chart_type %in% c("p", "pp")) {
+          title_text <- paste("P Chart -", config$y_col, "af", config$n_col)
+        } else {
+          title_text <- paste("U Chart -", config$y_col, "per", config$n_col)
+        }
+      }
+      
       if (chart_type %in% c("p", "pp")) {
-        title_text <- paste("P Chart -", config$y_col, "af", config$n_col)
         ylab_text <- "Proportion"
       } else {
-        title_text <- paste("U Chart -", config$y_col, "per", config$n_col)
         ylab_text <- "Rate"
       }
       
     } else {
       # For other chart types, calculate rate
       y_data <- (taeller / naevner) * 100
-      title_text <- paste(chart_type, "Chart - Rate af", config$y_col, "per", config$n_col, "(%)")
+      
+      # Update title - PRESERVE custom title
+      if (is.null(custom_title_text)) {
+        title_text <- paste(chart_type, "Chart - Rate af", config$y_col, "per", config$n_col, "(%)")
+      }
       ylab_text <- paste("Rate (", config$y_col, "/", config$n_col, ") %")
     }
     
@@ -683,8 +717,10 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
     y_data <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data_raw))))
     cat("DEBUG: generateSPCPlot - Standard chart: y_data after conversion sample:", paste(head(y_data, 3), collapse = ", "), "\n")
     
-    # Standard labels
-    title_text <- paste("SPC Chart -", config$y_col)
+    # Standard labels - PRESERVE custom title
+    if (is.null(custom_title_text)) {
+      title_text <- paste("SPC Chart -", config$y_col)
+    }
     ylab_text <- config$y_col
   }
   
@@ -771,6 +807,7 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
   }
   
   cat("DEBUG: generateSPCPlot - calling qicharts2::qic\n")
+  cat("DEBUG: generateSPCPlot - Final title being used:", title_text, "\n")
   cat("DEBUG: generateSPCPlot - qic_args:", paste(names(qic_args), collapse = ", "), "\n")
   cat("DEBUG: generateSPCPlot - x length:", length(qic_args$x), "y length:", length(qic_args$y), "\n")
   cat("DEBUG: generateSPCPlot - x class:", class(qic_args$x), "\n")
