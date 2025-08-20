@@ -165,26 +165,187 @@ ui <- page_navbar(
     title = "Analyse",
     icon = icon("chart-line"),
     
+    # Layout med collapsible sidebar
     layout_sidebar(
       sidebar = sidebar(
         title = div(
-          icon("sliders-h"), 
-          " Kontrolpanel",
+          icon("table"), 
+          " Data & Upload",
           style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
         ),
-        width = 320,
+        width = "60%",
+        position = "left",
+        open = TRUE,
+        collapsible = TRUE,
         
-        # DATA MODULE
-        dataModuleUI("data_upload"),
+        # Upload sektion
+        fluidRow(
+          column(
+            6,
+            fileInput(
+              "data_file",
+              "Upload CSV/Excel:",
+              accept = c(".csv", ".xlsx", ".xls"),
+              placeholder = "Vælg fil..."
+            )
+          ),
+          column(
+            6,
+            # Collapsible import indstillinger
+            div(
+              actionButton(
+                "toggle_import_settings",
+                "Import indstillinger",
+                icon = icon("cog"),
+                class = "btn-outline-secondary btn-sm",
+                style = "margin-top: 25px;"
+              )
+            )
+          )
+        ),
         
-        # VISUALISERING SEKTION  
+        # Collapsible import settings panel
+        conditionalPanel(
+          condition = "input.toggle_import_settings % 2 == 1",
+          div(
+            style = "border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; background-color: #f8f9fa;",
+            
+            fluidRow(
+              column(6,
+                     selectInput(
+                       "separator",
+                       "Separator:",
+                       choices = list(
+                         "Semikolon (;)" = ";",
+                         "Komma (,)" = ",", 
+                         "Tab" = "\t"
+                       ),
+                       selected = ";"
+                     )
+              ),
+              column(6,
+                     selectInput(
+                       "decimal",
+                       "Decimal:",
+                       choices = list(
+                         "Komma (,)" = ",",
+                         "Punktum (.)" = "."
+                       ),
+                       selected = ","
+                     )
+              )
+            ),
+            
+            actionButton(
+              "reimport",
+              "Genindlæs fil",
+              icon = icon("refresh"),
+              class = "btn-outline-primary btn-sm"
+            )
+          )
+        ),
+        
+        hr(),
+        
+        # Data status
+        div(
+          id = "data_status",
+          uiOutput("data_status_display")
+        ),
+        
+        # Editérbar tabel
+        div(
+          style = "margin-top: 15px;",
+          
+          # Tabel kontrols
+          fluidRow(
+            column(
+              8,
+              h6("Data tabel:", style = "margin-bottom: 10px; font-weight: 500;")
+            ),
+            column(
+              4,
+              div(
+                style = "text-align: right;",
+                div(
+                  class = "btn-group",
+                  actionButton(
+                    "add_column",
+                    label = NULL,
+                    icon = icon("plus"),
+                    title = "Tilføj kolonne",
+                    class = "btn-outline-primary btn-sm"
+                  ),
+                  actionButton(
+                    "add_row",
+                    label = NULL,
+                    icon = icon("plus-square"),
+                    title = "Tilføj række",
+                    class = "btn-outline-primary btn-sm"
+                  ),
+                  actionButton(
+                    "reset_table",
+                    label = NULL,
+                    icon = icon("refresh"),
+                    title = "Reset tabel", 
+                    class = "btn-outline-warning btn-sm"
+                  )
+                )
+              )
+            )
+          ),
+          
+          # Rhandsontable
+          div(
+            style = "border: 1px solid #ddd; border-radius: 5px; background-color: white;",
+            rhandsontable::rHandsontableOutput("main_data_table", height = "400px")
+          )
+        )
+      ),
+      
+      # Main content area (højre side)
+      div(
+        # Graf sektion
+        card(
+          card_header(
+            div(
+              icon("chart-line"),
+              " SPC Visualisering",
+              style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+            )
+          ),
+          card_body(
+            min_height = "400px",
+            
+            # Graf output
+            conditionalPanel(
+              condition = "output.has_data == true",
+              visualizationModuleUI("visualization")
+            ),
+            
+            # Placeholder når ingen data
+            conditionalPanel(
+              condition = "output.has_data == false",
+              div(
+                style = "text-align: center; margin-top: 80px;",
+                icon("chart-line", style = "font-size: 3em; color: #ccc; margin-bottom: 20px;"),
+                h5("Ingen graf endnu", style = paste("color:", HOSPITAL_COLORS$secondary)),
+                p("Indtast data i tabellen eller upload en fil", style = "color: #666;")
+              )
+            )
+          )
+        ),
+        
+        br(),
+        
+        # Visualiserings indstillinger
         conditionalPanel(
           condition = "output.has_data == true",
           card(
             card_header(
               div(
-                icon("chart-bar"), 
-                " Visualisering",
+                icon("sliders-h"), 
+                " Graf Indstillinger",
                 style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
               )
             ),
@@ -203,24 +364,17 @@ ui <- page_navbar(
               ),
               
               checkboxInput(
-                "show_phases", 
-                "Vis faser/interventioner",
+                "show_phases",
+                "Vis faser/interventioner", 
                 value = FALSE
-              ),
-              
-              hr(),
-              
-              h6("Avancerede indstillinger:", style = "font-weight: 500; font-size: 0.9rem;"),
-              div(
-                style = "font-size: 0.85rem; color: #666;",
-                icon("info-circle"),
-                " Grafen opdateres automatisk når indstillinger ændres"
               )
             )
           )
         ),
         
-        # EKSPORT SEKTION
+        br(),
+        
+        # Eksport sektion
         conditionalPanel(
           condition = "output.plot_ready == true",
           card(
@@ -232,12 +386,6 @@ ui <- page_navbar(
               )
             ),
             card_body(
-              div(
-                span(class = "status-indicator status-ready"),
-                "Graf klar til eksport",
-                style = "font-size: 0.9rem; color: #666; margin-bottom: 15px;"
-              ),
-              
               downloadButton(
                 "download_png",
                 "Download PNG",
@@ -246,8 +394,8 @@ ui <- page_navbar(
               ),
               
               downloadButton(
-                "download_pdf",
-                "Download PDF Rapport", 
+                "download_pdf", 
+                "Download PDF Rapport",
                 icon = icon("file-pdf"),
                 class = "btn-outline-primary w-100 mb-2"
               ),
@@ -260,120 +408,6 @@ ui <- page_navbar(
               )
             )
           )
-        ),
-        
-        # EXPORT PLACEHOLDER når ingen graf
-        conditionalPanel(
-          condition = "output.plot_ready == false",
-          card(
-            card_header(
-              div(
-                icon("download"), 
-                " Eksport",
-                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
-              )
-            ),
-            card_body(
-              div(
-                span(class = "status-indicator status-warning"),
-                "Venter på graf...",
-                style = "font-size: 0.9rem; color: #666; margin-bottom: 15px;"
-              ),
-              
-              div(
-                style = "opacity: 0.5;",
-                div("Download PNG", class = "btn btn-outline-secondary w-100 mb-2", style = "pointer-events: none;"),
-                div("Download PDF Rapport", class = "btn btn-outline-secondary w-100 mb-2", style = "pointer-events: none;"),
-                div("Download Data", class = "btn btn-outline-secondary w-100", style = "pointer-events: none;")
-              )
-            )
-          )
-        )
-      ),
-      
-      # Main content
-      card(
-        full_screen = TRUE,
-        card_header(
-          div(
-            style = "display: flex; justify-content: space-between; align-items: center;",
-            div(
-              icon("chart-line"),
-              " SPC Visualisering",
-              style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-            ),
-            div(
-              # Dynamic status based on data and plot readiness
-              conditionalPanel(
-                condition = "output.plot_ready == true",
-                span(class = "status-indicator status-ready"),
-                "Graf klar",
-                style = "font-size: 0.9rem;"
-              ),
-              conditionalPanel(
-                condition = "output.has_data == true && output.plot_ready == false",
-                span(class = "status-indicator status-processing"),
-                "Genererer graf...",
-                style = "font-size: 0.9rem;"
-              ),
-              conditionalPanel(
-                condition = "output.has_data == false",
-                span(class = "status-indicator status-warning"),
-                "Venter på data",
-                style = "font-size: 0.9rem;"
-              )
-            )
-          )
-        ),
-        card_body(
-          min_height = "500px",
-          
-          # Conditional content: show visualization when data is available
-          conditionalPanel(
-            condition = "output.has_data == true",
-            visualizationModuleUI("visualization")
-          ),
-          
-          # Placeholder when no data
-          conditionalPanel(
-            condition = "output.has_data == false",
-            div(
-              id = "plot_container",
-              style = "text-align: center; margin-top: 80px;",
-              
-              img(
-                src = basename(HOSPITAL_LOGO_PATH), 
-                height = "80px", 
-                style = "opacity: 0.2; margin-bottom: 30px;",
-                onerror = "this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjhGOUZBIiBzdHJva2U9IiNEQ0REREYiIHN0cm9rZS13aWR0aD0iMiIvPgo8dGV4dCB4PSI0MCIgeT0iNDUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TE9HTzwvdGV4dD4KPHN2Zz4K'; this.style.opacity='0.1';"
-              ),
-              
-              h3(
-                "SPC Analyse Dashboard", 
-                style = paste("color:", HOSPITAL_COLORS$primary, "; margin-bottom: 20px;")
-              ),
-              
-              p(
-                "Upload data i sidepanelet for at begynde analysen",
-                style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 1.1rem;")
-              ),
-              
-              br(),
-              
-              div(
-                style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;"),
-                h5("SPC funktioner:", style = paste("color:", HOSPITAL_COLORS$primary)),
-                tags$ul(
-                  style = "text-align: left; color: #666;",
-                  tags$li("✅ Automatisk seriediagram generering"),
-                  tags$li("✅ Anhøj-regler for signaldetektion"), 
-                  tags$li("✅ Interaktive kontrolkort"),
-                  tags$li("✅ Real-time dataredigering"),
-                  tags$li("⚙️ Professionel rapport-eksport")
-                )
-              )
-            )
-          )
         )
       )
     )
@@ -382,17 +416,7 @@ ui <- page_navbar(
   # -------------------------------------------------------------------------
   # TAB 2: DATA REDIGERING
   # -------------------------------------------------------------------------
-  nav_panel(
-    title = "Data",
-    icon = icon("table"),
-    
-    div(
-      style = "padding: 20px;",
-      
-      # Editable table interface
-      editableTableUI("editable_data")
-    )
-  ),
+  
   
   # -------------------------------------------------------------------------
   # TAB 3: DIAGNOSTIK
@@ -769,51 +793,275 @@ ui <- page_navbar(
 # Define server
 server <- function(input, output, session) {
   
-  # Initialize data module
-  data_module <- dataModuleServer("data_upload")
+  # Reactive values for data håndtering
+  values <- reactiveValues(
+    current_data = NULL,
+    original_data = NULL,
+    file_uploaded = FALSE
+  )
   
-  # Initialize editable table module with debug
-  edited_data <- editableTableServer("editable_data", reactive({
-    cat("DEBUG: edited_data input reactive called\n")
-    original_data <- data_module$data()
-    if (!is.null(original_data)) {
-      cat("DEBUG: edited_data - passing data with", nrow(original_data), "rows\n")
-    } else {
-      cat("DEBUG: edited_data - passing NULL data\n")
-    }
-    return(original_data)
-  }))
+  # Initialize tom tabel med standard kolonner
+  initialize_empty_table <- function() {
+    data.frame(
+      Dato = as.Date(character(0)),
+      Taeller = numeric(0),
+      Naevner = numeric(0),
+      stringsAsFactors = FALSE
+    )
+  }
   
-  # Use edited data if available, otherwise use original data
-  active_data <- reactive({
-    # Debug output
-    has_original <- !is.null(data_module$data())
-    has_edited <- !is.null(edited_data())
-    
-    cat("DEBUG: active_data() called\n")
-    cat("DEBUG: has_original:", has_original, "\n")
-    cat("DEBUG: has_edited:", has_edited, "\n")
-    
-    # Prioritize original data first, then edited if available
-    if (has_original) {
-      original_data <- data_module$data()
-      if (!is.null(original_data) && nrow(original_data) > 0) {
-        cat("DEBUG: Using original data with", nrow(original_data), "rows\n")
-        return(original_data)
-      }
+  # Start med tom tabel
+  observe({
+    if (is.null(values$current_data)) {
+      # Lav en tabel med 5 tomme rækker så brugeren kan se strukturen
+      empty_data <- data.frame(
+        Dato = rep(as.Date(NA), 5),
+        Taeller = rep(NA_real_, 5), 
+        Naevner = rep(NA_real_, 5),
+        stringsAsFactors = FALSE
+      )
+      values$current_data <- empty_data
     }
-    
-    if (has_edited) {
-      edited <- edited_data()
-      if (!is.null(edited) && nrow(edited) > 0) {
-        cat("DEBUG: Using edited data with", nrow(edited), "rows\n")
-        return(edited)
-      }
-    }
-    
-    cat("DEBUG: No valid data available\n")
-    return(NULL)
   })
+  
+  # Data status display
+  output$data_status_display <- renderUI({
+    if (is.null(values$current_data)) {
+      div(
+        span(class = "status-indicator status-warning"),
+        "Ingen data",
+        style = "font-size: 0.9rem;"
+      )
+    } else if (values$file_uploaded) {
+      data_rows <- sum(!is.na(values$current_data[[1]]))  # Count non-NA rows
+      div(
+        span(class = "status-indicator status-ready"),
+        paste("Fil uploadet -", data_rows, "datapunkter"),
+        style = "font-size: 0.9rem;"
+      )
+    } else {
+      data_rows <- sum(!is.na(values$current_data[[1]]))
+      if (data_rows > 0) {
+        div(
+          span(class = "status-indicator status-processing"),
+          paste("Manuel indtastning -", data_rows, "datapunkter"),
+          style = "font-size: 0.9rem;"
+        )
+      } else {
+        div(
+          span(class = "status-indicator status-warning"),
+          "Tom tabel - indtast data eller upload fil",
+          style = "font-size: 0.9rem;"
+        )
+      }
+    }
+  })
+  
+  # File upload handler
+  observeEvent(input$data_file, {
+    req(input$data_file)
+    
+    file_path <- input$data_file$datapath
+    file_ext <- tools::file_ext(input$data_file$name)
+    
+    tryCatch({
+      if (file_ext %in% c("xlsx", "xls")) {
+        # Excel fil
+        data <- readxl::read_excel(file_path, col_names = TRUE)
+      } else {
+        # CSV fil med danske indstillinger
+        data <- readr::read_csv2(
+          file_path,
+          locale = readr::locale(
+            decimal_mark = input$decimal %||% ",",
+            grouping_mark = ".",
+            encoding = "ISO-8859-1"
+          ),
+          show_col_types = FALSE
+        )
+      }
+      
+      # Konverter til data.frame og gem
+      values$current_data <- as.data.frame(data)
+      values$original_data <- as.data.frame(data)
+      values$file_uploaded <- TRUE
+      
+      showNotification(
+        paste("Fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
+        type = "message",
+        duration = 3
+      )
+      
+    }, error = function(e) {
+      showNotification(
+        paste("Fejl ved upload:", e$message),
+        type = "error",
+        duration = 5
+      )
+    })
+  })
+  
+  # Re-import med nye indstillinger
+  observeEvent(input$reimport, {
+    req(input$data_file, values$original_data)
+    
+    file_path <- input$data_file$datapath
+    
+    tryCatch({
+      data <- readr::read_delim(
+        file_path,
+        delim = input$separator,
+        locale = readr::locale(
+          decimal_mark = input$decimal,
+          encoding = "ISO-8859-1"
+        ),
+        show_col_types = FALSE
+      )
+      
+      values$current_data <- as.data.frame(data)
+      values$original_data <- as.data.frame(data)
+      
+      showNotification("Fil genindlæst med nye indstillinger", type = "message")
+      
+    }, error = function(e) {
+      showNotification(paste("Fejl ved genindlæsning:", e$message), type = "error")
+    })
+  })
+  
+  # Hovedtabel rendering
+  output$main_data_table <- rhandsontable::renderRHandsontable({
+    req(values$current_data)
+    
+    data <- values$current_data
+    
+    hot <- rhandsontable::rhandsontable(
+      data,
+      height = 400,
+      stretchH = "all",
+      contextMenu = TRUE,
+      manualColumnResize = TRUE,
+      fillHandle = list(direction = "vertical", autoInsertRow = FALSE)
+    ) %>%
+      rhandsontable::hot_context_menu(
+        allowRowEdit = TRUE,
+        allowColEdit = TRUE
+      ) %>%
+      rhandsontable::hot_table(
+        highlightCol = TRUE,
+        highlightRow = TRUE
+      )
+    
+    # Kolonne-specifik formatting
+    for (i in 1:ncol(data)) {
+      col_name <- names(data)[i]
+      
+      if (grepl("dato|date", col_name, ignore.case = TRUE)) {
+        hot <- hot %>%
+          rhandsontable::hot_col(col = i, type = "date", dateFormat = "DD-MM-YYYY")
+      } else if (is.numeric(data[[i]])) {
+        hot <- hot %>%
+          rhandsontable::hot_col(col = i, type = "numeric", format = "0,0.00")
+      } else {
+        hot <- hot %>%
+          rhandsontable::hot_col(col = i, type = "text")
+      }
+    }
+    
+    return(hot)
+  })
+  
+  # Håndter tabel ændringer
+  observeEvent(input$main_data_table, {
+    req(input$main_data_table)
+    values$current_data <- rhandsontable::hot_to_r(input$main_data_table)
+  })
+  
+  # Tilføj kolonne
+  observeEvent(input$add_column, {
+    req(values$current_data)
+    
+    # Spørg brugeren om kolonnenavn
+    showModal(modalDialog(
+      title = "Tilføj ny kolonne",
+      textInput("new_col_name", "Kolonnenavn:", value = "Ny_kolonne"),
+      selectInput("new_col_type", "Type:", 
+                  choices = list("Numerisk" = "numeric", "Tekst" = "text", "Dato" = "date")),
+      footer = tagList(
+        modalButton("Annuller"),
+        actionButton("confirm_add_col", "Tilføj", class = "btn-primary")
+      )
+    ))
+  })
+  
+  observeEvent(input$confirm_add_col, {
+    req(input$new_col_name, values$current_data)
+    
+    new_col_name <- input$new_col_name
+    new_col_type <- input$new_col_type
+    
+    # Tilføj ny kolonne
+    if (new_col_type == "numeric") {
+      values$current_data[[new_col_name]] <- rep(NA_real_, nrow(values$current_data))
+    } else if (new_col_type == "date") {
+      values$current_data[[new_col_name]] <- rep(as.Date(NA), nrow(values$current_data))
+    } else {
+      values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
+    }
+    
+    removeModal()
+    showNotification(paste("Kolonne", new_col_name, "tilføjet"), type = "message")
+  })
+  
+  # Tilføj række
+  observeEvent(input$add_row, {
+    req(values$current_data)
+    
+    # Tilføj tom række
+    new_row <- values$current_data[1, ]
+    new_row[1, ] <- NA
+    
+    values$current_data <- rbind(values$current_data, new_row)
+    
+    showNotification("Ny række tilføjet", type = "message")
+  })
+  
+  # Reset tabel
+  observeEvent(input$reset_table, {
+    if (values$file_uploaded && !is.null(values$original_data)) {
+      values$current_data <- values$original_data
+      showNotification("Tabel nulstillet til uploaded data", type = "message")
+    } else {
+      values$current_data <- data.frame(
+        Dato = rep(as.Date(NA), 5),
+        Taeller = rep(NA_real_, 5),
+        Naevner = rep(NA_real_, 5),
+        stringsAsFactors = FALSE
+      )
+      values$file_uploaded <- FALSE
+      showNotification("Tabel nulstillet til tom tabel", type = "message")
+    }
+  })
+  
+  # Data for visualization modul
+  active_data <- reactive({
+    req(values$current_data)
+    
+    # Filtrer rækker hvor mindst én kolonne har data
+    data <- values$current_data
+    non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
+    
+    if (any(non_empty_rows)) {
+      return(data[non_empty_rows, ])
+    } else {
+      return(NULL)
+    }
+  })
+  
+  # Has data check
+  output$has_data <- reactive({
+    !is.null(active_data()) && nrow(active_data()) > 0
+  })
+  outputOptions(output, "has_data", suspendWhenHidden = FALSE)
   
   # Initialize visualization module
   visualization <- visualizationModuleServer(
@@ -821,119 +1069,24 @@ server <- function(input, output, session) {
     data_reactive = active_data,
     chart_type_reactive = reactive({
       chart_selection <- input$chart_type %||% "Seriediagram (Run Chart)"
-      qic_chart_type <- get_qic_chart_type(chart_selection)
-      cat("DEBUG: chart_type_reactive triggered - selection:", chart_selection, "-> qic:", qic_chart_type, "\n")
-      return(qic_chart_type)
+      get_qic_chart_type(chart_selection)
     }),
-    show_targets_reactive = reactive(input$show_targets),
-    show_phases_reactive = reactive(input$show_phases)
+    show_targets_reactive = reactive(input$show_targets %||% FALSE),
+    show_phases_reactive = reactive(input$show_phases %||% FALSE)
   )
   
-  # Has data check for conditional panels
-  output$has_data <- reactive({
-    !is.null(active_data())
-  })
-  outputOptions(output, "has_data", suspendWhenHidden = FALSE)
-  
-  # Plot ready check for conditional panels
+  # Plot ready check
   output$plot_ready <- reactive({
     !is.null(visualization$plot_ready()) && visualization$plot_ready()
   })
   outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   
-  # Reaktiv status tracking
-  status <- reactiveValues(
-    data_uploaded = FALSE,
-    plot_ready = FALSE,
-    export_ready = FALSE
-  )
-  
-  # Observe data upload success
-  observe({
-    if(!is.null(data_module$upload_success()) && data_module$upload_success()) {
-      status$data_uploaded <- TRUE
-      showNotification(
-        div(
-          icon("check-circle"),
-          strong("Data uploadet succesfuldt!"),
-          br(),
-          "Gå til Data-fanen for at redigere tabellen direkte."
-        ),
-        type = "message",
-        duration = 8
-      )
-    }
-  })
-  
-  # Monitor chart type changes explicitly
-  observe({
-    cat("DEBUG: app.R - Chart type input changed to:", input$chart_type, "\n")
-    # Force UI update notification
-    if (!is.null(input$chart_type) && !is.null(active_data())) {
-      showNotification(
-        paste("Skifter til", input$chart_type, "- genererer ny graf..."),
-        type = "message",
-        duration = 2
-      )
-    }
-  })
-  
-  # Monitor plot readiness
-  observe({
-    if(!is.null(visualization$plot_ready()) && visualization$plot_ready()) {
-      status$plot_ready <- TRUE
-      status$export_ready <- TRUE
-      showNotification(
-        div(
-          icon("chart-line"),
-          strong("SPC graf genereret!"),
-          br(),
-          "Graf er klar til eksport og videre analyse."
-        ),
-        type = "message",
-        duration = 5
-      )
-    }
-  })
-  
-  # Monitor edited data changes
-  observe({
-    if(!is.null(edited_data()) && status$data_uploaded) {
-      # Data has been edited - plot will regenerate automatically
-      showNotification(
-        "Data modificeret - graf opdateres automatisk",
-        type = "message",
-        duration = 3
-      )
-    }
-  })
-  
-  # Welcome message kun én gang ved app start
-  observe({
-    showNotification(
-      div(
-        icon("check-circle"),
-        paste("Velkommen til", HOSPITAL_NAME, "SPC Analyse App!"),
-        br(),
-        strong("Nyt: "), "Fuld SPC graf-generering med Anhøj-regler!"
-      ),
-      type = "message",
-      duration = 10,
-      closeButton = TRUE
-    )
-  }) %>% 
-    bindEvent(session$clientData, once = TRUE)
-  
-  # Download handlers
+  # Download handlers (simpel versioner)
   output$download_png <- downloadHandler(
     filename = function() paste0("spc_plot_", Sys.Date(), ".png"),
     content = function(file) {
-      if(!is.null(visualization$plot()) && status$plot_ready) {
-        ggsave(file, visualization$plot(), 
-               width = 12, height = 8, dpi = 300, units = "in")
-        showNotification("PNG eksporteret succesfuldt", type = "message", duration = 3)
-      } else {
-        showNotification("Ingen graf tilgængelig til eksport", type = "warning")
+      if (!is.null(visualization$plot())) {
+        ggsave(file, visualization$plot(), width = 12, height = 8, dpi = 300)
       }
     }
   )
@@ -941,23 +1094,83 @@ server <- function(input, output, session) {
   output$download_pdf <- downloadHandler(
     filename = function() paste0("spc_rapport_", Sys.Date(), ".pdf"),
     content = function(file) {
-      showNotification("PDF rapport kommer i Phase 4", type = "warning")
+      showNotification("PDF rapport kommer i næste fase", type = "message")
     }
   )
   
   output$download_data <- downloadHandler(
     filename = function() paste0("spc_data_", Sys.Date(), ".csv"),
     content = function(file) {
-      data_to_export <- active_data()
-      
-      if(!is.null(data_to_export)) {
-        write.csv(data_to_export, file, row.names = FALSE)
-        showNotification("Data eksporteret med alle redigeringer", type = "message", duration = 3)
-      } else {
-        showNotification("Ingen data at eksportere", type = "warning")
+      if (!is.null(active_data())) {
+        write.csv(active_data(), file, row.names = FALSE)
       }
     }
   )
+  
+  # Velkommen besked
+  observe({
+    showNotification(
+      paste("Velkommen til", HOSPITAL_NAME, "SPC App! Indtast data i tabellen eller upload en fil."),
+      type = "message",
+      duration = 5
+    )
+  }) %>% 
+    bindEvent(session$clientData, once = TRUE)
+  
+  # Data overview outputs
+  output$data_row_count <- renderText({
+    data <- active_data()
+    if (is.null(data)) "0" else as.character(nrow(data))
+  })
+  
+  output$data_col_count <- renderText({
+    data <- active_data()
+    if (is.null(data)) "0" else as.character(ncol(data))
+  })
+  
+  output$data_quality <- renderText({
+    data <- active_data()
+    if (is.null(data)) {
+      "N/A"
+    } else {
+      missing_pct <- round(sum(is.na(data)) / (nrow(data) * ncol(data)) * 100)
+      if (missing_pct < 10) {
+        "God"
+      } else if (missing_pct < 25) {
+        "OK"
+      } else {
+        "Lav"
+      }
+    }
+  })
+  
+  # Read-only data table
+  output$readonly_data_table <- DT::renderDataTable({
+    req(active_data())
+    
+    DT::datatable(
+      active_data(),
+      options = list(
+        pageLength = 15,
+        scrollX = TRUE,
+        scrollY = "300px",
+        searching = TRUE,
+        ordering = TRUE,
+        info = TRUE,
+        dom = 'frtip',
+        columnDefs = list(
+          list(className = 'dt-center', targets = '_all')
+        )
+      ),
+      rownames = FALSE,
+      class = 'cell-border stripe hover compact'
+    )
+  })
+  
+  # Navigation to Analyse tab
+  observeEvent(input$go_to_analyse, {
+    updateNavbarPage(session, inputId = "navbar", selected = "Analyse")
+  })
 }
 
 # Run the application
