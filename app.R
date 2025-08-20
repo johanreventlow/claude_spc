@@ -1194,8 +1194,8 @@ server <- function(input, output, session) {
       get_qic_chart_type(chart_selection)
     }),
     show_targets_reactive = reactive(input$show_targets %||% FALSE),
-    show_phases_reactive = reactive(input$show_phases %||% FALSE),
-    chart_title_reactive = chart_title  # Send custom title til visualization module
+    show_phases_reactive = reactive(input$show_phases %||% FALSE)
+    # chart_title_reactive = chart_title  # Fjernet indtil videre
   )
   
   # Plot ready check

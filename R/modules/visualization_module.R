@@ -56,6 +56,7 @@ visualizationModuleUI <- function(id) {
 
 # Visualization Module Server
 visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, show_targets_reactive, show_phases_reactive, chart_title_reactive = NULL) {
+  
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
