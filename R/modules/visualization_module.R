@@ -72,10 +72,13 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
     chart_config <- reactive({
       req(data_reactive())
       
+      # Explicit dependencies to ensure reactivity
+      chart_type <- chart_type_reactive() %||% "run"  # Force dependency
+      
       cat("DEBUG: chart_config() triggered\n")
+      cat("DEBUG: chart_config() - Working with chart_type:", chart_type, "\n")
       
       data <- data_reactive()
-      chart_type <- chart_type_reactive() %||% "run"
       
       cat("DEBUG: chart_config - data rows:", nrow(data), "cols:", ncol(data), "\n")
       cat("DEBUG: chart_config - chart_type:", chart_type, "\n")
@@ -93,11 +96,14 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
     spc_plot <- reactive({
       req(data_reactive(), chart_config())
       
+      # Explicit dependencies to ensure reactivity
+      chart_type <- chart_type_reactive() %||% "run"  # Force dependency
+      
       cat("DEBUG: spc_plot() triggered by reactive dependencies\n")
+      cat("DEBUG: spc_plot() - Working with chart_type:", chart_type, "\n")
       
       data <- data_reactive()
       config <- chart_config()
-      chart_type <- chart_type_reactive() %||% "run"
       
       # Explicit dependency on title to ensure reactivity
       title_dependency <- if (!is.null(chart_title_reactive)) {
@@ -228,17 +234,13 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
       
     }, height = 500, width = 800, res = 96)
     
-    # Explicit observer for chart type changes
+    # Explicit observer for chart type changes - REMOVED to fix reactivity
+    # The spc_plot() reactive should automatically respond to chart_type_reactive changes
+    
+    # Debug observer for chart type changes (non-interfering)
     observe({
       chart_type <- chart_type_reactive()
-      cat("DEBUG: Chart type observer triggered - new type:", chart_type, "\n")
-      
-      # Force invalidation of plot when chart type changes
-      if (!is.null(data_reactive())) {
-        cat("DEBUG: Chart type changed - invalidating plot\n")
-        values$plot_ready <- FALSE
-        # The spc_plot reactive will automatically re-run due to chart_type_reactive dependency
-      }
+      cat("DEBUG: Chart type changed to:", chart_type, "\n")
     })
     
     # Plot ready status for conditional panels
@@ -856,8 +858,9 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
   })
   
   tryCatch({
+    cat("DEBUG: generateSPCPlot - Calling qic() with explicit parameters for chart type:", chart_type, "\n")
+    
     if (chart_type == "run") {
-      cat("DEBUG: generateSPCPlot - Calling qic() with explicit run chart parameters\n")
       plot <- qicharts2::qic(
         x = qic_args$x,
         y = qic_args$y,
@@ -866,45 +869,72 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
         ylab = qic_args$ylab,
         xlab = qic_args$xlab
       )
-    } else {
-      cat("DEBUG: generateSPCPlot - Calling qic() with do.call for chart type:", chart_type, "\n")
-      plot <- do.call(qicharts2::qic, qic_args)
       
-      # For P charts, qicharts2 sometimes returns a different object structure
-      if (chart_type %in% c("p", "pp") && !inherits(plot, "ggplot")) {
-        cat("DEBUG: generateSPCPlot - P-chart plot needs conversion\n")
-        
-        # Try alternative qic call for P-charts
-        tryCatch({
-          plot <- qicharts2::qic(
-            x = qic_args$x,
-            y = qic_args$y,
-            n = qic_args$n,
-            chart = chart_type,
-            title = qic_args$title,
-            ylab = qic_args$ylab,
-            xlab = qic_args$xlab
-          )
-          cat("DEBUG: generateSPCPlot - Alternative P-chart call successful\n")
-        }, error = function(e3) {
-          cat("DEBUG: generateSPCPlot - Alternative P-chart call failed:", e3$message, "\n")
-        })
-      }
+    } else if (chart_type %in% c("p", "pp", "u", "up")) {
+      # P/U charts need denominator
+      plot <- qicharts2::qic(
+        x = qic_args$x,
+        y = qic_args$y,
+        n = qic_args$n,
+        chart = chart_type,
+        title = qic_args$title,
+        ylab = qic_args$ylab,
+        xlab = qic_args$xlab
+      )
+      
+    } else if (chart_type %in% c("i", "mr", "c", "g")) {
+      # I, MR, C, G charts - standard parameters
+      plot <- qicharts2::qic(
+        x = qic_args$x,
+        y = qic_args$y,
+        chart = chart_type,
+        title = qic_args$title,
+        ylab = qic_args$ylab,
+        xlab = qic_args$xlab
+      )
+      
+    } else {
+      # Fallback for any other chart types
+      cat("DEBUG: generateSPCPlot - Using fallback do.call for chart type:", chart_type, "\n")
+      plot <- do.call(qicharts2::qic, qic_args)
     }
+    
+    cat("DEBUG: generateSPCPlot -", chart_type, "chart call successful\n")
   }, error = function(e) {
     cat("DEBUG: generateSPCPlot - qic() failed with error:", e$message, "\n")
     
     # Try with numeric x instead of dates (common qicharts2 issue)
     cat("DEBUG: generateSPCPlot - Trying with numeric x instead of dates\n")
     tryCatch({
-      plot <- qicharts2::qic(
-        x = 1:length(qic_args$y),  # Force sequential numbers
-        y = qic_args$y,
-        chart = "run",
-        title = qic_args$title,
-        ylab = qic_args$ylab,
-        xlab = "Observation"
-      )
+      if (chart_type %in% c("p", "pp", "u", "up")) {
+        plot <- qicharts2::qic(
+          x = 1:length(qic_args$y),  # Force sequential numbers
+          y = qic_args$y,
+          n = qic_args$n,
+          chart = chart_type,
+          title = qic_args$title,
+          ylab = qic_args$ylab,
+          xlab = "Observation"
+        )
+      } else if (chart_type %in% c("i", "mr", "c", "g")) {
+        plot <- qicharts2::qic(
+          x = 1:length(qic_args$y),  # Force sequential numbers
+          y = qic_args$y,
+          chart = chart_type,
+          title = qic_args$title,
+          ylab = qic_args$ylab,
+          xlab = "Observation"
+        )
+      } else {
+        plot <- qicharts2::qic(
+          x = 1:length(qic_args$y),  # Force sequential numbers
+          y = qic_args$y,
+          chart = "run",
+          title = qic_args$title,
+          ylab = qic_args$ylab,
+          xlab = "Observation"
+        )
+      }
     }, error = function(e2) {
       cat("DEBUG: generateSPCPlot - Even numeric x failed:", e2$message, "\n")
       
@@ -928,6 +958,97 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
         ggplot2::theme_minimal()
     })
   })
+  
+  # Validate that we have a proper ggplot object
+  if (!inherits(plot, "ggplot")) {
+    cat("DEBUG: generateSPCPlot - WARNING: Plot is not ggplot, type is:", class(plot), "\n")
+    
+    # Try to convert or create fallback
+    tryCatch({
+      # Sometimes qicharts2 returns a function that needs to be called
+      if (is.function(plot)) {
+        cat("DEBUG: generateSPCPlot - Plot is function, attempting to call\n")
+        plot <- plot()
+      }
+      
+      # Check again
+      if (!inherits(plot, "ggplot")) {
+        cat("DEBUG: generateSPCPlot - Still not ggplot, creating fallback\n")
+        
+        # Create fallback ggplot
+        plot_data <- data.frame(
+          x = 1:length(qic_args$y),
+          y = qic_args$y
+        )
+        
+        if (chart_type %in% c("p", "pp")) {
+          # P-chart fallback
+          proportions <- qic_args$y / qic_args$n
+          mean_p <- mean(proportions, na.rm = TRUE)
+          
+          plot <- ggplot2::ggplot(data.frame(x = 1:length(proportions), y = proportions), 
+                                  ggplot2::aes(x = x, y = y)) +
+            ggplot2::geom_point() +
+            ggplot2::geom_line() +
+            ggplot2::geom_hline(yintercept = mean_p, color = "red", linetype = "dashed") +
+            ggplot2::labs(
+              title = qic_args$title,
+              x = "Observation", 
+              y = "Proportion"
+            ) +
+            ggplot2::theme_minimal()
+            
+        } else if (chart_type %in% c("u", "up")) {
+          # U-chart fallback
+          rates <- qic_args$y / qic_args$n
+          mean_rate <- mean(rates, na.rm = TRUE)
+          
+          plot <- ggplot2::ggplot(data.frame(x = 1:length(rates), y = rates), 
+                                  ggplot2::aes(x = x, y = y)) +
+            ggplot2::geom_point() +
+            ggplot2::geom_line() +
+            ggplot2::geom_hline(yintercept = mean_rate, color = "red", linetype = "dashed") +
+            ggplot2::labs(
+              title = qic_args$title,
+              x = "Observation", 
+              y = "Rate"
+            ) +
+            ggplot2::theme_minimal()
+            
+        } else if (chart_type %in% c("i", "mr", "c", "g")) {
+          # I, MR, C, G chart fallback
+          mean_val <- mean(qic_args$y, na.rm = TRUE)
+          
+          plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = x, y = y)) +
+            ggplot2::geom_point() +
+            ggplot2::geom_line() +
+            ggplot2::geom_hline(yintercept = mean_val, color = "red", linetype = "dashed") +
+            ggplot2::labs(
+              title = qic_args$title,
+              x = "Observation", 
+              y = qic_args$ylab
+            ) +
+            ggplot2::theme_minimal()
+            
+        } else {
+          # Standard fallback
+          plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = x, y = y)) +
+            ggplot2::geom_point() +
+            ggplot2::geom_line() +
+            ggplot2::geom_hline(yintercept = median(qic_args$y, na.rm = TRUE), 
+                                color = "red", linetype = "dashed") +
+            ggplot2::labs(
+              title = qic_args$title,
+              x = "Observation", 
+              y = qic_args$ylab
+            ) +
+            ggplot2::theme_minimal()
+        }
+      }
+    }, error = function(e3) {
+      cat("DEBUG: generateSPCPlot - Fallback creation failed:", e3$message, "\n")
+    })
+  }
   
   cat("DEBUG: generateSPCPlot - qic() completed successfully\n")
   

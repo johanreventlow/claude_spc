@@ -334,6 +334,13 @@ ui <- page_navbar(
                 div(
                   class = "btn-group",
                   actionButton(
+                    "edit_column_names",
+                    label = NULL,
+                    icon = icon("edit"),
+                    title = "Redigér kolonnenavne",
+                    class = "btn-outline-secondary btn-sm"
+                  ),
+                  actionButton(
                     "add_column",
                     label = NULL,
                     icon = icon("plus"),
@@ -370,7 +377,50 @@ ui <- page_navbar(
               div(
                 style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
                 icon("info-circle"),
-                " Dobbeltklik for at redigere • Tab/Enter for næste celle • Højreklik for menu"
+                " Dobbeltklik på celle for at redigere • Tab/Enter for næste celle • Højreklik for menu",
+                br(),
+                " Brug redigér-knappen for at ændre kolonnenavne"
+              )
+            )
+          ),
+          
+          br(),
+          
+          # Graf indstillinger flyttet hertil
+          conditionalPanel(
+            condition = "output.has_data == true",
+            card(
+              card_header(
+                div(
+                  icon("sliders-h"), 
+                  " Graf Indstillinger",
+                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+                )
+              ),
+              card_body(
+                selectInput(
+                  "chart_type",
+                  "Diagram type:",
+                  choices = CHART_TYPES_DA,
+                  selected = "Seriediagram (Run Chart)"
+                ),
+                
+                fluidRow(
+                  column(6,
+                         checkboxInput(
+                           "show_targets",
+                           "Vis målsætninger",
+                           value = FALSE
+                         )
+                  ),
+                  column(6,
+                         checkboxInput(
+                           "show_phases",
+                           "Vis faser",
+                           value = FALSE
+                         )
+                  )
+                )
               )
             )
           )
@@ -405,47 +455,6 @@ ui <- page_navbar(
                   icon("chart-line", style = "font-size: 3em; color: #ccc; margin-bottom: 20px;"),
                   h5("Ingen graf endnu", style = paste("color:", HOSPITAL_COLORS$secondary)),
                   p("Indtast data i tabellen til venstre eller upload en fil", style = "color: #666;")
-                )
-              )
-            )
-          ),
-          
-          br(),
-          
-          # Graf indstillinger
-          conditionalPanel(
-            condition = "output.has_data == true",
-            card(
-              card_header(
-                div(
-                  icon("sliders-h"), 
-                  " Graf Indstillinger",
-                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
-                )
-              ),
-              card_body(
-                selectInput(
-                  "chart_type",
-                  "Diagram type:",
-                  choices = CHART_TYPES_DA,
-                  selected = "Seriediagram (Run Chart)"
-                ),
-                
-                fluidRow(
-                  column(6,
-                         checkboxInput(
-                           "show_targets",
-                           "Vis målsætninger",
-                           value = FALSE
-                         )
-                  ),
-                  column(6,
-                         checkboxInput(
-                           "show_phases",
-                           "Vis faser",
-                           value = FALSE
-                         )
-                  )
                 )
               )
             )
@@ -1050,7 +1059,7 @@ server <- function(input, output, session) {
     })
   })
   
-  # Hovedtabel rendering
+  # Hovedtabel rendering med simplificeret header-redigering
   output$main_data_table <- rhandsontable::renderRHandsontable({
     req(values$current_data)
     
@@ -1095,7 +1104,102 @@ server <- function(input, output, session) {
   # Håndter tabel ændringer
   observeEvent(input$main_data_table, {
     req(input$main_data_table)
-    values$current_data <- rhandsontable::hot_to_r(input$main_data_table)
+    
+    # Konverter hot til data.frame
+    new_data <- rhandsontable::hot_to_r(input$main_data_table)
+    
+    # Opdater data
+    values$current_data <- new_data
+  })
+  
+  # Redigér kolonnenavne modal
+  observeEvent(input$edit_column_names, {
+    req(values$current_data)
+    
+    current_names <- names(values$current_data)
+    
+    # Lav input felter for hver kolonne
+    name_inputs <- lapply(1:length(current_names), function(i) {
+      textInput(
+        paste0("col_name_", i),
+        paste("Kolonne", i, ":"),
+        value = current_names[i],
+        placeholder = paste("Navn for kolonne", i)
+      )
+    })
+    
+    showModal(modalDialog(
+      title = "Redigér kolonnenavne",
+      size = "m",
+      
+      div(
+        style = "margin-bottom: 15px;",
+        h6("Nuværende kolonnenavne:", style = "font-weight: 500;"),
+        p(paste(current_names, collapse = ", "), style = "color: #666; font-style: italic;")
+      ),
+      
+      div(
+        style = "max-height: 300px; overflow-y: auto;",
+        name_inputs
+      ),
+      
+      footer = tagList(
+        modalButton("Annuller"),
+        actionButton("confirm_column_names", "Gem ændringer", class = "btn-primary")
+      )
+    ))
+  })
+  
+  # Bekræft kolonnenavn-ændringer
+  observeEvent(input$confirm_column_names, {
+    req(values$current_data)
+    
+    current_names <- names(values$current_data)
+    new_names <- character(length(current_names))
+    
+    # Saml nye navne fra input felter
+    for (i in 1:length(current_names)) {
+      input_value <- input[[paste0("col_name_", i)]]
+      if (!is.null(input_value) && input_value != "") {
+        new_names[i] <- trimws(input_value)
+      } else {
+        new_names[i] <- current_names[i]  # Bevar originalt navn hvis tomt
+      }
+    }
+    
+    # Tjek for dubletter
+    if (any(duplicated(new_names))) {
+      showNotification(
+        "Kolonnenavne skal være unikke. Ret duplikater og prøv igen.",
+        type = "error",
+        duration = 5
+      )
+      return()
+    }
+    
+    # Opdater kolonnenavne
+    names(values$current_data) <- new_names
+    
+    removeModal()
+    
+    # Vis bekræftelse
+    if (!identical(current_names, new_names)) {
+      changed_cols <- which(current_names != new_names)
+      change_summary <- paste(
+        paste0("'", current_names[changed_cols], "' -> '", new_names[changed_cols], "'"),
+        collapse = ", "
+      )
+      
+      showNotification(
+        paste("Kolonnenavne opdateret:", change_summary),
+        type = "message",
+        duration = 4
+      )
+      
+      cat("DEBUG: Kolonnenavne ændret:", change_summary, "\n")
+    } else {
+      showNotification("Ingen ændringer i kolonnenavne", type = "message", duration = 2)
+    }
   })
   
   # Tilføj kolonne
@@ -1147,21 +1251,30 @@ server <- function(input, output, session) {
     showNotification("Ny række tilføjet", type = "message")
   })
   
-  # Reset tabel
+  # Reset tabel - tøm helt for at starte forfra
   observeEvent(input$reset_table, {
-    if (values$file_uploaded && !is.null(values$original_data)) {
-      values$current_data <- values$original_data
-      showNotification("Tabel nulstillet til uploaded data", type = "message")
-    } else {
-      values$current_data <- data.frame(
-        Dato = rep(as.Date(NA), 5),
-        Taeller = rep(NA_real_, 5),
-        Naevner = rep(NA_real_, 5),
-        stringsAsFactors = FALSE
-      )
-      values$file_uploaded <- FALSE
-      showNotification("Tabel nulstillet til tom tabel", type = "message")
-    }
+    # Lav en helt tom tabel med basis struktur
+    values$current_data <- data.frame(
+      Dato = rep(as.Date(NA), 5),
+      Taeller = rep(NA_real_, 5),
+      Naevner = rep(NA_real_, 5),
+      stringsAsFactors = FALSE
+    )
+    
+    # Nulstil file upload status
+    values$file_uploaded <- FALSE
+    values$original_data <- NULL
+    
+    # Reset file upload felt
+    shinyjs::reset("data_file")
+    
+    # Metadata (titel, beskrivelse etc.) bevares - de røres ikke
+    
+    showNotification(
+      "Tabel og fil-upload tømt - indtast nye data eller upload ny fil. Titel og beskrivelse bevaret.", 
+      type = "message", 
+      duration = 4
+    )
   })
   
   # Data for visualization modul

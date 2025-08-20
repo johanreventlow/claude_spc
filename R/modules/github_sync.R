@@ -1,8 +1,12 @@
 library(usethis)
+library(gert)
 
 # git_sitrep()
 
-gert::git_add(".")
-gert::git_commit_all("forbedret ui")
-# gert::git_commit("Din commit besked")
-gert::git_push()
+git_status()
+
+git_add(".")
+git_find()
+git_reset_soft()
+git_commit_all("forbedret ui")
+git_push()
