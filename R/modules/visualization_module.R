@@ -55,7 +55,7 @@ visualizationModuleUI <- function(id) {
 }
 
 # Visualization Module Server
-visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, show_targets_reactive, show_phases_reactive) {
+visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, show_targets_reactive, show_phases_reactive, chart_title_reactive = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -604,7 +604,17 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
   }
   
   # Initialize title and label variables
-  title_text <- paste("SPC Chart -", config$y_col)
+  title_text <- if (!is.null(chart_title_reactive) && !is.null(chart_title_reactive())) {
+    # Brug custom titel hvis tilgængelig
+    custom_title <- chart_title_reactive()
+    if (custom_title != "" && custom_title != "SPC Analyse") {
+      custom_title
+    } else {
+      paste("SPC Chart -", config$y_col)
+    }
+  } else {
+    paste("SPC Chart -", config$y_col)
+  }
   ylab_text <- config$y_col
   xlab_text <- "Observation"  # Default, will be updated based on x_data type
   
