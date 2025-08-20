@@ -55,7 +55,7 @@ visualizationModuleUI <- function(id) {
 }
 
 # Visualization Module Server
-visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, show_targets_reactive, show_phases_reactive, chart_title_reactive = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, show_targets_reactive, show_phases_reactive, chart_title_reactive = NULL) {
   
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -68,28 +68,54 @@ visualizationModuleServer <- function(id, data_reactive, chart_type_reactive, sh
       plot_warnings = character(0)
     )
     
-    # Detect chart configuration based on data
+    # Chart configuration from explicit user selection
     chart_config <- reactive({
-      req(data_reactive())
+      req(data_reactive(), column_config_reactive())
       
-      # Explicit dependencies to ensure reactivity
-      chart_type <- chart_type_reactive() %||% "run"  # Force dependency
+      # Eksplicitte dependencies
+      chart_type <- chart_type_reactive() %||% "run"
+      config <- column_config_reactive()
       
-      cat("DEBUG: chart_config() triggered\n")
-      cat("DEBUG: chart_config() - Working with chart_type:", chart_type, "\n")
+      cat("DEBUG: chart_config() using explicit configuration\n")
+      cat("DEBUG: chart_config() - chart_type:", chart_type, "\n")
+      cat("DEBUG: chart_config() - x_col:", config$x_col, "y_col:", config$y_col, "n_col:", config$n_col, "\n")
       
       data <- data_reactive()
       
-      cat("DEBUG: chart_config - data rows:", nrow(data), "cols:", ncol(data), "\n")
-      cat("DEBUG: chart_config - chart_type:", chart_type, "\n")
-      cat("DEBUG: chart_config - column names:", paste(names(data), collapse = ", "), "\n")
+      # Valider at valgte kolonner eksisterer i data
+      if (!is.null(config$x_col) && !config$x_col %in% names(data)) {
+        cat("DEBUG: chart_config - WARNING: x_col", config$x_col, "not found in data\n")
+        config$x_col <- NULL
+      }
       
-      # Auto-detect appropriate columns
-      config <- detectChartConfiguration(data, chart_type)
+      if (!is.null(config$y_col) && !config$y_col %in% names(data)) {
+        cat("DEBUG: chart_config - WARNING: y_col", config$y_col, "not found in data\n")
+        config$y_col <- NULL
+      }
       
-      cat("DEBUG: chart_config - x_col:", config$x_col, "y_col:", config$y_col, "\n")
+      if (!is.null(config$n_col) && !config$n_col %in% names(data)) {
+        cat("DEBUG: chart_config - WARNING: n_col", config$n_col, "not found in data\n")
+        config$n_col <- NULL
+      }
       
-      return(config)
+      # Fallback til auto-detection hvis ingen kolonner valgt
+      if (is.null(config$x_col) || is.null(config$y_col)) {
+        cat("DEBUG: chart_config - Falling back to auto-detection\n")
+        auto_config <- detectChartConfiguration(data, chart_type)
+        
+        if (is.null(config$x_col)) config$x_col <- auto_config$x_col
+        if (is.null(config$y_col)) config$y_col <- auto_config$y_col
+        if (is.null(config$n_col)) config$n_col <- auto_config$n_col
+      }
+      
+      cat("DEBUG: chart_config - Final config: x=", config$x_col, "y=", config$y_col, "n=", config$n_col, "\n")
+      
+      return(list(
+        x_col = config$x_col,
+        y_col = config$y_col,
+        n_col = config$n_col,
+        chart_type = chart_type
+      ))
     })
     
     # Generate SPC plot
