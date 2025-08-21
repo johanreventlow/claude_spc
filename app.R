@@ -129,16 +129,16 @@ ui <- page_navbar(
       .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
       .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
       
-      /* rhandsontable styling */
-      .handsontable {
-        font-size: 12px !important;
-      }
-      
+      /* Fix 1: Bredere kolonner i rhandsontable */
       .handsontable .htCore td {
+        min-width: 120px !important;
+        width: 120px !important;
         border-color: #ddd !important;
       }
       
       .handsontable .htCore th {
+        min-width: 120px !important;
+        width: 120px !important;
         background-color: ", HOSPITAL_COLORS$light, " !important;
         color: ", HOSPITAL_COLORS$dark, " !important;
         font-weight: 600 !important;
@@ -153,39 +153,24 @@ ui <- page_navbar(
         background-color: ", HOSPITAL_COLORS$warning, "20 !important;
       }
       
-      /* Fix 1: Bredere kolonner i rhandsontable */
-    .handsontable .htCore td {
-      min-width: 120px !important;
-      width: 120px !important;
-      border-color: #ddd !important;
-    }
-    
-    .handsontable .htCore th {
-      min-width: 120px !important;
-      width: 120px !important;
-      background-color: ", HOSPITAL_COLORS$light, " !important;
-      color: ", HOSPITAL_COLORS$dark, " !important;
-      font-weight: 600 !important;
-    }
-    
-    /* Fix 4: Dropdown menu z-index fix */
-    .selectize-dropdown {
-      z-index: 9999 !important;
-      max-height: 300px !important;
-    }
-    
-    .form-select {
-      z-index: 1000 !important;
-    }
-    
-    /* Ensure dropdowns are not clipped */
-    .card-body {
-      overflow: visible !important;
-    }
-    
-    .sidebar {
-      overflow: visible !important;
-    }
+      /* Fix 4: Dropdown menu z-index fix */
+      .selectize-dropdown {
+        z-index: 9999 !important;
+        max-height: 300px !important;
+      }
+      
+      .form-select {
+        z-index: 1000 !important;
+      }
+      
+      /* Ensure dropdowns are not clipped */
+      .card-body {
+        overflow: visible !important;
+      }
+      
+      .sidebar {
+        overflow: visible !important;
+      }
       
     ")))
   ),
@@ -224,7 +209,7 @@ ui <- page_navbar(
             placeholder = "Vælg fil..."
           ),
           
-          # Collapsible import indstillinger
+          # Toggle button for import settings
           div(
             actionButton(
               "toggle_import_settings",
@@ -234,40 +219,37 @@ ui <- page_navbar(
             )
           ),
           
-          # Collapsible import settings panel
-          conditionalPanel(
-            condition = "input.toggle_import_settings > 0 && input.toggle_import_settings % 2 == 1",
-            div(
-              id = "import_settings_panel",
-              style = "border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; background-color: #f8f9fa;",
-              
-              selectInput(
-                "separator",
-                "Separator:",
-                choices = list(
-                  "Semikolon (;)" = ";",
-                  "Komma (,)" = ",", 
-                  "Tab" = "\t"
-                ),
-                selected = ";"
+          # Import settings panel - completely hidden by default
+          div(
+            id = "import_settings_panel",
+            style = "display: none; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; background-color: #f8f9fa;",
+            
+            selectInput(
+              "separator",
+              "Separator:",
+              choices = list(
+                "Semikolon (;)" = ";",
+                "Komma (,)" = ",", 
+                "Tab" = "\t"
               ),
-              
-              selectInput(
-                "decimal",
-                "Decimal:",
-                choices = list(
-                  "Komma (,)" = ",",
-                  "Punktum (.)" = "."
-                ),
-                selected = ","
+              selected = ";"
+            ),
+            
+            selectInput(
+              "decimal",
+              "Decimal:",
+              choices = list(
+                "Komma (,)" = ",",
+                "Punktum (.)" = "."
               ),
-              
-              actionButton(
-                "reimport",
-                "Genindlæs fil",
-                icon = icon("refresh"),
-                class = "btn-outline-primary btn-sm w-100"
-              )
+              selected = ","
+            ),
+            
+            actionButton(
+              "reimport",
+              "Genindlæs fil",
+              icon = icon("refresh"),
+              class = "btn-outline-primary btn-sm w-100"
             )
           )
         ),
@@ -434,6 +416,8 @@ ui <- page_navbar(
                 )
               ),
               card_body(
+                style = "overflow: visible;",  # Fix for dropdown clipping
+                
                 # Chart type selection
                 selectInput(
                   "chart_type",
@@ -587,454 +571,35 @@ ui <- page_navbar(
         )
       )
     )
-  ),
-  
-  # -------------------------------------------------------------------------
-  # TAB 2: DATA REDIGERING
-  # -------------------------------------------------------------------------
-  
-  
-  # -------------------------------------------------------------------------
-  # TAB 3: DIAGNOSTIK
-  # -------------------------------------------------------------------------
-  nav_panel(
-    title = "Diagnostik",
-    icon = icon("stethoscope"),
-    
-    div(
-      style = "padding: 20px;",
-      
-      # Show diagnostics when plot is ready
-      conditionalPanel(
-        condition = "output.plot_ready == true",
-        
-        fluidRow(
-          column(
-            6,
-            card(
-              card_header(
-                div(
-                  icon("search"),
-                  " Anhøj Regler",
-                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-                )
-              ),
-              card_body(
-                div(
-                  span(class = "status-indicator status-ready"),
-                  "Analyse komplet",
-                  style = "font-size: 1rem; margin-bottom: 15px;"
-                ),
-                h6("Tests udført:", style = "font-weight: 500;"),
-                tags$ul(
-                  style = "color: #666;",
-                  tags$li("✅ Unusually long runs"),
-                  tags$li("✅ Unusually few crossings"),
-                  tags$li("✅ Shift detection")
-                ),
-                br(),
-                div(
-                  style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 10px; border-radius: 5px;"),
-                  icon("info-circle"),
-                  " Se detaljerede resultater i Analyse-fanen under grafen."
-                )
-              )
-            )
-          ),
-          
-          column(
-            6,
-            card(
-              card_header(
-                div(
-                  icon("exclamation-triangle"),
-                  " Signal Detektion",
-                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-                )
-              ),
-              card_body(
-                div(id = "signal_summary"),
-                h6("Signal typer:", style = "font-weight: 500;"),
-                tags$ul(
-                  style = "color: #666;",
-                  tags$li("Special cause variation"),
-                  tags$li("Systematic patterns"),
-                  tags$li("Process shifts")
-                ),
-                br(),
-                div(
-                  style = paste("background-color:", HOSPITAL_COLORS$success, "20; padding: 10px; border-radius: 5px;"),
-                  icon("check-circle"),
-                  " Signaler markeres visuelt på grafen med farver og forklaringer."
-                )
-              )
-            )
-          )
-        )
-      ),
-      
-      # Show placeholder when no analysis available
-      conditionalPanel(
-        condition = "output.plot_ready == false",
-        
-        fluidRow(
-          column(
-            6,
-            card(
-              card_header(
-                div(
-                  icon("search"),
-                  " Anhøj Regler",
-                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-                )
-              ),
-              card_body(
-                div(
-                  span(class = "status-indicator status-warning"),
-                  "Venter på data for analyse",
-                  style = "font-size: 1rem; margin-bottom: 15px;"
-                ),
-                h6("Tests der vil blive udført:", style = "font-weight: 500;"),
-                tags$ul(
-                  style = "color: #666;",
-                  tags$li("Unusually long runs"),
-                  tags$li("Unusually few crossings"),
-                  tags$li("Shift detection")
-                )
-              )
-            )
-          ),
-          
-          column(
-            6,
-            card(
-              card_header(
-                div(
-                  icon("exclamation-triangle"),
-                  " Signal Detektion",
-                  style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-                )
-              ),
-              card_body(
-                div(
-                  span(class = "status-indicator status-warning"),
-                  "Ingen signaler at rapportere",
-                  style = "font-size: 1rem; margin-bottom: 15px;"
-                ),
-                h6("Signal typer:", style = "font-weight: 500;"),
-                tags$ul(
-                  style = "color: #666;",
-                  tags$li("Points beyond control limits"),
-                  tags$li("Systematic patterns"),
-                  tags$li("Special cause variation")
-                )
-              )
-            )
-          )
-        )
-      ),
-      
-      br(),
-      
-      # Kolonne mapping help section
-      card(
-        card_header(
-          div(
-            icon("columns"),
-            " Kolonne Mapping Guide",
-            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-          )
-        ),
-        card_body(
-          fluidRow(
-            column(
-              6,
-              h6("Kolonne-valg:", style = "font-weight: 500;"),
-              tags$ul(
-                style = "font-size: 0.9rem;",
-                tags$li(strong("X-akse"), " for tid/observation (datoer eller sekvensnumre)"),
-                tags$li(strong("Y-akse"), " for værdier der skal analyseres"),
-                tags$li(strong("Nævner (N)"), " kun for P/U-charts (totaler/denominators)"),
-                tags$li(strong("Auto-detektér"), " finder intelligente forslag automatisk")
-              )
-            ),
-            column(
-              6,
-              h6("Validering:", style = "font-weight: 500;"),
-              tags$ul(
-                style = "font-size: 0.9rem;",
-                tags$li(strong("Numeriske kolonner"), " påkrævet for Y og N"),
-                tags$li(strong("Unikke valg"), " - samme kolonne kan ikke bruges flere gange"),
-                tags$li(strong("Chart-kompatibilitet"), " - P/U charts kræver nævner"),
-                tags$li(strong("Øjeblikkelig feedback"), " viser advarsler eller bekræftelse")
-              )
-            )
-          ),
-          
-          div(
-            style = paste("background-color:", HOSPITAL_COLORS$primary, "10; padding: 10px; border-radius: 5px; margin-top: 15px;"),
-            icon("magic"),
-            strong(" Pro tip: "), "Brug Auto-detektér knappen for intelligente forslag baseret på kolonnenavne og datatyper. Du kan altid justere valgene manuelt bagefter.",
-            style = "font-size: 0.85rem;"
-          )
-        )
-      ),
-      
-      br(),
-      
-      card(
-        full_screen = TRUE,
-        card_header(
-          div(
-            icon("clipboard-list"),
-            " Detaljeret Diagnostik Rapport",
-            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-          )
-        ),
-        card_body(
-          min_height = "300px",
-          
-          conditionalPanel(
-            condition = "output.plot_ready == true",
-            div(
-              style = "text-align: center; margin-top: 50px;",
-              h4("📊 SPC Analyse Komplet", style = paste("color:", HOSPITAL_COLORS$primary)),
-              p("Detaljerede Anhøj-regel resultater vises under grafen i Analyse-fanen.", 
-                style = paste("color:", HOSPITAL_COLORS$secondary)),
-              br(),
-              div(
-                style = paste("background-color:", HOSPITAL_COLORS$success, "20; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;"),
-                h6("✅ Implementeret analyse:", style = paste("color:", HOSPITAL_COLORS$primary)),
-                tags$ul(
-                  style = "text-align: left; color: #666;",
-                  tags$li("✅ Automatisk Anhøj-regel evaluering"),
-                  tags$li("✅ Statistisk signifikans tests"),
-                  tags$li("✅ Runs og crossings analyse"),
-                  tags$li("✅ Visual signal markering"),
-                  tags$li("✅ Forklarende tekst og anbefalinger")
-                )
-              )
-            )
-          ),
-          
-          conditionalPanel(
-            condition = "output.plot_ready == false",
-            div(
-              style = "text-align: center; margin-top: 80px;",
-              h4("SPC Diagnostik", style = paste("color:", HOSPITAL_COLORS$primary)),
-              p("Upload data og vælg diagram-type for at starte analysen", 
-                style = paste("color:", HOSPITAL_COLORS$secondary)),
-              br(),
-              div(
-                style = paste("background-color:", HOSPITAL_COLORS$light, "; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;"),
-                h6("Kommende analyse:", style = paste("color:", HOSPITAL_COLORS$primary)),
-                tags$ul(
-                  style = "text-align: left; color: #666;",
-                  tags$li("Automatisk Anhøj-regel evaluering"),
-                  tags$li("Statistisk signifikans tests"),
-                  tags$li("Process capability analyse"),
-                  tags$li("Trend og shift detektion"),
-                  tags$li("Forklarende tekst og anbefalinger")
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-  ),
-  
-  # -------------------------------------------------------------------------
-  # TAB 4: HJÆLP
-  # -------------------------------------------------------------------------
-  nav_panel(
-    title = "Hjælp",
-    icon = icon("question-circle"),
-    
-    div(
-      style = "padding: 20px;",
-      
-      fluidRow(
-        column(
-          6,
-          card(
-            card_header(
-              div(
-                icon("book"),
-                " SPC Grundprincipper",
-                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-              )
-            ),
-            card_body(
-              h6("Statistisk Process Kontrol (SPC):", style = "font-weight: 500;"),
-              p("SPC bruges til at monitere processer over tid og identificere variationer der kræver handling.", 
-                style = "font-size: 0.9rem;"),
-              
-              h6("Anhøj Regler:", style = "font-weight: 500; margin-top: 15px;"),
-              tags$ul(
-                style = "font-size: 0.9rem;",
-                tags$li(strong("Long runs:"), " Flere datapunkter i træk på samme side af centerlinjen"),
-                tags$li(strong("Few crossings:"), " For få krydsninger af centerlinjen relativt til forventet")
-              )
-            )
-          )
-        ),
-        
-        column(
-          6,
-          card(
-            card_header(
-              div(
-                icon("play-circle"),
-                " Hurtig Start Guide",
-                style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-              )
-            ),
-            card_body(
-              h6("Sådan kommer du i gang:", style = "font-weight: 500;"),
-              tags$ol(
-                style = "font-size: 0.9rem;",
-                tags$li("Upload din CSV/Excel fil i Analyse-fanen"),
-                tags$li(strong("Vælg kolonner"), " for X-akse, Y-akse og Nævner (eller brug Auto-detektér)"),
-                tags$li(strong("Redigér data"), " efter behov direkte i tabellen"),
-                tags$li("Vælg passende diagram-type"),
-                tags$li("Gennemgå diagnostik resultaterne"),
-                tags$li("Download graf eller rapport")
-              ),
-              
-              div(
-                style = paste("background-color:", HOSPITAL_COLORS$success, "20; padding: 10px; border-radius: 5px; margin-top: 15px;"),
-                icon("lightbulb"),
-                strong(" Nyt i v3.1: "), "Eksplicit kolonne-valg! Vælg præcis hvilke kolonner der skal bruges til X, Y og N.",
-                style = "font-size: 0.85rem;"
-              )
-            )
-          )
-        )
-      ),
-      
-      br(),
-      
-      # Data redigering help section
-      card(
-        card_header(
-          div(
-            icon("edit"),
-            " Data Redigering Guide",
-            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-          )
-        ),
-        card_body(
-          fluidRow(
-            column(
-              6,
-              h6("Grundlæggende redigering:", style = "font-weight: 500;"),
-              tags$ul(
-                style = "font-size: 0.9rem;",
-                tags$li(strong("Dobbeltklik kolonnenavn"), " for at redigere headers direkte"),
-                tags$li(strong("Dobbeltklik celle"), " for at redigere data"),
-                tags$li(strong("Tab/Enter"), " for at gå til næste celle"),
-                tags$li(strong("Højreklik"), " for kontekstmenu med copy/paste")
-              )
-            ),
-            column(
-              6,
-              h6("Avancerede funktioner:", style = "font-weight: 500;"),
-              tags$ul(
-                style = "font-size: 0.9rem;",
-                tags$li(strong("Redigér kolonnenavne"), " direkte i headers eller via modal"),
-                tags$li(strong("Tilføj rækker/kolonner"), " med plus-knapperne"),
-                tags$li(strong("Validering"), " forhindrer dubletter og tomme navne"),
-                tags$li(strong("Reset til original"), " hvis du fortryder alt")
-              )
-            )
-          ),
-          
-          div(
-            style = paste("background-color:", HOSPITAL_COLORS$warning, "20; padding: 10px; border-radius: 5px; margin-top: 15px;"),
-            icon("exclamation-triangle"),
-            strong(" Vigtigt: "), "Ændringer er midlertidige indtil du eksporterer den modificerede data. Brug Reset-knappen for at gå tilbage til original.",
-            style = "font-size: 0.85rem;"
-          )
-        )
-      ),
-      
-      br(),
-      
-      card(
-        card_header(
-          div(
-            icon("info"),
-            paste(" Om", HOSPITAL_NAME, "SPC App"),
-            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-          )
-        ),
-        card_body(
-          fluidRow(
-            column(
-              8,
-              h6("Version Information:", style = "font-weight: 500;"),
-              p(paste("Udviklet til", HOSPITAL_NAME), style = "font-size: 0.9rem;"),
-              p("Baseret på qicharts2 og Anhøj-metoderne", style = "font-size: 0.9rem;"),
-              p(paste("Bygget med R Shiny, bslib og rhandsontable"), style = "font-size: 0.9rem;"),
-              
-              br(),
-              
-              div(
-                style = paste("color:", HOSPITAL_COLORS$success, "; font-size: 0.9rem; font-weight: 500;"),
-                "✅ Phase 3: SPC grafer og Anhøj-regler implementeret!"
-              ),
-              div(
-                style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.85rem;"),
-                "Næste: PDF rapport-generering og avanceret eksport..."
-              )
-            ),
-            column(
-              4,
-              div(
-                style = "text-align: center;",
-                img(
-                  src = basename(HOSPITAL_LOGO_PATH), 
-                  height = "100px", 
-                  style = "opacity: 0.7;",
-                  onerror = "this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjhGOUZBIiBzdHJva2U9IiNEQ0REREYiIHN0cm9rZS13aWR0aD0iMiIvPgo8dGV4dCB4PSI1MCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SE9TUElUQUw8L3RleHQ+CjwvdGV4dD4KPHN2Zz4K'; this.style.opacity='0.3';"
-                ),
-                br(), br(),
-                div(
-                  style = paste("font-size: 0.8rem; color:", HOSPITAL_COLORS$secondary, ";"),
-                  format(Sys.Date(), "Version %Y.%m")
-                )
-              )
-            )
-          )
-        )
-      )
-    )
   )
 )
 
 # Define server
-# Forbedret server logic til app.R
-# Erstat server function med denne kode
-
 server <- function(input, output, session) {
   
   # Reactive values for data håndtering
   values <- reactiveValues(
     current_data = NULL,
     original_data = NULL,
-    file_uploaded = FALSE
+    file_uploaded = FALSE,
+    import_settings_visible = FALSE  # Track visibility state
   )
   
-  # Initialize tom tabel med standard kolonner
-  initialize_empty_table <- function() {
-    data.frame(
-      Dato = as.Date(character(0)),
-      Taeller = numeric(0),
-      Naevner = numeric(0),
-      stringsAsFactors = FALSE
-    )
-  }
+  # Toggle import settings panel - explicit show/hide logic
+  observeEvent(input$toggle_import_settings, {
+    cat("DEBUG: Toggle button clicked\n")
+    
+    # Toggle visibility state
+    values$import_settings_visible <- !values$import_settings_visible
+    
+    if (values$import_settings_visible) {
+      cat("DEBUG: Showing import settings panel\n")
+      shinyjs::show("import_settings_panel")
+    } else {
+      cat("DEBUG: Hiding import settings panel\n")
+      shinyjs::hide("import_settings_panel")
+    }
+  })
   
   # Start med tom tabel
   observe({
@@ -1222,12 +787,12 @@ server <- function(input, output, session) {
     
     # Kolonne-specifik formatting
     for (i in 1:ncol(data)) {
-      col_name <- names(data)[i]
+      col_data <- data[[i]]
       
-      if (grepl("dato|date", col_name, ignore.case = TRUE)) {
+      if (grepl("dato|date", names(data)[i], ignore.case = TRUE)) {
         hot <- hot %>%
           rhandsontable::hot_col(col = i, type = "date", dateFormat = "DD-MM-YYYY")
-      } else if (is.numeric(data[[i]])) {
+      } else if (is.numeric(col_data)) {
         hot <- hot %>%
           rhandsontable::hot_col(col = i, type = "numeric", format = "0,0.00")
       } else {
@@ -1251,9 +816,6 @@ server <- function(input, output, session) {
     new_names <- names(new_data)
     
     if (!identical(current_names, new_names)) {
-      cat("DEBUG: Column names changed from:", paste(current_names, collapse = ", "), "\n")
-      cat("DEBUG: Column names changed to:", paste(new_names, collapse = ", "), "\n")
-      
       # Valider nye kolonnenavne
       if (length(new_names) != length(unique(new_names))) {
         showNotification(
@@ -1377,8 +939,6 @@ server <- function(input, output, session) {
         type = "message",
         duration = 4
       )
-      
-      cat("DEBUG: Kolonnenavne ændret:", change_summary, "\n")
     } else {
       showNotification("Ingen ændringer i kolonnenavne", type = "message", duration = 2)
     }
@@ -1449,8 +1009,6 @@ server <- function(input, output, session) {
     
     # Reset file upload felt
     shinyjs::reset("data_file")
-    
-    # Metadata (titel, beskrivelse etc.) bevares - de røres ikke
     
     showNotification(
       "Tabel og fil-upload tømt - indtast nye data eller upload ny fil. Titel og beskrivelse bevaret.", 
@@ -1619,7 +1177,6 @@ server <- function(input, output, session) {
     }
     
     chart_type <- get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
-    messages <- character(0)
     warnings <- character(0)
     
     # Tjek om Y-kolonne er numerisk
@@ -1695,7 +1252,7 @@ server <- function(input, output, session) {
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = active_data,
-    column_config_reactive = column_config,  # Eksplicit kolonne konfiguration
+    column_config_reactive = column_config,
     chart_type_reactive = reactive({
       chart_selection <- input$chart_type %||% "Seriediagram (Run Chart)"
       get_qic_chart_type(chart_selection)

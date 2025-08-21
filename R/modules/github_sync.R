@@ -6,5 +6,5 @@ library(gert)
 # git_status()
 
 git_add(".")
-git_commit_all("forbedret ui")
+git_commit_all("fejlfinding - 'genererer graf'")
 git_push()
