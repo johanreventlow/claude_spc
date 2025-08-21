@@ -152,6 +152,41 @@ ui <- page_navbar(
       .htChanged {
         background-color: ", HOSPITAL_COLORS$warning, "20 !important;
       }
+      
+      /* Fix 1: Bredere kolonner i rhandsontable */
+    .handsontable .htCore td {
+      min-width: 120px !important;
+      width: 120px !important;
+      border-color: #ddd !important;
+    }
+    
+    .handsontable .htCore th {
+      min-width: 120px !important;
+      width: 120px !important;
+      background-color: ", HOSPITAL_COLORS$light, " !important;
+      color: ", HOSPITAL_COLORS$dark, " !important;
+      font-weight: 600 !important;
+    }
+    
+    /* Fix 4: Dropdown menu z-index fix */
+    .selectize-dropdown {
+      z-index: 9999 !important;
+      max-height: 300px !important;
+    }
+    
+    .form-select {
+      z-index: 1000 !important;
+    }
+    
+    /* Ensure dropdowns are not clipped */
+    .card-body {
+      overflow: visible !important;
+    }
+    
+    .sidebar {
+      overflow: visible !important;
+    }
+      
     ")))
   ),
   
@@ -201,8 +236,9 @@ ui <- page_navbar(
           
           # Collapsible import settings panel
           conditionalPanel(
-            condition = "input.toggle_import_settings % 2 == 1",
+            condition = "input.toggle_import_settings > 0 && input.toggle_import_settings % 2 == 1",
             div(
+              id = "import_settings_panel",
               style = "border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; background-color: #f8f9fa;",
               
               selectInput(

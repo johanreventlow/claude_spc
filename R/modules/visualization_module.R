@@ -17,7 +17,7 @@ visualizationModuleUI <- function(id) {
       
       # Loading overlay - only show when we have data but plot is not ready
       conditionalPanel(
-        condition = paste0("output['has_data'] == true && output['", ns("plot_ready"), "'] == false"),
+        condition = paste0("output['", ns("show_loading"), "']"),
         div(
           style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: rgba(255,255,255,0.9); padding: 20px; border-radius: 8px;",
           div(
@@ -63,9 +63,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Reactive values
     values <- reactiveValues(
       plot_object = NULL,
-      plot_ready = FALSE,  # Start with FALSE
+      plot_ready = FALSE,
       anhoej_results = NULL,
-      plot_warnings = character(0)
+      plot_warnings = character(0),
+      is_computing = FALSE  # Ny reactive value
     )
     
     # Chart configuration from explicit user selection
@@ -121,6 +122,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Generate SPC plot
     spc_plot <- reactive({
       req(data_reactive(), chart_config())
+      
+      # Set loading state
+      values$is_computing <- TRUE
+      on.exit(values$is_computing <- FALSE)
       
       # Explicit dependencies to ensure reactivity
       chart_type <- chart_type_reactive() %||% "run"  # Force dependency
@@ -268,6 +273,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       chart_type <- chart_type_reactive()
       cat("DEBUG: Chart type changed to:", chart_type, "\n")
     })
+    
+    # Tilføj loading indicator output:
+    output$show_loading <- reactive({
+      values$is_computing && !is.null(data_reactive())
+    })
+    outputOptions(output, "show_loading", suspendWhenHidden = FALSE)
     
     # Plot ready status for conditional panels
     output$plot_ready <- reactive({
