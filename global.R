@@ -12,6 +12,7 @@ library(shinyWidgets)
 library(shinyjs)
 library(zoo)  # For rolling means in calculated fields
 library(scales)  # For percent formatting in plots
+library(rlang)  # for %||%
 
 # -----------------------------------------------------------------------------
 # HOSPITAL BRANDING CONFIGURATION

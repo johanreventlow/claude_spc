@@ -418,12 +418,12 @@ ui <- page_navbar(
               card_body(
                 style = "overflow: visible;",  # Fix for dropdown clipping
                 
-                # Chart type selection
+                # Chart type selection - FIXED: use value instead of label as selected
                 selectInput(
                   "chart_type",
                   "Diagram type:",
                   choices = CHART_TYPES_DA,
-                  selected = "Seriediagram (Run Chart)"
+                  selected = "run"  # Use English value, not Danish label
                 ),
                 
                 # Column mapping section
@@ -447,9 +447,9 @@ ui <- page_navbar(
                     selected = NULL
                   ),
                   
-                  # N column (for P/U charts)
+                  # N column (for P/U charts) - FIXED: use English values for comparison
                   conditionalPanel(
-                    condition = "input.chart_type == 'P-kort (Andele)' || input.chart_type == 'P\'-kort (Andele, standardiseret)' || input.chart_type == 'U-kort (Rater)' || input.chart_type == 'U\'-kort (Rater, standardiseret)'",
+                    condition = "input.chart_type == 'p' || input.chart_type == 'pp' || input.chart_type == 'u' || input.chart_type == 'up'",
                     selectInput(
                       "n_column",
                       "Nævner (n):",
@@ -601,7 +601,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # Data status display
+  # Data status display - FIXED: count rows with any non-NA content
   output$data_status_display <- renderUI({
     if (is.null(values$current_data)) {
       div(
@@ -610,14 +610,14 @@ server <- function(input, output, session) {
         style = "font-size: 0.9rem;"
       )
     } else if (values$file_uploaded) {
-      data_rows <- sum(!is.na(values$current_data[[1]]))  # Count non-NA rows
+      data_rows <- sum(apply(values$current_data, 1, function(row) any(!is.na(row))))  # FIXED counting
       div(
         span(class = "status-indicator status-ready"),
         paste("Fil uploadet -", data_rows, "datapunkter"),
         style = "font-size: 0.9rem;"
       )
     } else {
-      data_rows <- sum(!is.na(values$current_data[[1]]))
+      data_rows <- sum(apply(values$current_data, 1, function(row) any(!is.na(row))))  # FIXED counting
       if (data_rows > 0) {
         div(
           span(class = "status-indicator status-processing"),
@@ -1148,7 +1148,7 @@ server <- function(input, output, session) {
       x_col = x_col,
       y_col = y_col,
       n_col = n_col,
-      chart_type = get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
+      chart_type = get_qic_chart_type(input$chart_type %||% "run")
     ))
   })
   
@@ -1162,7 +1162,7 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
-    chart_type <- get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
+    chart_type <- get_qic_chart_type(input$chart_type %||% "run")
     warnings <- character(0)
     
     # Tjek om Y-kolonne er numerisk
@@ -1241,7 +1241,7 @@ server <- function(input, output, session) {
     data_reactive = active_data,
     column_config_reactive = column_config,
     chart_type_reactive = reactive({
-      chart_selection <- input$chart_type %||% "Seriediagram (Run Chart)"
+      chart_selection <- input$chart_type %||% "run"
       get_qic_chart_type(chart_selection)
     }),
     show_targets_reactive = reactive(input$show_targets %||% FALSE),
@@ -1249,51 +1249,6 @@ server <- function(input, output, session) {
     chart_title_reactive = chart_title
   )
   cat("DEBUG: Visualization module initialized\n")
-  
-  # Dynamic plot area - always show visualization module, but conditionally show placeholder overlay
-  output$plot_area <- renderUI({
-    cat("DEBUG: plot_area renderUI called\n")
-    cat("DEBUG: has_data:", !is.null(active_data()) && nrow(active_data()) > 0, "\n")
-    cat("DEBUG: plot_ready from visualization:", !is.null(visualization$plot_ready()) && visualization$plot_ready(), "\n")
-    
-    # Check if we have real data with actual values
-    has_real_data <- !is.null(active_data()) && nrow(active_data()) > 0
-    has_actual_values <- FALSE
-    
-    if (has_real_data) {
-      data <- active_data()
-      # Check if data has actual non-NA values (not just empty rows)
-      has_actual_values <- any(sapply(data, function(col) any(!is.na(col))))
-    }
-    
-    plot_is_ready <- !is.null(visualization$plot_ready()) && visualization$plot_ready()
-    
-    cat("DEBUG: has_real_data:", has_real_data, "has_actual_values:", has_actual_values, "plot_is_ready:", plot_is_ready, "\n")
-    
-    # Always show the visualization module (so it can initialize)
-    # But overlay placeholder when no real data or plot not ready
-    tagList(
-      # Always present visualization module
-      visualizationModuleUI("visualization"),
-      
-      # Conditional overlay when no plot ready
-      if (!has_actual_values || !plot_is_ready) {
-        cat("DEBUG: Adding placeholder overlay\n")
-        div(
-          style = "position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 10;",
-          div(
-            style = "text-align: center;",
-            icon("chart-line", style = "font-size: 2.5em; color: #ccc; margin-bottom: 15px;"),
-            h5("Ingen graf endnu", style = paste("color:", HOSPITAL_COLORS$secondary)),
-            p("Indtast data i tabellen til venstre eller upload en fil", style = "color: #666;")
-          )
-        )
-      } else {
-        cat("DEBUG: No overlay - showing plot\n")
-        NULL
-      }
-    )
-  })
   
   # Plot ready check - with debug
   output$plot_ready <- reactive({
