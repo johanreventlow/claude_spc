@@ -7,9 +7,6 @@ library(dplyr)
 library(shinyjs)
 library(rhandsontable)
 
-# Helper functions
-`%||%` <- function(x, y) if(is.null(x)) y else x
-
 # Read CSV file with error handling - Danish-optimized
 readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8", header = TRUE) {
   
@@ -84,7 +81,7 @@ readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8",
       return(data)
       
     }, error = function(e2) {
-      stop(paste("Kunne ikke læse CSV fil. Fejl:", e1$message))
+      stop(paste("Kunne ikke læse CSV fil. Første fejl:", e1$message, "• Fallback-fejl:", e2$message))
     })
   })
 }
@@ -499,9 +496,11 @@ dataModuleServer <- function(id) {
       data <- values$raw_data
       cat("DEBUG: Raw data has", nrow(data), "rows and", ncol(data), "columns\n")
       
-      # Basic data processing
-      # Remove completely empty rows
-      data <- data[!apply(is.na(data) | data == "", 1, all), ]
+      # Robust removal of empty rows
+      is_empty <- apply(as.data.frame(lapply(data, function(col) {
+        if (is.character(col)) trimws(col) == "" else is.na(col)
+      })), 1, all)
+      data <- data[!is_empty, , drop = FALSE]
       cat("DEBUG: After removing empty rows:", nrow(data), "rows remain\n")
       
       # Store processed data
@@ -848,20 +847,36 @@ editableTableServer <- function(id, data_reactive) {
       return(hot)
     })
     
-    # Handle table changes
+    # Handle table changes with corrected history handling
     observeEvent(input$editable_table, {
       req(input$editable_table)
       
       new_data <- rhandsontable::hot_to_r(input$editable_table)
       values$current_data <- new_data
       
-      # Add to history
+      # Add to history with corrected parentheses
       values$history_position <- values$history_position + 1
-      values$history <- c(values$history[1:values$history_position - 1], list(new_data))
+      values$history <- c(values$history[1:(values$history_position - 1)], list(new_data))
       
       if(length(values$history) > 50) {
         values$history <- values$history[-1]
         values$history_position <- values$history_position - 1
+      }
+    })
+    
+    # Implement Undo functionality
+    observeEvent(input$undo, {
+      if (values$history_position > 1) {
+        values$history_position <- values$history_position - 1
+        values$current_data <- values$history[[values$history_position]]
+      }
+    })
+    
+    # Implement Redo functionality
+    observeEvent(input$redo, {
+      if (values$history_position < length(values$history)) {
+        values$history_position <- values$history_position + 1
+        values$current_data <- values$history[[values$history_position]]
       }
     })
     

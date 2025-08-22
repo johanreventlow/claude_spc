@@ -15,15 +15,8 @@ visualizationModuleUI <- function(id) {
       id = ns("plot_container"),
       style = "position: relative; min-height: 500px;",
       
-      # Main plot output
-      plotOutput(
-        ns("spc_plot"),
-        height = "500px",
-        width = "100%"
-      ),
-      
-      # Dynamic overlay based on plot_ready
-      uiOutput(ns("plot_overlay"))
+      # Dynamic content that switches between plot and placeholder
+      uiOutput(ns("dynamic_content"))
     ),
     
     br(),
@@ -50,13 +43,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       plot_ready = FALSE,
       anhoej_results = NULL,
       plot_warnings = character(0),
-      is_computing = FALSE  # Explicitly start as FALSE
+      is_computing = FALSE
     )
     
     # Debug: observe changes to is_computing
     observe({
       cat("DEBUG: is_computing changed to:", values$is_computing, "\n")
     })
+    
     chart_config <- reactive({
       req(data_reactive(), column_config_reactive())
       
@@ -64,14 +58,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       config <- column_config_reactive()
       data <- data_reactive()
       
-      # Validate columns exist in data
-      if (!is.null(config$x_col) && !config$x_col %in% names(data)) {
+      # Validate columns exist in data - corrected boolean logic
+      if (!is.null(config$x_col) && !(config$x_col %in% names(data))) {
         config$x_col <- NULL
       }
-      if (!is.null(config$y_col) && !config$y_col %in% names(data)) {
+      if (!is.null(config$y_col) && !(config$y_col %in% names(data))) {
         config$y_col <- NULL
       }
-      if (!is.null(config$n_col) && !config$n_col %in% names(data)) {
+      if (!is.null(config$n_col) && !(config$n_col %in% names(data))) {
         config$n_col <- NULL
       }
       
@@ -96,6 +90,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       req(data_reactive(), chart_config())
       
       cat("DEBUG: spc_plot reactive triggered\n")
+      
+      # Set computing flag with proper cleanup
+      values$is_computing <- TRUE
+      on.exit({ values$is_computing <- FALSE }, add = TRUE)
       
       # Reset plot ready at start
       values$plot_ready <- FALSE
@@ -154,20 +152,20 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       })
     })
     
-    # Simple loading logic - only show when user explicitly changes something
-    user_interaction <- reactiveVal(FALSE)
-    
-    # Track user interactions
-    observe({
-      chart_type_reactive()
-      user_interaction(TRUE)
-      cat("DEBUG: User changed chart type\n")
-    })
-    
-    observe({
-      column_config_reactive()
-      if (user_interaction()) {
-        cat("DEBUG: User changed column config\n")
+    # Dynamic content output - switches between plot and placeholder
+    output$dynamic_content <- renderUI({
+      if (!values$plot_ready) {
+        div(
+          class = "alert alert-info",
+          style = "text-align: center; padding: 40px; margin: 50px 0;",
+          icon("info-circle", style = "font-size: 2em; margin-bottom: 15px;"),
+          br(),
+          strong("Ingen graf endnu"),
+          br(),
+          "Indlæs eller indtast data og vælg kolonner for at se grafen."
+        )
+      } else {
+        plotOutput(ns("spc_plot"), height = 500, width = "100%")
       }
     })
     
@@ -634,8 +632,14 @@ calculateAnhoejRules <- function(data, config) {
   ))
 }
 
-# Helper function: Render Anhøj results
+# Helper function: Render Anhøj results with guard for edge cases
 renderAnhoejResults <- function(results) {
+  # Guard against incomplete results
+  if (!is.null(results$message) &&
+      (is.null(results$longest_run) || is.null(results$crossings_count))) {
+    return(div(class="alert alert-info", icon("info-circle"), results$message))
+  }
+  
   div(
     # Runs test
     div(
@@ -692,12 +696,16 @@ renderAnhoejResults <- function(results) {
   )
 }
 
-# Helper function: Show placeholder
+# Helper function: Show placeholder with improved visibility
 showPlaceholder <- function() {
   ggplot() + 
-    annotate("text", x = 0.5, y = 0.5, 
-             label = "Venter på data eller juster indstillinger", 
-             size = 6, color = HOSPITAL_COLORS$secondary) +
+    xlim(0, 1) + ylim(0, 1) +
+    annotate(
+      "text", x = 0.5, y = 0.5,
+      label = "Venter på data eller juster indstillinger",
+      size = 6,
+      color = HOSPITAL_COLORS$secondary
+    ) +
     theme_void() +
     theme(
       plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA)
