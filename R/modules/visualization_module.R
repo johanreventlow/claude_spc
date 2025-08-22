@@ -10,17 +10,20 @@ visualizationModuleUI <- function(id) {
   ns <- NS(id)
   
   tagList(
-    # Plot container - NO loading overlay
+    # Plot container - always visible
     div(
       id = ns("plot_container"),
-      style = "position: relative;",
+      style = "position: relative; min-height: 500px;",
       
-      # Main plot output (no loading overlay)
+      # Main plot output
       plotOutput(
         ns("spc_plot"),
         height = "500px",
         width = "100%"
-      )
+      ),
+      
+      # Dynamic overlay based on plot_ready
+      uiOutput(ns("plot_overlay"))
     ),
     
     br(),
@@ -38,6 +41,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
   
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    
+    cat("DEBUG: Visualization module server starting\n")
     
     # Reactive values for state management
     values <- reactiveValues(
@@ -92,6 +97,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       
       cat("DEBUG: spc_plot reactive triggered\n")
       
+      # Reset plot ready at start
+      values$plot_ready <- FALSE
+      cat("DEBUG: Reset plot_ready to FALSE at start of spc_plot\n")
+      
       data <- data_reactive()
       config <- chart_config()
       chart_type <- chart_type_reactive() %||% "run"
@@ -102,6 +111,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       if (!validation$valid) {
         values$plot_warnings <- validation$warnings
         values$plot_ready <- FALSE
+        cat("DEBUG: Validation failed - plot_ready set to FALSE\n")
         return(NULL)
       }
       
@@ -125,7 +135,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         values$plot_object <- plot
         values$plot_ready <- TRUE
         
-        cat("DEBUG: spc_plot - plot ready set to TRUE\n")
+        cat("DEBUG: spc_plot - plot ready set to TRUE, values$plot_ready:", values$plot_ready, "\n")
         
         # Calculate Anhøj rules for run charts
         if (chart_type == "run") {
@@ -139,6 +149,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }, error = function(e) {
         values$plot_warnings <- c(values$plot_warnings, paste("Fejl ved graf-generering:", e$message))
         values$plot_ready <- FALSE
+        cat("DEBUG: Error in plot generation - plot_ready set to FALSE, error:", e$message, "\n")
         return(NULL)
       })
     })

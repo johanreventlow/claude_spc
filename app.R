@@ -512,22 +512,8 @@ ui <- page_navbar(
             card_body(
               min_height = "400px",
               
-              # Graf output
-              conditionalPanel(
-                condition = "output.has_data == true",
-                visualizationModuleUI("visualization")
-              ),
-              
-              # Placeholder når ingen data
-              conditionalPanel(
-                condition = "output.has_data == false",
-                div(
-                  style = "text-align: center; margin-top: 80px;",
-                  icon("chart-line", style = "font-size: 3em; color: #ccc; margin-bottom: 20px;"),
-                  h5("Ingen graf endnu", style = paste("color:", HOSPITAL_COLORS$secondary)),
-                  p("Indtast data i tabellen til venstre eller upload en fil", style = "color: #666;")
-                )
-              )
+              # Always show visualization module
+              visualizationModuleUI("visualization")
             )
           ),
           
@@ -1249,6 +1235,7 @@ server <- function(input, output, session) {
   outputOptions(output, "has_data", suspendWhenHidden = FALSE)
   
   # Initialize visualization module
+  cat("DEBUG: About to initialize visualization module\n")
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = active_data,
@@ -1261,10 +1248,58 @@ server <- function(input, output, session) {
     show_phases_reactive = reactive(input$show_phases %||% FALSE),
     chart_title_reactive = chart_title
   )
+  cat("DEBUG: Visualization module initialized\n")
   
-  # Plot ready check
+  # Dynamic plot area - always show visualization module, but conditionally show placeholder overlay
+  output$plot_area <- renderUI({
+    cat("DEBUG: plot_area renderUI called\n")
+    cat("DEBUG: has_data:", !is.null(active_data()) && nrow(active_data()) > 0, "\n")
+    cat("DEBUG: plot_ready from visualization:", !is.null(visualization$plot_ready()) && visualization$plot_ready(), "\n")
+    
+    # Check if we have real data with actual values
+    has_real_data <- !is.null(active_data()) && nrow(active_data()) > 0
+    has_actual_values <- FALSE
+    
+    if (has_real_data) {
+      data <- active_data()
+      # Check if data has actual non-NA values (not just empty rows)
+      has_actual_values <- any(sapply(data, function(col) any(!is.na(col))))
+    }
+    
+    plot_is_ready <- !is.null(visualization$plot_ready()) && visualization$plot_ready()
+    
+    cat("DEBUG: has_real_data:", has_real_data, "has_actual_values:", has_actual_values, "plot_is_ready:", plot_is_ready, "\n")
+    
+    # Always show the visualization module (so it can initialize)
+    # But overlay placeholder when no real data or plot not ready
+    tagList(
+      # Always present visualization module
+      visualizationModuleUI("visualization"),
+      
+      # Conditional overlay when no plot ready
+      if (!has_actual_values || !plot_is_ready) {
+        cat("DEBUG: Adding placeholder overlay\n")
+        div(
+          style = "position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 10;",
+          div(
+            style = "text-align: center;",
+            icon("chart-line", style = "font-size: 2.5em; color: #ccc; margin-bottom: 15px;"),
+            h5("Ingen graf endnu", style = paste("color:", HOSPITAL_COLORS$secondary)),
+            p("Indtast data i tabellen til venstre eller upload en fil", style = "color: #666;")
+          )
+        )
+      } else {
+        cat("DEBUG: No overlay - showing plot\n")
+        NULL
+      }
+    )
+  })
+  
+  # Plot ready check - with debug
   output$plot_ready <- reactive({
-    !is.null(visualization$plot_ready()) && visualization$plot_ready()
+    result <- !is.null(visualization$plot_ready()) && visualization$plot_ready()
+    cat("DEBUG: app.R plot_ready output called, result:", result, "\n")
+    return(result)
   })
   outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   
