@@ -418,12 +418,12 @@ ui <- page_navbar(
               card_body(
                 style = "overflow: visible;",  # Fix for dropdown clipping
                 
-                # Chart type selection - FIXED: use value instead of label as selected
+                # Chart type selection
                 selectInput(
                   "chart_type",
                   "Diagram type:",
                   choices = CHART_TYPES_DA,
-                  selected = "run"  # Use English value, not Danish label
+                  selected = "Seriediagram (Run Chart)"
                 ),
                 
                 # Column mapping section
@@ -447,9 +447,9 @@ ui <- page_navbar(
                     selected = NULL
                   ),
                   
-                  # N column (for P/U charts) - FIXED: use English values for comparison
+                  # N column (for P/U charts)
                   conditionalPanel(
-                    condition = "input.chart_type == 'p' || input.chart_type == 'pp' || input.chart_type == 'u' || input.chart_type == 'up'",
+                    condition = "input.chart_type == 'P-kort (Andele)' || input.chart_type == 'P\'-kort (Andele, standardiseret)' || input.chart_type == 'U-kort (Rater)' || input.chart_type == 'U\'-kort (Rater, standardiseret)'",
                     selectInput(
                       "n_column",
                       "Nævner (n):",
@@ -512,7 +512,7 @@ ui <- page_navbar(
             card_body(
               min_height = "400px",
               
-              # Always show visualization module
+              # FIX: Always show visualization module UI statically
               visualizationModuleUI("visualization")
             )
           ),
@@ -601,7 +601,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # Data status display - FIXED: count rows with any non-NA content
+  # Data status display
   output$data_status_display <- renderUI({
     if (is.null(values$current_data)) {
       div(
@@ -610,14 +610,14 @@ server <- function(input, output, session) {
         style = "font-size: 0.9rem;"
       )
     } else if (values$file_uploaded) {
-      data_rows <- sum(apply(values$current_data, 1, function(row) any(!is.na(row))))  # FIXED counting
+      data_rows <- sum(!is.na(values$current_data[[1]]))  # Count non-NA rows
       div(
         span(class = "status-indicator status-ready"),
         paste("Fil uploadet -", data_rows, "datapunkter"),
         style = "font-size: 0.9rem;"
       )
     } else {
-      data_rows <- sum(apply(values$current_data, 1, function(row) any(!is.na(row))))  # FIXED counting
+      data_rows <- sum(!is.na(values$current_data[[1]]))
       if (data_rows > 0) {
         div(
           span(class = "status-indicator status-processing"),
@@ -1148,7 +1148,7 @@ server <- function(input, output, session) {
       x_col = x_col,
       y_col = y_col,
       n_col = n_col,
-      chart_type = get_qic_chart_type(input$chart_type %||% "run")
+      chart_type = get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
     ))
   })
   
@@ -1162,7 +1162,7 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
-    chart_type <- get_qic_chart_type(input$chart_type %||% "run")
+    chart_type <- get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
     warnings <- character(0)
     
     # Tjek om Y-kolonne er numerisk
@@ -1241,7 +1241,7 @@ server <- function(input, output, session) {
     data_reactive = active_data,
     column_config_reactive = column_config,
     chart_type_reactive = reactive({
-      chart_selection <- input$chart_type %||% "run"
+      chart_selection <- input$chart_type %||% "Seriediagram (Run Chart)"
       get_qic_chart_type(chart_selection)
     }),
     show_targets_reactive = reactive(input$show_targets %||% FALSE),
@@ -1250,7 +1250,7 @@ server <- function(input, output, session) {
   )
   cat("DEBUG: Visualization module initialized\n")
   
-  # Plot ready check - with debug
+  # Plot ready check
   output$plot_ready <- reactive({
     result <- !is.null(visualization$plot_ready()) && visualization$plot_ready()
     cat("DEBUG: app.R plot_ready output called, result:", result, "\n")
