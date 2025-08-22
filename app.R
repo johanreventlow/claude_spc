@@ -17,16 +17,15 @@ if(file.exists("R/modules/data_module.R")) {
 ui <- page_navbar(
   title = div(
     style = "display: flex; align-items: center;",
-    # Conditional logo display - only show if file exists
-    conditionalPanel(
-      condition = "true", # Will be made smarter later
+    # Logo display - only show if the logo file exists
+    if (file.exists(HOSPITAL_LOGO_PATH)) {
       img(
-        src = basename(HOSPITAL_LOGO_PATH), 
-        height = "30px", 
+        src = basename(HOSPITAL_LOGO_PATH),
+        height = "30px",
         style = "margin-right: 10px;",
         onerror = "this.style.display='none'" # Hide if image fails to load
       )
-    ),
+    },
     paste("SPC Analyse -", HOSPITAL_NAME)
   ),
   
