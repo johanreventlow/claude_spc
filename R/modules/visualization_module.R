@@ -35,8 +35,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    cat("DEBUG: Visualization module server starting\n")
-    
     # Reactive values for state management
     values <- reactiveValues(
       plot_object = NULL,
@@ -46,53 +44,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       is_computing = FALSE
     )
     
-    # Debug: observe all inputs to see what triggers what
-    observe({
-      cat("DEBUG: data_reactive changed, data is null:", is.null(data_reactive()), "\n")
-    })
-    
-    observe({
-      cat("DEBUG: column_config_reactive changed\n")
-      config <- column_config_reactive()
-      cat("DEBUG: column_config_reactive - config is null:", is.null(config), "\n")
-      if (!is.null(config)) {
-        cat("DEBUG: column_config_reactive - x:", config$x_col %||% "NULL", "y:", config$y_col %||% "NULL", "\n")
-      }
-    })
-    
-    observe({
-      cat("DEBUG: chart_type_reactive changed to:", chart_type_reactive(), "\n")
-    })
-    
-    # DEBUG: Force chart_config to run
-    observe({
-      cat("DEBUG: Forcing chart_config to run\n")
-      config <- chart_config()
-      cat("DEBUG: chart_config forced, result is null:", is.null(config), "\n")
-    })
-    
-    # DEBUG: Force spc_plot to run  
-    observe({
-      cat("DEBUG: Forcing spc_plot to run\n")
-      plot <- spc_plot()
-      cat("DEBUG: spc_plot forced, result is null:", is.null(plot), "\n")
-    })
-    
     chart_config <- reactive({
-      cat("DEBUG: chart_config reactive called\n")
-      
       # Don't use req() here - let it run with available data/config
-      # req(data_reactive(), column_config_reactive())
-      
       data <- data_reactive()
       config <- column_config_reactive()
       chart_type <- chart_type_reactive() %||% "run"
       
-      cat("DEBUG: chart_config - data is null:", is.null(data), "\n")
-      cat("DEBUG: chart_config - config is null:", is.null(config), "\n")
-      
       if (is.null(data) || is.null(config)) {
-        cat("DEBUG: chart_config - returning NULL due to missing data/config\n")
         return(NULL)
       }
       
@@ -125,23 +83,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     
     # Main plot generation reactive
     spc_plot <- reactive({
-      cat("DEBUG: spc_plot reactive called\n")
-      
       # Don't use req() - check manually
       data <- data_reactive()
       config <- chart_config()
       
-      if (is.null(data)) {
-        cat("DEBUG: spc_plot - no data, returning NULL\n")
+      if (is.null(data) || is.null(config)) {
         return(NULL)
       }
-      
-      if (is.null(config)) {
-        cat("DEBUG: spc_plot - no config, returning NULL\n")
-        return(NULL)
-      }
-      
-      cat("DEBUG: spc_plot reactive triggered - data and config OK\n")
       
       # Set computing flag with proper cleanup
       values$is_computing <- TRUE
@@ -149,7 +97,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       
       # Reset plot ready at start
       values$plot_ready <- FALSE
-      cat("DEBUG: Reset plot_ready to FALSE at start of spc_plot\n")
       
       chart_type <- chart_type_reactive() %||% "run"
       
@@ -159,7 +106,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       if (!validation$valid) {
         values$plot_warnings <- validation$warnings
         values$plot_ready <- FALSE
-        cat("DEBUG: Validation failed - plot_ready set to FALSE\n")
         return(NULL)
       }
       
@@ -183,8 +129,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         values$plot_object <- plot
         values$plot_ready <- TRUE
         
-        cat("DEBUG: spc_plot - plot ready set to TRUE, values$plot_ready:", values$plot_ready, "\n")
-        
         # Calculate Anhøj rules for run charts
         if (chart_type == "run") {
           values$anhoej_results <- calculateAnhoejRules(data, config)
@@ -197,34 +141,63 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }, error = function(e) {
         values$plot_warnings <- c(values$plot_warnings, paste("Fejl ved graf-generering:", e$message))
         values$plot_ready <- FALSE
-        cat("DEBUG: Error in plot generation - plot_ready set to FALSE, error:", e$message, "\n")
         return(NULL)
       })
     })
     
-    # Dynamic content output - switches between plot and placeholder
+    # Dynamic content output - FIXED: Always show plotOutput, handle empty state in renderPlot
     output$dynamic_content <- renderUI({
-      if (!values$plot_ready) {
-        div(
-          class = "alert alert-info",
-          style = "text-align: center; padding: 40px; margin: 50px 0;",
-          icon("info-circle", style = "font-size: 2em; margin-bottom: 15px;"),
-          br(),
-          strong("Ingen graf endnu"),
-          br(),
-          "Indlæs eller indtast data og vælg kolonner for at se grafen."
-        )
-      } else {
-        plotOutput(ns("spc_plot"), height = 500, width = "100%")
-      }
+      # Always show the plotOutput - let renderPlot handle the logic
+      plotOutput(ns("spc_plot"), height = 500, width = "100%")
     })
     
-    # Render plot
+    # Render plot - FIXED: Handle all states properly
     output$spc_plot <- renderPlot({
+      # Check if we have data first
+      data <- data_reactive()
+      config <- chart_config()
+      
+      if (is.null(data) || is.null(config) || is.null(config$y_col)) {
+        # Show informative placeholder when no data/config
+        return(ggplot() + 
+          xlim(0, 1) + ylim(0, 1) +
+          annotate(
+            "text", x = 0.5, y = 0.5,
+            label = "Indlæs eller indtast data og vælg kolonner for at se grafen.",
+            size = 5,
+            color = HOSPITAL_COLORS$secondary
+          ) +
+          theme_void() +
+          theme(
+            plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA),
+            plot.margin = margin(20, 20, 20, 20)
+          ))
+      }
+      
+      # Try to generate plot
       plot <- spc_plot()
       
       if (is.null(plot)) {
-        return(showPlaceholder())
+        # Show error/warning placeholder
+        warning_text <- if (length(values$plot_warnings) > 0) {
+          paste(values$plot_warnings, collapse = "\n")
+        } else {
+          "Kunne ikke generere graf - tjek data og indstillinger"
+        }
+        
+        return(ggplot() + 
+          xlim(0, 1) + ylim(0, 1) +
+          annotate(
+            "text", x = 0.5, y = 0.5,
+            label = warning_text,
+            size = 4,
+            color = HOSPITAL_COLORS$danger
+          ) +
+          theme_void() +
+          theme(
+            plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA),
+            plot.margin = margin(20, 20, 20, 20)
+          ))
       }
       
       if (inherits(plot, "ggplot")) {
@@ -238,7 +211,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     output$show_loading <- reactive({
       # Only show if actively computing AND we have data
       result <- values$is_computing && !is.null(data_reactive())
-      cat("DEBUG: show_loading - is_computing:", values$is_computing, "has_data:", !is.null(data_reactive()), "result:", result, "\n")
       return(result)
     })
     outputOptions(output, "show_loading", suspendWhenHidden = FALSE)
@@ -378,20 +350,14 @@ detectChartConfiguration <- function(data, chart_type) {
 
 # Helper function: Validate data
 validateDataForChart <- function(data, config, chart_type) {
-  cat("DEBUG: validateDataForChart called\n")
   warnings <- character(0)
   
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
-    cat("DEBUG: VALIDATION FAILED - no data\n")
     warnings <- c(warnings, "Ingen data tilgængelig")
     return(list(valid = FALSE, warnings = warnings))
   }
   
-  cat("DEBUG: validateDataForChart - data has", nrow(data), "rows and", ncol(data), "columns\n")
-  cat("DEBUG: validateDataForChart - config y_col:", config$y_col %||% "NULL", "\n")
-  
   if (is.null(config$y_col) || !config$y_col %in% names(data)) {
-    cat("DEBUG: VALIDATION FAILED - no valid y_col\n")
     warnings <- c(warnings, "Ingen numerisk kolonne fundet til Y-akse")
     return(list(valid = FALSE, warnings = warnings))
   }
@@ -414,7 +380,6 @@ validateDataForChart <- function(data, config, chart_type) {
     warnings <- c(warnings, paste("Kun", nrow(data), "datapunkter - SPC analyse er mest pålidelig med mindst 15-20 punkter"))
   }
   
-  cat("DEBUG: VALIDATION PASSED - returning valid=TRUE\n")
   return(list(valid = TRUE, warnings = warnings))
 }
 
@@ -759,12 +724,13 @@ showPlaceholder <- function() {
     xlim(0, 1) + ylim(0, 1) +
     annotate(
       "text", x = 0.5, y = 0.5,
-      label = "Venter på data eller juster indstillinger",
-      size = 6,
-      color = HOSPITAL_COLORS$secondary
+      label = "Teknisk fejl ved graf-generering",
+      size = 5,
+      color = HOSPITAL_COLORS$danger
     ) +
     theme_void() +
     theme(
-      plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA)
+      plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA),
+      plot.margin = margin(20, 20, 20, 20)
     )
 }
