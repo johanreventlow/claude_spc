@@ -46,17 +46,55 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       is_computing = FALSE
     )
     
-    # Debug: observe changes to is_computing
+    # Debug: observe all inputs to see what triggers what
     observe({
-      cat("DEBUG: is_computing changed to:", values$is_computing, "\n")
+      cat("DEBUG: data_reactive changed, data is null:", is.null(data_reactive()), "\n")
+    })
+    
+    observe({
+      cat("DEBUG: column_config_reactive changed\n")
+      config <- column_config_reactive()
+      cat("DEBUG: column_config_reactive - config is null:", is.null(config), "\n")
+      if (!is.null(config)) {
+        cat("DEBUG: column_config_reactive - x:", config$x_col %||% "NULL", "y:", config$y_col %||% "NULL", "\n")
+      }
+    })
+    
+    observe({
+      cat("DEBUG: chart_type_reactive changed to:", chart_type_reactive(), "\n")
+    })
+    
+    # DEBUG: Force chart_config to run
+    observe({
+      cat("DEBUG: Forcing chart_config to run\n")
+      config <- chart_config()
+      cat("DEBUG: chart_config forced, result is null:", is.null(config), "\n")
+    })
+    
+    # DEBUG: Force spc_plot to run  
+    observe({
+      cat("DEBUG: Forcing spc_plot to run\n")
+      plot <- spc_plot()
+      cat("DEBUG: spc_plot forced, result is null:", is.null(plot), "\n")
     })
     
     chart_config <- reactive({
-      req(data_reactive(), column_config_reactive())
+      cat("DEBUG: chart_config reactive called\n")
       
-      chart_type <- chart_type_reactive() %||% "run"
-      config <- column_config_reactive()
+      # Don't use req() here - let it run with available data/config
+      # req(data_reactive(), column_config_reactive())
+      
       data <- data_reactive()
+      config <- column_config_reactive()
+      chart_type <- chart_type_reactive() %||% "run"
+      
+      cat("DEBUG: chart_config - data is null:", is.null(data), "\n")
+      cat("DEBUG: chart_config - config is null:", is.null(config), "\n")
+      
+      if (is.null(data) || is.null(config)) {
+        cat("DEBUG: chart_config - returning NULL due to missing data/config\n")
+        return(NULL)
+      }
       
       # Validate columns exist in data - corrected boolean logic
       if (!is.null(config$x_col) && !(config$x_col %in% names(data))) {
@@ -87,9 +125,23 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     
     # Main plot generation reactive
     spc_plot <- reactive({
-      req(data_reactive(), chart_config())
+      cat("DEBUG: spc_plot reactive called\n")
       
-      cat("DEBUG: spc_plot reactive triggered\n")
+      # Don't use req() - check manually
+      data <- data_reactive()
+      config <- chart_config()
+      
+      if (is.null(data)) {
+        cat("DEBUG: spc_plot - no data, returning NULL\n")
+        return(NULL)
+      }
+      
+      if (is.null(config)) {
+        cat("DEBUG: spc_plot - no config, returning NULL\n")
+        return(NULL)
+      }
+      
+      cat("DEBUG: spc_plot reactive triggered - data and config OK\n")
       
       # Set computing flag with proper cleanup
       values$is_computing <- TRUE
@@ -99,8 +151,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       values$plot_ready <- FALSE
       cat("DEBUG: Reset plot_ready to FALSE at start of spc_plot\n")
       
-      data <- data_reactive()
-      config <- chart_config()
       chart_type <- chart_type_reactive() %||% "run"
       
       # Validate data
@@ -328,14 +378,20 @@ detectChartConfiguration <- function(data, chart_type) {
 
 # Helper function: Validate data
 validateDataForChart <- function(data, config, chart_type) {
+  cat("DEBUG: validateDataForChart called\n")
   warnings <- character(0)
   
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
+    cat("DEBUG: VALIDATION FAILED - no data\n")
     warnings <- c(warnings, "Ingen data tilgængelig")
     return(list(valid = FALSE, warnings = warnings))
   }
   
+  cat("DEBUG: validateDataForChart - data has", nrow(data), "rows and", ncol(data), "columns\n")
+  cat("DEBUG: validateDataForChart - config y_col:", config$y_col %||% "NULL", "\n")
+  
   if (is.null(config$y_col) || !config$y_col %in% names(data)) {
+    cat("DEBUG: VALIDATION FAILED - no valid y_col\n")
     warnings <- c(warnings, "Ingen numerisk kolonne fundet til Y-akse")
     return(list(valid = FALSE, warnings = warnings))
   }
@@ -358,6 +414,7 @@ validateDataForChart <- function(data, config, chart_type) {
     warnings <- c(warnings, paste("Kun", nrow(data), "datapunkter - SPC analyse er mest pålidelig med mindst 15-20 punkter"))
   }
   
+  cat("DEBUG: VALIDATION PASSED - returning valid=TRUE\n")
   return(list(valid = TRUE, warnings = warnings))
 }
 
