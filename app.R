@@ -1029,14 +1029,10 @@ server <- function(input, output, session) {
   
   # Auto-detect kolonne funktion
   auto_detect_and_update_columns <- function() {
-    cat("DEBUG: auto_detect_and_update_columns called\n")
     req(values$current_data)
     
     data <- values$current_data
     col_names <- names(data)
-    
-    cat("DEBUG: auto_detect - data has", nrow(data), "rows,", ncol(data), "cols:\n")
-    cat("DEBUG: auto_detect - column names:", paste(col_names, collapse=", "), "\n")
     
     # Detektér potentielle dato-kolonner
     x_col <- NULL
@@ -1125,54 +1121,35 @@ server <- function(input, output, session) {
   
   # Data for visualization modul
   active_data <- reactive({
-    cat("DEBUG: active_data reactive called\n")
     req(values$current_data)
     
     # Filtrer rækker hvor mindst én kolonne har data
     data <- values$current_data
-    cat("DEBUG: active_data - raw data has", nrow(data), "rows and", ncol(data), "columns\n")
-    
     non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
     
     if (any(non_empty_rows)) {
       filtered_data <- data[non_empty_rows, ]
-      cat("DEBUG: active_data - returning", nrow(filtered_data), "non-empty rows\n")
       return(filtered_data)
     } else {
-      cat("DEBUG: active_data - returning NULL (no non-empty rows)\n")
       return(NULL)
     }
   })
   
   # Kolonne konfiguration for visualization
   column_config <- reactive({
-    cat("DEBUG: column_config reactive called\n")
-    
-    # Debug input values
-    cat("DEBUG: column_config - input$x_column:", input$x_column %||% "NULL", "\n")
-    cat("DEBUG: column_config - input$y_column:", input$y_column %||% "NULL", "\n")
-    cat("DEBUG: column_config - input$n_column:", input$n_column %||% "NULL", "\n")
-    
     # Don't use req() here - let it run even without data to avoid circular dependency
-    # req(active_data())
     
     # Brug brugerens valg hvis tilgængelige
     x_col <- if (!is.null(input$x_column) && input$x_column != "") input$x_column else NULL
     y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL
     n_col <- if (!is.null(input$n_column) && input$n_column != "") input$n_column else NULL
     
-    cat("DEBUG: column_config - x:", x_col %||% "NULL", "y:", y_col %||% "NULL", "n:", n_col %||% "NULL", "\n")
-    
-    config <- list(
+    return(list(
       x_col = x_col,
       y_col = y_col,
       n_col = n_col,
       chart_type = get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
-    )
-    
-    cat("DEBUG: column_config - chart_type:", config$chart_type, "\n")
-    
-    return(config)
+    ))
   })
   
   # Kolonne validering output
@@ -1257,15 +1234,7 @@ server <- function(input, output, session) {
   })
   outputOptions(output, "has_data", suspendWhenHidden = FALSE)
   
-  # DEBUG: Force trigger column_config to see if it can run
-  observe({
-    cat("DEBUG: Forcing column_config trigger\n")
-    config <- column_config()
-    cat("DEBUG: Forced column_config completed\n")
-  })
-  
   # Initialize visualization module
-  cat("DEBUG: About to initialize visualization module\n")
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = active_data,
@@ -1278,12 +1247,10 @@ server <- function(input, output, session) {
     show_phases_reactive = reactive(input$show_phases %||% FALSE),
     chart_title_reactive = chart_title
   )
-  cat("DEBUG: Visualization module initialized\n")
   
   # Plot ready check
   output$plot_ready <- reactive({
     result <- !is.null(visualization$plot_ready()) && visualization$plot_ready()
-    cat("DEBUG: app.R plot_ready output called, result:", result, "\n")
     return(result)
   })
   outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
