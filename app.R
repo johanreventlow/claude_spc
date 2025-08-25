@@ -1,140 +1,160 @@
 source("global.R")
+source("R/modules/data_module.R")
+source("R/modules/visualization_module.R")
 
-# Try different source paths to find modules
-if(file.exists("R/modules/data_module.R")) {
-  source("R/modules/data_module.R")
-  source("R/modules/visualization_module.R")
-  cat("✅ Loaded modules from R/modules/\n")
-} else if(file.exists("data_module.R")) {
-  source("data_module.R")
-  source("visualization_module.R")
-  cat("✅ Loaded modules from root directory\n")
-} else {
-  stop("❌ Could not find module files. Check your directory structure.")
-}
-
+#UI -----
 # Define UI with enhanced bslib theming
 ui <- page_navbar(
-  title = div(
-    style = "display: flex; align-items: center;",
-    # Logo display - only show if the logo file exists
-    if (file.exists(HOSPITAL_LOGO_PATH)) {
+  title = tagList(
+    # if (file.exists(HOSPITAL_LOGO_PATH)) {
       img(
         src = basename(HOSPITAL_LOGO_PATH),
-        height = "30px",
+        height = "40px",
         style = "margin-right: 10px;",
         onerror = "this.style.display='none'" # Hide if image fails to load
-      )
-    },
-    paste("SPC Analyse -", HOSPITAL_NAME)
+      ),
+    # },
+    div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
   ),
+  theme = my_theme,
+  inverse = FALSE,
   
-  # Custom theme med hospital branding
-  theme = bs_theme(
-    version = 5,
-    bootswatch = "flatly",  # Clean, professional base theme
-    
-    # Primary farver
-    primary = HOSPITAL_COLORS$primary,
-    secondary = HOSPITAL_COLORS$secondary,
-    success = HOSPITAL_COLORS$success,
-    info = HOSPITAL_COLORS$primary,
-    warning = HOSPITAL_COLORS$warning,
-    danger = HOSPITAL_COLORS$danger,
-    light = HOSPITAL_COLORS$light,
-    dark = HOSPITAL_COLORS$dark,
-    
-    # Typography
-    base_font = font_google("Source Sans Pro"),
-    heading_font = font_google("Source Sans Pro", wght = 600),
-    code_font = font_google("Source Code Pro"),
-    
-    # Custom CSS variables
-    "navbar-brand-font-size" = "1.1rem",
-    "card-border-radius" = "0.5rem"
-  ),
+  # # Custom theme med hospital branding
+  # theme = bs_theme(
+  #   # version = 5,
+  #   bootswatch = theme_name,  # Clean, professional base theme
+  #   
+  #   # Primary farver
+  #   primary = HOSPITAL_COLORS$primary,
+  #   secondary = HOSPITAL_COLORS$secondary,
+  #   success = HOSPITAL_COLORS$success,
+  #   info = HOSPITAL_COLORS$primary,
+  #   warning = HOSPITAL_COLORS$warning,
+  #   danger = HOSPITAL_COLORS$danger,
+  #   light = HOSPITAL_COLORS$light,
+  #   dark = HOSPITAL_COLORS$dark,
+  #   
+  #   # Typography
+  #   # base_font = font_google("Source Sans Pro"),
+  #   # heading_font = font_google("Source Sans Pro", wght = 600),
+  #   # code_font = font_google("Source Code Pro"),
+  #   
+  #   # Custom CSS variables
+  #   "navbar-brand-font-size" = "1.1rem",
+  #   "card-border-radius" = "0.5rem"
+  # ),
   
   # Custom CSS for additional styling
   tags$head(
-    tags$style(HTML(paste0("
-      /* Custom hospital branding */
-      .navbar-brand {
-        font-weight: 600 !important;
-        color: ", HOSPITAL_COLORS$primary, " !important;
-      }
+    tags$style(HTML(
+      # /* Custom hospital branding */
+      # .navbar-brand {
+      #   font-weight: 600 !important;
+      #   color: ", HOSPITAL_COLORS$primary, " !important;
+      # }
+      # 
+      # /* Sidebar styling */
+      # .bslib-sidebar-layout > .sidebar {
+      #   background-color: #f8f9fa;
+      #   border-right: 2px solid ", HOSPITAL_COLORS$light, ";
+      # }
+      # 
+      # /* Card styling */
+      # .card {
+      #   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      #   border: 1px solid ", HOSPITAL_COLORS$light, ";
+      # }
+      # 
+      # /* Button styling */
+      # .btn-outline-primary {
+      #   color: ", HOSPITAL_COLORS$primary, ";
+      #   border-color: ", HOSPITAL_COLORS$primary, ";
+      # }
+      # 
+      # .btn-outline-primary:hover {
+      #   background-color: ", HOSPITAL_COLORS$primary, ";
+      #   border-color: ", HOSPITAL_COLORS$primary, ";
+      # }
+
+      #' /* Loading spinner farver */
+      #' .lds-dual-ring:after {
+      #'   border-color: ", HOSPITAL_COLORS$primary, " transparent ", HOSPITAL_COLORS$primary, " transparent;
+      #' }
+      #' 
+      #' /* Success/warning alerts */
+      #' .alert-success {
+      #'   background-color: ", HOSPITAL_COLORS$success, "20;
+      #'   border-color: ", HOSPITAL_COLORS$success, ";
+      #'   color: ", HOSPITAL_COLORS$dark, ";
+      #' }
+      #' 
+      #' .alert-warning {
+      #'   background-color: ", HOSPITAL_COLORS$warning, "20;
+      #'   border-color: ", HOSPITAL_COLORS$warning, ";
+      #'   color: ", HOSPITAL_COLORS$dark, ";
+      #' }
+      #' 
+      #' /* Responsive design */
+      #' @media (max-width: 768px) {
+      #'   .navbar-brand {
+      #'     font-size: 0.9rem;
+      #'   }
+      #'   .card {
+      #'     margin-bottom: 1rem;
+      #'   }
+      #' }
+      #' 
+      #' /* Status indicators */
+      #' .status-indicator {
+      #'   display: inline-block;
+      #'   width: 12px;
+      #'   height: 12px;
+      #'   border-radius: 50%;
+      #'   margin-right: 8px;
+      #' }
+      #' 
+      #' /* Validation styling for table cells */
+      #' .htInvalid {
+      #'   background-color: ", HOSPITAL_COLORS$danger, "20 !important;
+      #' }
+      #' 
+      #' .htChanged {
+      #'   background-color: ", HOSPITAL_COLORS$warning, "20 !important;
+      #' }
+      #' 
+      #' /* Fix 4: Dropdown menu z-index fix */
+      #' .selectize-dropdown {
+      #'   z-index: 9999 !important;
+      #'   max-height: 300px !important;
+      #' }
+      #' 
+      #' .form-select {
+      #'   z-index: 1000 !important;
+      #' }
+      #' 
+      #' /* Ensure dropdowns are not clipped */
+      #' .card-body {
+      #'   overflow: visible !important;
+      #' }
+      #' 
+      #' .sidebar {
+      #'   overflow: visible !important;
+      #' }
       
-      /* Sidebar styling */
-      .bslib-sidebar-layout > .sidebar {
-        background-color: #f8f9fa;
-        border-right: 2px solid ", HOSPITAL_COLORS$light, ";
-      }
-      
-      /* Card styling */
-      .card {
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border: 1px solid ", HOSPITAL_COLORS$light, ";
-      }
-      
-      /* Button styling */
-      .btn-outline-primary {
-        color: ", HOSPITAL_COLORS$primary, ";
-        border-color: ", HOSPITAL_COLORS$primary, ";
-      }
-      
-      .btn-outline-primary:hover {
-        background-color: ", HOSPITAL_COLORS$primary, ";
-        border-color: ", HOSPITAL_COLORS$primary, ";
-      }
-      
-      /* Loading spinner farver */
-      .lds-dual-ring:after {
-        border-color: ", HOSPITAL_COLORS$primary, " transparent ", HOSPITAL_COLORS$primary, " transparent;
-      }
-      
-      /* Success/warning alerts */
-      .alert-success {
-        background-color: ", HOSPITAL_COLORS$success, "20;
-        border-color: ", HOSPITAL_COLORS$success, ";
-        color: ", HOSPITAL_COLORS$dark, ";
-      }
-      
-      .alert-warning {
-        background-color: ", HOSPITAL_COLORS$warning, "20;
-        border-color: ", HOSPITAL_COLORS$warning, ";
-        color: ", HOSPITAL_COLORS$dark, ";
-      }
-      
-      /* Responsive design */
-      @media (max-width: 768px) {
-        .navbar-brand {
-          font-size: 0.9rem;
-        }
-        .card {
-          margin-bottom: 1rem;
-        }
-      }
-      
-      /* Status indicators */
-      .status-indicator {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-right: 8px;
-      }
-      
-      .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }
-      .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
-      .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
-      .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
-      
-      /* Fix 1: Bredere kolonner i rhandsontable */
+      paste0("
+             
+       .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }
+       .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
+       .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
+       .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
+       
+       /* Fix 1: Bredere kolonner i rhandsontable */
       .handsontable .htCore td {
         min-width: 120px !important;
         width: 120px !important;
         border-color: #ddd !important;
       }
-      
+
       .handsontable .htCore th {
         min-width: 120px !important;
         width: 120px !important;
@@ -142,36 +162,8 @@ ui <- page_navbar(
         color: ", HOSPITAL_COLORS$dark, " !important;
         font-weight: 600 !important;
       }
-      
-      /* Validation styling for table cells */
-      .htInvalid {
-        background-color: ", HOSPITAL_COLORS$danger, "20 !important;
-      }
-      
-      .htChanged {
-        background-color: ", HOSPITAL_COLORS$warning, "20 !important;
-      }
-      
-      /* Fix 4: Dropdown menu z-index fix */
-      .selectize-dropdown {
-        z-index: 9999 !important;
-        max-height: 300px !important;
-      }
-      
-      .form-select {
-        z-index: 1000 !important;
-      }
-      
-      /* Ensure dropdowns are not clipped */
-      .card-body {
-        overflow: visible !important;
-      }
-      
-      .sidebar {
-        overflow: visible !important;
-      }
-      
-    ")))
+             
+             ")))
   ),
   
   # Enable shinyjs
@@ -181,9 +173,8 @@ ui <- page_navbar(
   # TAB 1: ANALYSE
   # -------------------------------------------------------------------------
   nav_panel(
-    title = "Analyse",
-    icon = icon("chart-line"),
-    
+    title = NULL,
+
     # Layout med smal sidebar + 2-kolonne main area
     layout_sidebar(
       sidebar = sidebar(
@@ -559,6 +550,7 @@ ui <- page_navbar(
   )
 )
 
+# SERVER ----
 # Define server
 server <- function(input, output, session) {
   
