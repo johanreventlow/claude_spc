@@ -296,10 +296,28 @@ detectChartConfiguration <- function(data, chart_type) {
   x_col <- NULL
   for (col_name in names(data)) {
     col_data <- data[[col_name]]
-    char_data <- as.character(col_data)[!is.na(col_data)]
-    if (length(char_data) > 0 && any(grepl("\\d{4}-\\d{2}-\\d{2}|\\d{2}/\\d{2}/\\d{4}", char_data))) {
+    
+    # FIXED: Tjek for dato i kolonnenavn ELLER dato-formater i data
+    if (grepl("dato|date|tid|time", col_name, ignore.case = TRUE)) {
       x_col <- col_name
       break
+    }
+    
+    # Tjek for dato-lignende data (nu som character)
+    char_data <- as.character(col_data)[!is.na(col_data)]
+    if (length(char_data) > 0) {
+      # Test forskellige dato-formater
+      date_patterns <- c(
+        "\\d{1,2}-\\d{1,2}-\\d{4}",   # 01-01-2024 eller 1-1-2024
+        "\\d{1,2}/\\d{1,2}/\\d{4}",   # 01/01/2024 eller 1/1/2024
+        "\\d{4}-\\d{1,2}-\\d{1,2}",   # 2024-01-01 eller 2024-1-1
+        "\\d{1,2}\\.\\d{1,2}\\.\\d{4}"  # 01.01.2024 eller 1.1.2024
+      )
+      
+      if (any(sapply(date_patterns, function(pattern) any(grepl(pattern, char_data))))) {
+        x_col <- col_name
+        break
+      }
     }
   }
   
@@ -467,14 +485,45 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
     stop(paste("Kunne ikke konvertere", config$y_col, "til numeriske værdier"))
   }
   
-  # Handle x-axis data
-  if (is.null(x_data) || !inherits(x_data, "Date")) {
+  # Handle x-axis data with robust date parsing
+  if (is.null(x_data)) {
     x_data <- 1:length(y_data)
     xlab_text <- "Observation"
+    use_dates <- FALSE
   } else {
-    # Convert dates to numeric for qicharts2 compatibility
-    x_data <- 1:length(y_data)
-    xlab_text <- "Observation (tidsserie)"
+    # FIXED: Robust dato-konvertering fra character input
+    # Prøv forskellige dato-formater
+    parsed_dates <- NULL
+    
+    # Convert character dates to Date objects
+    if (is.character(x_data)) {
+      # Prøv danske formater først
+      parsed_dates <- as.Date(x_data, format = "%d-%m-%Y")  # 01-01-2024
+      if (all(is.na(parsed_dates))) {
+        parsed_dates <- as.Date(x_data, format = "%d/%m/%Y")  # 01/01/2024
+      }
+      if (all(is.na(parsed_dates))) {
+        parsed_dates <- as.Date(x_data, format = "%Y-%m-%d")  # 2024-01-01
+      }
+      if (all(is.na(parsed_dates))) {
+        parsed_dates <- as.Date(x_data, format = "%d.%m.%Y")  # 01.01.2024
+      }
+    } else if (inherits(x_data, "Date")) {
+      parsed_dates <- x_data
+    }
+    
+    # Use dates if successfully parsed
+    if (!is.null(parsed_dates) && !all(is.na(parsed_dates))) {
+      # FIXED: Brug faktiske datoer på x-aksen
+      x_data <- as.numeric(parsed_dates)  # Convert to numeric for qicharts2
+      xlab_text <- "Dato"
+      use_dates <- TRUE
+      date_range <- range(parsed_dates, na.rm = TRUE)
+    } else {
+      x_data <- 1:length(y_data)
+      xlab_text <- "Observation"
+      use_dates <- FALSE
+    }
   }
   
   # Prepare qic arguments
@@ -492,13 +541,19 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
     qic_args$n <- n_data
   }
   
-  # Clean data
+  # Clean data - FIXED: Sørg for at dato-info bevares
   complete_cases <- complete.cases(qic_args$x, qic_args$y)
   if (!all(complete_cases)) {
     qic_args$x <- qic_args$x[complete_cases]
     qic_args$y <- qic_args$y[complete_cases]
     if ("n" %in% names(qic_args)) {
       qic_args$n <- qic_args$n[complete_cases]
+    }
+    
+    # Opdater date_range hvis nødvendigt
+    if (exists("use_dates") && use_dates && exists("date_range")) {
+      remaining_dates <- as.Date(qic_args$x, origin = "1970-01-01")
+      date_range <- range(remaining_dates, na.rm = TRUE)
     }
   }
   
@@ -528,6 +583,24 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
         xlab = qic_args$xlab
       )
     }
+    
+    # FIXED: Tilføj dato-formatering til x-aksen hvis vi bruger datoer
+    if (exists("use_dates") && use_dates && exists("date_range")) {
+      # Konverter numeriske x-værdier tilbage til datoer for formatering
+      plot <- plot + 
+        ggplot2::scale_x_continuous(
+          name = "Dato",
+          breaks = scales::pretty_breaks(n = 6),
+          labels = function(x) {
+            dates <- as.Date(x, origin = "1970-01-01")
+            format(dates, "%b %Y")  # Format som "Jan 2024"
+          }
+        ) +
+        ggplot2::theme(
+          axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)  # Roter labels for læsbarhed
+        )
+    }
+    
   }, error = function(e) {
     # Fallback to basic ggplot
     plot_data <- data.frame(x = qic_args$x, y = qic_args$y)
@@ -537,6 +610,22 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
       ggplot2::geom_hline(yintercept = median(qic_args$y, na.rm = TRUE), color = "red", linetype = "dashed") +
       ggplot2::labs(title = qic_args$title, x = qic_args$xlab, y = qic_args$ylab) +
       ggplot2::theme_minimal()
+    
+    # Tilføj dato-formatering til fallback plot også
+    if (exists("use_dates") && use_dates) {
+      plot <- plot + 
+        ggplot2::scale_x_continuous(
+          name = "Dato",
+          breaks = scales::pretty_breaks(n = 6),
+          labels = function(x) {
+            dates <- as.Date(x, origin = "1970-01-01")
+            format(dates, "%b %Y")
+          }
+        ) +
+        ggplot2::theme(
+          axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+        )
+    }
   })
   
   return(plot)

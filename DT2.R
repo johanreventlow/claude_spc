@@ -16,12 +16,6 @@ ui <- fluidPage(
     font-weight: 600;
     white-space: nowrap;
   }
-  xtable.dataTable thead th,
-  xtable.dataTable > tbody > td {
-    border: 1px solid #d9d9d9 !important;   /* gitterlinjer */
-    padding: 5px 10px !important;
-  }
-
 
 /* aktiv/redigeret celle: grøn kant som i Excel */
   table.dataTable > tbody > td:focus-within {
@@ -79,9 +73,6 @@ table.dataTable > tbody > tr:focus-within > td > input {
 table.dataTable > tbody > tr:focus-within > td > input {
   padding: 6px 7px !important;
 }
-
-
-  
   
   "))),
   h3("DT som Excel-agtig editor"),
@@ -98,7 +89,7 @@ server <- function(input, output, session) {
       rv(),
       rownames  = FALSE,
       selection = "none",                 # undgå konflikt mellem klik og redigering
-      editable  = "all",  
+      editable  = "row",  
       # options   = list(pageLength = 10, dom = "t"),
       # Gør redigering aktiv ved ét klik (simulerer dblclick)
       callback  = JS("
