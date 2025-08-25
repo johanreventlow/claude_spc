@@ -331,6 +331,7 @@ ui <- page_navbar(
         column(
           6,
           card(
+            full_screen = TRUE,
             card_header(
               div(
                 style = "display: flex; justify-content: space-between; align-items: center;",
