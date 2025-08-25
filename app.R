@@ -567,7 +567,9 @@ server <- function(input, output, session) {
     current_data = NULL,
     original_data = NULL,
     file_uploaded = FALSE,
-    import_settings_visible = FALSE  # Track visibility state
+    import_settings_visible = FALSE,  # Track visibility state
+    updating_table = FALSE,  # Flag to prevent infinite loops
+    auto_detect_done = FALSE  # Track if auto-detect has run
   )
   
   # Toggle import settings panel - explicit show/hide logic
@@ -672,9 +674,13 @@ server <- function(input, output, session) {
     }
   })
   
-  # File upload handler
+  # File upload handler - FIXED with proper flag management
   observeEvent(input$data_file, {
     req(input$data_file)
+    
+    # Prevent table update loops during file upload
+    values$updating_table <- TRUE
+    on.exit({ values$updating_table <- FALSE }, add = TRUE)
     
     file_path <- input$data_file$datapath
     file_ext <- tools::file_ext(input$data_file$name)
@@ -700,6 +706,7 @@ server <- function(input, output, session) {
       values$current_data <- as.data.frame(data)
       values$original_data <- as.data.frame(data)
       values$file_uploaded <- TRUE
+      values$auto_detect_done <- FALSE  # Allow auto-detect for new file
       
       showNotification(
         paste("Fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
@@ -789,57 +796,81 @@ server <- function(input, output, session) {
     return(hot)
   })
   
-  # Forbedret håndtering af tabel ændringer (både data og headers)
+  # FIXED: Forbedret håndtering af tabel ændringer med loop-prevention
   observeEvent(input$main_data_table, {
+    # GUARD: Prevent infinite loops
+    if (values$updating_table) {
+      return()
+    }
+    
     req(input$main_data_table)
     
-    # Konverter hot til data.frame
-    new_data <- rhandsontable::hot_to_r(input$main_data_table)
+    # Set flag to prevent loops
+    values$updating_table <- TRUE
+    on.exit({ values$updating_table <- FALSE }, add = TRUE)
     
-    # Tjek om kolonnenavne er ændret
-    current_names <- names(values$current_data)
-    new_names <- names(new_data)
-    
-    if (!identical(current_names, new_names)) {
-      # Valider nye kolonnenavne
-      if (length(new_names) != length(unique(new_names))) {
-        showNotification(
-          "Kolonnenavne skal være unikke. Ændring ignoreret.",
-          type = "error",
-          duration = 4
-        )
-        return()  # Ignorer ændringen hvis der er dubletter
-      }
+    tryCatch({
+      # Konverter hot til data.frame
+      new_data <- rhandsontable::hot_to_r(input$main_data_table)
       
-      # Tjek for tomme kolonnenavne
-      if (any(is.na(new_names) | new_names == "" | trimws(new_names) == "")) {
-        showNotification(
-          "Kolonnenavne kan ikke være tomme. Ændring ignoreret.",
-          type = "error", 
-          duration = 4
-        )
+      # SAFETY: Check if data is actually different to avoid unnecessary updates
+      if (!is.null(values$current_data) && identical(values$current_data, new_data)) {
         return()
       }
       
-      # Vis bekræftelse af kolonnenavn-ændringer
-      changed_indices <- which(current_names != new_names)
-      if (length(changed_indices) > 0) {
-        change_summary <- paste(
-          paste0("'", current_names[changed_indices], "' → '", new_names[changed_indices], "'"),
-          collapse = ", "
-        )
+      # Tjek om kolonnenavne er ændret
+      current_names <- names(values$current_data)
+      new_names <- names(new_data)
+      
+      if (!identical(current_names, new_names)) {
+        # Valider nye kolonnenavne
+        if (length(new_names) != length(unique(new_names))) {
+          showNotification(
+            "Kolonnenavne skal være unikke. Ændring ignoreret.",
+            type = "error",
+            duration = 4
+          )
+          return()  # Ignorer ændringen hvis der er dubletter
+        }
         
-        showNotification(
-          paste("Kolonnenavne opdateret:", change_summary),
-          type = "message",
-          duration = 4
-        )
+        # Tjek for tomme kolonnenavne
+        if (any(is.na(new_names) | new_names == "" | trimws(new_names) == "")) {
+          showNotification(
+            "Kolonnenavne kan ikke være tomme. Ændring ignoreret.",
+            type = "error", 
+            duration = 4
+          )
+          return()
+        }
+        
+        # Vis bekræftelse af kolonnenavn-ændringer
+        changed_indices <- which(current_names != new_names)
+        if (length(changed_indices) > 0) {
+          change_summary <- paste(
+            paste0("'", current_names[changed_indices], "' → '", new_names[changed_indices], "'"),
+            collapse = ", "
+          )
+          
+          showNotification(
+            paste("Kolonnenavne opdateret:", change_summary),
+            type = "message",
+            duration = 4
+          )
+        }
       }
-    }
-    
-    # Opdater data med eventuelle nye kolonnenavne
-    values$current_data <- new_data
-  })
+      
+      # Opdater data med eventuelle nye kolonnenavne
+      values$current_data <- new_data
+      
+    }, error = function(e) {
+      cat("ERROR in main_data_table observer:", e$message, "\n")
+      showNotification(
+        paste("Fejl ved tabel-opdatering:", e$message),
+        type = "error",
+        duration = 3
+      )
+    })
+  }, ignoreInit = TRUE)  # Don't run on initialization
   
   # Redigér kolonnenavne modal
   observeEvent(input$edit_column_names, {
@@ -980,6 +1011,9 @@ server <- function(input, output, session) {
   
   # Reset tabel - tøm helt for at starte forfra
   observeEvent(input$reset_table, {
+    # PREVENT loops during reset
+    values$updating_table <- TRUE
+    
     # Lav en helt tom tabel med basis struktur
     values$current_data <- data.frame(
       Dato = rep(as.Date(NA), 5),
@@ -988,12 +1022,18 @@ server <- function(input, output, session) {
       stringsAsFactors = FALSE
     )
     
-    # Nulstil file upload status
+    # Nulstil file upload status og flags
     values$file_uploaded <- FALSE
     values$original_data <- NULL
+    values$auto_detect_done <- FALSE
     
     # Reset file upload felt
-    shinyjs::reset("data_file")
+    isolate({
+      shinyjs::reset("data_file")
+    })
+    
+    # Allow updates again
+    values$updating_table <- FALSE
     
     showNotification(
       "Tabel og fil-upload tømt - indtast nye data eller upload ny fil. Titel og beskrivelse bevaret.", 
@@ -1002,8 +1042,13 @@ server <- function(input, output, session) {
     )
   })
   
-  # Opdater kolonne-valg når data ændres
+  # FIXED: Opdater kolonne-valg når data ændres - med loop protection
   observe({
+    # GUARD: Don't run if we're updating table to prevent loops
+    if (values$updating_table) {
+      return()
+    }
+    
     req(values$current_data)
     
     data <- values$current_data
@@ -1015,13 +1060,19 @@ server <- function(input, output, session) {
       # Lav choices list med "Vælg..." som første option
       col_choices <- setNames(c("", all_cols), c("Vælg kolonne...", all_cols))
       
-      # Opdater dropdown menuer
-      updateSelectInput(session, "x_column", choices = col_choices)
-      updateSelectInput(session, "y_column", choices = col_choices)
-      updateSelectInput(session, "n_column", choices = col_choices)
+      # ISOLATE: Prevent reactive chain from triggering more observers
+      isolate({
+        # Opdater dropdown menuer
+        updateSelectInput(session, "x_column", choices = col_choices)
+        updateSelectInput(session, "y_column", choices = col_choices)
+        updateSelectInput(session, "n_column", choices = col_choices)
+      })
       
-      # Auto-detektér kolonner første gang data indlæses
-      if (is.null(input$x_column) || input$x_column == "") {
+      # Auto-detektér kolonner KUN hvis det ikke er gjort før
+      if (!values$auto_detect_done && 
+          (is.null(input$x_column) || input$x_column == "")) {
+        # Mark as done BEFORE calling to prevent loops
+        values$auto_detect_done <- TRUE
         auto_detect_and_update_columns()
       }
     }
@@ -1091,32 +1142,34 @@ server <- function(input, output, session) {
       taeller_col <- numeric_cols[1]
     }
     
-    # Opdater UI med detekterede kolonner
-    if (!is.null(x_col)) {
-      updateSelectInput(session, "x_column", selected = x_col)
-    }
-    
-    if (!is.null(taeller_col)) {
-      updateSelectInput(session, "y_column", selected = taeller_col)
-    }
-    
-    if (!is.null(naevner_col)) {
-      updateSelectInput(session, "n_column", selected = naevner_col)
-    }
-    
-    # Vis bekræftelse
-    detected_msg <- paste0(
-      "Auto-detekteret: ",
-      "X=", x_col %||% "ingen", ", ",
-      "Y=", taeller_col %||% "ingen",
-      if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ""
-    )
-    
-    showNotification(
-      detected_msg,
-      type = "message",
-      duration = 3
-    )
+    # ISOLATE: Opdater UI med detekterede kolonner for at forhindre reactive loops
+    isolate({
+      if (!is.null(x_col)) {
+        updateSelectInput(session, "x_column", selected = x_col)
+      }
+      
+      if (!is.null(taeller_col)) {
+        updateSelectInput(session, "y_column", selected = taeller_col)
+      }
+      
+      if (!is.null(naevner_col)) {
+        updateSelectInput(session, "n_column", selected = naevner_col)
+      }
+      
+      # Vis bekræftelse
+      detected_msg <- paste0(
+        "Auto-detekteret: ",
+        "X=", x_col %||% "ingen", ", ",
+        "Y=", taeller_col %||% "ingen",
+        if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ""
+      )
+      
+      showNotification(
+        detected_msg,
+        type = "message",
+        duration = 3
+      )
+    })
   }
   
   # Data for visualization modul
@@ -1317,6 +1370,12 @@ server <- function(input, output, session) {
       }
     }
   )
+  
+  # Simple anti-stuck mechanism - prevent UI from getting stuck in loading state
+  observeEvent(values$current_data, {
+    # Just ensure we're not stuck in loading state after data changes
+    invalidateLater(200)
+  }, ignoreInit = TRUE, ignoreNULL = FALSE)
   
   # Velkommen besked
   observe({

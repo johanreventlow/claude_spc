@@ -6,5 +6,5 @@ library(gert)
 # git_status()
 
 git_add(".")
-git_commit_all("fejlfinding - spc-grafvisning")
+git_commit_all("fejlfinding - forbedringer dataindtastning i tabel")
 git_push()

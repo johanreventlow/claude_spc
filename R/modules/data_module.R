@@ -369,7 +369,7 @@ editableTableServer <- function(id, data_reactive) {
       ) %>%
         rhandsontable::hot_context_menu(
           allowRowEdit = TRUE,
-          allowColEdit = FALSE,
+          allowColEdit = TRUE,
           allowReadOnly = FALSE,
           allowComments = FALSE
         ) %>%
@@ -384,13 +384,13 @@ editableTableServer <- function(id, data_reactive) {
         col_data <- data[[i]]
         
         if(is.numeric(col_data) || 
-           sum(!is.na(suppressWarnings(as.numeric(gsub(",", ".", as.character(col_data)))))) > length(col_data) * 0.8) {
+           sum(!is.na(suppressWarnings(as.numeric(gsub(".", ",", as.character(col_data)))))) > length(col_data) * 0.8) {
           
           hot <- hot %>%
             rhandsontable::hot_col(
               col = i,
               type = "numeric",
-              format = "0,0.00"
+              format = "0.0,00"
             )
         } else {
           hot <- hot %>%
