@@ -81,19 +81,28 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       ))
     })
     
-    # Main plot generation reactive
+    # Main plot generation reactive - FIXED: Better error handling and state management
     spc_plot <- reactive({
       # Don't use req() - check manually
       data <- data_reactive()
       config <- chart_config()
       
+      # IMPORTANT: Reset computing state at the start
+      values$is_computing <- FALSE
+      
       if (is.null(data) || is.null(config)) {
+        values$plot_ready <- FALSE
+        values$plot_warnings <- character(0)
         return(NULL)
       }
       
-      # Set computing flag with proper cleanup
+      # Set computing flag ONLY when we actually start processing
       values$is_computing <- TRUE
-      on.exit({ values$is_computing <- FALSE }, add = TRUE)
+      
+      # CRITICAL: Ensure we reset the flag no matter what happens
+      on.exit({
+        values$is_computing <- FALSE
+      }, add = TRUE)
       
       # Reset plot ready at start
       values$plot_ready <- FALSE
@@ -139,7 +148,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         return(plot)
         
       }, error = function(e) {
-        values$plot_warnings <- c(values$plot_warnings, paste("Fejl ved graf-generering:", e$message))
+        cat("ERROR in spc_plot reactive:", e$message, "\n")
+        values$plot_warnings <- c("Graf-generering fejlede:", e$message)
         values$plot_ready <- FALSE
         return(NULL)
       })
@@ -207,13 +217,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     }, height = 500, width = 800, res = 96)
     
-    # Loading indicator - only show during actual computation
-    output$show_loading <- reactive({
-      # Only show if actively computing AND we have data
-      result <- values$is_computing && !is.null(data_reactive())
-      return(result)
-    })
-    outputOptions(output, "show_loading", suspendWhenHidden = FALSE)
+    # Loading indicator - DISABLED to prevent overlay issues
+    # output$show_loading <- reactive({
+    #   result <- values$is_computing && !is.null(data_reactive())
+    #   return(result)
+    # })
+    # outputOptions(output, "show_loading", suspendWhenHidden = FALSE)
     
     # Plot ready status
     output$plot_ready <- reactive({
