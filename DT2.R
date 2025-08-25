@@ -6,34 +6,83 @@ library(tibble)
 ui <- fluidPage(
   tags$head(tags$style(HTML("
   /* --- Excel-ish tema til DT --- */
-  .excel-theme table.dataTable {
+  table.dataTable {
     font-family: Calibri, 'Segoe UI', Arial, sans-serif;
     font-size: 13px;
   }
-  .excel-theme table.dataTable thead th {
+  table.dataTable thead th {
     background: #f3f3f3;
     border-bottom: 2px solid #bfbfbf;
     font-weight: 600;
     white-space: nowrap;
   }
-  .excel-theme table.dataTable thead th,
-  .excel-theme table.dataTable tbody td {
+  xtable.dataTable thead th,
+  xtable.dataTable > tbody > td {
     border: 1px solid #d9d9d9 !important;   /* gitterlinjer */
+    padding: 5px 10px !important;
   }
-  .excel-theme table.dataTable tbody tr:hover td {
-    background-color: #f8fbff !important;   /* diskret hover */
-  }
-  /* aktiv/redigeret celle: grøn kant som i Excel */
-  .excel-theme table.dataTable tbody td:focus-within {
+
+
+/* aktiv/redigeret celle: grøn kant som i Excel */
+  table.dataTable > tbody > td:focus-within {
     outline: 2px solid #21a366;  /* Excel-grøn */
     outline-offset: -2px;
-    background: #fff;
   }
   /* gør scrolleren visuelt pænere */
-  .excel-theme .dataTables_scrollBody {
+  .dataTables_scrollBody {
     border-left: 1px solid #d9d9d9;
     border-right: 1px solid #d9d9d9;
   }
+
+table.dataTable > tbody > tr:nth-child(odd) > td,
+table.dataTable > tbody > tr:nth-child(odd) > td > input,
+table.dataTable > tbody > tr:nth-child(odd):focus-within > td,
+table.dataTable > tbody > tr:nth-child(odd):focus-within > td > input,
+table.dataTable > tbody > tr:nth-child(odd) > th {
+  background-color: #f3f3f3 !important;
+  box-shadow: none !important;
+}
+table.dataTable > tbody > tr:nth-child(even) > td,
+table.dataTable > tbody > tr:nth-child(even) > td > input,
+table.dataTable > tbody > tr:nth-child(even):focus-within > td,
+table.dataTable > tbody > tr:nth-child(even):focus-within > td > input,
+table.dataTable > tbody > tr:nth-child(even) > th {
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+table.dataTable > tbody > tr:nth-child(odd):hover > td,
+table.dataTable > tbody > tr:nth-child(odd):hover > td > input,
+table.dataTable > tbody > tr:nth-child(even):hover > td,
+table.dataTable > tbody > tr:nth-child(even):hover > td > input {
+   background-color: #f8fbff !important;
+}
+
+table.dataTable > tbody > tr > td,
+table.dataTable > tbody > tr:focus-within > td {
+      border: 1px solid #d9d9d9 !important;   /* gitterlinjer */
+}
+
+table.dataTable > tbody > tr > td {
+   padding: 5px !important;
+}
+table.dataTable > tbody > tr:focus-within > td {
+   padding: 0px !important;
+}
+
+
+table.dataTable > tbody > tr > td > input,
+table.dataTable > tbody > tr:focus-within > td > input {
+  border: none !important;
+}
+
+table.dataTable > tbody > tr:focus-within > td > input {
+  padding: 6px 7px !important;
+}
+
+
+  
+  
   "))),
   h3("DT som Excel-agtig editor"),
   DTOutput("tbl", height = "520px")
@@ -49,8 +98,8 @@ server <- function(input, output, session) {
       rv(),
       rownames  = FALSE,
       selection = "none",                 # undgå konflikt mellem klik og redigering
-      editable  = "all",  # "alle celler" redigerbare
-      options   = list(pageLength = 10, dom = "t"),
+      editable  = "all",  
+      # options   = list(pageLength = 10, dom = "t"),
       # Gør redigering aktiv ved ét klik (simulerer dblclick)
       callback  = JS("
         table.on('click', 'tbody td', function() {
