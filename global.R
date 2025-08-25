@@ -20,19 +20,34 @@ library(rlang)  # for %||%
 
 # Hospital information
 HOSPITAL_NAME <- "Bispebjerg og Frederiksberg Hospital"
-HOSPITAL_LOGO_PATH <- "www/RegionH_hospital.png"  # Skal placeres i www/ mappen
+HOSPITAL_LOGO_PATH <- "www/Logo_Bispebjerg_og Frederiksberg_RGB_neg.png"  # Skal placeres i www/ mappen
 
 # Farvepalette (skal matches med hospital branding)
+theme_name <- "flatly"
+my_theme <- bs_theme(bootswatch = theme_name)
+
 HOSPITAL_COLORS <- list(
-  primary = "#0066CC",      # Primær blå
-  secondary = "#004D99",    # Mørkere blå  
+  primary = bs_get_variables(my_theme, "primary") |> as.character(),      # Primær blå
+  secondary = bs_get_variables(my_theme, "secondary") |> as.character(),    # Mørkere blå  
   accent = "#FF6B35",       # Orange accent
-  success = "#28A745",      # Grøn for positive signals
-  warning = "#FFC107",      # Gul for advarsler
-  danger = "#DC3545",       # Rød for alerts
-  light = "#F8F9FA",        # Lys baggrund
-  dark = "#343A40"          # Mørk tekst
+  success = bs_get_variables(my_theme, "success"),      # Grøn for positive signals
+  warning = bs_get_variables(my_theme, "warning"),      # Gul for advarsler
+  danger = bs_get_variables(my_theme, "danger"),       # Rød for alerts
+  light = bs_get_variables(my_theme, "light"),        # Lys baggrund
+  dark = bs_get_variables(my_theme, "dark")          # Mørk tekst
 )
+
+HOSPITAL_COLORS <- list(
+  primary = bs_get_variables(my_theme, "primary") |> as.character(),      # Primær blå
+  secondary = bs_get_variables(my_theme, "secondary") |> as.character(),    # Mørkere blå  
+  accent = "#FF6B35",       # Orange accent
+  success = bs_get_variables(my_theme, "success"),      # Grøn for positive signals
+  warning = bs_get_variables(my_theme, "warning"),      # Gul for advarsler
+  danger = bs_get_variables(my_theme, "danger"),       # Rød for alerts
+  light = bs_get_variables(my_theme, "light"),        # Lys baggrund
+  dark = bs_get_variables(my_theme, "dark")          # Mørk tekst
+)
+
 
 # ggplot2 tema for alle grafer
 HOSPITAL_THEME <- function() {
