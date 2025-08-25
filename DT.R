@@ -29,7 +29,7 @@ server <- function(input, output, session) {
     datatable(
       data_rv(),
       selection = "multiple",
-      editable = "cell",
+      editable = "all",
       options = list(pageLength = 5, dom = "tip")
     )
   }, server = FALSE)

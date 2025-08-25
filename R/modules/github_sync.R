@@ -6,5 +6,5 @@ library(gert)
 # git_status()
 
 git_add(".")
-git_commit_all("fejlfinding - forbedringer ui farver")
+git_commit_all("Undersøgelser vedr DT")
 git_push()
