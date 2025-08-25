@@ -378,19 +378,19 @@ ui <- page_navbar(
               
               # Rhandsontable
               div(
-                style = "border: 1px solid #ddd; border-radius: 5px; background-color: white;",
-                rhandsontable::rHandsontableOutput("main_data_table", height = "500px")
-              ),
-              
-              # Tabel info
-              div(
-                style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
-                icon("info-circle"),
-                " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
-                br(),
-                " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
-                br(),
-                strong("Dato-formater:"), " 01-01-2024, 01/01/2024, 2024-01-01, eller 01.01.2024"
+                style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; height = '100%'",
+                rhandsontable::rHandsontableOutput("main_data_table")
+              # ),
+              # 
+              # # Tabel info
+              # div(
+              #   style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
+              #   icon("info-circle"),
+              #   " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
+              #   br(),
+              #   " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
+              #   br(),
+              #   strong("Dato-formater:"), " 01-01-2024, 01/01/2024, 2024-01-01, eller 01.01.2024"
               )
             )
           ),
