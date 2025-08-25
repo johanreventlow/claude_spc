@@ -28,8 +28,8 @@ server <- function(input, output, session) {
   output$tbl <- renderDT({
     datatable(
       data_rv(),
-      selection = "multiple",
-      editable = "all",
+      selection = "none",
+      editable = "row",
       options = list(pageLength = 5, dom = "tip")
     )
   }, server = FALSE)
