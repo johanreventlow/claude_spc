@@ -387,7 +387,9 @@ ui <- page_navbar(
                 icon("info-circle"),
                 " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
                 br(),
-                " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog"
+                " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
+                br(),
+                strong("Dato-formater:"), " 01-01-2024, 01/01/2024, 2024-01-01, eller 01.01.2024"
               )
             )
           ),
@@ -584,8 +586,9 @@ server <- function(input, output, session) {
   observe({
     if (is.null(values$current_data)) {
       # Lav en tabel med 5 tomme rækker så brugeren kan se strukturen
+      # FIXED: Dato som character for at undgå rhandsontable dato-problemer
       empty_data <- data.frame(
-        Dato = rep(as.Date(NA), 5),
+        Dato = rep(NA_character_, 5),  # Character i stedet for Date
         Taeller = rep(NA_real_, 5), 
         Naevner = rep(NA_real_, 5),
         stringsAsFactors = FALSE
@@ -773,9 +776,11 @@ server <- function(input, output, session) {
     for (i in 1:ncol(data)) {
       col_data <- data[[i]]
       
+      # FIXED: Fjern automatisk dato-type for at undgå forsvindende datoer
+      # Alle dato-kolonner behandles som tekst så brugeren kan indtaste frit
       if (grepl("dato|date", names(data)[i], ignore.case = TRUE)) {
         hot <- hot %>%
-          rhandsontable::hot_col(col = i, type = "date", dateFormat = "DD-MM-YYYY")
+          rhandsontable::hot_col(col = i, type = "text")  # Tekst i stedet for date
       } else if (is.numeric(col_data)) {
         hot <- hot %>%
           rhandsontable::hot_col(col = i, type = "numeric", format = "0,0.00")
@@ -979,7 +984,8 @@ server <- function(input, output, session) {
     if (new_col_type == "numeric") {
       values$current_data[[new_col_name]] <- rep(NA_real_, nrow(values$current_data))
     } else if (new_col_type == "date") {
-      values$current_data[[new_col_name]] <- rep(as.Date(NA), nrow(values$current_data))
+      # FIXED: Brug character i stedet for Date for kompatibilitet
+      values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
     } else {
       values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
     }
@@ -1007,8 +1013,9 @@ server <- function(input, output, session) {
     values$updating_table <- TRUE
     
     # Lav en helt tom tabel med basis struktur
+    # FIXED: Character dato-kolonne og danske kolonnenavne
     values$current_data <- data.frame(
-      Dato = rep(as.Date(NA), 5),
+      Dato = rep(NA_character_, 5),  # Character i stedet for Date
       Taeller = rep(NA_real_, 5),
       Naevner = rep(NA_real_, 5),
       stringsAsFactors = FALSE
@@ -1088,12 +1095,21 @@ server <- function(input, output, session) {
         break
       }
       
-      # Tjek for dato-format i data
+      # Tjek for dato-format i data (nu som character)
       char_data <- as.character(col_data)[!is.na(col_data)]
-      if (length(char_data) > 0 && 
-          any(grepl("\\d{4}-\\d{2}-\\d{2}|\\d{2}/\\d{2}/\\d{4}|\\d{2}-\\d{2}-\\d{4}", char_data))) {
-        x_col <- col_name
-        break
+      if (length(char_data) > 0) {
+        # Test forskellige dato-formater
+        date_patterns <- c(
+          "\\d{1,2}-\\d{1,2}-\\d{4}",   # 01-01-2024 eller 1-1-2024
+          "\\d{1,2}/\\d{1,2}/\\d{4}",   # 01/01/2024 eller 1/1/2024
+          "\\d{4}-\\d{1,2}-\\d{1,2}",   # 2024-01-01 eller 2024-1-1
+          "\\d{1,2}\\.\\d{1,2}\\.\\d{4}"  # 01.01.2024 eller 1.1.2024
+        )
+        
+        if (any(sapply(date_patterns, function(pattern) any(grepl(pattern, char_data))))) {
+          x_col <- col_name
+          break
+        }
       }
     }
     

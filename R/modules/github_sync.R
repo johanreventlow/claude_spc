@@ -6,5 +6,5 @@ library(gert)
 # git_status()
 
 git_add(".")
-git_commit_all("Undersøgelser vedr DT")
+git_commit_all("fejlrettelser vedr datavalidering")
 git_push()
