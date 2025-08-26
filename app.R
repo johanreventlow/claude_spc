@@ -1,148 +1,57 @@
 source("global.R")
 source("R/modules/data_module.R")
 source("R/modules/visualization_module.R")
+# NYT: Tilføj local storage modul
+source("R/modules/local_storage_module.R")
 
 #UI -----
 # Define UI with enhanced bslib theming
 ui <- page_navbar(
   title = tagList(
     # if (file.exists(HOSPITAL_LOGO_PATH)) {
-      img(
-        src = basename(HOSPITAL_LOGO_PATH),
-        height = "40px",
-        style = "margin-right: 10px;",
-        onerror = "this.style.display='none'" # Hide if image fails to load
-      ),
+    img(
+      src = basename(HOSPITAL_LOGO_PATH),
+      height = "40px",
+      style = "margin-right: 10px;",
+      onerror = "this.style.display='none'" # Hide if image fails to load
+    ),
     # },
     div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
   ),
   theme = my_theme,
   inverse = FALSE,
   
-  # # Custom theme med hospital branding
-  # theme = bs_theme(
-  #   # version = 5,
-  #   bootswatch = theme_name,  # Clean, professional base theme
-  #   
-  #   # Primary farver
-  #   primary = HOSPITAL_COLORS$primary,
-  #   secondary = HOSPITAL_COLORS$secondary,
-  #   success = HOSPITAL_COLORS$success,
-  #   info = HOSPITAL_COLORS$primary,
-  #   warning = HOSPITAL_COLORS$warning,
-  #   danger = HOSPITAL_COLORS$danger,
-  #   light = HOSPITAL_COLORS$light,
-  #   dark = HOSPITAL_COLORS$dark,
-  #   
-  #   # Typography
-  #   # base_font = font_google("Source Sans Pro"),
-  #   # heading_font = font_google("Source Sans Pro", wght = 600),
-  #   # code_font = font_google("Source Code Pro"),
-  #   
-  #   # Custom CSS variables
-  #   "navbar-brand-font-size" = "1.1rem",
-  #   "card-border-radius" = "0.5rem"
-  # ),
-  
-  # Custom CSS for additional styling
+  # NYT: Tilføj JavaScript til head section
   tags$head(
-    tags$style(HTML(
-      # /* Custom hospital branding */
-      # .navbar-brand {
-      #   font-weight: 600 !important;
-      #   color: ", HOSPITAL_COLORS$primary, " !important;
-      # }
-      # 
-      # /* Sidebar styling */
-      # .bslib-sidebar-layout > .sidebar {
-      #   background-color: #f8f9fa;
-      #   border-right: 2px solid ", HOSPITAL_COLORS$light, ";
-      # }
-      # 
-      # /* Card styling */
-      # .card {
-      #   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      #   border: 1px solid ", HOSPITAL_COLORS$light, ";
-      # }
-      # 
-      # /* Button styling */
-      # .btn-outline-primary {
-      #   color: ", HOSPITAL_COLORS$primary, ";
-      #   border-color: ", HOSPITAL_COLORS$primary, ";
-      # }
-      # 
-      # .btn-outline-primary:hover {
-      #   background-color: ", HOSPITAL_COLORS$primary, ";
-      #   border-color: ", HOSPITAL_COLORS$primary, ";
-      # }
-
-      #' /* Loading spinner farver */
-      #' .lds-dual-ring:after {
-      #'   border-color: ", HOSPITAL_COLORS$primary, " transparent ", HOSPITAL_COLORS$primary, " transparent;
-      #' }
-      #' 
-      #' /* Success/warning alerts */
-      #' .alert-success {
-      #'   background-color: ", HOSPITAL_COLORS$success, "20;
-      #'   border-color: ", HOSPITAL_COLORS$success, ";
-      #'   color: ", HOSPITAL_COLORS$dark, ";
-      #' }
-      #' 
-      #' .alert-warning {
-      #'   background-color: ", HOSPITAL_COLORS$warning, "20;
-      #'   border-color: ", HOSPITAL_COLORS$warning, ";
-      #'   color: ", HOSPITAL_COLORS$dark, ";
-      #' }
-      #' 
-      #' /* Responsive design */
-      #' @media (max-width: 768px) {
-      #'   .navbar-brand {
-      #'     font-size: 0.9rem;
-      #'   }
-      #'   .card {
-      #'     margin-bottom: 1rem;
-      #'   }
-      #' }
-      #' 
-      #' /* Status indicators */
-      #' .status-indicator {
-      #'   display: inline-block;
-      #'   width: 12px;
-      #'   height: 12px;
-      #'   border-radius: 50%;
-      #'   margin-right: 8px;
-      #' }
-      #' 
-      #' /* Validation styling for table cells */
-      #' .htInvalid {
-      #'   background-color: ", HOSPITAL_COLORS$danger, "20 !important;
-      #' }
-      #' 
-      #' .htChanged {
-      #'   background-color: ", HOSPITAL_COLORS$warning, "20 !important;
-      #' }
-      #' 
-      #' /* Fix 4: Dropdown menu z-index fix */
-      #' .selectize-dropdown {
-      #'   z-index: 9999 !important;
-      #'   max-height: 300px !important;
-      #' }
-      #' 
-      #' .form-select {
-      #'   z-index: 1000 !important;
-      #' }
-      #' 
-      #' /* Ensure dropdowns are not clipped */
-      #' .card-body {
-      #'   overflow: visible !important;
-      #' }
-      #' 
-      #' .sidebar {
-      #'   overflow: visible !important;
-      #' }
+    tags$script(HTML(localStorage_js)),
+    tags$script(HTML("
+      // Custom message handlers
+      Shiny.addCustomMessageHandler('saveAppState', function(message) {
+        window.saveAppState(message.key, message.data);
+      });
       
+      Shiny.addCustomMessageHandler('loadAppState', function(message) {
+        var data = window.loadAppState(message.key);
+        Shiny.setInputValue('loaded_app_state', data, {priority: 'event'});
+      });
+      
+      Shiny.addCustomMessageHandler('clearAppState', function(message) {
+        window.clearAppState(message.key);
+      });
+      
+      // Check for existing data on app start
+      $(document).ready(function() {
+        if (window.hasAppState('current_session')) {
+          setTimeout(function() {
+            var data = window.loadAppState('current_session');
+            Shiny.setInputValue('check_saved_data', data, {priority: 'event'});
+          }, 1000); // Delay to ensure Shiny is ready
+        }
+      });
+    ")),
+    
+    tags$style(HTML(
       paste0("
-             
        .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }
        .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
        .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
@@ -163,7 +72,7 @@ ui <- page_navbar(
         font-weight: 600 !important;
       }
              
-             ")))
+      ")))
   ),
   
   # Enable shinyjs
@@ -174,7 +83,7 @@ ui <- page_navbar(
   # -------------------------------------------------------------------------
   nav_panel(
     title = NULL,
-
+    
     # Layout med smal sidebar + 2-kolonne main area
     layout_sidebar(
       sidebar = sidebar(
@@ -319,6 +228,33 @@ ui <- page_navbar(
         
         hr(),
         
+        # NYT: Session management sektion
+        div(
+          h6("Session:", style = "font-weight: 500; margin-bottom: 10px;"),
+          div(
+            class = "btn-group w-100",
+            actionButton(
+              "manual_save", 
+              "Gem session", 
+              icon = icon("save"), 
+              class = "btn-outline-primary btn-sm"
+            ),
+            actionButton(
+              "clear_saved", 
+              "Ryd gemt", 
+              icon = icon("trash"), 
+              class = "btn-outline-danger btn-sm"
+            )
+          ),
+          div(
+            id = "save_status",
+            style = "margin-top: 8px; font-size: 0.8rem; color: #666;",
+            uiOutput("save_status_display")
+          )
+        ),
+        
+        hr(),
+        
         # Data status
         div(
           uiOutput("data_status_display")
@@ -381,7 +317,7 @@ ui <- page_navbar(
                 style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; height = '100%'",
                 rhandsontable::rHandsontableOutput("main_data_table")
               ),
-
+              
               # Tabel info
               div(
                 style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
@@ -557,28 +493,179 @@ ui <- page_navbar(
 # Define server
 server <- function(input, output, session) {
   
-  # Reactive values for data håndtering
+  # Reactive values for data håndtering inkl. auto-save
   values <- reactiveValues(
     current_data = NULL,
     original_data = NULL,
     file_uploaded = FALSE,
-    import_settings_visible = FALSE,  # Track visibility state
-    updating_table = FALSE,  # Flag to prevent infinite loops
-    auto_detect_done = FALSE  # Track if auto-detect has run
+    import_settings_visible = FALSE,
+    updating_table = FALSE,
+    auto_detect_done = FALSE,
+    # NYT: Auto-save relaterede values
+    auto_save_enabled = TRUE,
+    last_save_time = NULL
   )
   
-  # Toggle import settings panel - explicit show/hide logic
-  observeEvent(input$toggle_import_settings, {
-    cat("DEBUG: Toggle button clicked\n")
+  # NYT: Check for saved data ved app start
+  observeEvent(input$check_saved_data, {
+    req(input$check_saved_data)
     
-    # Toggle visibility state
+    tryCatch({
+      saved_state <- input$check_saved_data
+      
+      if (!is.null(saved_state$data)) {
+        showModal(modalDialog(
+          title = "Tidligere session fundet",
+          size = "m",
+          
+          div(
+            icon("clock"),
+            " Du har gemt data fra ",
+            strong(format(as.POSIXct(saved_state$timestamp), "%d-%m-%Y %H:%M")),
+            br(), br(),
+            
+            if (!is.null(saved_state$metadata$title)) {
+              p("Indikator: ", strong(saved_state$metadata$title))
+            },
+            
+            if (!is.null(saved_state$metadata$unit_type)) {
+              p("Enhed: ", strong(saved_state$metadata$unit_type))
+            },
+            
+            p("Datapunkter: ", strong(nrow(saved_state$data))),
+            
+            br(),
+            p("Vil du fortsætte med den gemte session eller starte forfra?")
+          ),
+          
+          footer = tagList(
+            actionButton("discard_saved", "Start forfra", class = "btn-outline-secondary"),
+            actionButton("restore_saved", "Gendan session", class = "btn-primary")
+          ),
+          easyClose = FALSE
+        ))
+      }
+      
+    }, error = function(e) {
+      cat("Error loading saved data:", e$message, "\n")
+    })
+  }, once = TRUE)
+  
+  # NYT: Gendan gemt session
+  observeEvent(input$restore_saved, {
+    req(input$check_saved_data)
+    
+    tryCatch({
+      saved_state <- input$check_saved_data
+      
+      # Prevent loops during restore
+      values$updating_table <- TRUE
+      on.exit({ values$updating_table <- FALSE }, add = TRUE)
+      
+      # Gendan data
+      values$current_data <- as.data.frame(saved_state$data)
+      values$original_data <- as.data.frame(saved_state$data)
+      values$file_uploaded <- TRUE
+      values$auto_detect_done <- TRUE
+      
+      # Gendan metadata hvis tilgængelig
+      if (!is.null(saved_state$metadata)) {
+        isolate({
+          if (!is.null(saved_state$metadata$title)) {
+            updateTextInput(session, "indicator_title", value = saved_state$metadata$title)
+          }
+          if (!is.null(saved_state$metadata$unit_type)) {
+            updateRadioButtons(session, "unit_type", selected = saved_state$metadata$unit_type)
+          }
+          if (!is.null(saved_state$metadata$unit_select)) {
+            updateSelectInput(session, "unit_select", selected = saved_state$metadata$unit_select)
+          }
+          if (!is.null(saved_state$metadata$unit_custom)) {
+            updateTextInput(session, "unit_custom", value = saved_state$metadata$unit_custom)
+          }
+          if (!is.null(saved_state$metadata$description)) {
+            updateTextAreaInput(session, "indicator_description", value = saved_state$metadata$description)
+          }
+          if (!is.null(saved_state$metadata$chart_type)) {
+            updateSelectInput(session, "chart_type", selected = saved_state$metadata$chart_type)
+          }
+          if (!is.null(saved_state$metadata$x_column)) {
+            updateSelectInput(session, "x_column", selected = saved_state$metadata$x_column)
+          }
+          if (!is.null(saved_state$metadata$y_column)) {
+            updateSelectInput(session, "y_column", selected = saved_state$metadata$y_column)
+          }
+          if (!is.null(saved_state$metadata$n_column)) {
+            updateSelectInput(session, "n_column", selected = saved_state$metadata$n_column)
+          }
+        })
+      }
+      
+      removeModal()
+      showNotification("Session gendannet!", type = "message", duration = 3)
+      
+    }, error = function(e) {
+      showNotification(paste("Fejl ved gendan:", e$message), type = "error")
+      removeModal()
+    })
+  })
+  
+  # NYT: Slet gemt session
+  observeEvent(input$discard_saved, {
+    clearDataLocally(session)
+    removeModal()
+    showNotification("Gemt session slettet - starter forfra", type = "message", duration = 3)
+  })
+  
+  # NYT: Manual save handler
+  observeEvent(input$manual_save, {
+    req(values$current_data)
+    
+    metadata <- list(
+      title = input$indicator_title,
+      unit_type = input$unit_type,
+      unit_select = input$unit_select,
+      unit_custom = input$unit_custom,
+      description = input$indicator_description,
+      x_column = input$x_column,
+      y_column = input$y_column,
+      n_column = input$n_column,
+      chart_type = input$chart_type
+    )
+    
+    saveDataLocally(session, values$current_data, metadata)
+    values$last_save_time <- Sys.time()
+    showNotification("Session gemt lokalt!", type = "message", duration = 2)
+  })
+  
+  # NYT: Clear saved handler
+  observeEvent(input$clear_saved, {
+    clearDataLocally(session)
+    values$last_save_time <- NULL
+    showNotification("Gemt data ryddet", type = "message", duration = 2)
+  })
+  
+  # NYT: Save status display
+  output$save_status_display <- renderUI({
+    if (!is.null(values$last_save_time)) {
+      time_diff <- as.numeric(difftime(Sys.time(), values$last_save_time, units = "mins"))
+      if (time_diff < 1) {
+        span(icon("check"), " Gemt lige nu", style = "color: green;")
+      } else if (time_diff < 60) {
+        span(icon("clock"), paste(" Gemt for", round(time_diff), "min siden"))
+      } else {
+        span(icon("clock"), " Gemt for mere end 1 time siden")
+      }
+    }
+  })
+  
+  # Toggle import settings panel
+  observeEvent(input$toggle_import_settings, {
     values$import_settings_visible <- !values$import_settings_visible
     
     if (values$import_settings_visible) {
-      cat("DEBUG: Showing import settings panel\n")
       shinyjs::show("import_settings_panel")
     } else {
-      cat("DEBUG: Hiding import settings panel\n")
       shinyjs::hide("import_settings_panel")
     }
   })
@@ -586,10 +673,8 @@ server <- function(input, output, session) {
   # Start med tom tabel
   observe({
     if (is.null(values$current_data)) {
-      # Lav en tabel med 5 tomme rækker så brugeren kan se strukturen
-      # FIXED: Dato som character for at undgå rhandsontable dato-problemer
       empty_data <- data.frame(
-        Dato = rep(NA_character_, 5),  # Character i stedet for Date
+        Dato = rep(NA_character_, 5),
         Taeller = rep(NA_real_, 5), 
         Naevner = rep(NA_real_, 5),
         stringsAsFactors = FALSE
@@ -607,7 +692,7 @@ server <- function(input, output, session) {
         style = "font-size: 0.9rem;"
       )
     } else if (values$file_uploaded) {
-      data_rows <- sum(!is.na(values$current_data[[1]]))  # Count non-NA rows
+      data_rows <- sum(!is.na(values$current_data[[1]]))
       div(
         span(class = "status-indicator status-ready"),
         paste("Fil uploadet -", data_rows, "datapunkter"),
@@ -670,11 +755,10 @@ server <- function(input, output, session) {
     }
   })
   
-  # File upload handler - FIXED with proper flag management
+  # File upload handler
   observeEvent(input$data_file, {
     req(input$data_file)
     
-    # Prevent table update loops during file upload
     values$updating_table <- TRUE
     on.exit({ values$updating_table <- FALSE }, add = TRUE)
     
@@ -683,10 +767,8 @@ server <- function(input, output, session) {
     
     tryCatch({
       if (file_ext %in% c("xlsx", "xls")) {
-        # Excel fil
         data <- readxl::read_excel(file_path, col_names = TRUE)
       } else {
-        # CSV fil med danske indstillinger
         data <- readr::read_csv2(
           file_path,
           locale = readr::locale(
@@ -698,11 +780,10 @@ server <- function(input, output, session) {
         )
       }
       
-      # Konverter til data.frame og gem
       values$current_data <- as.data.frame(data)
       values$original_data <- as.data.frame(data)
       values$file_uploaded <- TRUE
-      values$auto_detect_done <- FALSE  # Allow auto-detect for new file
+      values$auto_detect_done <- FALSE
       
       showNotification(
         paste("Fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
@@ -746,7 +827,7 @@ server <- function(input, output, session) {
     })
   })
   
-  # Hovedtabel rendering med aktiveret header-redigering
+  # Hovedtabel rendering
   output$main_data_table <- rhandsontable::renderRHandsontable({
     req(values$current_data)
     
@@ -762,14 +843,14 @@ server <- function(input, output, session) {
     ) %>%
       rhandsontable::hot_context_menu(
         allowRowEdit = TRUE,
-        allowColEdit = TRUE  # Tillader header-redigering
+        allowColEdit = TRUE
       ) %>%
       rhandsontable::hot_table(
         highlightCol = TRUE,
         highlightRow = TRUE
       ) %>%
       rhandsontable::hot_cols(
-        columnHeaderHeight = 50,  # Gør headers højere for bedre redigering
+        columnHeaderHeight = 50,
         manualColumnResize = TRUE
       )
     
@@ -777,11 +858,9 @@ server <- function(input, output, session) {
     for (i in 1:ncol(data)) {
       col_data <- data[[i]]
       
-      # FIXED: Fjern automatisk dato-type for at undgå forsvindende datoer
-      # Alle dato-kolonner behandles som tekst så brugeren kan indtaste frit
       if (grepl("dato|date", names(data)[i], ignore.case = TRUE)) {
         hot <- hot %>%
-          rhandsontable::hot_col(col = i, type = "text")  # Tekst i stedet for date
+          rhandsontable::hot_col(col = i, type = "text")
       } else if (is.numeric(col_data)) {
         hot <- hot %>%
           rhandsontable::hot_col(col = i, type = "numeric", format = "0,0.00")
@@ -794,24 +873,20 @@ server <- function(input, output, session) {
     return(hot)
   })
   
-  # FIXED: Forbedret håndtering af tabel ændringer med loop-prevention
+  # Håndtering af tabel ændringer
   observeEvent(input$main_data_table, {
-    # GUARD: Prevent infinite loops
     if (values$updating_table) {
       return()
     }
     
     req(input$main_data_table)
     
-    # Set flag to prevent loops
     values$updating_table <- TRUE
     on.exit({ values$updating_table <- FALSE }, add = TRUE)
     
     tryCatch({
-      # Konverter hot til data.frame
       new_data <- rhandsontable::hot_to_r(input$main_data_table)
       
-      # SAFETY: Check if data is actually different to avoid unnecessary updates
       if (!is.null(values$current_data) && identical(values$current_data, new_data)) {
         return()
       }
@@ -828,10 +903,9 @@ server <- function(input, output, session) {
             type = "error",
             duration = 4
           )
-          return()  # Ignorer ændringen hvis der er dubletter
+          return()
         }
         
-        # Tjek for tomme kolonnenavne
         if (any(is.na(new_names) | new_names == "" | trimws(new_names) == "")) {
           showNotification(
             "Kolonnenavne kan ikke være tomme. Ændring ignoreret.",
@@ -857,7 +931,6 @@ server <- function(input, output, session) {
         }
       }
       
-      # Opdater data med eventuelle nye kolonnenavne
       values$current_data <- new_data
       
     }, error = function(e) {
@@ -868,7 +941,7 @@ server <- function(input, output, session) {
         duration = 3
       )
     })
-  }, ignoreInit = TRUE)  # Don't run on initialization
+  }, ignoreInit = TRUE)
   
   # Redigér kolonnenavne modal
   observeEvent(input$edit_column_names, {
@@ -876,7 +949,6 @@ server <- function(input, output, session) {
     
     current_names <- names(values$current_data)
     
-    # Lav input felter for hver kolonne
     name_inputs <- lapply(1:length(current_names), function(i) {
       textInput(
         paste0("col_name_", i),
@@ -915,17 +987,15 @@ server <- function(input, output, session) {
     current_names <- names(values$current_data)
     new_names <- character(length(current_names))
     
-    # Saml nye navne fra input felter
     for (i in 1:length(current_names)) {
       input_value <- input[[paste0("col_name_", i)]]
       if (!is.null(input_value) && input_value != "") {
         new_names[i] <- trimws(input_value)
       } else {
-        new_names[i] <- current_names[i]  # Bevar originalt navn hvis tomt
+        new_names[i] <- current_names[i]
       }
     }
     
-    # Tjek for dubletter
     if (any(duplicated(new_names))) {
       showNotification(
         "Kolonnenavne skal være unikke. Ret duplikater og prøv igen.",
@@ -935,12 +1005,10 @@ server <- function(input, output, session) {
       return()
     }
     
-    # Opdater kolonnenavne
     names(values$current_data) <- new_names
     
     removeModal()
     
-    # Vis bekræftelse
     if (!identical(current_names, new_names)) {
       changed_cols <- which(current_names != new_names)
       change_summary <- paste(
@@ -962,7 +1030,6 @@ server <- function(input, output, session) {
   observeEvent(input$add_column, {
     req(values$current_data)
     
-    # Spørg brugeren om kolonnenavn
     showModal(modalDialog(
       title = "Tilføj ny kolonne",
       textInput("new_col_name", "Kolonnenavn:", value = "Ny_kolonne"),
@@ -981,11 +1048,9 @@ server <- function(input, output, session) {
     new_col_name <- input$new_col_name
     new_col_type <- input$new_col_type
     
-    # Tilføj ny kolonne
     if (new_col_type == "numeric") {
       values$current_data[[new_col_name]] <- rep(NA_real_, nrow(values$current_data))
     } else if (new_col_type == "date") {
-      # FIXED: Brug character i stedet for Date for kompatibilitet
       values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
     } else {
       values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
@@ -999,7 +1064,6 @@ server <- function(input, output, session) {
   observeEvent(input$add_row, {
     req(values$current_data)
     
-    # Tilføj tom række
     new_row <- values$current_data[1, ]
     new_row[1, ] <- NA
     
@@ -1008,31 +1072,25 @@ server <- function(input, output, session) {
     showNotification("Ny række tilføjet", type = "message")
   })
   
-  # Reset tabel - tøm helt for at starte forfra
+  # Reset tabel
   observeEvent(input$reset_table, {
-    # PREVENT loops during reset
     values$updating_table <- TRUE
     
-    # Lav en helt tom tabel med basis struktur
-    # FIXED: Character dato-kolonne og danske kolonnenavne
     values$current_data <- data.frame(
-      Dato = rep(NA_character_, 5),  # Character i stedet for Date
+      Dato = rep(NA_character_, 5),
       Taeller = rep(NA_real_, 5),
       Naevner = rep(NA_real_, 5),
       stringsAsFactors = FALSE
     )
     
-    # Nulstil file upload status og flags
     values$file_uploaded <- FALSE
     values$original_data <- NULL
     values$auto_detect_done <- FALSE
     
-    # Reset file upload felt
     isolate({
       shinyjs::reset("data_file")
     })
     
-    # Allow updates again
     values$updating_table <- FALSE
     
     showNotification(
@@ -1042,9 +1100,8 @@ server <- function(input, output, session) {
     )
   })
   
-  # FIXED: Opdater kolonne-valg når data ændres - med loop protection
+  # Opdater kolonne-valg når data ændres
   observe({
-    # GUARD: Don't run if we're updating table to prevent loops
     if (values$updating_table) {
       return()
     }
@@ -1052,26 +1109,19 @@ server <- function(input, output, session) {
     req(values$current_data)
     
     data <- values$current_data
-    
-    # Få alle kolonnenavne
     all_cols <- names(data)
     
     if (length(all_cols) > 0) {
-      # Lav choices list med "Vælg..." som første option
       col_choices <- setNames(c("", all_cols), c("Vælg kolonne...", all_cols))
       
-      # ISOLATE: Prevent reactive chain from triggering more observers
       isolate({
-        # Opdater dropdown menuer
         updateSelectInput(session, "x_column", choices = col_choices)
         updateSelectInput(session, "y_column", choices = col_choices)
         updateSelectInput(session, "n_column", choices = col_choices)
       })
       
-      # Auto-detektér kolonner KUN hvis det ikke er gjort før
       if (!values$auto_detect_done && 
           (is.null(input$x_column) || input$x_column == "")) {
-        # Mark as done BEFORE calling to prevent loops
         values$auto_detect_done <- TRUE
         auto_detect_and_update_columns()
       }
@@ -1090,17 +1140,13 @@ server <- function(input, output, session) {
     for (col_name in col_names) {
       col_data <- data[[col_name]]
       
-      # Tjek for dato patterns eller "dato" i navnet
       if (grepl("dato|date|tid|time", col_name, ignore.case = TRUE)) {
         x_col <- col_name
         break
       }
       
-      # Tjek for dato-format i data (nu som character)
       char_data <- as.character(col_data)[!is.na(col_data)]
       if (length(char_data) > 0) {
-        # Test forskellige dato-formater
-        # FIXED: Brug lubridate til intelligent dato-detection
         test_sample <- char_data[1:min(3, length(char_data))]
         danish_formats <- c("dmy", "ymd", "dby", "dbY")
         
@@ -1118,12 +1164,11 @@ server <- function(input, output, session) {
       }
     }
     
-    # Hvis ingen dato-kolonne fundet, brug første kolonne
     if (is.null(x_col) && length(col_names) > 0) {
       x_col <- col_names[1]
     }
     
-    # Detektér numeriske kolonner (ekskludér x_col)
+    # Detektér numeriske kolonner
     numeric_cols <- character(0)
     for (col_name in col_names) {
       if (col_name != x_col) {
@@ -1140,7 +1185,6 @@ server <- function(input, output, session) {
     taeller_col <- NULL
     naevner_col <- NULL
     
-    # Look for Danish tæller/nævner patterns
     taeller_idx <- which(grepl("t.ller|tael|num|count", col_names_lower, ignore.case = TRUE))
     naevner_idx <- which(grepl("n.vner|naev|denom|total", col_names_lower, ignore.case = TRUE))
     
@@ -1148,14 +1192,12 @@ server <- function(input, output, session) {
       taeller_col <- col_names[taeller_idx[1]]
       naevner_col <- col_names[naevner_idx[1]]
     } else if (length(numeric_cols) >= 2) {
-      # Hvis ikke tæller/nævner pattern, brug første to numeriske
       taeller_col <- numeric_cols[1]
       naevner_col <- numeric_cols[2]
     } else if (length(numeric_cols) >= 1) {
       taeller_col <- numeric_cols[1]
     }
     
-    # ISOLATE: Opdater UI med detekterede kolonner for at forhindre reactive loops
     isolate({
       if (!is.null(x_col)) {
         updateSelectInput(session, "x_column", selected = x_col)
@@ -1169,7 +1211,6 @@ server <- function(input, output, session) {
         updateSelectInput(session, "n_column", selected = naevner_col)
       }
       
-      # Vis bekræftelse
       detected_msg <- paste0(
         "Auto-detekteret: ",
         "X=", x_col %||% "ingen", ", ",
@@ -1189,7 +1230,6 @@ server <- function(input, output, session) {
   active_data <- reactive({
     req(values$current_data)
     
-    # Filtrer rækker hvor mindst én kolonne har data
     data <- values$current_data
     non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
     
@@ -1203,9 +1243,6 @@ server <- function(input, output, session) {
   
   # Kolonne konfiguration for visualization
   column_config <- reactive({
-    # Don't use req() here - let it run even without data to avoid circular dependency
-    
-    # Brug brugerens valg hvis tilgængelige
     x_col <- if (!is.null(input$x_column) && input$x_column != "") input$x_column else NULL
     y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL
     n_col <- if (!is.null(input$n_column) && input$n_column != "") input$n_column else NULL
@@ -1222,7 +1259,6 @@ server <- function(input, output, session) {
   output$column_validation_messages <- renderUI({
     req(values$current_data)
     
-    # Kun vis hvis vi har nogle kolonnevalg
     if (is.null(input$x_column) || input$x_column == "" ||
         is.null(input$y_column) || input$y_column == "") {
       return(NULL)
@@ -1235,7 +1271,6 @@ server <- function(input, output, session) {
     if (!is.null(input$y_column) && input$y_column != "" && input$y_column %in% names(values$current_data)) {
       y_data <- values$current_data[[input$y_column]]
       if (!is.numeric(y_data)) {
-        # Prøv at konvertere
         numeric_test <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data))))
         if (sum(!is.na(numeric_test)) < length(y_data) * 0.8) {
           warnings <- c(warnings, paste("Y-kolonne '", input$y_column, "' er ikke numerisk"))
@@ -1321,7 +1356,78 @@ server <- function(input, output, session) {
   })
   outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   
-  # Download handlers med metadata
+  # NYT: Auto-save når data ændres  
+  observeEvent(values$current_data, {
+    if (values$auto_save_enabled && !is.null(values$current_data) && !values$updating_table) {
+      
+      if (nrow(values$current_data) > 0 && any(!is.na(values$current_data))) {
+        
+        metadata <- list(
+          title = isolate(input$indicator_title),
+          unit_type = isolate(input$unit_type),
+          unit_select = isolate(input$unit_select),
+          unit_custom = isolate(input$unit_custom),
+          description = isolate(input$indicator_description),
+          x_column = isolate(input$x_column),
+          y_column = isolate(input$y_column),
+          n_column = isolate(input$n_column),
+          chart_type = isolate(input$chart_type)
+        )
+        
+        autoSaveAppState(session, values$current_data, metadata)
+        values$last_save_time <- Sys.time()
+      }
+    }
+  }, ignoreInit = TRUE)
+  
+  # NYT: Auto-save når indstillinger ændres (debounced)
+  observe({
+    list(
+      input$indicator_title,
+      input$unit_type,
+      input$unit_select,
+      input$unit_custom,
+      input$indicator_description,
+      input$x_column,
+      input$y_column,
+      input$n_column,
+      input$chart_type
+    )
+    
+    if (values$auto_save_enabled && !is.null(values$current_data) && !values$updating_table) {
+      
+      metadata <- list(
+        title = input$indicator_title,
+        unit_type = input$unit_type,
+        unit_select = input$unit_select,
+        unit_custom = input$unit_custom,
+        description = input$indicator_description,
+        x_column = input$x_column,
+        y_column = input$y_column,
+        n_column = input$n_column,
+        chart_type = input$chart_type
+      )
+      
+      invalidateLater(2000)
+      autoSaveAppState(session, values$current_data, metadata)
+      values$last_save_time <- Sys.time()
+    }
+  }) %>% 
+    bindEvent({
+      list(
+        input$indicator_title,
+        input$unit_type,
+        input$unit_select,
+        input$unit_custom,
+        input$indicator_description,
+        input$x_column,
+        input$y_column,
+        input$n_column,
+        input$chart_type
+      )
+    }, ignoreInit = TRUE)
+  
+  # Download handlers
   output$download_png <- downloadHandler(
     filename = function() {
       title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title())
@@ -1332,7 +1438,6 @@ server <- function(input, output, session) {
       if (!is.null(visualization$plot())) {
         ggsave(file, visualization$plot(), width = 12, height = 8, dpi = 300)
         
-        # Show success message with metadata
         showNotification(
           paste("PNG eksporteret:", chart_title()),
           type = "message",
@@ -1361,7 +1466,6 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       if (!is.null(active_data())) {
-        # Add metadata as comments in CSV
         metadata_header <- paste0(
           "# Indikator: ", input$indicator_title %||% "Ikke angivet", "\n",
           "# Enhed: ", current_unit(), "\n",
@@ -1370,7 +1474,6 @@ server <- function(input, output, session) {
           "# ---\n"
         )
         
-        # Write metadata + data
         cat(metadata_header, file = file)
         write.table(active_data(), file = file, append = TRUE, sep = ",", 
                     row.names = FALSE, quote = TRUE)
@@ -1384,9 +1487,8 @@ server <- function(input, output, session) {
     }
   )
   
-  # Simple anti-stuck mechanism - prevent UI from getting stuck in loading state
+  # Anti-stuck mechanism
   observeEvent(values$current_data, {
-    # Just ensure we're not stuck in loading state after data changes
     invalidateLater(200)
   }, ignoreInit = TRUE, ignoreNULL = FALSE)
   
