@@ -2,7 +2,7 @@ library(shiny)
 library(bslib)
 library(qicharts2)
 library(rhandsontable)
-library(DT)
+# library(DT)
 library(dplyr)
 library(ggplot2)
 library(readr)
@@ -12,7 +12,8 @@ library(shinyWidgets)
 library(shinyjs)
 library(zoo)  # For rolling means in calculated fields
 library(scales)  # For percent formatting in plots
-library(rlang)  # for %||%
+library(rlang)
+library(lubridate)
 
 # -----------------------------------------------------------------------------
 # HOSPITAL BRANDING CONFIGURATION

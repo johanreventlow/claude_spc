@@ -89,7 +89,7 @@ server <- function(input, output, session) {
       rv(),
       rownames  = FALSE,
       selection = "none",                 # undgå konflikt mellem klik og redigering
-      editable  = "row",  
+      editable  = "all",  
       # options   = list(pageLength = 10, dom = "t"),
       # Gør redigering aktiv ved ét klik (simulerer dblclick)
       callback  = JS("

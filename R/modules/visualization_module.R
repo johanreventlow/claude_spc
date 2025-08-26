@@ -307,14 +307,20 @@ detectChartConfiguration <- function(data, chart_type) {
     char_data <- as.character(col_data)[!is.na(col_data)]
     if (length(char_data) > 0) {
       # Test forskellige dato-formater
-      date_patterns <- c(
-        "\\d{1,2}-\\d{1,2}-\\d{4}",   # 01-01-2024 eller 1-1-2024
-        "\\d{1,2}/\\d{1,2}/\\d{4}",   # 01/01/2024 eller 1/1/2024
-        "\\d{4}-\\d{1,2}-\\d{1,2}",   # 2024-01-01 eller 2024-1-1
-        "\\d{1,2}\\.\\d{1,2}\\.\\d{4}"  # 01.01.2024 eller 1.1.2024
+      # FIXED: Brug lubridate til at teste om data ligner datoer
+      # Test med danske formater
+      test_sample <- char_data[1:min(3, length(char_data))]  # Test kun første 3 værdier
+      danish_formats <- c("dmy", "ymd", "dby", "dbY")
+      
+      date_test <- lubridate::parse_date_time(
+        test_sample, 
+        orders = danish_formats,
+        quiet = TRUE
       )
       
-      if (any(sapply(date_patterns, function(pattern) any(grepl(pattern, char_data))))) {
+      # Hvis mindst halvdelen kan parses som datoer, betragt som dato-kolonne
+      success_rate <- sum(!is.na(date_test)) / length(date_test)
+      if (success_rate >= 0.5) {
         x_col <- col_name
         break
       }
@@ -495,18 +501,34 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
     # Prøv forskellige dato-formater
     parsed_dates <- NULL
     
-    # Convert character dates to Date objects
+    # FIXED: Brug lubridate for robust dansk dato-parsing
     if (is.character(x_data)) {
-      # Prøv danske formater først
-      parsed_dates <- as.Date(x_data, format = "%d-%m-%Y")  # 01-01-2024
-      if (all(is.na(parsed_dates))) {
-        parsed_dates <- as.Date(x_data, format = "%d/%m/%Y")  # 01/01/2024
-      }
-      if (all(is.na(parsed_dates))) {
-        parsed_dates <- as.Date(x_data, format = "%Y-%m-%d")  # 2024-01-01
-      }
-      if (all(is.na(parsed_dates))) {
-        parsed_dates <- as.Date(x_data, format = "%d.%m.%Y")  # 01.01.2024
+      # Definer danske dato-formater i prioriteret rækkefølge
+      danish_formats <- c(
+        "dmy",       # 01-01-2024, 01/01/2024, 01.01.2024, 1-1-2024
+        "dmy HMS",   # Med tid hvis inkluderet
+        "ymd",       # 2024-01-01 (ISO format)
+        "mdy",       # Amerikansk format som fallback
+        "dby",       # 1 jan 2024, 01 januar 2024
+        "dbY"        # 1 januar 2024 (fuldt år)
+      )
+      
+      # Prøv at parse datoerne med lubridate
+      parsed_dates <- lubridate::parse_date_time(
+        x_data, 
+        orders = danish_formats,
+        locale = "da_DK.UTF-8"  # Dansk locale for månedsnavne
+      )
+      
+      # Konverter til Date hvis succesfuld
+      if (!all(is.na(parsed_dates))) {
+        parsed_dates <- as.Date(parsed_dates)
+      } else {
+        # Fallback: prøv guess_formats
+        guessed_formats <- lubridate::guess_formats(x_data[!is.na(x_data)][1:min(5, length(x_data[!is.na(x_data)]))])
+        if (length(guessed_formats) > 0) {
+          parsed_dates <- as.Date(x_data, format = guessed_formats[1])
+        }
       }
     } else if (inherits(x_data, "Date")) {
       parsed_dates <- x_data

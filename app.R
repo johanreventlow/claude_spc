@@ -380,17 +380,17 @@ ui <- page_navbar(
               div(
                 style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; height = '100%'",
                 rhandsontable::rHandsontableOutput("main_data_table")
-              # ),
-              # 
-              # # Tabel info
-              # div(
-              #   style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
-              #   icon("info-circle"),
-              #   " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
-              #   br(),
-              #   " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
-              #   br(),
-              #   strong("Dato-formater:"), " 01-01-2024, 01/01/2024, 2024-01-01, eller 01.01.2024"
+              ),
+
+              # Tabel info
+              div(
+                style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
+                icon("info-circle"),
+                " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
+                br(),
+                " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
+                br(),
+                strong("Dato-formater:"), " 01-01-2024, 1/1/2024, 01.01.24, 1 jan 2024, 2024-01-01 og mange flere"
               )
             )
           ),
@@ -1100,14 +1100,18 @@ server <- function(input, output, session) {
       char_data <- as.character(col_data)[!is.na(col_data)]
       if (length(char_data) > 0) {
         # Test forskellige dato-formater
-        date_patterns <- c(
-          "\\d{1,2}-\\d{1,2}-\\d{4}",   # 01-01-2024 eller 1-1-2024
-          "\\d{1,2}/\\d{1,2}/\\d{4}",   # 01/01/2024 eller 1/1/2024
-          "\\d{4}-\\d{1,2}-\\d{1,2}",   # 2024-01-01 eller 2024-1-1
-          "\\d{1,2}\\.\\d{1,2}\\.\\d{4}"  # 01.01.2024 eller 1.1.2024
+        # FIXED: Brug lubridate til intelligent dato-detection
+        test_sample <- char_data[1:min(3, length(char_data))]
+        danish_formats <- c("dmy", "ymd", "dby", "dbY")
+        
+        date_test <- lubridate::parse_date_time(
+          test_sample, 
+          orders = danish_formats,
+          quiet = TRUE
         )
         
-        if (any(sapply(date_patterns, function(pattern) any(grepl(pattern, char_data))))) {
+        success_rate <- sum(!is.na(date_test)) / length(date_test)
+        if (success_rate >= 0.5) {
           x_col <- col_name
           break
         }
