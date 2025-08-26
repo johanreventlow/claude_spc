@@ -366,7 +366,7 @@ editableTableServer <- function(id, data_reactive) {
         contextMenu = TRUE,
         manualColumnResize = TRUE,
         manualRowResize = TRUE,
-        fillHandle = list(direction = "vertical", autoInsertRow = FALSE)
+        fillHandle = list(direction = "vertical", autoInsertRow = TRUE)
       ) %>%
         rhandsontable::hot_context_menu(
           allowRowEdit = TRUE,
