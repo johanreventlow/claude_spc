@@ -25,27 +25,46 @@ ui <- page_navbar(
   tags$head(
     tags$script(HTML(localStorage_js)),
     tags$script(HTML("
-      // Custom message handlers
+      // FIXED: Custom message handlers med bedre error handling
       Shiny.addCustomMessageHandler('saveAppState', function(message) {
-        window.saveAppState(message.key, message.data);
+        console.log('Received saveAppState message:', message);
+        var success = window.saveAppState(message.key, message.data);
+        if (!success) {
+          console.error('saveAppState failed for key:', message.key);
+        }
       });
       
       Shiny.addCustomMessageHandler('loadAppState', function(message) {
+        console.log('Received loadAppState message:', message);
         var data = window.loadAppState(message.key);
         Shiny.setInputValue('loaded_app_state', data, {priority: 'event'});
       });
       
       Shiny.addCustomMessageHandler('clearAppState', function(message) {
-        window.clearAppState(message.key);
+        console.log('Received clearAppState message:', message);
+        var success = window.clearAppState(message.key);
+        if (!success) {
+          console.error('clearAppState failed for key:', message.key);
+        }
       });
       
-      // Check for existing data on app start
+      // FIXED: Bedre timing for check af existing data
       $(document).ready(function() {
+        // Sæt app som initialiseret efter kort delay
+        setTimeout(function() {
+          Shiny.setInputValue('app_initialized', true, {priority: 'event'});
+        }, 500);
+        
+        // Check for existing data med længere delay for at sikre Shiny er klar
         if (window.hasAppState('current_session')) {
           setTimeout(function() {
+            console.log('Checking for saved session data...');
             var data = window.loadAppState('current_session');
-            Shiny.setInputValue('check_saved_data', data, {priority: 'event'});
-          }, 1000); // Delay to ensure Shiny is ready
+            if (data) {
+              console.log('Found saved session data, triggering restore dialog');
+              Shiny.setInputValue('check_saved_data', data, {priority: 'event'});
+            }
+          }, 1500); // FIXED: Øget delay for at sikre Shiny er klar
         }
       });
     ")),
@@ -460,6 +479,30 @@ ui <- page_navbar(
                 )
               ),
               card_body(
+                # KOMPLET EXPORT - ny funktionalitet
+                div(
+                  downloadButton(
+                    "download_complete",
+                    "📋 Komplet Export (JSON)",
+                    icon = icon("download"),
+                    title = "Download hele sessionen - data, indstillinger og konfiguration",
+                    class = "btn-primary w-100 mb-2"
+                  ),
+                  
+                  # Hjælpe-tekst for komplet export
+                  div(
+                    style = "font-size: 0.75rem; color: #666; text-align: center; margin-bottom: 8px; font-style: italic;",
+                    "Inkluderer alt: data, metadata, graf-indstillinger"
+                  )
+                ),
+                
+                hr(style = "margin: 15px 0;"),
+                
+                div(
+                  style = "text-align: center; font-size: 0.85rem; color: #666; margin-bottom: 10px;",
+                  strong("Individuelle eksporter:")
+                ),
+                
                 downloadButton(
                   "download_png",
                   "Download PNG",
@@ -476,7 +519,7 @@ ui <- page_navbar(
                 
                 downloadButton(
                   "download_data",
-                  "Download Data",
+                  "Download Data (CSV)",
                   icon = icon("table"),
                   class = "btn-outline-primary w-100"
                 )
@@ -501,19 +544,48 @@ server <- function(input, output, session) {
     import_settings_visible = FALSE,
     updating_table = FALSE,
     auto_detect_done = FALSE,
-    # NYT: Auto-save relaterede values
+    # FIXED: Auto-save relaterede values med restore guard
     auto_save_enabled = TRUE,
-    last_save_time = NULL
+    last_save_time = NULL,
+    restoring_session = FALSE,  # Ny guard for session restore
+    app_initialized = FALSE,    # Track om app er fuldt initialiseret
+    table_version = 0           # Force table re-render counter
   )
   
-  # NYT: Check for saved data ved app start
+  # FIXED: App initialization tracker
+  observeEvent(input$app_initialized, {
+    cat("DEBUG: App marked as initialized\n")
+    values$app_initialized <- TRUE
+  })
+  
+  # FIXED: Check for saved data ved app start med bedre error handling
   observeEvent(input$check_saved_data, {
     req(input$check_saved_data)
     
+    # Vent til app er initialiseret
+    if (!values$app_initialized) {
+      cat("DEBUG: App not yet initialized, waiting...\n")
+      invalidateLater(500)
+      return()
+    }
+    
     tryCatch({
+      cat("DEBUG: Processing saved session data\n")
       saved_state <- input$check_saved_data
       
       if (!is.null(saved_state$data)) {
+        cat("DEBUG: Found saved data\n")
+        
+        # FIXED: Get correct dimensions from structured data
+        data_rows <- if (!is.null(saved_state$data$nrows)) {
+          saved_state$data$nrows
+        } else {
+          # Fallback for legacy format
+          nrow(saved_state$data)
+        }
+        
+        cat("DEBUG: Saved data has", data_rows, "rows\n")
+        
         showModal(modalDialog(
           title = "Tidligere session fundet",
           size = "m",
@@ -532,7 +604,7 @@ server <- function(input, output, session) {
               p("Enhed: ", strong(saved_state$metadata$unit_type))
             },
             
-            p("Datapunkter: ", strong(nrow(saved_state$data))),
+            p("Datapunkter: ", strong(data_rows)),
             
             br(),
             p("Vil du fortsætte med den gemte session eller starte forfra?")
@@ -544,32 +616,134 @@ server <- function(input, output, session) {
           ),
           easyClose = FALSE
         ))
+      } else {
+        cat("DEBUG: No saved data found in session state\n")
       }
       
     }, error = function(e) {
-      cat("Error loading saved data:", e$message, "\n")
+      cat("ERROR loading saved data:", e$message, "\n")
+      showNotification(paste("Fejl ved indlæsning af gemt session:", e$message), type = "error")
     })
   }, once = TRUE)
   
-  # NYT: Gendan gemt session
+  # FIXED: Gendan gemt session med data structure restoration
   observeEvent(input$restore_saved, {
     req(input$check_saved_data)
     
     tryCatch({
+      cat("DEBUG: Starting session restore\n")
       saved_state <- input$check_saved_data
       
-      # Prevent loops during restore
+      # CRITICAL: Disable auto-save og set restore guard
+      values$restoring_session <- TRUE
       values$updating_table <- TRUE
-      on.exit({ values$updating_table <- FALSE }, add = TRUE)
+      values$auto_save_enabled <- FALSE
       
-      # Gendan data
-      values$current_data <- as.data.frame(saved_state$data)
-      values$original_data <- as.data.frame(saved_state$data)
+      # Cleanup function som altid kører
+      on.exit({
+        cat("DEBUG: Session restore cleanup - re-enabling auto-save\n")
+        values$updating_table <- FALSE
+        values$restoring_session <- FALSE
+        values$auto_save_enabled <- TRUE
+      }, add = TRUE)
+      
+      # CRITICAL: Reconstruct data.frame from saved structure
+      saved_data <- saved_state$data
+      
+      if (!is.null(saved_data$values) && !is.null(saved_data$nrows) && !is.null(saved_data$ncols)) {
+        cat("DEBUG: Reconstructing data.frame from structured format\n")
+        cat("DEBUG: Target dimensions:", saved_data$nrows, "rows x", saved_data$ncols, "cols\n")
+        cat("DEBUG: Number of columns in saved values:", length(saved_data$values), "\n")
+        
+        # Debug saved data structure
+        if (!is.null(saved_data$col_names)) {
+          cat("DEBUG: Column names:", paste(saved_data$col_names, collapse = ", "), "\n")
+        }
+        
+        # Verify we have the expected number of columns
+        if (length(saved_data$values) != saved_data$ncols) {
+          stop(paste("Column count mismatch: expected", saved_data$ncols, "got", length(saved_data$values)))
+        }
+        
+        # Verify all columns have the expected length
+        col_lengths <- sapply(saved_data$values, length)
+        cat("DEBUG: Column lengths:", paste(col_lengths, collapse = ", "), "\n")
+        if (!all(col_lengths == saved_data$nrows)) {
+          stop(paste("Row count mismatch in columns. Expected:", saved_data$nrows, "Got:", paste(col_lengths, collapse = ", ")))
+        }
+        
+        # Reconstruct data.frame from saved components - MANUAL METHOD
+        cat("DEBUG: Using manual data.frame construction\n")
+        
+        # Create empty data.frame with correct dimensions
+        reconstructed_data <- data.frame(
+          matrix(nrow = saved_data$nrows, ncol = saved_data$ncols),
+          stringsAsFactors = FALSE
+        )
+        
+        # Set column names first if available
+        if (!is.null(saved_data$col_names)) {
+          names(reconstructed_data) <- saved_data$col_names
+          cat("DEBUG: Applied column names:", paste(names(reconstructed_data), collapse = ", "), "\n")
+        }
+        
+        # Populate columns one by one
+        for (i in seq_along(saved_data$values)) {
+          reconstructed_data[[i]] <- saved_data$values[[i]]
+          cat("DEBUG: Populated column", i, "with", length(saved_data$values[[i]]), "values\n")
+        }
+        
+        cat("DEBUG: Manual reconstruction complete -", nrow(reconstructed_data), "rows x", ncol(reconstructed_data), "cols\n")
+        
+        # REMOVED: row_names restoration to avoid length issues
+        # Let R generate default sequential row names
+        
+        # Debug actual dimensions before verification
+        actual_rows <- nrow(reconstructed_data)
+        actual_cols <- ncol(reconstructed_data) 
+        cat("DEBUG: Final reconstructed dimensions:", actual_rows, "rows x", actual_cols, "cols\n")
+        cat("DEBUG: Expected dimensions:", saved_data$nrows, "rows x", saved_data$ncols, "cols\n")
+        
+        # Verify dimensions match expectation
+        if (actual_rows == saved_data$nrows && actual_cols == saved_data$ncols) {
+          cat("DEBUG: Data reconstruction successful -", nrow(reconstructed_data), "rows x", ncol(reconstructed_data), "cols\n")
+          
+          # Restore column classes if available
+          if (!is.null(saved_data$class_info)) {
+            for (col_name in names(saved_data$class_info)) {
+              if (col_name %in% names(reconstructed_data)) {
+                target_class <- saved_data$class_info[[col_name]]
+                if (target_class == "numeric") {
+                  reconstructed_data[[col_name]] <- as.numeric(reconstructed_data[[col_name]])
+                } else if (target_class == "character") {
+                  reconstructed_data[[col_name]] <- as.character(reconstructed_data[[col_name]])
+                } else if (target_class == "logical") {
+                  reconstructed_data[[col_name]] <- as.logical(reconstructed_data[[col_name]])
+                }
+              }
+            }
+          }
+          
+          values$current_data <- reconstructed_data
+          values$original_data <- reconstructed_data
+        } else {
+          cat("ERROR: Dimension mismatch after reconstruction\n")
+          stop("Data reconstruction failed - dimension mismatch")
+        }
+        
+      } else {
+        cat("DEBUG: Using legacy direct data format\n")
+        # Fallback for older save format
+        values$current_data <- as.data.frame(saved_state$data)
+        values$original_data <- as.data.frame(saved_state$data)
+      }
+      
       values$file_uploaded <- TRUE
       values$auto_detect_done <- TRUE
       
       # Gendan metadata hvis tilgængelig
       if (!is.null(saved_state$metadata)) {
+        cat("DEBUG: Restoring metadata\n")
         isolate({
           if (!is.null(saved_state$metadata$title)) {
             updateTextInput(session, "indicator_title", value = saved_state$metadata$title)
@@ -603,11 +777,37 @@ server <- function(input, output, session) {
       
       removeModal()
       showNotification("Session gendannet!", type = "message", duration = 3)
+      cat("DEBUG: Session restore completed successfully\n")
+      
+      # CRITICAL: Force reset updating_table after a delay to ensure editability
+      invalidateLater(1000)
+      isolate({
+        values$updating_table <- FALSE
+        values$restoring_session <- FALSE
+        cat("DEBUG: Force-reset table guards for editability\n")
+        
+        # CRITICAL: Force rhandsontable to re-render by incrementing version
+        values$table_version <- values$table_version + 1
+        cat("DEBUG: Incremented table_version to", values$table_version, "\n")
+      })
       
     }, error = function(e) {
+      cat("ERROR during session restore:", e$message, "\n")
       showNotification(paste("Fejl ved gendan:", e$message), type = "error")
       removeModal()
     })
+  })
+  
+  # FIXED: Force cleanup observer for table editability 
+  observe({
+    # Reset guards 1 second after restore completes
+    if (values$restoring_session == FALSE && 
+        values$app_initialized == TRUE && 
+        values$updating_table == TRUE) {
+      
+      cat("DEBUG: Detected stuck updating_table flag - resetting\n")
+      values$updating_table <- FALSE
+    }
   })
   
   # NYT: Slet gemt session
@@ -831,6 +1031,10 @@ server <- function(input, output, session) {
   output$main_data_table <- rhandsontable::renderRHandsontable({
     req(values$current_data)
     
+    # CRITICAL: Include table_version to force re-render after restore
+    version_trigger <- values$table_version
+    cat("DEBUG: Rendering table with version", version_trigger, "\n")
+    
     data <- values$current_data
     
     hot <- rhandsontable::rhandsontable(
@@ -839,7 +1043,8 @@ server <- function(input, output, session) {
       stretchH = "all",
       contextMenu = TRUE,
       manualColumnResize = TRUE,
-      fillHandle = list(direction = "vertical", autoInsertRow = FALSE)
+      fillHandle = list(direction = "vertical", autoInsertRow = FALSE),
+      useTypes = FALSE  # CRITICAL: Disable types for better editability after restore
     ) %>%
       rhandsontable::hot_context_menu(
         allowRowEdit = TRUE,
@@ -854,35 +1059,50 @@ server <- function(input, output, session) {
         manualColumnResize = TRUE
       )
     
-    # Kolonne-specifik formatting
-    for (i in 1:ncol(data)) {
-      col_data <- data[[i]]
-      
-      if (grepl("dato|date", names(data)[i], ignore.case = TRUE)) {
-        hot <- hot %>%
-          rhandsontable::hot_col(col = i, type = "text")
-      } else if (is.numeric(col_data)) {
-        hot <- hot %>%
-          rhandsontable::hot_col(col = i, type = "numeric", format = "0,0.00")
-      } else {
-        hot <- hot %>%
-          rhandsontable::hot_col(col = i, type = "text")
-      }
-    }
+    # REMOVED: Kolonne-specifik formatting som kan forårsage editability problemer
+    # Efter restore har rhandsontable problemer med definerede kolonnetyper
+    # 
+    # for (i in 1:ncol(data)) {
+    #   col_data <- data[[i]]
+    #   
+    #   if (grepl("dato|date", names(data)[i], ignore.case = TRUE)) {
+    #     hot <- hot %>%
+    #       rhandsontable::hot_col(col = i, type = "text")
+    #   } else if (is.numeric(col_data)) {
+    #     hot <- hot %>%
+    #       rhandsontable::hot_col(col = i, type = "numeric", format = "0,0.00")
+    #   } else {
+    #     hot <- hot %>%
+    #       rhandsontable::hot_col(col = i, type = "text")
+    #   }
+    # }
+    
+    cat("DEBUG: Table rendered without column type definitions\n")
     
     return(hot)
   })
   
   # Håndtering af tabel ændringer
   observeEvent(input$main_data_table, {
+    cat("DEBUG: Table change event triggered\n")
+    
     if (values$updating_table) {
+      cat("DEBUG: Skipping table change - updating_table is TRUE\n")
+      return()
+    }
+    
+    if (values$restoring_session) {
+      cat("DEBUG: Skipping table change - restoring_session is TRUE\n")
       return()
     }
     
     req(input$main_data_table)
     
     values$updating_table <- TRUE
-    on.exit({ values$updating_table <- FALSE }, add = TRUE)
+    on.exit({ 
+      values$updating_table <- FALSE 
+      cat("DEBUG: Table change processing complete\n")
+    }, add = TRUE)
     
     tryCatch({
       new_data <- rhandsontable::hot_to_r(input$main_data_table)
@@ -1356,45 +1576,52 @@ server <- function(input, output, session) {
   })
   outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   
-  # NYT: Auto-save når data ændres  
+  # FIXED: Auto-save når data ændres med bedre guards
   observeEvent(values$current_data, {
-    if (values$auto_save_enabled && !is.null(values$current_data) && !values$updating_table) {
+    # CRITICAL: Flere guards for at forhindre auto-save under restore
+    if (!values$auto_save_enabled || 
+        values$updating_table || 
+        values$restoring_session || 
+        !values$app_initialized) {
+      cat("DEBUG: Auto-save skipped - guards active\n")
+      return()
+    }
+    
+    if (!is.null(values$current_data) && 
+        nrow(values$current_data) > 0 && 
+        any(!is.na(values$current_data))) {
       
-      if (nrow(values$current_data) > 0 && any(!is.na(values$current_data))) {
-        
-        metadata <- list(
-          title = isolate(input$indicator_title),
-          unit_type = isolate(input$unit_type),
-          unit_select = isolate(input$unit_select),
-          unit_custom = isolate(input$unit_custom),
-          description = isolate(input$indicator_description),
-          x_column = isolate(input$x_column),
-          y_column = isolate(input$y_column),
-          n_column = isolate(input$n_column),
-          chart_type = isolate(input$chart_type)
-        )
-        
-        autoSaveAppState(session, values$current_data, metadata)
-        values$last_save_time <- Sys.time()
-      }
+      cat("DEBUG: Triggering auto-save for data change\n")
+      
+      metadata <- list(
+        title = isolate(input$indicator_title),
+        unit_type = isolate(input$unit_type),
+        unit_select = isolate(input$unit_select),
+        unit_custom = isolate(input$unit_custom),
+        description = isolate(input$indicator_description),
+        x_column = isolate(input$x_column),
+        y_column = isolate(input$y_column),
+        n_column = isolate(input$n_column),
+        chart_type = isolate(input$chart_type)
+      )
+      
+      autoSaveAppState(session, values$current_data, metadata)
+      values$last_save_time <- Sys.time()
     }
   }, ignoreInit = TRUE)
   
-  # NYT: Auto-save når indstillinger ændres (debounced)
+  # FIXED: Auto-save når indstillinger ændres med guards og debounce
   observe({
-    list(
-      input$indicator_title,
-      input$unit_type,
-      input$unit_select,
-      input$unit_custom,
-      input$indicator_description,
-      input$x_column,
-      input$y_column,
-      input$n_column,
-      input$chart_type
-    )
+    # CRITICAL: Samme guards som data auto-save
+    if (!values$auto_save_enabled || 
+        values$updating_table || 
+        values$restoring_session || 
+        !values$app_initialized) {
+      return()
+    }
     
-    if (values$auto_save_enabled && !is.null(values$current_data) && !values$updating_table) {
+    if (!is.null(values$current_data)) {
+      cat("DEBUG: Settings changed - scheduling auto-save\n")
       
       metadata <- list(
         title = input$indicator_title,
@@ -1408,6 +1635,7 @@ server <- function(input, output, session) {
         chart_type = input$chart_type
       )
       
+      # Debounce med 2 sekunder delay
       invalidateLater(2000)
       autoSaveAppState(session, values$current_data, metadata)
       values$last_save_time <- Sys.time()
@@ -1428,6 +1656,99 @@ server <- function(input, output, session) {
     }, ignoreInit = TRUE)
   
   # Download handlers
+  
+  # KOMPLET EXPORT - ny funktionalitet
+  output$download_complete <- downloadHandler(
+    filename = function() {
+      title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title())
+      title_clean <- gsub(" ", "_", title_clean)
+      if (nchar(title_clean) == 0) title_clean <- "SPC_Analyse"
+      paste0("SPC_Session_", title_clean, "_", Sys.Date(), ".json")
+    },
+    content = function(file) {
+      if (!is.null(active_data())) {
+        tryCatch({
+          cat("DEBUG: Creating complete export\n")
+          
+          # Saml alle data og indstillinger
+          complete_export <- list(
+            export_info = list(
+              version = "1.0",
+              timestamp = Sys.time(),
+              app_version = "BFH_SPC_v1.2",
+              exported_by = "Bispebjerg og Frederiksberg Hospital SPC App",
+              hospital = HOSPITAL_NAME
+            ),
+            
+            metadata = list(
+              title = input$indicator_title %||% "",
+              unit_type = input$unit_type %||% "",
+              unit_select = input$unit_select %||% "", 
+              unit_custom = input$unit_custom %||% "",
+              unit_display = current_unit(),
+              description = input$indicator_description %||% "",
+              chart_title = chart_title()
+            ),
+            
+            chart_config = list(
+              chart_type = input$chart_type %||% "Seriediagram (Run Chart)",
+              chart_type_code = get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)"),
+              x_column = input$x_column %||% "",
+              y_column = input$y_column %||% "",
+              n_column = input$n_column %||% "",
+              show_targets = input$show_targets %||% FALSE,
+              show_phases = input$show_phases %||% FALSE
+            ),
+            
+            data_info = list(
+              rows = nrow(active_data()),
+              columns = ncol(active_data()),
+              column_names = names(active_data()),
+              column_types = sapply(active_data(), function(x) class(x)[1]),
+              file_uploaded = values$file_uploaded,
+              data_source = if (values$file_uploaded) "File Upload" else "Manual Entry"
+            ),
+            
+            # Faktiske data
+            data = active_data()
+          )
+          
+          # Skriv til JSON fil med pæn formatering
+          json_content <- jsonlite::toJSON(
+            complete_export,
+            auto_unbox = TRUE,
+            pretty = TRUE,
+            digits = NA,
+            na = 'null'
+          )
+          
+          writeLines(json_content, file)
+          
+          cat("DEBUG: Complete export created successfully\n")
+          
+          showNotification(
+            paste("Komplet session eksporteret:", basename(file)),
+            type = "message",
+            duration = 4
+          )
+          
+        }, error = function(e) {
+          cat("ERROR during complete export:", e$message, "\n")
+          showNotification(
+            paste("Fejl ved komplet eksport:", e$message),
+            type = "error",
+            duration = 5
+          )
+        })
+      } else {
+        showNotification(
+          "Ingen data at eksportere",
+          type = "warning",
+          duration = 3
+        )
+      }
+    }
+  )
   output$download_png <- downloadHandler(
     filename = function() {
       title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title())
