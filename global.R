@@ -14,6 +14,7 @@ library(zoo)  # For rolling means in calculated fields
 library(scales)  # For percent formatting in plots
 library(rlang)
 library(lubridate)
+library(openxlsx)  # For Excel export functionality
 
 # -----------------------------------------------------------------------------
 # HOSPITAL BRANDING CONFIGURATION

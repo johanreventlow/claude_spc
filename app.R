@@ -479,20 +479,20 @@ ui <- page_navbar(
                 )
               ),
               card_body(
-                # KOMPLET EXPORT - ny funktionalitet
+                # KOMPLET EXPORT - Excel version
                 div(
                   downloadButton(
-                    "download_complete",
-                    "📋 Komplet Export (JSON)",
-                    icon = icon("download"),
-                    title = "Download hele sessionen - data, indstillinger og konfiguration",
-                    class = "btn-primary w-100 mb-2"
+                    "download_complete_excel",
+                    "📋 Komplet Export (Excel)",
+                    icon = icon("file-excel"),
+                    title = "Download hele sessionen som Excel fil med data og konfiguration",
+                    class = "btn-success w-100 mb-2"
                   ),
                   
                   # Hjælpe-tekst for komplet export
                   div(
                     style = "font-size: 0.75rem; color: #666; text-align: center; margin-bottom: 8px; font-style: italic;",
-                    "Inkluderer alt: data, metadata, graf-indstillinger"
+                    "Data + session info i 2 Excel sheets - klar til brug og re-import"
                   )
                 ),
                 
@@ -500,7 +500,7 @@ ui <- page_navbar(
                 
                 div(
                   style = "text-align: center; font-size: 0.85rem; color: #666; margin-bottom: 10px;",
-                  strong("Individuelle eksporter:")
+                  strong("Graf eksporter:")
                 ),
                 
                 downloadButton(
@@ -514,13 +514,6 @@ ui <- page_navbar(
                   "download_pdf", 
                   "Download PDF Rapport",
                   icon = icon("file-pdf"),
-                  class = "btn-outline-primary w-100 mb-2"
-                ),
-                
-                downloadButton(
-                  "download_data",
-                  "Download Data (CSV)",
-                  icon = icon("table"),
                   class = "btn-outline-primary w-100"
                 )
               )
@@ -955,7 +948,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # File upload handler
+  # File upload handler - FORBEDRET til at håndtere komplette eksport-filer
   observeEvent(input$data_file, {
     req(input$data_file)
     
@@ -967,8 +960,167 @@ server <- function(input, output, session) {
     
     tryCatch({
       if (file_ext %in% c("xlsx", "xls")) {
-        data <- readxl::read_excel(file_path, col_names = TRUE)
+        # Tjek om det er en komplet eksport-fil
+        excel_sheets <- readxl::excel_sheets(file_path)
+        
+        if ("Data" %in% excel_sheets && "Session_Info" %in% excel_sheets) {
+          cat("DEBUG: Detected complete export file - importing with session info\n")
+          
+          # Læs data fra Data sheet
+          data <- readxl::read_excel(file_path, sheet = "Data", col_names = TRUE)
+          
+          # Læs session info fra Session_Info sheet
+          session_info_raw <- readxl::read_excel(
+            file_path, 
+            sheet = "Session_Info", 
+            col_names = FALSE
+          )
+          
+          # Parse session info for konfiguration
+          session_lines <- as.character(session_info_raw[[1]])
+          
+          # Udtrack metadata fra session info
+          metadata <- list()
+          
+          # Parse titel
+          title_line <- session_lines[grepl("^• Titel:", session_lines)]
+          if (length(title_line) > 0) {
+            metadata$title <- gsub("^• Titel: ", "", title_line[1])
+            metadata$title <- gsub(" Ikke angivet$", "", metadata$title)
+          }
+          
+          # Parse enhed 
+          unit_line <- session_lines[grepl("^• Enhed:", session_lines)]
+          if (length(unit_line) > 0) {
+            unit_text <- gsub("^• Enhed: ", "", unit_line[1])
+            if (unit_text != "Ikke angivet" && unit_text != "") {
+              # Tjek om det er en standard enhed
+              standard_units <- list(
+                "Medicinsk Afdeling" = "med",
+                "Kirurgisk Afdeling" = "kir", 
+                "Intensiv Afdeling" = "icu",
+                "Ambulatorie" = "amb",
+                "Akutmodtagelse" = "akut",
+                "Pædiatrisk Afdeling" = "paed",
+                "Gynækologi/Obstetrik" = "gyn"
+              )
+              
+              if (unit_text %in% names(standard_units)) {
+                metadata$unit_type <- "select"
+                metadata$unit_select <- standard_units[[unit_text]]
+              } else {
+                metadata$unit_type <- "custom"
+                metadata$unit_custom <- unit_text
+              }
+            }
+          }
+          
+          # Parse beskrivelse
+          desc_line <- session_lines[grepl("^• Beskrivelse:", session_lines)]
+          if (length(desc_line) > 0) {
+            desc_text <- gsub("^• Beskrivelse: ", "", desc_line[1])
+            if (desc_text != "Ikke angivet" && desc_text != "") {
+              metadata$description <- desc_text
+            }
+          }
+          
+          # Parse graf konfiguration
+          chart_line <- session_lines[grepl("^• Chart Type:", session_lines)]
+          if (length(chart_line) > 0) {
+            chart_text <- gsub("^• Chart Type: ", "", chart_line[1])
+            if (chart_text %in% names(CHART_TYPES_DA)) {
+              metadata$chart_type <- chart_text
+            }
+          }
+          
+          # Parse kolonne mapping
+          x_line <- session_lines[grepl("^• X-akse:", session_lines)]
+          if (length(x_line) > 0) {
+            x_text <- gsub("^• X-akse: (.+) \\(.*\\)$", "\\1", x_line[1])
+            if (x_text != "Ikke valgt" && x_text %in% names(data)) {
+              metadata$x_column <- x_text
+            }
+          }
+          
+          y_line <- session_lines[grepl("^• Y-akse:", session_lines)]
+          if (length(y_line) > 0) {
+            y_text <- gsub("^• Y-akse: (.+) \\(.*\\)$", "\\1", y_line[1])
+            if (y_text != "Ikke valgt" && y_text %in% names(data)) {
+              metadata$y_column <- y_text
+            }
+          }
+          
+          n_line <- session_lines[grepl("^• Nævner:", session_lines)]
+          if (length(n_line) > 0) {
+            n_text <- gsub("^• Nævner: ", "", n_line[1])
+            if (n_text %in% names(data)) {
+              metadata$n_column <- n_text
+            }
+          }
+          
+          # Indlæs data
+          values$current_data <- as.data.frame(data)
+          values$original_data <- as.data.frame(data)
+          values$file_uploaded <- TRUE
+          values$auto_detect_done <- TRUE  # Skip auto-detect da vi har session info
+          
+          # Gendan metadata med delay for at sikre UI er klar
+          invalidateLater(500)
+          isolate({
+            if (!is.null(metadata$title)) {
+              updateTextInput(session, "indicator_title", value = metadata$title)
+            }
+            if (!is.null(metadata$unit_type)) {
+              updateRadioButtons(session, "unit_type", selected = metadata$unit_type)
+              if (metadata$unit_type == "select" && !is.null(metadata$unit_select)) {
+                updateSelectInput(session, "unit_select", selected = metadata$unit_select)
+              }
+              if (metadata$unit_type == "custom" && !is.null(metadata$unit_custom)) {
+                updateTextInput(session, "unit_custom", value = metadata$unit_custom)
+              }
+            }
+            if (!is.null(metadata$description)) {
+              updateTextAreaInput(session, "indicator_description", value = metadata$description)
+            }
+            if (!is.null(metadata$chart_type)) {
+              updateSelectInput(session, "chart_type", selected = metadata$chart_type)
+            }
+            if (!is.null(metadata$x_column)) {
+              updateSelectInput(session, "x_column", selected = metadata$x_column)
+            }
+            if (!is.null(metadata$y_column)) {
+              updateSelectInput(session, "y_column", selected = metadata$y_column)
+            }
+            if (!is.null(metadata$n_column)) {
+              updateSelectInput(session, "n_column", selected = metadata$n_column)
+            }
+          })
+          
+          showNotification(
+            paste("Komplet session importeret:", nrow(data), "rækker,", ncol(data), "kolonner + konfiguration"),
+            type = "success",
+            duration = 4
+          )
+          
+        } else {
+          # Standard Excel fil uden session info
+          cat("DEBUG: Standard Excel file detected\n")
+          data <- readxl::read_excel(file_path, col_names = TRUE)
+          
+          values$current_data <- as.data.frame(data)
+          values$original_data <- as.data.frame(data)
+          values$file_uploaded <- TRUE
+          values$auto_detect_done <- FALSE
+          
+          showNotification(
+            paste("Excel fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
+            type = "message",
+            duration = 3
+          )
+        }
+        
       } else {
+        # CSV fil
         data <- readr::read_csv2(
           file_path,
           locale = readr::locale(
@@ -978,18 +1130,18 @@ server <- function(input, output, session) {
           ),
           show_col_types = FALSE
         )
+        
+        values$current_data <- as.data.frame(data)
+        values$original_data <- as.data.frame(data)
+        values$file_uploaded <- TRUE
+        values$auto_detect_done <- FALSE
+        
+        showNotification(
+          paste("CSV fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
+          type = "message",
+          duration = 3
+        )
       }
-      
-      values$current_data <- as.data.frame(data)
-      values$original_data <- as.data.frame(data)
-      values$file_uploaded <- TRUE
-      values$auto_detect_done <- FALSE
-      
-      showNotification(
-        paste("Fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
-        type = "message",
-        duration = 3
-      )
       
     }, error = function(e) {
       showNotification(
@@ -1657,85 +1809,137 @@ server <- function(input, output, session) {
   
   # Download handlers
   
-  # KOMPLET EXPORT - ny funktionalitet
-  output$download_complete <- downloadHandler(
+  # KOMPLET EXPORT - Excel version
+  output$download_complete_excel <- downloadHandler(
     filename = function() {
       title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title())
       title_clean <- gsub(" ", "_", title_clean)
       if (nchar(title_clean) == 0) title_clean <- "SPC_Analyse"
-      paste0("SPC_Session_", title_clean, "_", Sys.Date(), ".json")
+      paste0("SPC_Session_", title_clean, "_", Sys.Date(), ".xlsx")
     },
     content = function(file) {
       if (!is.null(active_data())) {
         tryCatch({
-          cat("DEBUG: Creating complete export\n")
+          cat("DEBUG: Creating Excel complete export with 2 sheets\n")
           
-          # Saml alle data og indstillinger
-          complete_export <- list(
-            export_info = list(
-              version = "1.0",
-              timestamp = Sys.time(),
-              app_version = "BFH_SPC_v1.2",
-              exported_by = "Bispebjerg og Frederiksberg Hospital SPC App",
-              hospital = HOSPITAL_NAME
-            ),
-            
-            metadata = list(
-              title = input$indicator_title %||% "",
-              unit_type = input$unit_type %||% "",
-              unit_select = input$unit_select %||% "", 
-              unit_custom = input$unit_custom %||% "",
-              unit_display = current_unit(),
-              description = input$indicator_description %||% "",
-              chart_title = chart_title()
-            ),
-            
-            chart_config = list(
-              chart_type = input$chart_type %||% "Seriediagram (Run Chart)",
-              chart_type_code = get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)"),
-              x_column = input$x_column %||% "",
-              y_column = input$y_column %||% "",
-              n_column = input$n_column %||% "",
-              show_targets = input$show_targets %||% FALSE,
-              show_phases = input$show_phases %||% FALSE
-            ),
-            
-            data_info = list(
-              rows = nrow(active_data()),
-              columns = ncol(active_data()),
-              column_names = names(active_data()),
-              column_types = sapply(active_data(), function(x) class(x)[1]),
-              file_uploaded = values$file_uploaded,
-              data_source = if (values$file_uploaded) "File Upload" else "Manual Entry"
-            ),
-            
-            # Faktiske data
-            data = active_data()
+          # Opret Excel workbook
+          wb <- createWorkbook()
+          
+          # ============== SHEET 1: DATA ==============
+          addWorksheet(wb, "Data")
+          
+          # Skriv data til sheet med professionel formatering
+          writeData(wb, "Data", active_data(), startRow = 1, startCol = 1, 
+                   headerStyle = createStyle(
+                     textDecoration = "bold",
+                     fgFill = HOSPITAL_COLORS$primary,
+                     fontColour = "white",
+                     border = "TopBottomLeftRight",
+                     fontSize = 12
+                   ))
+          
+          # Formatering af data sheet
+          addStyle(wb, "Data", 
+                  style = createStyle(
+                    border = "TopBottomLeftRight", 
+                    wrapText = TRUE
+                  ), 
+                  rows = 2:(nrow(active_data()) + 1), 
+                  cols = 1:ncol(active_data()), 
+                  gridExpand = TRUE)
+          
+          # Auto-width kolonner og frys header
+          setColWidths(wb, "Data", cols = 1:ncol(active_data()), widths = "auto")
+          freezePane(wb, "Data", firstActiveRow = 2)
+          
+          # ============== SHEET 2: SESSION_INFO ==============
+          addWorksheet(wb, "Session_Info")
+          
+          # Opret kombineret session information
+          session_lines <- c(
+            paste(HOSPITAL_NAME, "- SPC ANALYSE"),
+            "════════════════════════════════════════════════════════",
+            "",
+            "INDIKATOR INFORMATION:",
+            paste("• Titel:", input$indicator_title %||% "Ikke angivet"),
+            paste("• Enhed:", current_unit()),
+            paste("• Beskrivelse:", input$indicator_description %||% "Ikke angivet"),
+            "",
+            "GRAF KONFIGURATION:",
+            paste("• Chart Type:", input$chart_type %||% "Seriediagram (Run Chart)"),
+            paste("• X-akse:", input$x_column %||% "Ikke valgt", "(tid/observation)"),
+            paste("• Y-akse:", input$y_column %||% "Ikke valgt", "(værdier)"),
+            if (!is.null(input$n_column) && input$n_column != "") paste("• Nævner:", input$n_column) else NULL,
+            paste("• Målsætninger:", ifelse(input$show_targets %||% FALSE, "Vist", "Skjult")),
+            paste("• Faser:", ifelse(input$show_phases %||% FALSE, "Vist", "Skjult")),
+            "",
+            "DATA INFORMATION:",
+            paste("• Rækker:", nrow(active_data())),
+            paste("• Kolonner:", ncol(active_data())),
+            paste("• Kolonnenavne:", paste(names(active_data()), collapse = ", ")),
+            paste("• Data kilde:", if (values$file_uploaded) "File Upload" else "Manuel indtastning"),
+            paste("• Eksporteret:", format(Sys.time(), "%d-%m-%Y %H:%M")),
+            "",
+            "TEKNISK INFORMATION:",
+            paste("• App Version: BFH_SPC_v1.2"),
+            paste("• Chart Type Code:", get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")),
+            "",
+            "════════════════════════════════════════════════════════",
+            "IMPORT INSTRUKTIONER:",
+            "• For at re-importere: Rediger data i 'Data' sheet og gem filen",
+            "• Bevar kolonnenavnene og strukturen",
+            "• Slet eller tilføj rækker efter behov",
+            "• Import filen i SPC appen som Excel fil",
+            "",
+            paste("Genereret af:", HOSPITAL_NAME, "SPC App")
           )
           
-          # Skriv til JSON fil med pæn formatering
-          json_content <- jsonlite::toJSON(
-            complete_export,
-            auto_unbox = TRUE,
-            pretty = TRUE,
-            digits = NA,
-            na = 'null'
+          # Fjern NULL values
+          session_lines <- session_lines[!is.null(session_lines)]
+          
+          # Skriv session info
+          session_df <- data.frame(Information = session_lines, stringsAsFactors = FALSE)
+          writeData(wb, "Session_Info", session_df, startRow = 1, startCol = 1, colNames = FALSE)
+          
+          # Formatering af session info
+          setColWidths(wb, "Session_Info", cols = 1, widths = 85)
+          
+          # Style til header og separatorer
+          header_style <- createStyle(
+            fontSize = 16, 
+            textDecoration = "bold",
+            fgFill = HOSPITAL_COLORS$primary,
+            fontColour = "white",
+            halign = "center"
           )
+          addStyle(wb, "Session_Info", header_style, rows = 1, cols = 1)
           
-          writeLines(json_content, file)
+          # Style til section headers
+          section_rows <- which(grepl("^[A-ZÆØÅ ]+:$", session_lines))
+          if (length(section_rows) > 0) {
+            section_style <- createStyle(
+              fontSize = 12,
+              textDecoration = "bold",
+              fgFill = HOSPITAL_COLORS$light
+            )
+            addStyle(wb, "Session_Info", section_style, rows = section_rows, cols = 1)
+          }
           
-          cat("DEBUG: Complete export created successfully\n")
+          # Gem Excel fil
+          saveWorkbook(wb, file, overwrite = TRUE)
+          
+          cat("DEBUG: Excel complete export created successfully\n")
           
           showNotification(
-            paste("Komplet session eksporteret:", basename(file)),
+            paste("Komplet Excel session eksporteret:", basename(file)),
             type = "message",
             duration = 4
           )
           
         }, error = function(e) {
-          cat("ERROR during complete export:", e$message, "\n")
+          cat("ERROR during Excel export:", e$message, "\n")
           showNotification(
-            paste("Fejl ved komplet eksport:", e$message),
+            paste("Fejl ved Excel eksport:", e$message),
             type = "error",
             duration = 5
           )
@@ -1776,35 +1980,6 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       showNotification("PDF rapport kommer i næste fase", type = "message")
-    }
-  )
-  
-  output$download_data <- downloadHandler(
-    filename = function() {
-      title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title())
-      title_clean <- gsub(" ", "_", title_clean)
-      paste0("data_", title_clean, "_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      if (!is.null(active_data())) {
-        metadata_header <- paste0(
-          "# Indikator: ", input$indicator_title %||% "Ikke angivet", "\n",
-          "# Enhed: ", current_unit(), "\n",
-          "# Beskrivelse: ", input$indicator_description %||% "Ikke angivet", "\n",
-          "# Eksporteret: ", Sys.time(), "\n",
-          "# ---\n"
-        )
-        
-        cat(metadata_header, file = file)
-        write.table(active_data(), file = file, append = TRUE, sep = ",", 
-                    row.names = FALSE, quote = TRUE)
-        
-        showNotification(
-          paste("Data eksporteret med metadata:", chart_title()),
-          type = "message",
-          duration = 3
-        )
-      }
     }
   )
   
