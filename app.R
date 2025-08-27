@@ -492,7 +492,7 @@ ui <- page_navbar(
                   # Hjælpe-tekst for komplet export
                   div(
                     style = "font-size: 0.75rem; color: #666; text-align: center; margin-bottom: 8px; font-style: italic;",
-                    "Data + session info i 2 Excel sheets - klar til brug og re-import"
+                    "Data + metadata i 2 Excel sheets - klar til brug og re-import"
                   )
                 ),
                 
@@ -963,16 +963,16 @@ server <- function(input, output, session) {
         # Tjek om det er en komplet eksport-fil
         excel_sheets <- readxl::excel_sheets(file_path)
         
-        if ("Data" %in% excel_sheets && "Session_Info" %in% excel_sheets) {
+        if ("Data" %in% excel_sheets && "Metadata" %in% excel_sheets) {
           cat("DEBUG: Detected complete export file - importing with session info\n")
           
           # Læs data fra Data sheet
           data <- readxl::read_excel(file_path, sheet = "Data", col_names = TRUE)
           
-          # Læs session info fra Session_Info sheet
+          # Læs session info fra Metadata sheet
           session_info_raw <- readxl::read_excel(
             file_path, 
-            sheet = "Session_Info", 
+            sheet = "Metadata", 
             col_names = FALSE
           )
           
@@ -1098,7 +1098,7 @@ server <- function(input, output, session) {
           
           showNotification(
             paste("Komplet session importeret:", nrow(data), "rækker,", ncol(data), "kolonner + konfiguration"),
-            type = "success",
+            type = "message",
             duration = 4
           )
           
@@ -1852,8 +1852,8 @@ server <- function(input, output, session) {
           setColWidths(wb, "Data", cols = 1:ncol(active_data()), widths = "auto")
           freezePane(wb, "Data", firstActiveRow = 2)
           
-          # ============== SHEET 2: SESSION_INFO ==============
-          addWorksheet(wb, "Session_Info")
+          # ============== SHEET 2: METADATA ==============
+          addWorksheet(wb, "Metadata")
           
           # Opret kombineret session information
           session_lines <- c(
@@ -1899,10 +1899,10 @@ server <- function(input, output, session) {
           
           # Skriv session info
           session_df <- data.frame(Information = session_lines, stringsAsFactors = FALSE)
-          writeData(wb, "Session_Info", session_df, startRow = 1, startCol = 1, colNames = FALSE)
+          writeData(wb, "Metadata", session_df, startRow = 1, startCol = 1, colNames = FALSE)
           
           # Formatering af session info
-          setColWidths(wb, "Session_Info", cols = 1, widths = 85)
+          setColWidths(wb, "Metadata", cols = 1, widths = 85)
           
           # Style til header og separatorer
           header_style <- createStyle(
@@ -1912,7 +1912,7 @@ server <- function(input, output, session) {
             fontColour = "white",
             halign = "center"
           )
-          addStyle(wb, "Session_Info", header_style, rows = 1, cols = 1)
+          addStyle(wb, "Metadata", header_style, rows = 1, cols = 1)
           
           # Style til section headers
           section_rows <- which(grepl("^[A-ZÆØÅ ]+:$", session_lines))
@@ -1922,7 +1922,7 @@ server <- function(input, output, session) {
               textDecoration = "bold",
               fgFill = HOSPITAL_COLORS$light
             )
-            addStyle(wb, "Session_Info", section_style, rows = section_rows, cols = 1)
+            addStyle(wb, "Metadata", section_style, rows = section_rows, cols = 1)
           }
           
           # Gem Excel fil
