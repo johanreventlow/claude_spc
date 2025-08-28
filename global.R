@@ -15,6 +15,7 @@ library(scales)  # For percent formatting in plots
 library(rlang)     # For %||% operator
 library(lubridate)
 library(openxlsx)  # For Excel export functionality
+library(waiter)
 
 # -----------------------------------------------------------------------------
 # HOSPITAL BRANDING CONFIGURATION
