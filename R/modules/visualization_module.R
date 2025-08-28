@@ -48,7 +48,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Don't use req() here - let it run with available data/config
       data <- data_reactive()
       config <- column_config_reactive()
-      chart_type <- chart_type_reactive() %||% "run"
+      chart_type <- if(is.null(chart_type_reactive())) "run" else chart_type_reactive()
       
       if (is.null(data) || is.null(config)) {
         return(NULL)
@@ -107,7 +107,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Reset plot ready at start
       values$plot_ready <- FALSE
       
-      chart_type <- chart_type_reactive() %||% "run"
+      chart_type <- if(is.null(chart_type_reactive())) "run" else chart_type_reactive()
       
       # Validate data
       validation <- validateDataForChart(data, config, chart_type)

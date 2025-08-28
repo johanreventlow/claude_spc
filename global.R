@@ -1,5 +1,5 @@
 library(shiny)
-library(bslib)
+library(bslib)  # For page_navbar, card, sidebar etc.
 library(qicharts2)
 library(rhandsontable)
 # library(DT)
@@ -12,7 +12,7 @@ library(shinyWidgets)
 library(shinyjs)
 library(zoo)  # For rolling means in calculated fields
 library(scales)  # For percent formatting in plots
-library(rlang)
+library(rlang)     # For %||% operator
 library(lubridate)
 library(openxlsx)  # For Excel export functionality
 
@@ -36,18 +36,7 @@ HOSPITAL_COLORS <- list(
   warning = bs_get_variables(my_theme, "warning"),      # Gul for advarsler
   danger = bs_get_variables(my_theme, "danger"),       # Rød for alerts
   light = bs_get_variables(my_theme, "light"),        # Lys baggrund
-  dark = bs_get_variables(my_theme, "dark")          # Mørk tekst
-)
-
-HOSPITAL_COLORS <- list(
-  primary = bs_get_variables(my_theme, "primary") |> as.character(),      # Primær blå
-  secondary = bs_get_variables(my_theme, "secondary") |> as.character(),    # Mørkere blå  
-  accent = "#FF6B35",       # Orange accent
-  success = bs_get_variables(my_theme, "success"),      # Grøn for positive signals
-  warning = bs_get_variables(my_theme, "warning"),      # Gul for advarsler
-  danger = bs_get_variables(my_theme, "danger"),       # Rød for alerts
-  light = bs_get_variables(my_theme, "light"),        # Lys baggrund
-  dark = bs_get_variables(my_theme, "dark")          # Mørk tekst
+  dark = bs_get_variables(my_theme, "dark")          # Mörk tekst
 )
 
 
