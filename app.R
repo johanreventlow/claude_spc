@@ -27,7 +27,6 @@ ui <- page_navbar(
     
   # NYT: Tilføj JavaScript til head section
   tags$head(
-    waiter::use_waiter(),
     tags$script(HTML("
       $(document).ready(function() {
         // Add waiter-shown class immediately when page loads
@@ -39,6 +38,11 @@ ui <- page_navbar(
             $('body').css('opacity', '1');
           }, 100); // Small delay to ensure smooth transition
         };
+      });
+      
+      // Add to existing JavaScript section
+      Shiny.addCustomMessageHandler('showAppUI', function(message) {
+        window.showAppUI();
       });
     ")),
     tags$script(HTML(localStorage_js)),
@@ -133,9 +137,6 @@ ui <- page_navbar(
   # Enable shinyjs
   shinyjs::useShinyjs(),
   
-  # -------------------------------------------------------------------------
-  # TAB 1: ANALYSE
-  # -------------------------------------------------------------------------
   nav_panel(
     title = NULL,
     
@@ -144,7 +145,7 @@ ui <- page_navbar(
       sidebar = sidebar(
         title = div(
           icon("upload"), 
-          " Upload & Metadata",
+          " Data upload & konfiguration",
           style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
         ),
         width = "400px",
@@ -153,79 +154,31 @@ ui <- page_navbar(
         collapsible = TRUE,
         
         # Upload sektion
-        div(
-          h6("Data Upload:", style = "font-weight: 500; margin-bottom: 10px;"),
-          
+        # div(
           fileInput(
             "data_file",
             NULL,
             accept = c(".csv", ".xlsx", ".xls"),
             placeholder = "Vælg fil..."
-          ),
-          
-          # Toggle button for import settings
-          div(
-            actionButton(
-              "toggle_import_settings",
-              "Import indstillinger",
-              icon = icon("cog"),
-              class = "btn-outline-secondary btn-sm w-100"
-            )
-          ),
-          
-          # Import settings panel - completely hidden by default
-          div(
-            id = "import_settings_panel",
-            style = "display: none; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin: 10px 0; background-color: #f8f9fa;",
-            
-            selectInput(
-              "separator",
-              "Separator:",
-              choices = list(
-                "Semikolon (;)" = ";",
-                "Komma (,)" = ",", 
-                "Tab" = "\t"
-              ),
-              selected = ";"
-            ),
-            
-            selectInput(
-              "decimal",
-              "Decimal:",
-              choices = list(
-                "Komma (,)" = ",",
-                "Punktum (.)" = "."
-              ),
-              selected = ","
-            ),
-            
-            actionButton(
-              "reimport",
-              "Genindlæs fil",
-              icon = icon("refresh"),
-              class = "btn-outline-primary btn-sm w-100"
-            )
-          )
+          # )
         ),
         
         hr(),
         
         # Indikator metadata
-        div(
-          h6("Indikator Information:", style = "font-weight: 500; margin-bottom: 15px;"),
-          
+        # div(
           # Titel
           textInput(
             "indicator_title",
-            "Indikator titel:",
+            "Titel på indikator:",
             value = "",
-            placeholder = "F.eks. Infektionsrate pr. 1000 patientdage"
+            placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
           ),
           
           # Organisatorisk enhed
           div(
             style = "margin-bottom: 15px;",
-            tags$label("Organisatorisk enhed:", style = "font-weight: 500;"),
+            tags$label("Afdeling eller afsnit", style = "font-weight: 500;"),
             div(
               style = "margin-top: 5px;",
               radioButtons(
@@ -278,7 +231,7 @@ ui <- page_navbar(
             placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
             height = "100px",
             resize = "vertical"
-          )
+          # )
         ),
         
         hr(),
@@ -316,9 +269,9 @@ ui <- page_navbar(
         )
       ),
       
-      # Main content area - 2 kolonner
+      ## Main content area - 2 kolonner -----
       fluidRow(
-        # VENSTRE: Data tabel (~50%)
+        ### VENSTRE: Data tabel (~50%) ----
         column(
           6,
           card(
@@ -431,14 +384,31 @@ ui <- page_navbar(
                     selected = NULL
                   ),
                   
-                  # N column (for P/U charts)
+                  # N column - altid vist men med hjælpetekst
+                  selectInput(
+                    "n_column",
+                    "Nævner (n):",
+                    choices = NULL,
+                    selected = NULL
+                  ),
+                  
+                  # Hjælpe-tekst der forklarer hvornår nævner er påkrævet
                   conditionalPanel(
                     condition = "input.chart_type == 'P-kort (Andele)' || input.chart_type == \"P'-kort (Andele, standardiseret)\" || input.chart_type == 'U-kort (Rater)' || input.chart_type == \"U'-kort (Rater, standardiseret)\"",
-                    selectInput(
-                      "n_column",
-                      "Nævner (n):",
-                      choices = NULL,
-                      selected = NULL
+                    div(
+                      class = "alert alert-info",
+                      style = "font-size: 0.8rem; padding: 6px; margin-top: 5px;",
+                      icon("info-circle"),
+                      " Nævner-kolonne er ", strong("påkrævet"), " for denne chart type"
+                    )
+                  ),
+                  
+                  conditionalPanel(
+                    condition = "input.chart_type != 'P-kort (Andele)' && input.chart_type != \"P'-kort (Andele, standardiseret)\" && input.chart_type != 'U-kort (Rater)' && input.chart_type != \"U'-kort (Rater, standardiseret)\"",
+                    div(
+                      style = "font-size: 0.8rem; color: #666; margin-top: 5px;",
+                      icon("info-circle"),
+                      " Nævner er valgfri for denne chart type. Vælg 'Ingen (tom)' hvis ikke relevant."
                     )
                   ),
                   
@@ -481,7 +451,7 @@ ui <- page_navbar(
           )
         ),
         
-        # HØJRE: Graf og indstillinger (~50%)
+        ### HØJRE: Graf og indstillinger (~50%) -------
         column(
           6,
           # Graf sektion
@@ -494,8 +464,7 @@ ui <- page_navbar(
               )
             ),
             card_body(
-              min_height = "400px",
-              
+              # min_height = "200px",
               # FIX: Always show visualization module UI statically
               visualizationModuleUI("visualization")
             )
@@ -571,7 +540,7 @@ server <- function(input, output, session) {
     current_data = NULL,
     original_data = NULL,
     file_uploaded = FALSE,
-    import_settings_visible = FALSE,
+
     updating_table = FALSE,
     auto_detect_done = FALSE,
     # FIXED: Auto-save relaterede values med restore guard
@@ -603,11 +572,14 @@ server <- function(input, output, session) {
   # Show app start loading
   waiter_app_start$show()
 
-  # Hide app start loading when initialized
+  # OPTION 3: Kombination - minimum tid OG app initialized - ACTIVE
   observe({
-    invalidateLater(5000)  # Minimum 1.5 sekunder
+    invalidateLater(1500)  # Minimum 1.5 sekunder
     if (!is.null(input$app_initialized) && input$app_initialized) {
       waiter_app_start$hide()
+      
+      # Trigger smooth UI reveal after waiter hides
+      session$sendCustomMessage("showAppUI", list())
     }
   })
   
@@ -776,9 +748,9 @@ server <- function(input, output, session) {
       unit_select = input$unit_select,
       unit_custom = input$unit_custom,
       description = input$indicator_description,
-      x_column = input$x_column,
-      y_column = input$y_column,
-      n_column = input$n_column,
+      x_column = if(input$x_column == "BLANK") "" else input$x_column,
+      y_column = if(input$y_column == "BLANK") "" else input$y_column,
+      n_column = if(input$n_column == "BLANK") "" else input$n_column,
       chart_type = input$chart_type
     )
     
@@ -865,17 +837,6 @@ server <- function(input, output, session) {
       } else {
         span(icon("clock"), " Gemt for mere end 1 time siden")
       }
-    }
-  })
-  
-  # Toggle import settings panel
-  observeEvent(input$toggle_import_settings, {
-    values$import_settings_visible <- !values$import_settings_visible
-    
-    if (values$import_settings_visible) {
-      shinyjs::show("import_settings_panel")
-    } else {
-      shinyjs::hide("import_settings_panel")
     }
   })
   
@@ -1141,11 +1102,11 @@ server <- function(input, output, session) {
         }
         
       } else {
-        # CSV processing (existing code unchanged)
+        # CSV processing with Danish defaults
         data <- readr::read_csv2(
           file_path,
           locale = readr::locale(
-            decimal_mark = if(is.null(input$decimal)) "," else input$decimal,
+            decimal_mark = ",",
             grouping_mark = ".",
             encoding = "ISO-8859-1"
           ),
@@ -1170,33 +1131,6 @@ server <- function(input, output, session) {
         type = "error",
         duration = 5
       )
-    })
-  })
-  
-  # Re-import med nye indstillinger
-  observeEvent(input$reimport, {
-    req(input$data_file, values$original_data)
-    
-    file_path <- input$data_file$datapath
-    
-    tryCatch({
-      data <- readr::read_delim(
-        file_path,
-        delim = input$separator,
-        locale = readr::locale(
-          decimal_mark = input$decimal,
-          encoding = "ISO-8859-1"
-        ),
-        show_col_types = FALSE
-      )
-      
-      values$current_data <- as.data.frame(data)
-      values$original_data <- as.data.frame(data)
-      
-      showNotification("Fil genindlæst med nye indstillinger", type = "message")
-      
-    }, error = function(e) {
-      showNotification(paste("Fejl ved genindlæsning:", e$message), type = "error")
     })
   })
   
@@ -1487,7 +1421,11 @@ server <- function(input, output, session) {
     all_cols <- names(data)
     
     if (length(all_cols) > 0) {
-      col_choices <- setNames(c("", all_cols), c("Vælg kolonne...", all_cols))
+      # Tilføj altid en "Ingen (tom)" option sammen med "Vælg kolonne..."
+      col_choices <- setNames(
+        c("", "BLANK", all_cols), 
+        c("Vælg kolonne...", "Ingen (tom)", all_cols)
+      )
       
       isolate({
         updateSelectInput(session, "x_column", choices = col_choices)
@@ -1495,8 +1433,9 @@ server <- function(input, output, session) {
         updateSelectInput(session, "n_column", choices = col_choices)
       })
       
+      # Kør auto-detect hvis det ikke er gjort endnu OG ingen kolonner er valgt
       if (!values$auto_detect_done && 
-          (is.null(input$x_column) || input$x_column == "")) {
+          (is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK")) {
         values$auto_detect_done <- TRUE
         auto_detect_and_update_columns()
       }
@@ -1573,6 +1512,7 @@ server <- function(input, output, session) {
       taeller_col <- numeric_cols[1]
     }
     
+    # ÆNDRING: Opdater dropdowns til at VISE de detekterede værdier
     isolate({
       if (!is.null(x_col)) {
         updateSelectInput(session, "x_column", selected = x_col)
@@ -1584,19 +1524,22 @@ server <- function(input, output, session) {
       
       if (!is.null(naevner_col)) {
         updateSelectInput(session, "n_column", selected = naevner_col)
+      } else {
+        # Hvis ingen nævner er detekteret, sæt til blank
+        updateSelectInput(session, "n_column", selected = "BLANK")
       }
       
       detected_msg <- paste0(
-        "Auto-detekteret: ",
+        "Auto-detekteret og opdateret dropdowns: ",
         "X=", if(is.null(x_col)) "ingen" else x_col, ", ",
         "Y=", if(is.null(taeller_col)) "ingen" else taeller_col,
-        if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ""
+        if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ", N=ingen"
       )
       
       showNotification(
         detected_msg,
         type = "message",
-        duration = 3
+        duration = 4
       )
     })
   }
@@ -1618,9 +1561,9 @@ server <- function(input, output, session) {
   
   # Kolonne konfiguration for visualization
   column_config <- reactive({
-    x_col <- if (!is.null(input$x_column) && input$x_column != "") input$x_column else NULL
-    y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL
-    n_col <- if (!is.null(input$n_column) && input$n_column != "") input$n_column else NULL
+    x_col <- if (!is.null(input$x_column) && input$x_column != "" && input$x_column != "BLANK") input$x_column else NULL
+    y_col <- if (!is.null(input$y_column) && input$y_column != "" && input$y_column != "BLANK") input$y_column else NULL
+    n_col <- if (!is.null(input$n_column) && input$n_column != "" && input$n_column != "BLANK") input$n_column else NULL
     
     return(list(
       x_col = x_col,
@@ -1634,8 +1577,8 @@ server <- function(input, output, session) {
   output$column_validation_messages <- renderUI({
     req(values$current_data)
     
-    if (is.null(input$x_column) || input$x_column == "" ||
-        is.null(input$y_column) || input$y_column == "") {
+    if ((is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK") ||
+        (is.null(input$y_column) || input$y_column == "" || input$y_column == "BLANK")) {
       return(NULL)
     }
     
@@ -1655,7 +1598,7 @@ server <- function(input, output, session) {
     
     # Tjek P/U chart requirements
     if (chart_type %in% c("p", "pp", "u", "up")) {
-      if (is.null(input$n_column) || input$n_column == "") {
+      if (is.null(input$n_column) || input$n_column == "" || input$n_column == "BLANK") {
         warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne (N)"))
       } else if (input$n_column %in% names(values$current_data)) {
         n_data <- values$current_data[[input$n_column]]
@@ -1670,7 +1613,7 @@ server <- function(input, output, session) {
     
     # Tjek for samme kolonne valgt flere gange
     selected_cols <- c(input$x_column, input$y_column, input$n_column)
-    selected_cols <- selected_cols[!is.null(selected_cols) & selected_cols != ""]
+    selected_cols <- selected_cols[!is.null(selected_cols) & selected_cols != "" & selected_cols != "BLANK"]
     
     if (length(selected_cols) != length(unique(selected_cols))) {
       warnings <- c(warnings, "Samme kolonne kan ikke bruges til flere formål")
@@ -1754,9 +1697,9 @@ server <- function(input, output, session) {
         unit_select = isolate(input$unit_select),
         unit_custom = isolate(input$unit_custom),
         description = isolate(input$indicator_description),
-        x_column = isolate(input$x_column),
-        y_column = isolate(input$y_column),
-        n_column = isolate(input$n_column),
+        x_column = if(is.null(isolate(input$x_column)) || isolate(input$x_column) == "BLANK") "" else isolate(input$x_column),
+        y_column = if(is.null(isolate(input$y_column)) || isolate(input$y_column) == "BLANK") "" else isolate(input$y_column),
+        n_column = if(is.null(isolate(input$n_column)) || isolate(input$n_column) == "BLANK") "" else isolate(input$n_column),
         chart_type = isolate(input$chart_type)
       )
       
@@ -1784,9 +1727,9 @@ server <- function(input, output, session) {
         unit_select = input$unit_select,
         unit_custom = input$unit_custom,
         description = input$indicator_description,
-        x_column = input$x_column,
-        y_column = input$y_column,
-        n_column = input$n_column,
+        x_column = if(is.null(input$x_column) || input$x_column == "BLANK") "" else input$x_column,
+        y_column = if(is.null(input$y_column) || input$y_column == "BLANK") "" else input$y_column,
+        n_column = if(is.null(input$n_column) || input$n_column == "BLANK") "" else input$n_column,
         chart_type = input$chart_type
       )
       
@@ -1870,9 +1813,9 @@ server <- function(input, output, session) {
             "",
             "GRAF KONFIGURATION:",
             paste("• Chart Type:", if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type),
-            paste("• X-akse:", if(is.null(input$x_column) || input$x_column == "") "Ikke valgt" else input$x_column, "(tid/observation)"),
-            paste("• Y-akse:", if(is.null(input$y_column) || input$y_column == "") "Ikke valgt" else input$y_column, "(værdier)"),
-            if (!is.null(input$n_column) && input$n_column != "") paste("• Nævner:", input$n_column) else NULL,
+            paste("• X-akse:", if(is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK") "Ikke valgt" else input$x_column, "(tid/observation)"),
+            paste("• Y-akse:", if(is.null(input$y_column) || input$y_column == "" || input$y_column == "BLANK") "Ikke valgt" else input$y_column, "(værdier)"),
+            if (!is.null(input$n_column) && input$n_column != "" && input$n_column != "BLANK") paste("• Nævner:", input$n_column) else NULL,
             paste("• Målsætninger:", ifelse(if(is.null(input$show_targets)) FALSE else input$show_targets, "Vist", "Skjult")),
             paste("• Faser:", ifelse(if(is.null(input$show_phases)) FALSE else input$show_phases, "Vist", "Skjult")),
             "",
