@@ -333,7 +333,7 @@ ui <- page_navbar(
               
               # Rhandsontable
               div(
-                style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; height = '100%'",
+                style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; min-height: 400px;",
                 rhandsontable::rHandsontableOutput("main_data_table")
               ),
               
@@ -871,25 +871,25 @@ server <- function(input, output, session) {
         "paed" = "Pædiatrisk Afdeling",
         "gyn" = "Gynækologi/Obstetrik"
       )
-      selected_unit <- input$unit_select %||% ""
+      selected_unit <- if(is.null(input$unit_select)) "" else input$unit_select
       if (selected_unit != "" && selected_unit %in% names(unit_names)) {
         return(unit_names[[selected_unit]])
       } else {
         return("")
       }
     } else {
-      return(input$unit_custom %||% "")
+      return(if(is.null(input$unit_custom)) "" else input$unit_custom)
     }
   })
   
   # Reactive for komplet graf titel
   chart_title <- reactive({
-    base_title <- input$indicator_title %||% "SPC Analyse"
+    base_title <- if(is.null(input$indicator_title) || input$indicator_title == "") "SPC Analyse" else input$indicator_title
     unit_name <- current_unit()
     
-    if (base_title != "" && unit_name != "") {
+    if (base_title != "SPC Analyse" && unit_name != "") {
       return(paste(base_title, "-", unit_name))
-    } else if (base_title != "") {
+    } else if (base_title != "SPC Analyse") {
       return(base_title)
     } else if (unit_name != "") {
       return(paste("SPC Analyse -", unit_name))
@@ -1074,7 +1074,7 @@ server <- function(input, output, session) {
         data <- readr::read_csv2(
           file_path,
           locale = readr::locale(
-            decimal_mark = input$decimal %||% ",",
+            decimal_mark = if(is.null(input$decimal)) "," else input$decimal,
             grouping_mark = ".",
             encoding = "ISO-8859-1"
           ),
@@ -1517,8 +1517,8 @@ server <- function(input, output, session) {
       
       detected_msg <- paste0(
         "Auto-detekteret: ",
-        "X=", x_col %||% "ingen", ", ",
-        "Y=", taeller_col %||% "ingen",
+        "X=", if(is.null(x_col)) "ingen" else x_col, ", ",
+        "Y=", if(is.null(taeller_col)) "ingen" else taeller_col,
         if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ""
       )
       
@@ -1555,7 +1555,7 @@ server <- function(input, output, session) {
       x_col = x_col,
       y_col = y_col,
       n_col = n_col,
-      chart_type = get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
+      chart_type = get_qic_chart_type(if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
     ))
   })
   
@@ -1568,7 +1568,7 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
-    chart_type <- get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")
+    chart_type <- get_qic_chart_type(if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
     warnings <- character(0)
     
     # Tjek om Y-kolonne er numerisk
@@ -1645,11 +1645,11 @@ server <- function(input, output, session) {
     data_reactive = active_data,
     column_config_reactive = column_config,
     chart_type_reactive = reactive({
-      chart_selection <- input$chart_type %||% "Seriediagram (Run Chart)"
+      chart_selection <- if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type
       get_qic_chart_type(chart_selection)
     }),
-    show_targets_reactive = reactive(input$show_targets %||% FALSE),
-    show_phases_reactive = reactive(input$show_phases %||% FALSE),
+    show_targets_reactive = reactive(if(is.null(input$show_targets)) FALSE else input$show_targets),
+    show_phases_reactive = reactive(if(is.null(input$show_phases)) FALSE else input$show_phases),
     chart_title_reactive = chart_title
   )
   
@@ -1793,17 +1793,17 @@ server <- function(input, output, session) {
             "════════════════════════════════════════════════════════",
             "",
             "INDIKATOR INFORMATION:",
-            paste("• Titel:", input$indicator_title %||% "Ikke angivet"),
+            paste("• Titel:", if(is.null(input$indicator_title) || input$indicator_title == "") "Ikke angivet" else input$indicator_title),
             paste("• Enhed:", current_unit()),
-            paste("• Beskrivelse:", input$indicator_description %||% "Ikke angivet"),
+            paste("• Beskrivelse:", if(is.null(input$indicator_description) || input$indicator_description == "") "Ikke angivet" else input$indicator_description),
             "",
             "GRAF KONFIGURATION:",
-            paste("• Chart Type:", input$chart_type %||% "Seriediagram (Run Chart)"),
-            paste("• X-akse:", input$x_column %||% "Ikke valgt", "(tid/observation)"),
-            paste("• Y-akse:", input$y_column %||% "Ikke valgt", "(værdier)"),
+            paste("• Chart Type:", if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type),
+            paste("• X-akse:", if(is.null(input$x_column) || input$x_column == "") "Ikke valgt" else input$x_column, "(tid/observation)"),
+            paste("• Y-akse:", if(is.null(input$y_column) || input$y_column == "") "Ikke valgt" else input$y_column, "(værdier)"),
             if (!is.null(input$n_column) && input$n_column != "") paste("• Nævner:", input$n_column) else NULL,
-            paste("• Målsætninger:", ifelse(input$show_targets %||% FALSE, "Vist", "Skjult")),
-            paste("• Faser:", ifelse(input$show_phases %||% FALSE, "Vist", "Skjult")),
+            paste("• Målsætninger:", ifelse(if(is.null(input$show_targets)) FALSE else input$show_targets, "Vist", "Skjult")),
+            paste("• Faser:", ifelse(if(is.null(input$show_phases)) FALSE else input$show_phases, "Vist", "Skjult")),
             "",
             "DATA INFORMATION:",
             paste("• Rækker:", nrow(active_data())),
@@ -1814,7 +1814,7 @@ server <- function(input, output, session) {
             "",
             "TEKNISK INFORMATION:",
             paste("• App Version: BFH_SPC_v1.2"),
-            paste("• Chart Type Code:", get_qic_chart_type(input$chart_type %||% "Seriediagram (Run Chart)")),
+            paste("• Chart Type Code:", get_qic_chart_type(if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)),
             "",
             "════════════════════════════════════════════════════════",
             "IMPORT INSTRUKTIONER:",
