@@ -94,6 +94,8 @@ ui <- page_navbar(
       ")))
   ),
   
+  waiter::use_waiter(),
+  
   # Enable shinyjs
   shinyjs::useShinyjs(),
   
@@ -545,6 +547,26 @@ server <- function(input, output, session) {
     table_version = 0           # Force table re-render counter
   )
   
+  # Initialize app start waiter
+  waiter_app_start <- waiter::Waiter$new(
+    html = WAITER_CONFIG$app_start$html,
+    color = WAITER_CONFIG$app_start$color
+  )
+  
+  # Initialize file upload waiter
+  waiter_file <- waiter::Waiter$new(
+    html = WAITER_CONFIG$file_upload$html,
+    color = WAITER_CONFIG$file_upload$color
+  )
+  
+  # Show app start loading
+  waiter_app_start$show()
+  
+  # Hide app start loading when initialized
+  observeEvent(input$app_initialized, {
+    waiter_app_start$hide()
+  }, once = TRUE)
+  
   # FIXED: App initialization tracker
   observeEvent(input$app_initialized, {
     cat("DEBUG: App marked as initialized\n")
@@ -902,6 +924,12 @@ server <- function(input, output, session) {
   observeEvent(input$data_file, {
     req(input$data_file)
     
+    # Show loading
+    waiter_file$show()
+    
+    # Ensure loading is hidden no matter what happens
+    on.exit({ waiter_file$hide() })
+    
     values$updating_table <- TRUE
     on.exit({ values$updating_table <- FALSE }, add = TRUE)
     
@@ -910,7 +938,7 @@ server <- function(input, output, session) {
     
     tryCatch({
       if (file_ext %in% c("xlsx", "xls")) {
-        # Tjek om det er en komplet eksport-fil
+        # Excel processing (existing code unchanged)
         excel_sheets <- readxl::excel_sheets(file_path)
         
         if ("Data" %in% excel_sheets && "Metadata" %in% excel_sheets) {
@@ -1053,8 +1081,7 @@ server <- function(input, output, session) {
           )
           
         } else {
-          # Standard Excel fil uden session info
-          cat("DEBUG: Standard Excel file detected\n")
+          # Standard Excel file
           data <- readxl::read_excel(file_path, col_names = TRUE)
           
           values$current_data <- as.data.frame(data)
@@ -1070,7 +1097,7 @@ server <- function(input, output, session) {
         }
         
       } else {
-        # CSV fil
+        # CSV processing (existing code unchanged)
         data <- readr::read_csv2(
           file_path,
           locale = readr::locale(

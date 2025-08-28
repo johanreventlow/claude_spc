@@ -44,6 +44,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       is_computing = FALSE
     )
     
+    waiter_plot <- waiter::Waiter$new(
+      id = ns("plot_container"), # Target the plot container
+      html = WAITER_CONFIG$plot_generation$html,
+      color = WAITER_CONFIG$plot_generation$color
+    )
+    
+    
     chart_config <- reactive({
       # Don't use req() here - let it run with available data/config
       data <- data_reactive()
@@ -96,13 +103,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         return(NULL)
       }
       
-      # Set computing flag ONLY when we actually start processing
-      values$is_computing <- TRUE
+      # Show loading spinner
+      waiter_plot$show()
       
-      # CRITICAL: Ensure we reset the flag no matter what happens
+      # CRITICAL: Ensure we hide spinner no matter what happens
       on.exit({
+        waiter_plot$hide()
         values$is_computing <- FALSE
       }, add = TRUE)
+      
+      # Set computing flag ONLY when we actually start processing
+      values$is_computing <- TRUE
       
       # Reset plot ready at start
       values$plot_ready <- FALSE

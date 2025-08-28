@@ -6,5 +6,5 @@ library(gert)
 # git_status()
 
 git_add(".")
-git_commit_all("ggplot resize")
+git_commit_all("waiter funktionalitet")
 git_push()
