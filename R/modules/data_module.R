@@ -360,7 +360,7 @@ editableTableServer <- function(id, data_reactive) {
       
       hot <- rhandsontable::rhandsontable(
         data,
-        height = 500,
+        # height = 500,
         width = 500, 
         stretchH = "all",
         contextMenu = TRUE,

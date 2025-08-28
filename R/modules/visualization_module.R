@@ -13,7 +13,7 @@ visualizationModuleUI <- function(id) {
     # Plot container - always visible
     div(
       id = ns("plot_container"),
-      style = "position: relative; min-height: 500px;",
+      style = "position: relative; ",
       
       # Dynamic content that switches between plot and placeholder
       uiOutput(ns("dynamic_content"))
@@ -169,7 +169,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Dynamic content output - FIXED: Always show plotOutput, handle empty state in renderPlot
     output$dynamic_content <- renderUI({
       # Always show the plotOutput - let renderPlot handle the logic
-      plotOutput(ns("spc_plot"), height = "60vh", width = "100%")
+      div(
+        style = "width: 100%; aspect-ratio: 16/9; max-height: 60vh;",
+        plotOutput(ns("spc_plot"), height = "100%", width = "100%")
+      )
     })
     
     # Render plot - FIXED: Handle all states properly

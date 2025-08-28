@@ -6,5 +6,5 @@ library(gert)
 # git_status()
 
 git_add(".")
-git_commit_all("waiter funktionalitet rettelser")
+git_commit_all("små layoutrettelser")
 git_push()
