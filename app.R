@@ -7,6 +7,7 @@ source("R/modules/local_storage_module.R")
 #UI -----
 # Define UI with enhanced bslib theming
 ui <- page_navbar(
+  
   title = tagList(
     # if (file.exists(HOSPITAL_LOGO_PATH)) {
     img(
@@ -21,8 +22,25 @@ ui <- page_navbar(
   theme = my_theme,
   inverse = FALSE,
   
+  header = tagList(
+    waiter::use_waiter(),
+    
   # NYT: Tilføj JavaScript til head section
   tags$head(
+    waiter::use_waiter(),
+    tags$script(HTML("
+      $(document).ready(function() {
+        // Add waiter-shown class immediately when page loads
+        $('body').addClass('waiter-shown');
+        
+        // Function to properly show UI when waiter hides
+        window.showAppUI = function() {
+          setTimeout(function() {
+            $('body').css('opacity', '1');
+          }, 100); // Small delay to ensure smooth transition
+        };
+      });
+    ")),
     tags$script(HTML(localStorage_js)),
     tags$script(HTML("
       // FIXED: Custom message handlers med bedre error handling
@@ -71,6 +89,22 @@ ui <- page_navbar(
     
     tags$style(HTML(
       paste0("
+              /* Pre-hide entire app body to prevent flash */
+        body {
+          opacity: 0 !important;
+          transition: opacity 0.3s ease-in-out;
+        }
+        
+        /* Show body when waiter is active */
+        body.waiter-shown {
+          opacity: 1 !important;
+        }
+        
+        /* Ensure waiter overlay is on top */
+        .waiter-overlay {
+          z-index: 9999 !important;
+        }
+      
        .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }
        .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
        .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
@@ -92,9 +126,9 @@ ui <- page_navbar(
       }
              
       ")))
+
+    # waiter::autoWaiter(),
   ),
-  
-  waiter::use_waiter(),
   
   # Enable shinyjs
   shinyjs::useShinyjs(),
@@ -526,6 +560,7 @@ ui <- page_navbar(
     )
   )
 )
+)
 
 # SERVER ----
 # Define server
@@ -548,9 +583,15 @@ server <- function(input, output, session) {
   )
   
   # Initialize app start waiter
+  # waiter_app_start <- waiter::Waiter$new(
+  #   html = WAITER_CONFIG$app_start$html,
+  #   color = WAITER_CONFIG$app_start$color
+  # )
+  
   waiter_app_start <- waiter::Waiter$new(
+    id = NULL,  # NULL = hele skærmen
     html = WAITER_CONFIG$app_start$html,
-    color = WAITER_CONFIG$app_start$color
+    color = "rgba(248,249,250,0.95)"  # Halvgennemsigtig overlay
   )
   
   # Initialize file upload waiter
@@ -561,11 +602,14 @@ server <- function(input, output, session) {
   
   # Show app start loading
   waiter_app_start$show()
-  
+
   # Hide app start loading when initialized
-  observeEvent(input$app_initialized, {
-    waiter_app_start$hide()
-  }, once = TRUE)
+  observe({
+    invalidateLater(5000)  # Minimum 1.5 sekunder
+    if (!is.null(input$app_initialized) && input$app_initialized) {
+      waiter_app_start$hide()
+    }
+  })
   
   # FIXED: App initialization tracker
   observeEvent(input$app_initialized, {
