@@ -41,19 +41,24 @@ HOSPITAL_COLORS <- list(
 )
 
 # Waiter configuration med hospital branding
+# Waiter configuration med hospital branding
 WAITER_CONFIG <- list(
-  # App start loading
+  # App start loading - FULLSCREEN OVERLAY
   app_start = list(
     html = tagList(
-      img(src = basename(HOSPITAL_LOGO_PATH), height = "80px", style = "margin-bottom: 20px;"),
-      h3("Indlæser SPC App...", style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 300;")),
-      br(),
-      waiter::spin_6(), # Hospital-friendly spinner
-      br(),br(),
-      p("Vent venligst mens appen initialiseres", 
-        style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.9rem;"))
-    ),
-    color = HOSPITAL_COLORS$light
+      div(
+        style = "text-align: center; padding: 50px;",
+        img(src = basename(HOSPITAL_LOGO_PATH), height = "80px", style = "margin-bottom: 30px;"),
+        h2(paste(HOSPITAL_NAME, "SPC App"), 
+           style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 300; margin-bottom: 20px;")),
+        h4("Indlæser...", 
+           style = paste("color:", HOSPITAL_COLORS$secondary, "; font-weight: 300; margin-bottom: 30px;")),
+        waiter::spin_6(), # Hospital-friendly spinner
+        br(),br(),br(),
+        p("Vent venligst mens appen initialiseres", 
+          style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.9rem;"))
+      )
+    )
   ),
   
   # File upload loading
