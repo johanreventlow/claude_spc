@@ -158,7 +158,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Dynamic content output - FIXED: Always show plotOutput, handle empty state in renderPlot
     output$dynamic_content <- renderUI({
       # Always show the plotOutput - let renderPlot handle the logic
-      plotOutput(ns("spc_plot"), height = 500, width = "100%")
+      plotOutput(ns("spc_plot"), height = "60vh", width = "100%")
     })
     
     # Render plot - FIXED: Handle all states properly
@@ -215,7 +215,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       } else {
         return(showPlaceholder())
       }
-    }, height = 500, width = 800, res = 96)
+    }, res = 96)
     
     # Loading indicator - DISABLED to prevent overlay issues
     # output$show_loading <- reactive({
