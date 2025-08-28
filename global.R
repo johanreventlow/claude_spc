@@ -40,6 +40,47 @@ HOSPITAL_COLORS <- list(
   dark = bs_get_variables(my_theme, "dark")          # Mörk tekst
 )
 
+# Waiter configuration med hospital branding
+WAITER_CONFIG <- list(
+  # App start loading
+  app_start = list(
+    html = tagList(
+      img(src = basename(HOSPITAL_LOGO_PATH), height = "80px", style = "margin-bottom: 20px;"),
+      h3("Indlæser SPC App...", style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 300;")),
+      br(),
+      waiter::spin_6(), # Hospital-friendly spinner
+      br(),br(),
+      p("Vent venligst mens appen initialiseres", 
+        style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.9rem;"))
+    ),
+    color = HOSPITAL_COLORS$light
+  ),
+  
+  # File upload loading
+  file_upload = list(
+    html = tagList(
+      h4("Behandler fil...", style = paste("color:", HOSPITAL_COLORS$primary)),
+      br(),
+      waiter::spin_3(),
+      br(),br(),
+      p("Læser og validerer data", style = paste("color:", HOSPITAL_COLORS$secondary))
+    ),
+    color = "rgba(255,255,255,0.9)"
+  ),
+  
+  # Plot generation loading  
+  plot_generation = list(
+    html = tagList(
+      h4("Genererer SPC graf...", style = paste("color:", HOSPITAL_COLORS$primary)),
+      br(),
+      waiter::spin_4(),
+      br(),br(),
+      p("Anvender Anhøj-regler og beregner kontrolgrænser", 
+        style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.9rem;"))
+    ),
+    color = "rgba(248,249,250,0.95)"
+  )
+)
 
 # ggplot2 tema for alle grafer
 HOSPITAL_THEME <- function() {
