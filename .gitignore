@@ -3,27 +3,21 @@
 .Rapp.history
 .RData
 .Ruserdata
-
-# Shiny specific  
+# Shiny specific
 rsconnect/
 .secrets
-
 # Data files (for privacy)
 data/*.csv
 data/*.xlsx
 data/*.rds
-
 # Logs
 *.log
-
 # OS specific
 .DS_Store
 Thumbs.db
-
 # IDE
 .vscode/
 .idea/
-
 # renv (uncomment if you add renv later)
 # renv/library/
 # renv/local/
@@ -35,3 +29,4 @@ Thumbs.db
 .Rdata
 .httr-oauth
 .quarto
+archive

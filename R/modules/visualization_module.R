@@ -530,8 +530,8 @@ generateSPCPlot <- function(data, config, chart_type, show_targets = FALSE, show
       # Prøv at parse datoerne med lubridate
       parsed_dates <- lubridate::parse_date_time(
         x_data, 
-        orders = danish_formats,
-        locale = "da_DK.UTF-8"  # Dansk locale for månedsnavne
+        orders = danish_formats
+        # locale = "da_DK.UTF-8"  # Dansk locale for månedsnavne
       )
       
       # Konverter til Date hvis succesfuld
