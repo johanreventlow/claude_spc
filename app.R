@@ -281,7 +281,7 @@ ui <- page_navbar(
                 style = "display: flex; justify-content: space-between; align-items: center;",
                 div(
                   icon("table"),
-                  " Data Tabel",
+                  " Data",
                   style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
                 ),
                 div(
