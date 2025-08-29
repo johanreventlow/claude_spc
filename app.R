@@ -1,37 +1,34 @@
 source("global.R")
 source("R/modules/data_module.R")
 source("R/modules/visualization_module.R")
-# NYT: Tilføj local storage modul
 source("R/modules/local_storage_module.R")
 
 #UI -----
-# Define UI with enhanced bslib theming
 ui <- page_navbar(
   
   title = tagList(
-    # if (file.exists(HOSPITAL_LOGO_PATH)) {
     img(
       src = basename(HOSPITAL_LOGO_PATH),
       height = "40px",
       style = "margin-right: 10px;",
       onerror = "this.style.display='none'" # Hide if image fails to load
     ),
-    # },
     div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
   ),
   theme = my_theme,
   inverse = FALSE,
-  
+# header ----
+    
   header = tagList(
     waiter::use_waiter(),
-    
-  # NYT: Tilføj JavaScript til head section
-  tags$head(
-    tags$script(HTML("
+    # Enable shinyjs
+    shinyjs::useShinyjs(),
+    tags$head(
+      tags$script(HTML("
       $(document).ready(function() {
         // Add waiter-shown class immediately when page loads
         $('body').addClass('waiter-shown');
-        
+
         // Function to properly show UI when waiter hides
         window.showAppUI = function() {
           setTimeout(function() {
@@ -39,14 +36,14 @@ ui <- page_navbar(
           }, 100); // Small delay to ensure smooth transition
         };
       });
-      
+
       // Add to existing JavaScript section
       Shiny.addCustomMessageHandler('showAppUI', function(message) {
         window.showAppUI();
       });
     ")),
-    tags$script(HTML(localStorage_js)),
-    tags$script(HTML("
+      tags$script(HTML(localStorage_js)),
+      tags$script(HTML("
       // FIXED: Custom message handlers med bedre error handling
       Shiny.addCustomMessageHandler('saveAppState', function(message) {
         console.log('Received saveAppState message:', message);
@@ -55,13 +52,13 @@ ui <- page_navbar(
           console.error('saveAppState failed for key:', message.key);
         }
       });
-      
+
       Shiny.addCustomMessageHandler('loadAppState', function(message) {
         console.log('Received loadAppState message:', message);
         var data = window.loadAppState(message.key);
         Shiny.setInputValue('loaded_app_state', data, {priority: 'event'});
       });
-      
+
       Shiny.addCustomMessageHandler('clearAppState', function(message) {
         console.log('Received clearAppState message:', message);
         var success = window.clearAppState(message.key);
@@ -69,14 +66,14 @@ ui <- page_navbar(
           console.error('clearAppState failed for key:', message.key);
         }
       });
-      
+
       // FIXED: Bedre timing for check af existing data
       $(document).ready(function() {
         // Sæt app som initialiseret efter kort delay
         setTimeout(function() {
           Shiny.setInputValue('app_initialized', true, {priority: 'event'});
         }, 500);
-        
+
         // UPDATED: Auto-load existing data ved app start
         if (window.hasAppState('current_session')) {
           setTimeout(function() {
@@ -90,30 +87,34 @@ ui <- page_navbar(
         }
       });
     ")),
-    
-    tags$style(HTML(
-      paste0("
+
+      tags$style(HTML(
+        paste0("
               /* Pre-hide entire app body to prevent flash */
         body {
           opacity: 0 !important;
           transition: opacity 0.3s ease-in-out;
         }
-        
+
         /* Show body when waiter is active */
         body.waiter-shown {
           opacity: 1 !important;
         }
-        
+
         /* Ensure waiter overlay is on top */
         .waiter-overlay {
           z-index: 9999 !important;
         }
-      
+        
+        .htContextMenu {
+         z-index: 99999 !important;
+        }
+
        .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }
        .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
        .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
        .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
-       
+
        /* Fix 1: Bredere kolonner i rhandsontable */
       .handsontable .htCore td {
         min-width: 120px !important;
@@ -128,148 +129,144 @@ ui <- page_navbar(
         color: ", HOSPITAL_COLORS$dark, " !important;
         font-weight: 600 !important;
       }
-             
-      ")))
 
-    # waiter::autoWaiter(),
-  ),
-  
-  # Enable shinyjs
-  shinyjs::useShinyjs(),
-  
-  nav_panel(
-    title = NULL,
+      ")))
+    )
+    ),
+    
+    
+# sidebar ----    
     
     # Layout med smal sidebar + 2-kolonne main area
-    layout_sidebar(
-      sidebar = sidebar(
-        title = div(
-          icon("upload"), 
-          " Data upload & konfiguration",
-          style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+    # layout_sidebar(
+  sidebar = sidebar(
+      title = div(
+        icon("upload"), 
+        " Data upload & konfiguration",
+        style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+      ),
+      width = "300px",
+      position = "left",
+      open = TRUE,
+      collapsible = TRUE,
+      
+      # Upload sektion
+        fileInput(
+          "data_file",
+      "Vælg datafil (Excel eller CSV)",
+      accept = c(".xlsx", ".xls", ".csv", ".CSV"),
+          placeholder = "Vælg fil..."
+      ),
+
+      hr(),
+
+      # Indikator metadata
+      # div(
+        # Titel
+        textInput(
+          "indicator_title",
+          "Titel på indikator:",
+          value = "",
+          placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
         ),
-        width = "400px",
-        position = "left",
-        open = TRUE,
-        collapsible = TRUE,
-        
-        # Upload sektion
-        # div(
-          fileInput(
-            "data_file",
-            NULL,
-            accept = c(".csv", ".xlsx", ".xls"),
-            placeholder = "Vælg fil..."
-          # )
-        ),
-        
-        hr(),
-        
-        # Indikator metadata
-        # div(
-          # Titel
-          textInput(
-            "indicator_title",
-            "Titel på indikator:",
-            value = "",
-            placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
-          ),
-          
-          # Organisatorisk enhed
-          div(
-            style = "margin-bottom: 15px;",
-            tags$label("Afdeling eller afsnit", style = "font-weight: 500;"),
-            div(
-              style = "margin-top: 5px;",
-              radioButtons(
-                "unit_type",
-                NULL,
-                choices = list(
-                  "Vælg fra liste" = "select",
-                  "Indtast selv" = "custom"
-                ),
-                selected = "select",
-                inline = TRUE
-              )
-            ),
-            
-            # Dropdown for standard enheder
-            conditionalPanel(
-              condition = "input.unit_type == 'select'",
-              selectInput(
-                "unit_select",
-                NULL,
-                choices = list(
-                  "Vælg enhed..." = "",
-                  "Medicinsk Afdeling" = "med",
-                  "Kirurgisk Afdeling" = "kir", 
-                  "Intensiv Afdeling" = "icu",
-                  "Ambulatorie" = "amb",
-                  "Akutmodtagelse" = "akut",
-                  "Pædiatrisk Afdeling" = "paed",
-                  "Gynækologi/Obstetrik" = "gyn"
-                )
-              )
-            ),
-            
-            # Custom input
-            conditionalPanel(
-              condition = "input.unit_type == 'custom'",
-              textInput(
-                "unit_custom",
-                NULL,
-                placeholder = "Indtast enhedsnavn..."
-              )
-            )
-          ),
-          
-          # Beskrivelse
-          textAreaInput(
-            "indicator_description",
-            "Indikatorbeskrivelse:",
-            value = "",
-            placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
-            height = "100px",
-            resize = "vertical"
-          # )
-        ),
-        
-        hr(),
-        
-        # NYT: Session management sektion
+
+        # Organisatorisk enhed
         div(
-          h6("Session:", style = "font-weight: 500; margin-bottom: 10px;"),
+          style = "margin-bottom: 15px;",
+          tags$label("Afdeling eller afsnit", style = "font-weight: 500;"),
           div(
-            class = "btn-group w-100",
-            actionButton(
-              "manual_save", 
-              "Gem session", 
-              icon = icon("save"), 
-              class = "btn-outline-primary btn-sm"
-            ),
-            actionButton(
-              "clear_saved", 
-              "Start ny session", 
-              icon = icon("refresh"), 
-              class = "btn-outline-warning btn-sm"
+            style = "margin-top: 5px;",
+            radioButtons(
+              "unit_type",
+              NULL,
+              choices = list(
+                "Vælg fra liste" = "select",
+                "Indtast selv" = "custom"
+              ),
+              selected = "select",
+              inline = TRUE
             )
           ),
-          div(
-            id = "save_status",
-            style = "margin-top: 8px; font-size: 0.8rem; color: #666;",
-            uiOutput("save_status_display")
+
+          # Dropdown for standard enheder
+          conditionalPanel(
+            condition = "input.unit_type == 'select'",
+            selectInput(
+              "unit_select",
+              NULL,
+              choices = list(
+                "Vælg enhed..." = "",
+                "Medicinsk Afdeling" = "med",
+                "Kirurgisk Afdeling" = "kir",
+                "Intensiv Afdeling" = "icu",
+                "Ambulatorie" = "amb",
+                "Akutmodtagelse" = "akut",
+                "Pædiatrisk Afdeling" = "paed",
+                "Gynækologi/Obstetrik" = "gyn"
+              )
+            )
+          ),
+
+          # Custom input
+          conditionalPanel(
+            condition = "input.unit_type == 'custom'",
+            textInput(
+              "unit_custom",
+              NULL,
+              placeholder = "Indtast enhedsnavn..."
+            )
           )
         ),
-        
-        hr(),
-        
-        # Data status
+
+        # Beskrivelse
+        textAreaInput(
+          "indicator_description",
+          "Beskrivelse:",
+          value = "",
+          placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
+          height = "100px",
+          resize = "vertical"
+        # )
+      ),
+
+      hr(),
+
+      div(
+        h6("Session:", style = "font-weight: 500; margin-bottom: 10px;"),
         div(
-          uiOutput("data_status_display")
+          class = "btn-group w-100",
+          actionButton(
+            "manual_save",
+            "Gem session",
+            icon = icon("save"),
+            class = "btn-outline-primary btn-sm"
+          ),
+          actionButton(
+            "clear_saved",
+            "Start ny session",
+            icon = icon("refresh"),
+            class = "btn-outline-warning btn-sm"
+          )
+        ),
+        div(
+          id = "save_status",
+          style = "margin-top: 8px; font-size: 0.8rem; color: #666;",
+          uiOutput("save_status_display")
         )
       ),
+
+      hr(),
+
+      # Data status
+      div(
+        uiOutput("data_status_display")
+      )
+    ),
+    
+# main area - 2 kolonner -----    
+    nav_panel(
+      title = NULL,
       
-      ## Main content area - 2 kolonner -----
       fluidRow(
         ### VENSTRE: Data tabel (~50%) ----
         column(
@@ -528,8 +525,7 @@ ui <- page_navbar(
       )
     )
   )
-)
-)
+
 
 # SERVER ----
 # Define server
@@ -540,7 +536,7 @@ server <- function(input, output, session) {
     current_data = NULL,
     original_data = NULL,
     file_uploaded = FALSE,
-
+    
     updating_table = FALSE,
     auto_detect_done = FALSE,
     # FIXED: Auto-save relaterede values med restore guard
@@ -571,7 +567,7 @@ server <- function(input, output, session) {
   
   # Show app start loading
   waiter_app_start$show()
-
+  
   # OPTION 3: Kombination - minimum tid OG app initialized - ACTIVE
   observe({
     invalidateLater(1500)  # Minimum 1.5 sekunder
@@ -1776,23 +1772,23 @@ server <- function(input, output, session) {
           
           # Skriv data til sheet med professionel formatering
           writeData(wb, "Data", active_data(), startRow = 1, startCol = 1, 
-                   headerStyle = createStyle(
-                     textDecoration = "bold",
-                     fgFill = HOSPITAL_COLORS$primary,
-                     fontColour = "white",
-                     border = "TopBottomLeftRight",
-                     fontSize = 12
-                   ))
+                    headerStyle = createStyle(
+                      textDecoration = "bold",
+                      fgFill = HOSPITAL_COLORS$primary,
+                      fontColour = "white",
+                      border = "TopBottomLeftRight",
+                      fontSize = 12
+                    ))
           
           # Formatering af data sheet
           addStyle(wb, "Data", 
-                  style = createStyle(
-                    border = "TopBottomLeftRight", 
-                    wrapText = TRUE
-                  ), 
-                  rows = 2:(nrow(active_data()) + 1), 
-                  cols = 1:ncol(active_data()), 
-                  gridExpand = TRUE)
+                   style = createStyle(
+                     border = "TopBottomLeftRight", 
+                     wrapText = TRUE
+                   ), 
+                   rows = 2:(nrow(active_data()) + 1), 
+                   cols = 1:ncol(active_data()), 
+                   gridExpand = TRUE)
           
           # Auto-width kolonner og frys header
           setColWidths(wb, "Data", cols = 1:ncol(active_data()), widths = "auto")
