@@ -71,7 +71,7 @@ setup_visualization <- function(input, output, session, values) {
   # Plot ready check
   output$plot_ready <- reactive({
     result <- !is.null(visualization$plot_ready()) && visualization$plot_ready()
-    return(result)
+    return(if(result) "true" else "false")
   })
   outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   

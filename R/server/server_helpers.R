@@ -61,21 +61,6 @@ setup_helper_observers <- function(input, output, session, values) {
   })
   outputOptions(output, "has_data", suspendWhenHidden = FALSE)
   
-  output$plot_ready <- renderText({
-    # Plot is ready when we have data and valid column mappings
-    data_ready <- !is.null(values$current_data) && any(sapply(values$current_data, function(x) {
-      if (is.logical(x)) return(any(x, na.rm = TRUE))
-      if (is.numeric(x)) return(any(!is.na(x)))
-      if (is.character(x)) return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
-      return(FALSE)
-    }))
-    
-    columns_ready <- !is.null(input$x_column) && !is.null(input$y_column) &&
-                    input$x_column != "" && input$y_column != ""
-    
-    if (data_ready && columns_ready) "true" else "false"
-  })
-  outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   
   # Data status display
   output$data_status_display <- renderUI({
