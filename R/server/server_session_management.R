@@ -3,119 +3,119 @@
 
 setup_session_management <- function(input, output, session, values, waiter_file) {
   
-  # Auto-restore session data
-  observeEvent(input$auto_restore_data, {
-    req(input$auto_restore_data)
-    
-    tryCatch({
-      cat("DEBUG: Auto-restoring saved session data\n")
-      saved_state <- input$auto_restore_data
-      
-      if (!is.null(saved_state$data)) {
-        cat("DEBUG: Found saved data for auto-restore\n")
-        
-        # Disable auto-save and set restore guard
-        values$restoring_session <- TRUE
-        values$updating_table <- TRUE
-        values$auto_save_enabled <- FALSE
-        
-        # Cleanup function
-        on.exit({
-          cat("DEBUG: Auto-restore cleanup - re-enabling auto-save\n")
-          values$updating_table <- FALSE
-          values$restoring_session <- FALSE
-          values$auto_save_enabled <- TRUE
-        }, add = TRUE)
-        
-        # Reconstruct data.frame from saved structure
-        saved_data <- saved_state$data
-        
-        if (!is.null(saved_data$values) && !is.null(saved_data$nrows) && !is.null(saved_data$ncols)) {
-          cat("DEBUG: Reconstructing data.frame from structured format\n")
-          
-          # Reconstruct data.frame manually
-          reconstructed_data <- data.frame(
-            matrix(nrow = saved_data$nrows, ncol = saved_data$ncols),
-            stringsAsFactors = FALSE
-          )
-          
-          # Set column names first if available
-          if (!is.null(saved_data$col_names)) {
-            names(reconstructed_data) <- saved_data$col_names
-          }
-          
-          # Populate columns one by one
-          for (i in seq_along(saved_data$values)) {
-            reconstructed_data[[i]] <- saved_data$values[[i]]
-          }
-          
-          # Restore column classes if available
-          if (!is.null(saved_data$class_info)) {
-            for (col_name in names(saved_data$class_info)) {
-              if (col_name %in% names(reconstructed_data)) {
-                target_class <- saved_data$class_info[[col_name]]
-                if (target_class == "numeric") {
-                  reconstructed_data[[col_name]] <- as.numeric(reconstructed_data[[col_name]])
-                } else if (target_class == "character") {
-                  reconstructed_data[[col_name]] <- as.character(reconstructed_data[[col_name]])
-                } else if (target_class == "logical") {
-                  reconstructed_data[[col_name]] <- as.logical(reconstructed_data[[col_name]])
-                }
-              }
-            }
-          }
-          
-          values$current_data <- reconstructed_data
-          values$original_data <- reconstructed_data
-          
-        } else {
-          # Fallback for older save format
-          values$current_data <- as.data.frame(saved_state$data)
-          values$original_data <- as.data.frame(saved_state$data)
-        }
-        
-        values$file_uploaded <- TRUE
-        values$auto_detect_done <- TRUE
-        
-        # Restore metadata if available
-        if (!is.null(saved_state$metadata)) {
-          cat("DEBUG: Restoring metadata\n")
-          restore_metadata(session, saved_state$metadata)
-        }
-        
-        # Show notification about auto restore
-        data_rows <- if (!is.null(saved_state$data$nrows)) {
-          saved_state$data$nrows
-        } else {
-          nrow(saved_state$data)
-        }
-        
-        showNotification(
-          paste("Tidligere session automatisk genindlæst:", data_rows, "datapunkter fra", 
-                format(as.POSIXct(saved_state$timestamp), "%d-%m-%Y %H:%M")),
-          type = "message",
-          duration = 5
-        )
-        
-        cat("DEBUG: Auto-restore completed successfully\n")
-        
-        # Force reset updating_table after a delay
-        invalidateLater(1000)
-        isolate({
-          values$updating_table <- FALSE
-          values$restoring_session <- FALSE
-          values$table_version <- values$table_version + 1
-        })
-        
-      } else {
-        cat("DEBUG: No saved data found in session state\n")
-      }
-      
-    }, error = function(e) {
-      cat("ERROR during auto-restore:", e$message, "\n")
-      showNotification(paste("Fejl ved automatisk genindlæsning:", e$message), type = "error")
-    })
-  }, once = TRUE)
+  # Auto-restore session data - TEMPORARILY DISABLED FOR TESTING
+  # observeEvent(input$auto_restore_data, {
+  #   req(input$auto_restore_data)
+  #   
+  #   tryCatch({
+  #     cat("DEBUG: Auto-restoring saved session data\n")
+  #     saved_state <- input$auto_restore_data
+  #     
+  #     if (!is.null(saved_state$data)) {
+  #       cat("DEBUG: Found saved data for auto-restore\n")
+  #       
+  #       # Disable auto-save and set restore guard
+  #       values$restoring_session <- TRUE
+  #       values$updating_table <- TRUE
+  #       values$auto_save_enabled <- FALSE
+  #       
+  #       # Cleanup function
+  #       on.exit({
+  #         cat("DEBUG: Auto-restore cleanup - re-enabling auto-save\n")
+  #         values$updating_table <- FALSE
+  #         values$restoring_session <- FALSE
+  #         values$auto_save_enabled <- TRUE
+  #       }, add = TRUE)
+  #       
+  #       # Reconstruct data.frame from saved structure
+  #       saved_data <- saved_state$data
+  #       
+  #       if (!is.null(saved_data$values) && !is.null(saved_data$nrows) && !is.null(saved_data$ncols)) {
+  #         cat("DEBUG: Reconstructing data.frame from structured format\n")
+  #         
+  #         # Reconstruct data.frame manually
+  #         reconstructed_data <- data.frame(
+  #           matrix(nrow = saved_data$nrows, ncol = saved_data$ncols),
+  #           stringsAsFactors = FALSE
+  #         )
+  #         
+  #         # Set column names first if available
+  #         if (!is.null(saved_data$col_names)) {
+  #           names(reconstructed_data) <- saved_data$col_names
+  #         }
+  #         
+  #         # Populate columns one by one
+  #         for (i in seq_along(saved_data$values)) {
+  #           reconstructed_data[[i]] <- saved_data$values[[i]]
+  #         }
+  #         
+  #         # Restore column classes if available
+  #         if (!is.null(saved_data$class_info)) {
+  #           for (col_name in names(saved_data$class_info)) {
+  #             if (col_name %in% names(reconstructed_data)) {
+  #               target_class <- saved_data$class_info[[col_name]]
+  #               if (target_class == "numeric") {
+  #                 reconstructed_data[[col_name]] <- as.numeric(reconstructed_data[[col_name]])
+  #               } else if (target_class == "character") {
+  #                 reconstructed_data[[col_name]] <- as.character(reconstructed_data[[col_name]])
+  #               } else if (target_class == "logical") {
+  #                 reconstructed_data[[col_name]] <- as.logical(reconstructed_data[[col_name]])
+  #               }
+  #             }
+  #           }
+  #         }
+  #         
+  #         values$current_data <- reconstructed_data
+  #         values$original_data <- reconstructed_data
+  #         
+  #       } else {
+  #         # Fallback for older save format
+  #         values$current_data <- as.data.frame(saved_state$data)
+  #         values$original_data <- as.data.frame(saved_state$data)
+  #       }
+  #       
+  #       values$file_uploaded <- TRUE
+  #       values$auto_detect_done <- TRUE
+  #       
+  #       # Restore metadata if available
+  #       if (!is.null(saved_state$metadata)) {
+  #         cat("DEBUG: Restoring metadata\n")
+  #         restore_metadata(session, saved_state$metadata)
+  #       }
+  #       
+  #       # Show notification about auto restore
+  #       data_rows <- if (!is.null(saved_state$data$nrows)) {
+  #         saved_state$data$nrows
+  #       } else {
+  #         nrow(saved_state$data)
+  #       }
+  #       
+  #       showNotification(
+  #         paste("Tidligere session automatisk genindlæst:", data_rows, "datapunkter fra", 
+  #               format(as.POSIXct(saved_state$timestamp), "%d-%m-%Y %H:%M")),
+  #         type = "message",
+  #         duration = 5
+  #       )
+  #       
+  #       cat("DEBUG: Auto-restore completed successfully\n")
+  #       
+  #       # Force reset updating_table after a delay
+  #       invalidateLater(1000)
+  #       isolate({
+  #         values$updating_table <- FALSE
+  #         values$restoring_session <- FALSE
+  #         values$table_version <- values$table_version + 1
+  #       })
+  #       
+  #     } else {
+  #       cat("DEBUG: No saved data found in session state\n")
+  #     }
+  #     
+  #   }, error = function(e) {
+  #     cat("ERROR during auto-restore:", e$message, "\n")
+  #     showNotification(paste("Fejl ved automatisk genindlæsning:", e$message), type = "error")
+  #   })
+  # }, once = TRUE)
   
   # Manual save handler
   observeEvent(input$manual_save, {
