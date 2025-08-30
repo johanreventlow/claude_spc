@@ -3,35 +3,45 @@
 
 setup_helper_observers <- function(input, output, session, values) {
   
-  # Start with empty table if none exists
-  observe({
-    if (is.null(values$current_data)) {
-      empty_data <- data.frame(
-        Skift = rep(FALSE, 5),
-        Dato = rep(NA_character_, 5),
-        Tæller = rep(NA_real_, 5), 
-        Nævner = rep(NA_real_, 5),
-        Kommentar = rep(NA_character_, 5),
-        stringsAsFactors = FALSE
-      )
-      values$current_data <- empty_data
-    }
-  })
+  # Don't auto-initialize empty table on startup - wait for user action
+  # observe({
+  #   if (is.null(values$current_data)) {
+  #     empty_data <- data.frame(
+  #       Skift = rep(FALSE, 5),
+  #       Dato = rep(NA_character_, 5),
+  #       Tæller = rep(NA_real_, 5), 
+  #       Nævner = rep(NA_real_, 5),
+  #       Kommentar = rep(NA_character_, 5),
+  #       stringsAsFactors = FALSE
+  #     )
+  #     values$current_data <- empty_data
+  #   }
+  # })
   
   # Data loading status flags - following BFH UTH pattern
   output$dataLoaded <- renderText({
-    if (is.null(values$current_data)) {
+    result <- if (is.null(values$current_data)) {
       "FALSE"
     } else {
       # Check if data has meaningful content (not just empty template)
+      # Also check if user has actively started working (file uploaded or started manually)
       meaningful_data <- any(sapply(values$current_data, function(x) {
         if (is.logical(x)) return(any(x, na.rm = TRUE))
         if (is.numeric(x)) return(any(!is.na(x)))
         if (is.character(x)) return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
         return(FALSE)
       }))
-      if (meaningful_data) "TRUE" else "FALSE"
+      
+      # Only consider data loaded if:
+      # 1. There's meaningful data, OR
+      # 2. User has uploaded a file, OR 
+      # 3. User has explicitly started a new session
+      user_has_started <- values$file_uploaded || values$user_started_session %||% FALSE
+      
+      if (meaningful_data || user_has_started) "TRUE" else "FALSE"
     }
+    cat("DEBUG: output$dataLoaded returning:", result, "\n")
+    result
   })
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
   

@@ -12,26 +12,25 @@ create_ui_main_content <- function() {
         p("For at komme i gang kan du:"),
         tags$ul(
           tags$li("Upload en Excel (.xlsx eller .xls) eller CSV-fil med dine data i menuen til venstre, eller"),
-          tags$li("Indtast data direkte i tabellen nedenfor")
+          tags$li('Klik på "Start ny session" i sidepanelet for at begynde med manuel indtastning')
         ),
-        p("Når data er indlæst, vil du kunne se SPC-grafer og konfigurere dine analyser."),
-        br()
+        p("Når data er indlæst, vil du kunne se SPC-grafer og konfigurere dine analyser.")
       )
     ),
     
-    # Data table - always visible so users can input data
-    fluidRow(
-      column(
-        6,
-        create_data_table_card(),
-        br(),
-        # Chart settings - only when we have meaningful data
-        create_chart_settings_card()
-      ),
-      
-      # Visualization and export - only when data is loaded
-      conditionalPanel(
-        condition = "output.dataLoaded == 'TRUE'",
+    # Data table and visualization - only when user has started
+    conditionalPanel(
+      condition = "output.dataLoaded == 'TRUE'",
+      fluidRow(
+        column(
+          6,
+          create_data_table_card(),
+          br(),
+          # Chart settings - only when we have meaningful data
+          create_chart_settings_card()
+        ),
+        
+        # Visualization and export - only when data is loaded
         column(
           6,
           create_visualization_card(),
