@@ -6,6 +6,7 @@ initialize_reactive_values <- function() {
     current_data = NULL,
     original_data = NULL,
     file_uploaded = FALSE,
+    user_started_session = FALSE,  # NEW: Track if user has actively started
     
     updating_table = FALSE,
     auto_detect_done = FALSE,

@@ -13,7 +13,7 @@ create_ui_sidebar <- function() {
     open = TRUE,
     collapsible = TRUE,
     
-    # Upload eller start ny session sektion
+    # Upload eller start ny session sektion - ALWAYS VISIBLE
     div(
       style = "margin-bottom: 15px;",
       h6("Vælg handling:", style = "font-weight: 500; margin-bottom: 15px;"),
@@ -37,52 +37,57 @@ create_ui_sidebar <- function() {
       )
     ),
 
-    hr(),
+    # REST OF SIDEBAR - only when data is loaded
+    conditionalPanel(
+      condition = "output.dataLoaded == 'TRUE'",
+      
+      hr(),
 
-    # Indikator metadata
-    textInput(
-      "indicator_title",
-      "Titel på indikator:",
-      value = "",
-      placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
-    ),
-
-    # Organisatorisk enhed
-    create_unit_selection(),
-
-    # Beskrivelse
-    textAreaInput(
-      "indicator_description",
-      "Beskrivelse:",
-      value = "",
-      placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
-      height = "100px",
-      resize = "vertical"
-    ),
-
-    hr(),
-
-    # Session management
-    div(
-      h6("Session:", style = "font-weight: 500; margin-bottom: 10px;"),
-      actionButton(
-        "manual_save",
-        "Gem session",
-        icon = icon("save"),
-        class = "btn-outline-primary btn-sm w-100"
+      # Indikator metadata
+      textInput(
+        "indicator_title",
+        "Titel på indikator:",
+        value = "",
+        placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
       ),
+
+      # Organisatorisk enhed
+      create_unit_selection(),
+
+      # Beskrivelse
+      textAreaInput(
+        "indicator_description",
+        "Beskrivelse:",
+        value = "",
+        placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
+        height = "100px",
+        resize = "vertical"
+      ),
+
+      hr(),
+
+      # Session management
       div(
-        id = "save_status",
-        style = "margin-top: 8px; font-size: 0.8rem; color: #666;",
-        uiOutput("save_status_display")
+        h6("Session:", style = "font-weight: 500; margin-bottom: 10px;"),
+        actionButton(
+          "manual_save",
+          "Gem session",
+          icon = icon("save"),
+          class = "btn-outline-primary btn-sm w-100"
+        ),
+        div(
+          id = "save_status",
+          style = "margin-top: 8px; font-size: 0.8rem; color: #666;",
+          uiOutput("save_status_display")
+        )
+      ),
+
+      hr(),
+
+      # Data status
+      div(
+        uiOutput("data_status_display")
       )
-    ),
-
-    hr(),
-
-    # Data status
-    div(
-      uiOutput("data_status_display")
     )
   )
 }

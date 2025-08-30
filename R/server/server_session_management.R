@@ -168,11 +168,7 @@ setup_session_management <- function(input, output, session, values, waiter_file
     }
   })
   
-  # Data loading status
-  output$dataLoaded <- renderText({
-    if (is.null(values$current_data)) "FALSE" else "TRUE"
-  })
-  outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
+  # NOTE: output$dataLoaded is now handled in server_helpers.R with smart logic
 }
 
 # Helper functions for session management
@@ -268,6 +264,7 @@ reset_to_empty_session <- function(session, values) {
   )
   
   values$file_uploaded <- FALSE
+  values$user_started_session <- TRUE  # NEW: Set flag that user has started
   values$original_data <- NULL
   values$auto_detect_done <- FALSE
   
