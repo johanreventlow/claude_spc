@@ -5,6 +5,10 @@ library(shiny)
 library(bslib)
 library(rhandsontable)
 
+# Load modules needed for UI
+source("R/modules/visualization_module.R")
+source("R/modules/local_storage_module.R")
+
 source("R/ui/ui_header.R")
 source("R/ui/ui_sidebar.R") 
 source("R/ui/ui_main_content.R")

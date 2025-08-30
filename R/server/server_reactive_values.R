@@ -7,6 +7,7 @@ initialize_reactive_values <- function() {
     original_data = NULL,
     file_uploaded = FALSE,
     user_started_session = FALSE,  # NEW: Track if user has actively started
+    hide_anhoej_rules = FALSE,    # NEW: Flag to force hide Anhøj rules
     
     updating_table = FALSE,
     auto_detect_done = FALSE,

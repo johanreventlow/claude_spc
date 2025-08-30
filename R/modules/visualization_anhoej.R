@@ -39,12 +39,13 @@ calculateAnhoejRules <- function(data, config) {
     y_clean <- y_data[!is.na(y_data)]
     n <- length(y_clean)
     
-    if (n < 8) {
+    # SPC standard: minimum 10 datapunkter for pålidelig Anhøj analyse
+    if (n < 10) {
       return(list(
         runs_signal = FALSE,
         crossings_signal = FALSE,
         any_signal = FALSE,
-        message = "For få datapunkter til Anhøj-analyse (minimum 8 påkrævet)",
+        message = "For få datapunkter til Anhøj-analyse (minimum 10 påkrævet)",
         n_total = n
       ))
     }
