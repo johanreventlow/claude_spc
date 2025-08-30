@@ -18,6 +18,55 @@ setup_helper_observers <- function(input, output, session, values) {
     }
   })
   
+  # Data loading status flags - following BFH UTH pattern
+  output$dataLoaded <- renderText({
+    if (is.null(values$current_data)) {
+      "FALSE"
+    } else {
+      # Check if data has meaningful content (not just empty template)
+      meaningful_data <- any(sapply(values$current_data, function(x) {
+        if (is.logical(x)) return(any(x, na.rm = TRUE))
+        if (is.numeric(x)) return(any(!is.na(x)))
+        if (is.character(x)) return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
+        return(FALSE)
+      }))
+      if (meaningful_data) "TRUE" else "FALSE"
+    }
+  })
+  outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
+  
+  output$has_data <- renderText({
+    if (is.null(values$current_data)) {
+      "false"
+    } else {
+      # Check if data has meaningful content (not just empty template)
+      meaningful_data <- any(sapply(values$current_data, function(x) {
+        if (is.logical(x)) return(any(x, na.rm = TRUE))
+        if (is.numeric(x)) return(any(!is.na(x)))
+        if (is.character(x)) return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
+        return(FALSE)
+      }))
+      if (meaningful_data) "true" else "false"
+    }
+  })
+  outputOptions(output, "has_data", suspendWhenHidden = FALSE)
+  
+  output$plot_ready <- renderText({
+    # Plot is ready when we have data and valid column mappings
+    data_ready <- !is.null(values$current_data) && any(sapply(values$current_data, function(x) {
+      if (is.logical(x)) return(any(x, na.rm = TRUE))
+      if (is.numeric(x)) return(any(!is.na(x)))
+      if (is.character(x)) return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
+      return(FALSE)
+    }))
+    
+    columns_ready <- !is.null(input$x_column) && !is.null(input$y_column) &&
+                    input$x_column != "" && input$y_column != ""
+    
+    if (data_ready && columns_ready) "true" else "false"
+  })
+  outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
+  
   # Data status display
   output$data_status_display <- renderUI({
     if (is.null(values$current_data)) {

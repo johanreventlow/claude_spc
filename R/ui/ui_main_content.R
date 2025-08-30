@@ -3,26 +3,35 @@
 
 create_ui_main_content <- function() {
   tagList(
-    conditionalPanel(condition = "output.dataLoaded == 'TRUE'", div(
-      style = "margin-top: 20px;",
-      h4("Velkommen til BFHs SPC værktøj"),
-      p("For at komme i gang, upload en Excel (.xlsx eller .xls) eller CSV-fil med dine data i menuen til venstre."),
-      p("Når filen er indlæst, vil du kunne se grafer og tabeller baseret på dine data.")
-    )),
-    
+    # Welcome message when no meaningful data is loaded
     conditionalPanel(
-      condition = "output.dataLoaded != 'TRUE'",
-      
-      fluidRow(
-        # VENSTRE: Data tabel (~50%)
-        column(
-          6,
-          create_data_table_card(),
-          br(),
-          create_chart_settings_card()
+      condition = "output.dataLoaded != 'TRUE'", 
+      div(
+        style = "margin-top: 20px;",
+        h4("Velkommen til BFHs SPC værktøj"),
+        p("For at komme i gang kan du:"),
+        tags$ul(
+          tags$li("Upload en Excel (.xlsx eller .xls) eller CSV-fil med dine data i menuen til venstre, eller"),
+          tags$li("Indtast data direkte i tabellen nedenfor")
         ),
-        
-        # HØJRE: Graf og eksport (~50%)
+        p("Når data er indlæst, vil du kunne se SPC-grafer og konfigurere dine analyser."),
+        br()
+      )
+    ),
+    
+    # Data table - always visible so users can input data
+    fluidRow(
+      column(
+        6,
+        create_data_table_card(),
+        br(),
+        # Chart settings - only when we have meaningful data
+        create_chart_settings_card()
+      ),
+      
+      # Visualization and export - only when data is loaded
+      conditionalPanel(
+        condition = "output.dataLoaded == 'TRUE'",
         column(
           6,
           create_visualization_card(),
