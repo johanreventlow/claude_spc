@@ -1,0 +1,345 @@
+# R/server/server_column_management.R
+# Column management logic including auto-detection and validation
+
+setup_column_management <- function(input, output, session, values) {
+  
+  # Update column choices when data changes
+  observe({
+    if (values$updating_table) {
+      return()
+    }
+    
+    req(values$current_data)
+    
+    data <- values$current_data
+    all_cols <- names(data)
+    
+    if (length(all_cols) > 0) {
+      # Always add "Ingen (tom)" option together with "Vælg kolonne..."
+      col_choices <- setNames(
+        c("", "BLANK", all_cols), 
+        c("Vælg kolonne...", "Ingen (tom)", all_cols)
+      )
+      
+      isolate({
+        updateSelectInput(session, "x_column", choices = col_choices)
+        updateSelectInput(session, "y_column", choices = col_choices)
+        updateSelectInput(session, "n_column", choices = col_choices)
+      })
+      
+      # Run auto-detect if not done yet AND no columns are selected
+      if (!values$auto_detect_done && 
+          (is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK")) {
+        values$auto_detect_done <- TRUE
+        auto_detect_and_update_columns(input, session, values)
+      }
+    }
+  })
+  
+  # Auto-detect button handler
+  observeEvent(input$auto_detect_columns, {
+    auto_detect_and_update_columns(input, session, values)
+  })
+  
+  # Column validation output
+  output$column_validation_messages <- renderUI({
+    req(values$current_data)
+    
+    if ((is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK") ||
+        (is.null(input$y_column) || input$y_column == "" || input$y_column == "BLANK")) {
+      return(NULL)
+    }
+    
+    chart_type <- get_qic_chart_type(if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
+    warnings <- character(0)
+    
+    # Check if Y-column is numeric
+    if (!is.null(input$y_column) && input$y_column != "" && input$y_column %in% names(values$current_data)) {
+      y_data <- values$current_data[[input$y_column]]
+      if (!is.numeric(y_data)) {
+        numeric_test <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data))))
+        if (sum(!is.na(numeric_test)) < length(y_data) * 0.8) {
+          warnings <- c(warnings, paste("Y-kolonne '", input$y_column, "' er ikke numerisk"))
+        }
+      }
+    }
+    
+    # Check P/U chart requirements
+    if (chart_type %in% c("p", "pp", "u", "up")) {
+      if (is.null(input$n_column) || input$n_column == "" || input$n_column == "BLANK") {
+        warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne (N)"))
+      } else if (input$n_column %in% names(values$current_data)) {
+        n_data <- values$current_data[[input$n_column]]
+        if (!is.numeric(n_data)) {
+          numeric_test <- suppressWarnings(as.numeric(gsub(",", ".", as.character(n_data))))
+          if (sum(!is.na(numeric_test)) < length(n_data) * 0.8) {
+            warnings <- c(warnings, paste("Nævner-kolonne '", input$n_column, "' er ikke numerisk"))
+          }
+        }
+      }
+    }
+    
+    # Check for same column selected multiple times
+    selected_cols <- c(input$x_column, input$y_column, input$n_column)
+    selected_cols <- selected_cols[!is.null(selected_cols) & selected_cols != "" & selected_cols != "BLANK"]
+    
+    if (length(selected_cols) != length(unique(selected_cols))) {
+      warnings <- c(warnings, "Samme kolonne kan ikke bruges til flere formål")
+    }
+    
+    # Show results
+    if (length(warnings) > 0) {
+      div(
+        class = "alert alert-warning",
+        style = "font-size: 0.85rem; padding: 8px; margin: 5px 0;",
+        icon("exclamation-triangle"),
+        strong(" Kolonne advarsler:"),
+        tags$ul(
+          style = "margin: 5px 0; padding-left: 20px;",
+          lapply(warnings, function(warn) tags$li(warn))
+        )
+      )
+    } else if (length(selected_cols) >= 2) {
+      div(
+        class = "alert alert-success",
+        style = "font-size: 0.85rem; padding: 8px; margin: 5px 0;",
+        icon("check-circle"),
+        strong(" Kolonner valideret! "),
+        sprintf("Klar til %s chart", chart_type)
+      )
+    }
+  })
+  
+  # Edit column names modal
+  observeEvent(input$edit_column_names, {
+    show_column_edit_modal(session, values)
+  })
+  
+  # Confirm column name changes
+  observeEvent(input$confirm_column_names, {
+    handle_column_name_changes(input, session, values)
+  })
+  
+  # Add column
+  observeEvent(input$add_column, {
+    show_add_column_modal()
+  })
+  
+  observeEvent(input$confirm_add_col, {
+    handle_add_column(input, session, values)
+  })
+}
+
+# Auto-detect column function
+auto_detect_and_update_columns <- function(input, session, values) {
+  req(values$current_data)
+  
+  data <- values$current_data
+  col_names <- names(data)
+  
+  # Detect potential date columns
+  x_col <- NULL
+  for (col_name in col_names) {
+    col_data <- data[[col_name]]
+    
+    if (grepl("dato|date|tid|time", col_name, ignore.case = TRUE)) {
+      x_col <- col_name
+      break
+    }
+    
+    char_data <- as.character(col_data)[!is.na(col_data)]
+    if (length(char_data) > 0) {
+      test_sample <- char_data[1:min(3, length(char_data))]
+      danish_formats <- c("dmy", "ymd", "dby", "dbY")
+      
+      date_test <- lubridate::parse_date_time(
+        test_sample, 
+        orders = danish_formats,
+        quiet = TRUE
+      )
+      
+      success_rate <- sum(!is.na(date_test)) / length(date_test)
+      if (success_rate >= 0.5) {
+        x_col <- col_name
+        break
+      }
+    }
+  }
+  
+  if (is.null(x_col) && length(col_names) > 0) {
+    x_col <- col_names[1]
+  }
+  
+  # Detect numeric columns
+  numeric_cols <- character(0)
+  for (col_name in col_names) {
+    if (col_name != x_col) {
+      col_data <- data[[col_name]]
+      if (is.numeric(col_data) || 
+          sum(!is.na(suppressWarnings(as.numeric(gsub(",", ".", as.character(col_data)))))) > length(col_data) * 0.8) {
+        numeric_cols <- c(numeric_cols, col_name)
+      }
+    }
+  }
+  
+  # Smart detect tæller/nævner
+  col_names_lower <- tolower(col_names)
+  taeller_col <- NULL
+  naevner_col <- NULL
+  
+  taeller_idx <- which(grepl("t.ller|tael|num|count", col_names_lower, ignore.case = TRUE))
+  naevner_idx <- which(grepl("n.vner|naev|denom|total", col_names_lower, ignore.case = TRUE))
+  
+  if (length(taeller_idx) > 0 && length(naevner_idx) > 0) {
+    taeller_col <- col_names[taeller_idx[1]]
+    naevner_col <- col_names[naevner_idx[1]]
+  } else if (length(numeric_cols) >= 2) {
+    taeller_col <- numeric_cols[1]
+    naevner_col <- numeric_cols[2]
+  } else if (length(numeric_cols) >= 1) {
+    taeller_col <- numeric_cols[1]
+  }
+  
+  # Update dropdowns to SHOW the detected values
+  isolate({
+    if (!is.null(x_col)) {
+      updateSelectInput(session, "x_column", selected = x_col)
+    }
+    
+    if (!is.null(taeller_col)) {
+      updateSelectInput(session, "y_column", selected = taeller_col)
+    }
+    
+    if (!is.null(naevner_col)) {
+      updateSelectInput(session, "n_column", selected = naevner_col)
+    } else {
+      # If no denominator detected, set to blank
+      updateSelectInput(session, "n_column", selected = "BLANK")
+    }
+    
+    detected_msg <- paste0(
+      "Auto-detekteret og opdateret dropdowns: ",
+      "X=", if(is.null(x_col)) "ingen" else x_col, ", ",
+      "Y=", if(is.null(taeller_col)) "ingen" else taeller_col,
+      if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ", N=ingen"
+    )
+    
+    showNotification(
+      detected_msg,
+      type = "message",
+      duration = 4
+    )
+  })
+}
+
+show_column_edit_modal <- function(session, values) {
+  req(values$current_data)
+  
+  current_names <- names(values$current_data)
+  
+  name_inputs <- lapply(1:length(current_names), function(i) {
+    textInput(
+      paste0("col_name_", i),
+      paste("Kolonne", i, ":"),
+      value = current_names[i],
+      placeholder = paste("Navn for kolonne", i)
+    )
+  })
+  
+  showModal(modalDialog(
+    title = "Redigér kolonnenavne",
+    size = "m",
+    
+    div(
+      style = "margin-bottom: 15px;",
+      h6("Nuværende kolonnenavne:", style = "font-weight: 500;"),
+      p(paste(current_names, collapse = ", "), style = "color: #666; font-style: italic;")
+    ),
+    
+    div(
+      style = "max-height: 300px; overflow-y: auto;",
+      name_inputs
+    ),
+    
+    footer = tagList(
+      modalButton("Annuller"),
+      actionButton("confirm_column_names", "Gem ændringer", class = "btn-primary")
+    )
+  ))
+}
+
+handle_column_name_changes <- function(input, session, values) {
+  req(values$current_data)
+  
+  current_names <- names(values$current_data)
+  new_names <- character(length(current_names))
+  
+  for (i in 1:length(current_names)) {
+    input_value <- input[[paste0("col_name_", i)]]
+    if (!is.null(input_value) && input_value != "") {
+      new_names[i] <- trimws(input_value)
+    } else {
+      new_names[i] <- current_names[i]
+    }
+  }
+  
+  if (any(duplicated(new_names))) {
+    showNotification(
+      "Kolonnenavne skal være unikke. Ret duplikater og prøv igen.",
+      type = "error",
+      duration = 5
+    )
+    return()
+  }
+  
+  names(values$current_data) <- new_names
+  
+  removeModal()
+  
+  if (!identical(current_names, new_names)) {
+    changed_cols <- which(current_names != new_names)
+    change_summary <- paste(
+      paste0("'", current_names[changed_cols], "' -> '", new_names[changed_cols], "'"),
+      collapse = ", "
+    )
+    
+    showNotification(
+      paste("Kolonnenavne opdateret:", change_summary),
+      type = "message",
+      duration = 4
+    )
+  } else {
+    showNotification("Ingen ændringer i kolonnenavne", type = "message", duration = 2)
+  }
+}
+
+show_add_column_modal <- function() {
+  showModal(modalDialog(
+    title = "Tilføj ny kolonne",
+    textInput("new_col_name", "Kolonnenavn:", value = "Ny_kolonne"),
+    selectInput("new_col_type", "Type:", 
+                choices = list("Numerisk" = "numeric", "Tekst" = "text", "Dato" = "date")),
+    footer = tagList(
+      modalButton("Annuller"),
+      actionButton("confirm_add_col", "Tilføj", class = "btn-primary")
+    )
+  ))
+}
+
+handle_add_column <- function(input, session, values) {
+  req(input$new_col_name, values$current_data)
+  
+  new_col_name <- input$new_col_name
+  new_col_type <- input$new_col_type
+  
+  if (new_col_type == "numeric") {
+    values$current_data[[new_col_name]] <- rep(NA_real_, nrow(values$current_data))
+  } else if (new_col_type == "date") {
+    values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
+  } else {
+    values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
+  }
+  
+  removeModal()
+  showNotification(paste("Kolonne", new_col_name, "tilføjet"), type = "message")
+}

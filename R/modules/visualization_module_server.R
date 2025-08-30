@@ -1,0 +1,256 @@
+# R/modules/visualization_module_server.R
+# Server logic for the visualization module
+
+library(shiny)
+library(qicharts2)
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# Visualization Module Server
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, show_targets_reactive, show_phases_reactive, chart_title_reactive = NULL) {
+  
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    # Reactive values for state management
+    values <- reactiveValues(
+      plot_object = NULL,
+      plot_ready = FALSE,
+      anhoej_results = NULL,
+      plot_warnings = character(0),
+      is_computing = FALSE
+    )
+    
+    waiter_plot <- waiter::Waiter$new(
+      id = ns("plot_container"),
+      html = WAITER_CONFIG$plot_generation$html,
+      color = WAITER_CONFIG$plot_generation$color
+    )
+    
+    chart_config <- reactive({
+      data <- data_reactive()
+      config <- column_config_reactive()
+      chart_type <- if(is.null(chart_type_reactive())) "run" else chart_type_reactive()
+      
+      if (is.null(data) || is.null(config)) {
+        return(NULL)
+      }
+      
+      # Validate columns exist in data
+      if (!is.null(config$x_col) && !(config$x_col %in% names(data))) {
+        config$x_col <- NULL
+      }
+      if (!is.null(config$y_col) && !(config$y_col %in% names(data))) {
+        config$y_col <- NULL
+      }
+      if (!is.null(config$n_col) && !(config$n_col %in% names(data))) {
+        config$n_col <- NULL
+      }
+      
+      # Auto-detect if needed
+      if (is.null(config$x_col) || is.null(config$y_col)) {
+        auto_config <- detectChartConfiguration(data, chart_type)
+        if (is.null(config$x_col)) config$x_col <- auto_config$x_col
+        if (is.null(config$y_col)) config$y_col <- auto_config$y_col
+        if (is.null(config$n_col)) config$n_col <- auto_config$n_col
+      }
+      
+      return(list(
+        x_col = config$x_col,
+        y_col = config$y_col,
+        n_col = config$n_col,
+        chart_type = chart_type
+      ))
+    })
+    
+    # Main plot generation reactive
+    spc_plot <- reactive({
+      data <- data_reactive()
+      config <- chart_config()
+      
+      values$is_computing <- FALSE
+      
+      if (is.null(data) || is.null(config)) {
+        values$plot_ready <- FALSE
+        values$plot_warnings <- character(0)
+        return(NULL)
+      }
+      
+      waiter_plot$show()
+      
+      on.exit({
+        waiter_plot$hide()
+        values$is_computing <- FALSE
+      }, add = TRUE)
+      
+      values$is_computing <- TRUE
+      values$plot_ready <- FALSE
+      
+      chart_type <- if(is.null(chart_type_reactive())) "run" else chart_type_reactive()
+      
+      # Validate data
+      validation <- validateDataForChart(data, config, chart_type)
+      
+      if (!validation$valid) {
+        values$plot_warnings <- validation$warnings
+        values$plot_ready <- FALSE
+        return(NULL)
+      }
+      
+      values$plot_warnings <- character(0)
+      
+      # Generate plot
+      tryCatch({
+        plot <- generateSPCPlot(
+          data = data, 
+          config = config, 
+          chart_type = chart_type,
+          show_targets = show_targets_reactive(),
+          show_phases = show_phases_reactive(),
+          chart_title_reactive = chart_title_reactive
+        )
+        
+        plot <- applyHospitalTheme(plot)
+        
+        values$plot_object <- plot
+        values$plot_ready <- TRUE
+        
+        # Calculate Anhøj rules for run charts
+        if (chart_type == "run") {
+          values$anhoej_results <- calculateAnhoejRules(data, config)
+        } else {
+          values$anhoej_results <- NULL
+        }
+        
+        return(plot)
+        
+      }, error = function(e) {
+        cat("ERROR in spc_plot reactive:", e$message, "\n")
+        values$plot_warnings <- c("Graf-generering fejlede:", e$message)
+        values$plot_ready <- FALSE
+        return(NULL)
+      })
+    })
+    
+    # Dynamic content output
+    output$dynamic_content <- renderUI({
+      div(
+        style = "width: 100%; aspect-ratio: 16/9; max-height: 60vh;",
+        plotOutput(ns("spc_plot"), height = "100%", width = "100%")
+      )
+    })
+    
+    # Render plot
+    output$spc_plot <- renderPlot({
+      data <- data_reactive()
+      config <- chart_config()
+      
+      if (is.null(data) || is.null(config) || is.null(config$y_col)) {
+        return(ggplot() + 
+          xlim(0, 1) + ylim(0, 1) +
+          annotate(
+            "text", x = 0.5, y = 0.5,
+            label = "Indlæs eller indtast data og vælg kolonner for at se grafen.",
+            size = 5,
+            color = HOSPITAL_COLORS$secondary
+          ) +
+          theme_void() +
+          theme(
+            plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA),
+            plot.margin = margin(20, 20, 20, 20)
+          ))
+      }
+      
+      plot <- spc_plot()
+      
+      if (is.null(plot)) {
+        warning_text <- if (length(values$plot_warnings) > 0) {
+          paste(values$plot_warnings, collapse = "\n")
+        } else {
+          "Kunne ikke generere graf - tjek data og indstillinger"
+        }
+        
+        return(ggplot() + 
+          xlim(0, 1) + ylim(0, 1) +
+          annotate(
+            "text", x = 0.5, y = 0.5,
+            label = warning_text,
+            size = 4,
+            color = HOSPITAL_COLORS$danger
+          ) +
+          theme_void() +
+          theme(
+            plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA),
+            plot.margin = margin(20, 20, 20, 20)
+          ))
+      }
+      
+      if (inherits(plot, "ggplot")) {
+        return(plot)
+      } else {
+        return(showPlaceholder())
+      }
+    }, res = 96)
+    
+    # Plot ready status
+    output$plot_ready <- reactive({
+      values$plot_ready
+    })
+    outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
+    
+    # Plot info and warnings
+    output$plot_info <- renderUI({
+      if (length(values$plot_warnings) > 0) {
+        div(
+          class = "alert alert-warning",
+          icon("exclamation-triangle"),
+          strong(" Graf-advarsler:"),
+          tags$ul(
+            lapply(values$plot_warnings, function(warn) tags$li(warn))
+          )
+        )
+      } else if (values$plot_ready && !is.null(data_reactive())) {
+        div(
+          class = "alert alert-success",
+          style = "font-size: 0.9rem;",
+          icon("check-circle"),
+          strong(" Graf genereret succesfuldt! "),
+          sprintf("Chart type: %s | Datapunkter: %d", 
+                  chart_type_reactive() %||% "unknown", 
+                  nrow(data_reactive()))
+        )
+      }
+    })
+    
+    # Anhøj rules section
+    output$anhoej_rules_section <- renderUI({
+      if (!is.null(chart_type_reactive()) && chart_type_reactive() == "run" && !is.null(values$anhoej_results)) {
+        card(
+          card_header(
+            div(
+              icon("search-plus"),
+              " Anhøj Regler (Run Chart)",
+              style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+            )
+          ),
+          card_body(
+            renderAnhoejResults(values$anhoej_results)
+          )
+        )
+      } else {
+        return(NULL)
+      }
+    })
+    
+    # Return reactive values
+    return(
+      list(
+        plot = reactive(values$plot_object),
+        plot_ready = reactive(values$plot_ready),
+        anhoej_results = reactive(values$anhoej_results),
+        chart_config = chart_config
+      )
+    )
+  })
+}
