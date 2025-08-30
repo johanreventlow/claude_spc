@@ -253,6 +253,9 @@ reset_to_empty_session <- function(session, values) {
   
   values$updating_table <- TRUE
   
+  # Force hide Anhøj rules until real data is loaded
+  values$hide_anhoej_rules <- TRUE
+  
   # Reset to standard column order
   values$current_data <- data.frame(
     Skift = rep(FALSE, 5),

@@ -71,11 +71,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       
       values$is_computing <- FALSE
       
+      # Reset Anhøj results when no data or invalid config
       if (is.null(data) || is.null(config)) {
         values$plot_ready <- FALSE
         values$plot_warnings <- character(0)
+        values$anhoej_results <- NULL  # CLEAR Anhøj results when no data
         return(NULL)
       }
+      
       
       waiter_plot$show()
       
@@ -95,6 +98,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       if (!validation$valid) {
         values$plot_warnings <- validation$warnings
         values$plot_ready <- FALSE
+        values$anhoej_results <- NULL  # CLEAR Anhøj results when validation fails
         return(NULL)
       }
       
@@ -129,6 +133,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         cat("ERROR in spc_plot reactive:", e$message, "\n")
         values$plot_warnings <- c("Graf-generering fejlede:", e$message)
         values$plot_ready <- FALSE
+        values$anhoej_results <- NULL  # CLEAR Anhøj results on error
         return(NULL)
       })
     })
@@ -223,24 +228,69 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
-    # Anhøj rules section
+    # Anhøj rules section - only for run charts with sufficient data
     output$anhoej_rules_section <- renderUI({
-      if (!is.null(chart_type_reactive()) && chart_type_reactive() == "run" && !is.null(values$anhoej_results)) {
-        card(
-          card_header(
-            div(
-              icon("search-plus"),
-              " Anhøj Regler (Run Chart)",
-              style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
-            )
-          ),
-          card_body(
-            renderAnhoejResults(values$anhoej_results)
-          )
-        )
-      } else {
+      # Check data first to get hide_anhoej_rules flag
+      data <- data_reactive()
+      
+      # SOLUTION: Check hide_anhoej_rules flag passed via data attribute
+      # This flag is set to TRUE when "start ny session" is clicked
+      # and set to FALSE when real data is uploaded
+      hide_flag <- attr(data, "hide_anhoej_rules")
+      if (!is.null(hide_flag) && hide_flag) {
         return(NULL)
       }
+      
+      # Only show for run charts
+      if (is.null(chart_type_reactive()) || chart_type_reactive() != "run") {
+        return(NULL)
+      }
+      
+      # Check data and config first
+      data <- data_reactive()
+      config <- chart_config()
+      
+      if (is.null(data) || is.null(config) || is.null(config$y_col)) {
+        return(NULL)
+      }
+      
+      
+      # Only show if we have Anhøj results and enough data
+      if (is.null(values$anhoej_results)) {
+        return(NULL)
+      }
+      
+      # Count meaningful data points (non-NA values)
+      if (!is.null(config$n_col) && config$n_col %in% names(data)) {
+        # For rate data: count where both numerator and denominator are valid
+        taeller <- suppressWarnings(as.numeric(gsub(",", ".", as.character(data[[config$y_col]]))))
+        naevner <- suppressWarnings(as.numeric(gsub(",", ".", as.character(data[[config$n_col]]))))
+        meaningful_count <- sum(!is.na(taeller) & !is.na(naevner) & naevner > 0)
+      } else {
+        # For simple data: count non-NA values
+        y_data_raw <- data[[config$y_col]]
+        y_data <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data_raw))))
+        meaningful_count <- sum(!is.na(y_data))
+      }
+      
+      # Only show Anhøj rules if we have minimum 10 meaningful observations
+      if (meaningful_count < 10) {
+        return(NULL)
+      }
+      
+      # Show the Anhøj rules card
+      card(
+        card_header(
+          div(
+            icon("search-plus"),
+            " Anhøj Regler (Run Chart)",
+            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+          )
+        ),
+        card_body(
+          renderAnhoejResults(values$anhoej_results)
+        )
+      )
     })
     
     # Return reactive values

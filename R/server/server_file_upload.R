@@ -69,6 +69,7 @@ handle_excel_upload <- function(file_path, session, values) {
     values$original_data <- as.data.frame(data)
     values$file_uploaded <- TRUE
     values$auto_detect_done <- TRUE  # Skip auto-detect since we have session info
+    values$hide_anhoej_rules <- FALSE  # Re-enable Anhøj rules when real data is uploaded
     
     # Restore metadata with delay to ensure UI is ready
     invalidateLater(500)
@@ -93,6 +94,7 @@ handle_excel_upload <- function(file_path, session, values) {
     values$original_data <- as.data.frame(data)
     values$file_uploaded <- TRUE
     values$auto_detect_done <- FALSE
+    values$hide_anhoej_rules <- FALSE  # Re-enable Anhøj rules when real data is uploaded
     
     showNotification(
       paste("Excel fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
@@ -121,6 +123,7 @@ handle_csv_upload <- function(file_path, values) {
   values$original_data <- as.data.frame(data)
   values$file_uploaded <- TRUE
   values$auto_detect_done <- FALSE
+  values$hide_anhoej_rules <- FALSE  # Re-enable Anhøj rules when real data is uploaded
   
   showNotification(
     paste("CSV fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),

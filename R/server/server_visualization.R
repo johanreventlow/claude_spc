@@ -8,13 +8,29 @@ setup_visualization <- function(input, output, session, values) {
     req(values$current_data)
     
     data <- values$current_data
+    
+    # Add hide_anhoej_rules flag as attribute to data
+    attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
+    
+    # Check if this is the empty standard table from session reset
+    if (nrow(data) == 5 && all(c("Skift", "Dato", "Tæller", "Nævner", "Kommentar") %in% names(data))) {
+      if (all(is.na(data$Dato)) && all(is.na(data$Tæller)) && all(is.na(data$Nævner))) {
+        # This is empty standard table but we still need to pass the hide flag
+        attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
+        return(data)  # Return data with flag instead of NULL
+      }
+    }
+    
     non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
     
     if (any(non_empty_rows)) {
       filtered_data <- data[non_empty_rows, ]
+      attr(filtered_data, "hide_anhoej_rules") <- values$hide_anhoej_rules
       return(filtered_data)
     } else {
-      return(NULL)
+      # Even when no meaningful data, pass the flag
+      attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
+      return(data)
     }
   })
   
@@ -38,7 +54,7 @@ setup_visualization <- function(input, output, session, values) {
   })
   outputOptions(output, "has_data", suspendWhenHidden = FALSE)
   
-  # Initialize visualization module
+  # Initialize visualization module  
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = active_data,
