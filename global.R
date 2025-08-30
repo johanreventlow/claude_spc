@@ -170,6 +170,34 @@ get_qic_chart_type <- function(danish_selection) {
   return("run")
 }
 
+# Helper function to ensure standard columns are present and in correct order
+ensure_standard_columns <- function(data) {
+  # Define standard columns in the correct order
+  standard_cols <- c("Skift", "Dato", "Tæller", "Nævner", "Kommentar")
+  
+  # Add missing standard columns
+  for (col in standard_cols) {
+    if (!col %in% names(data)) {
+      if (col == "Skift") {
+        data[[col]] <- FALSE
+      } else if (col %in% c("Tæller", "Nævner")) {
+        data[[col]] <- NA_real_
+      } else {
+        data[[col]] <- NA_character_
+      }
+    }
+  }
+  
+  # Get non-standard columns (user's additional columns)
+  extra_cols <- setdiff(names(data), standard_cols)
+  
+  # Reorder: standard columns first (in correct order), then user's columns
+  final_order <- c(standard_cols, extra_cols)
+  
+  # Return data with correct column order
+  return(data[, final_order, drop = FALSE])
+}
+
 # Validation functions
 validate_numeric_column <- function(data, column_name) {
   if (!column_name %in% names(data)) {
@@ -279,6 +307,81 @@ generate_test_data <- function(type = "infection_rates", n = 50) {
       stringsAsFactors = FALSE
     )
   }
+}
+
+# Helper function to validate Skift column for center line phases
+validateSkiftColumn <- function(data) {
+  if (!"Skift" %in% names(data)) {
+    return(list(
+      valid = TRUE,
+      warnings = character(0),
+      info = "Ingen Skift kolonne - én center line for alle data",
+      phase_count = 1,
+      shift_points = integer(0)
+    ))
+  }
+  
+  skift_col <- data[["Skift"]]
+  warnings <- character(0)
+  info_messages <- character(0)
+  
+  # Konverter til logical og tjek for problemer
+  if (!is.logical(skift_col)) {
+    # Prøv at konvertere fra forskellige formater
+    if (is.character(skift_col)) {
+      # Håndter tekst som "TRUE", "FALSE", "1", "0", "ja", "nej"
+      skift_col_clean <- tolower(trimws(skift_col))
+      logical_col <- ifelse(skift_col_clean %in% c("true", "1", "ja", "yes", "x"), TRUE,
+                           ifelse(skift_col_clean %in% c("false", "0", "nej", "no", ""), FALSE, NA))
+      
+      if (any(is.na(logical_col) & !is.na(skift_col))) {
+        warnings <- c(warnings, "Nogle værdier i Skift kolonnen kunne ikke forstås (brug TRUE/FALSE eller 1/0)")
+      }
+      skift_col <- logical_col
+    } else {
+      converted <- as.logical(skift_col)
+      if (any(is.na(converted) & !is.na(skift_col))) {
+        warnings <- c(warnings, "Nogle værdier i Skift kolonnen kunne ikke konverteres til TRUE/FALSE")
+      }
+      skift_col <- converted
+    }
+  }
+  
+  # Tæl skift
+  skift_count <- sum(skift_col == TRUE, na.rm = TRUE)
+  total_points <- length(skift_col)
+  
+  if (skift_count == 0) {
+    info_messages <- c(info_messages, "Ingen phase shifts markeret - én center line beregnes")
+    phase_count <- 1
+  } else if (skift_count > total_points / 2) {
+    warnings <- c(warnings, paste("Meget mange phase shifts (", skift_count, ") - overvej om dette er hensigtsmæssigt"))
+    phase_count <- skift_count + 1
+  } else {
+    info_messages <- c(info_messages, paste(skift_count, "phase shift(s) detekteret -", skift_count + 1, "separate center lines beregnes"))
+    phase_count <- skift_count + 1
+  }
+  
+  # Find skift punkter
+  shift_points <- which(skift_col == TRUE)
+  
+  # Tjek for skift på første observation
+  if (length(shift_points) > 0 && 1 %in% shift_points) {
+    warnings <- c(warnings, "Phase shift på første observation ignoreres - phase 1 starter altid ved observation 1")
+    shift_points <- shift_points[shift_points != 1]
+    if (length(shift_points) == 0) {
+      phase_count <- 1
+      info_messages <- c("Phase shift kun på første observation ignoreret - én center line beregnes")
+    }
+  }
+  
+  return(list(
+    valid = length(warnings) == 0,
+    warnings = warnings,
+    info = info_messages,
+    phase_count = phase_count,
+    shift_points = shift_points
+  ))
 }
 
 # Quick access to test data
