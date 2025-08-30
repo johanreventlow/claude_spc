@@ -1,6 +1,9 @@
 # server.R
 # Main server definition
 
+library(shiny)
+library(openxlsx)
+
 source("R/server/server_reactive_values.R")
 source("R/server/server_session_management.R")
 source("R/server/server_file_upload.R")
@@ -35,7 +38,7 @@ server <- function(input, output, session) {
   setup_column_management(input, output, session, values)
   
   # Visualization logic
-  setup_visualization(input, output, session, values)
+  visualization <- setup_visualization(input, output, session, values)
   
   # Download handlers
   setup_download_handlers(input, output, session, values)
