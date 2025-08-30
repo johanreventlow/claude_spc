@@ -48,11 +48,6 @@ setup_visualization <- function(input, output, session, values) {
     ))
   })
   
-  # Has data check
-  output$has_data <- reactive({
-    !is.null(active_data()) && nrow(active_data()) > 0
-  })
-  outputOptions(output, "has_data", suspendWhenHidden = FALSE)
   
   # Initialize visualization module  
   visualization <- visualizationModuleServer(

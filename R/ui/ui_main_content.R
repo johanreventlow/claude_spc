@@ -111,7 +111,7 @@ create_data_table_card <- function() {
 
 create_chart_settings_card <- function() {
   conditionalPanel(
-    condition = "output.has_data == true",
+    condition = "output.has_data == 'true'",
     card(
       card_header(
         div(

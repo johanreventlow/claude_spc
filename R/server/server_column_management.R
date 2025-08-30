@@ -22,19 +22,33 @@ setup_column_management <- function(input, output, session, values) {
       )
       
       isolate({
-        updateSelectInput(session, "x_column", choices = col_choices)
-        updateSelectInput(session, "y_column", choices = col_choices)
-        updateSelectInput(session, "n_column", choices = col_choices)
+        # Preserve current selected values when updating choices
+        current_x <- input$x_column
+        current_y <- input$y_column  
+        current_n <- input$n_column
+        
+        updateSelectInput(session, "x_column", choices = col_choices, selected = current_x)
+        updateSelectInput(session, "y_column", choices = col_choices, selected = current_y)
+        updateSelectInput(session, "n_column", choices = col_choices, selected = current_n)
       })
       
-      # Run auto-detect if not done yet AND no columns are selected
-      if (!values$auto_detect_done && 
-          (is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK")) {
-        values$auto_detect_done <- TRUE
-        auto_detect_and_update_columns(input, session, values)
-      }
     }
   })
+  
+  # Auto-detect trigger flag
+  observeEvent(values$current_data, {
+    if (!is.null(values$current_data) && 
+        (is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK") &&
+        (is.null(input$y_column) || input$y_column == "" || input$y_column == "BLANK")) {
+      
+      values$auto_detect_trigger <- Sys.time()  # Use timestamp to ensure reactivity
+    }
+  }, ignoreInit = TRUE)
+  
+  # Delayed auto-detect execution
+  observeEvent(values$auto_detect_trigger, {
+    auto_detect_and_update_columns(input, session, values)
+  }, ignoreInit = TRUE)
   
   # Auto-detect button handler
   observeEvent(input$auto_detect_columns, {
@@ -201,20 +215,30 @@ auto_detect_and_update_columns <- function(input, session, values) {
   }
   
   # Update dropdowns to SHOW the detected values
+  # First, ensure choices are updated with current column names
+  all_cols <- col_names
+  col_choices <- setNames(
+    c("", "BLANK", all_cols), 
+    c("Vælg kolonne...", "Ingen (tom)", all_cols)
+  )
+  
   isolate({
-    if (!is.null(x_col)) {
-      updateSelectInput(session, "x_column", selected = x_col)
-    }
-    
-    if (!is.null(taeller_col)) {
-      updateSelectInput(session, "y_column", selected = taeller_col)
-    }
-    
-    if (!is.null(naevner_col)) {
-      updateSelectInput(session, "n_column", selected = naevner_col)
+    if (!is.null(x_col) && x_col %in% col_names) {
+      updateSelectInput(session, "x_column", choices = col_choices, selected = x_col)
     } else {
-      # If no denominator detected, set to blank
-      updateSelectInput(session, "n_column", selected = "BLANK")
+      updateSelectInput(session, "x_column", choices = col_choices, selected = "")
+    }
+    
+    if (!is.null(taeller_col) && taeller_col %in% col_names) {
+      updateSelectInput(session, "y_column", choices = col_choices, selected = taeller_col)
+    } else {
+      updateSelectInput(session, "y_column", choices = col_choices, selected = "")
+    }
+    
+    if (!is.null(naevner_col) && naevner_col %in% col_names) {
+      updateSelectInput(session, "n_column", choices = col_choices, selected = naevner_col)
+    } else {
+      updateSelectInput(session, "n_column", choices = col_choices, selected = "BLANK")
     }
     
     detected_msg <- paste0(

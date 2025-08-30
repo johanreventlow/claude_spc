@@ -41,11 +41,6 @@ editableTableServer <- function(id, data_reactive) {
       }
     })
     
-    # Has data check
-    output$has_data <- reactive({
-      !is.null(values$current_data)
-    })
-    outputOptions(output, "has_data", suspendWhenHidden = FALSE)
     
     # Table status
     output$table_status <- renderUI({
