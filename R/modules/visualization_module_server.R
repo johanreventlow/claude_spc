@@ -206,6 +206,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     
     # Plot info and warnings
     output$plot_info <- renderUI({
+      # Check data first to get hide_anhoej_rules flag
+      data <- data_reactive()
+      
+      # SOLUTION: Check hide_anhoej_rules flag passed via data attribute
+      # This flag is set to TRUE when "start ny session" is clicked
+      # and set to FALSE when real data is uploaded
+      hide_flag <- attr(data, "hide_anhoej_rules")
+      if (!is.null(hide_flag) && hide_flag) {
+        return(NULL)
+      }
+      
       if (length(values$plot_warnings) > 0) {
         div(
           class = "alert alert-warning",

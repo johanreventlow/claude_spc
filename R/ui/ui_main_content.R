@@ -240,7 +240,7 @@ create_visualization_card <- function() {
 
 create_export_card <- function() {
   conditionalPanel(
-    condition = "output.plot_ready == true",
+    condition = "output.plot_ready == 'true'",
     card(
       card_header(
         div(
