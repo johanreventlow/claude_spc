@@ -17,6 +17,10 @@ library(lubridate)
 library(openxlsx)  # For Excel export functionality
 library(waiter)
 
+# TEST MODE: Auto-load example data for qic() debugging
+# Set to FALSE to disable auto-loading and return to normal user-controlled data loading
+TEST_MODE_AUTO_LOAD <- FALSE
+
 # Load utility functions
 source("R/utils/danish_numbers.R")
 
