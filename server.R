@@ -19,6 +19,35 @@ server <- function(input, output, session) {
   # Initialize reactive values
   values <- initialize_reactive_values()
   
+  # TEST MODE: Auto-load example data if enabled
+  if (TEST_MODE_AUTO_LOAD) {
+    test_file_path <- "R/data/spc_exampledata.csv"
+    
+    if (file.exists(test_file_path)) {
+      tryCatch({
+        # Load test data with proper encoding
+        test_data <- tryCatch({
+          read.csv(test_file_path, stringsAsFactors = FALSE, sep = ";", dec = ",", encoding = "UTF-8")
+        }, error = function(e1) {
+          read.csv(test_file_path, stringsAsFactors = FALSE, sep = ";", dec = ",", encoding = "latin1")
+        })
+        
+        # Ensure standard columns are present
+        test_data <- ensure_standard_columns(test_data)
+        
+        # Set reactive values
+        values$current_data <- test_data
+        values$original_data <- test_data
+        values$file_uploaded <- TRUE
+        values$auto_detect_done <- FALSE  # Will trigger auto-detect
+        values$hide_anhoej_rules <- FALSE  # Show Anhøj rules for real data
+        
+      }, error = function(e) {
+        cat("ERROR: Failed to load test data:", e$message, "\n")
+      })
+    }
+  }
+  
   # Initialize file upload waiter
   waiter_file <- waiter::Waiter$new(
     html = WAITER_CONFIG$file_upload$html,

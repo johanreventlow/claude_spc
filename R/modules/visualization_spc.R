@@ -148,6 +148,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
     call_args$target <- target_value
   }
   
+  # CRITICAL: Add return.data = TRUE to get underlying data frame instead of plot
+  call_args$return.data <- TRUE
+  
   # Clean data
   complete_cases <- complete.cases(call_args$x, call_args$y)
   if (!all(complete_cases)) {
@@ -234,36 +237,131 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
   cat("  - X label:", if(is.null(call_args$xlab)) "NULL" else call_args$xlab, "\n")  
   cat("  - Y label:", if(is.null(call_args$ylab)) "NULL" else call_args$ylab, "\n")
   
-  # Generate plot with qicharts2
+  # Generate SPC data using qicharts2 and build custom ggplot
   tryCatch({
-    plot <- do.call(qicharts2::qic, call_args)
-    return(plot)
-  }, error = function(e) {
-    cat("ERROR in qic generation:", e$message, "\n")
     
-    # Try without part parameter if that's causing the issue
-    if ("part" %in% names(call_args)) {
-      cat("RETRY: Attempting qic without part parameter...\n")
-      call_args_no_part <- call_args
-      call_args_no_part$part <- NULL
+    # Use data parameter approach like the working example
+    # qicharts2::qic(x = Dato, y = `Tæller`, n = `Nævner`, part = c(12), data = data, return.data = TRUE)
+    
+    # Get column names for qic() call - respecting auto-detection results
+    x_col_name <- config$x_col  # Auto-detected date column or NULL
+    y_col_name <- config$y_col  # Should be "Tæller"
+    n_col_name <- config$n_col  # Should be "Nævner"
+    
+    # Handle X column: Use Date column if detected, otherwise create sequence
+    if (!is.null(x_col_name) && x_col_name %in% names(data)) {
+      # Check if this is actually a date column (as detected by auto-detect)
+      x_data_sample <- data[[x_col_name]]
+      is_date_column <- inherits(x_data_sample, "Date") || 
+                       (is.character(x_data_sample) && 
+                        !is.null(suppressWarnings(lubridate::parse_date_time(head(x_data_sample, 3), 
+                                                   orders = c("dmy", "ymd", "mdy"), quiet = TRUE))))
       
-      tryCatch({
-        plot <- do.call(qicharts2::qic, call_args_no_part)
-        cat("SUCCESS: qic worked without part parameter\n")
-        return(plot)
-      }, error = function(e2) {
-        cat("ERROR: qic still fails without part parameter:", e2$message, "\n")
-      })
+      if (is_date_column) {
+        cat("DEBUG: Using detected date column:", x_col_name, "\n")
+        
+        # Convert character dates to actual Date objects (like your working example)
+        if (is.character(data[[x_col_name]])) {
+          cat("DEBUG: Converting character dates to Date objects\n")
+          data[[x_col_name]] <- lubridate::parse_date_time(
+            data[[x_col_name]], 
+            orders = c("dmy", "ymd", "mdy"), 
+            quiet = TRUE
+          ) |> as.Date()
+          cat("DEBUG: Converted to Date class:", class(data[[x_col_name]]), "\n")
+        }
+        
+        x_col_for_qic <- x_col_name
+      } else {
+        cat("DEBUG: X column", x_col_name, "is not a date, creating sequence\n")
+        data$obs_sequence <- 1:nrow(data)
+        x_col_for_qic <- "obs_sequence"
+      }
+    } else {
+      cat("DEBUG: No X column detected, creating observation sequence\n")
+      data$obs_sequence <- 1:nrow(data)
+      x_col_for_qic <- "obs_sequence"
     }
     
-    # Fallback to basic ggplot
+    # Generate SPC data using qicharts2
+    tryCatch({
+      # Build qic call arguments
+      qic_args <- list(
+        data = data,
+        chart = chart_type,
+        return.data = TRUE
+      )
+      
+      # Add column names using non-standard evaluation (NSE) approach
+      if (!is.null(x_col_for_qic)) qic_args$x <- as.name(x_col_for_qic)
+      if (!is.null(y_col_name)) qic_args$y <- as.name(y_col_name) 
+      if (!is.null(n_col_name)) qic_args$n <- as.name(n_col_name)
+      if (!is.null(part_positions)) qic_args$part <- part_positions
+      
+      qic_data <- do.call(qicharts2::qic, qic_args)
+    
+    # Build custom ggplot using qic calculations
+    plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) +
+      # Data points
+      ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$primary) +
+      ggplot2::geom_line(color = HOSPITAL_COLORS$primary, alpha = 0.7) +
+      
+      # Center line
+      ggplot2::geom_line(ggplot2::aes(y = cl), color = HOSPITAL_COLORS$secondary, 
+                        linetype = "solid", size = 1) +
+      
+      # Control limits
+      ggplot2::geom_line(ggplot2::aes(y = ucl), color = HOSPITAL_COLORS$danger, 
+                        linetype = "dashed", size = 0.8) +
+      ggplot2::geom_line(ggplot2::aes(y = lcl), color = HOSPITAL_COLORS$danger, 
+                        linetype = "dashed", size = 0.8) +
+      
+      # Labels and theme
+      ggplot2::labs(title = call_args$title, x = call_args$xlab, y = call_args$ylab) +
+      ggplot2::theme_minimal()
+    
+    # Fix x-axis if we converted dates to numeric
+    if (call_args$xlab == "Dato" && is.numeric(qic_data$x)) {
+      plot <- plot + 
+        ggplot2::scale_x_continuous(
+          labels = function(x) format(as.Date(x, origin = "1970-01-01"), "%Y-%m"),
+          breaks = scales::pretty_breaks(n = 6)
+        )
+    }
+    
+    # Add phase separation lines if parts exist
+    if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
+      # Find phase change points
+      phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
+      if (length(phase_changes) > 0) {
+        for (change_point in phase_changes) {
+          plot <- plot + 
+            ggplot2::geom_vline(xintercept = qic_data$x[change_point + 1], 
+                               color = HOSPITAL_COLORS$warning, 
+                               linetype = "dotted", size = 1, alpha = 0.7)
+        }
+      }
+    }
+    
+    # Add target line if provided
+    if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+      plot <- plot + 
+        ggplot2::geom_hline(yintercept = target_value, 
+                           color = "#2E8B57", linetype = "solid", size = 1.2,
+                           alpha = 0.8)
+    }
+    
+    return(plot)
+    
+  }, error = function(e) {
+    # Fallback to basic ggplot if qic() fails
     plot_data <- data.frame(x = call_args$x, y = call_args$y)
     
     plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = x, y = y)) +
-      ggplot2::geom_point() +
-      ggplot2::geom_line() +
+      ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$primary) +
+      ggplot2::geom_line(color = HOSPITAL_COLORS$primary, alpha = 0.7) +
       ggplot2::geom_hline(yintercept = median(call_args$y, na.rm = TRUE), 
-                         color = "red", linetype = "dashed") +
+                         color = HOSPITAL_COLORS$secondary, linetype = "dashed") +
       ggplot2::labs(title = call_args$title, x = call_args$xlab, y = call_args$ylab) +
       ggplot2::theme_minimal()
     
