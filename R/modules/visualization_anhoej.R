@@ -17,8 +17,8 @@ calculateAnhoejRules <- function(data, config) {
   tryCatch({
     # Get Y data - handle tæller/nævner for run charts
     if (!is.null(config$n_col) && config$n_col %in% names(data)) {
-      taeller <- suppressWarnings(as.numeric(gsub(",", ".", as.character(data[[config$y_col]]))))
-      naevner <- suppressWarnings(as.numeric(gsub(",", ".", as.character(data[[config$n_col]]))))
+      taeller <- parse_danish_number(data[[config$y_col]])
+      naevner <- parse_danish_number(data[[config$n_col]])
       
       if (any(is.na(taeller)) || any(is.na(naevner)) || any(naevner == 0)) {
         return(list(
@@ -32,7 +32,7 @@ calculateAnhoejRules <- function(data, config) {
       y_data <- (taeller / naevner) * 100
     } else {
       y_data_raw <- data[[config$y_col]]
-      y_data <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data_raw))))
+      y_data <- parse_danish_number(y_data_raw)
     }
     
     # Remove missing values

@@ -17,6 +17,9 @@ library(lubridate)
 library(openxlsx)  # For Excel export functionality
 library(waiter)
 
+# Load utility functions
+source("R/utils/danish_numbers.R")
+
 # -----------------------------------------------------------------------------
 # HOSPITAL BRANDING CONFIGURATION
 # -----------------------------------------------------------------------------

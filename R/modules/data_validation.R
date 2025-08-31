@@ -40,7 +40,7 @@ validateDataStructure <- function(data) {
     
     # Check for numeric columns (handle Danish decimal separator)
     if(is.numeric(col_data) || 
-       sum(!is.na(suppressWarnings(as.numeric(gsub(",", ".", as.character(col_data)))))) > length(col_data) * 0.8) {
+       sum(!is.na(parse_danish_number(col_data))) > length(col_data) * 0.8) {
       potential_numeric_cols <- c(potential_numeric_cols, col_name)
     }
   }

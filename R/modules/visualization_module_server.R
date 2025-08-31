@@ -8,7 +8,7 @@ library(dplyr)
 library(scales)
 
 # Visualization Module Server
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, show_targets_reactive, show_phases_reactive, chart_title_reactive = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, skift_config_reactive, chart_title_reactive = NULL) {
   
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -106,12 +106,16 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       
       # Generate plot
       tryCatch({
+        # Get phase configuration
+        skift_config <- skift_config_reactive()
+        
         plot <- generateSPCPlot(
           data = data, 
           config = config, 
           chart_type = chart_type,
-          show_targets = show_targets_reactive(),
-          show_phases = show_phases_reactive(),
+          target_value = target_value_reactive(),
+          show_phases = skift_config$show_phases,
+          skift_column = skift_config$skift_column,
           chart_title_reactive = chart_title_reactive
         )
         
@@ -274,13 +278,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Count meaningful data points (non-NA values)
       if (!is.null(config$n_col) && config$n_col %in% names(data)) {
         # For rate data: count where both numerator and denominator are valid
-        taeller <- suppressWarnings(as.numeric(gsub(",", ".", as.character(data[[config$y_col]]))))
-        naevner <- suppressWarnings(as.numeric(gsub(",", ".", as.character(data[[config$n_col]]))))
+        taeller <- parse_danish_number(data[[config$y_col]])
+        naevner <- parse_danish_number(data[[config$n_col]])
         meaningful_count <- sum(!is.na(taeller) & !is.na(naevner) & naevner > 0)
       } else {
         # For simple data: count non-NA values
         y_data_raw <- data[[config$y_col]]
-        y_data <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data_raw))))
+        y_data <- parse_danish_number(y_data_raw)
         meaningful_count <- sum(!is.na(y_data))
       }
       

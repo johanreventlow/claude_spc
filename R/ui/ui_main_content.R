@@ -134,23 +134,6 @@ create_chart_settings_card <- function() {
         # Column mapping section
         create_column_mapping_section(),
         
-        # Additional options
-        fluidRow(
-          column(6,
-                 checkboxInput(
-                   "show_targets",
-                   "Vis målsætninger",
-                   value = FALSE
-                 )
-          ),
-          column(6,
-                 checkboxInput(
-                   "show_phases",
-                   "Vis faser",
-                   value = FALSE
-                 )
-          )
-        )
       )
     )
   )
@@ -205,6 +188,34 @@ create_column_mapping_section <- function() {
       )
     ),
     
+    # Skift column
+    selectInput(
+      "skift_column",
+      "Skift (fase-markering):",
+      choices = NULL,
+      selected = NULL
+    ),
+    
+    div(
+      style = "font-size: 0.8rem; color: #666; margin-top: 5px; margin-bottom: 10px;",
+      icon("info-circle"),
+      " Valgfri: Kolonne til markering af processkift eller faser"
+    ),
+    
+    # Kommentar column  
+    selectInput(
+      "kommentar_column",
+      "Kommentar (noter):",
+      choices = NULL,
+      selected = NULL
+    ),
+    
+    div(
+      style = "font-size: 0.8rem; color: #666; margin-top: 5px; margin-bottom: 15px;",
+      icon("info-circle"),
+      " Valgfri: Kolonne med kommentarer eller noter til datapunkter"
+    ),
+    
     # Auto-detect button
     actionButton(
       "auto_detect_columns",
@@ -212,6 +223,23 @@ create_column_mapping_section <- function() {
       icon = icon("magic"),
       class = "btn-outline-secondary btn-sm w-100",
       style = "margin-top: 10px;"
+    ),
+    
+    # Target value input
+    div(
+      style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
+      textInput(
+        "target_value",
+        "Målværdi (target):",
+        value = "",
+        placeholder = "fx 85%, 0,85 eller 25"
+      ),
+      
+      div(
+        style = "font-size: 0.8rem; color: #666; margin-top: 5px;",
+        icon("info-circle"),
+        " Valgfri: Indtast målværdi som procent (85%) eller decimaltal (0,85)"
+      )
     ),
     
     # Column validation feedback

@@ -214,7 +214,10 @@ collect_metadata <- function(input) {
     x_column = if(input$x_column == "BLANK") "" else input$x_column,
     y_column = if(input$y_column == "BLANK") "" else input$y_column,
     n_column = if(input$n_column == "BLANK") "" else input$n_column,
-    chart_type = input$chart_type
+    skift_column = if(input$skift_column == "BLANK") "" else input$skift_column,
+    kommentar_column = if(input$kommentar_column == "BLANK") "" else input$kommentar_column,
+    chart_type = input$chart_type,
+    target_value = input$target_value
   )
 }
 
