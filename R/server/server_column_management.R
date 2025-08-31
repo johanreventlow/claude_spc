@@ -26,10 +26,14 @@ setup_column_management <- function(input, output, session, values) {
         current_x <- input$x_column
         current_y <- input$y_column  
         current_n <- input$n_column
+        current_skift <- input$skift_column
+        current_kommentar <- input$kommentar_column
         
         updateSelectInput(session, "x_column", choices = col_choices, selected = current_x)
         updateSelectInput(session, "y_column", choices = col_choices, selected = current_y)
         updateSelectInput(session, "n_column", choices = col_choices, selected = current_n)
+        updateSelectInput(session, "skift_column", choices = col_choices, selected = current_skift)
+        updateSelectInput(session, "kommentar_column", choices = col_choices, selected = current_kommentar)
       })
       
     }
@@ -71,7 +75,7 @@ setup_column_management <- function(input, output, session, values) {
     if (!is.null(input$y_column) && input$y_column != "" && input$y_column %in% names(values$current_data)) {
       y_data <- values$current_data[[input$y_column]]
       if (!is.numeric(y_data)) {
-        numeric_test <- suppressWarnings(as.numeric(gsub(",", ".", as.character(y_data))))
+        numeric_test <- parse_danish_number(y_data)
         if (sum(!is.na(numeric_test)) < length(y_data) * 0.8) {
           warnings <- c(warnings, paste("Y-kolonne '", input$y_column, "' er ikke numerisk"))
         }
@@ -85,7 +89,7 @@ setup_column_management <- function(input, output, session, values) {
       } else if (input$n_column %in% names(values$current_data)) {
         n_data <- values$current_data[[input$n_column]]
         if (!is.numeric(n_data)) {
-          numeric_test <- suppressWarnings(as.numeric(gsub(",", ".", as.character(n_data))))
+          numeric_test <- parse_danish_number(n_data)
           if (sum(!is.na(numeric_test)) < length(n_data) * 0.8) {
             warnings <- c(warnings, paste("Nævner-kolonne '", input$n_column, "' er ikke numerisk"))
           }
@@ -190,7 +194,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
     if (col_name != x_col) {
       col_data <- data[[col_name]]
       if (is.numeric(col_data) || 
-          sum(!is.na(suppressWarnings(as.numeric(gsub(",", ".", as.character(col_data)))))) > length(col_data) * 0.8) {
+          sum(!is.na(parse_danish_number(col_data))) > length(col_data) * 0.8) {
         numeric_cols <- c(numeric_cols, col_name)
       }
     }
@@ -212,6 +216,42 @@ auto_detect_and_update_columns <- function(input, session, values) {
     naevner_col <- numeric_cols[2]
   } else if (length(numeric_cols) >= 1) {
     taeller_col <- numeric_cols[1]
+  }
+  
+  # Detect skift/fase column (boolean or text with shift-related terms)
+  skift_col <- NULL
+  skift_idx <- which(grepl("skift|shift|fase|phase|change|periode", col_names_lower, ignore.case = TRUE))
+  
+  if (length(skift_idx) > 0) {
+    skift_col <- col_names[skift_idx[1]]
+  } else {
+    # Look for boolean columns that might represent shifts
+    for (col_name in col_names) {
+      col_data <- data[[col_name]]
+      if (is.logical(col_data)) {
+        skift_col <- col_name
+        break
+      }
+    }
+  }
+  
+  # Detect kommentar column (text-based columns)
+  kommentar_col <- NULL
+  kommentar_idx <- which(grepl("kommentar|comment|note|noter|bemærk|remark", col_names_lower, ignore.case = TRUE))
+  
+  if (length(kommentar_idx) > 0) {
+    kommentar_col <- col_names[kommentar_idx[1]]
+  } else {
+    # Look for character columns that aren't already assigned and contain text
+    for (col_name in col_names) {
+      if (col_name != x_col && col_name != taeller_col && col_name != naevner_col && col_name != skift_col) {
+        col_data <- data[[col_name]]
+        if (is.character(col_data) && any(nzchar(col_data, keepNA = FALSE), na.rm = TRUE)) {
+          kommentar_col <- col_name
+          break
+        }
+      }
+    }
   }
   
   # Update dropdowns to SHOW the detected values
@@ -241,11 +281,25 @@ auto_detect_and_update_columns <- function(input, session, values) {
       updateSelectInput(session, "n_column", choices = col_choices, selected = "BLANK")
     }
     
+    if (!is.null(skift_col) && skift_col %in% col_names) {
+      updateSelectInput(session, "skift_column", choices = col_choices, selected = skift_col)
+    } else {
+      updateSelectInput(session, "skift_column", choices = col_choices, selected = "BLANK")
+    }
+    
+    if (!is.null(kommentar_col) && kommentar_col %in% col_names) {
+      updateSelectInput(session, "kommentar_column", choices = col_choices, selected = kommentar_col)
+    } else {
+      updateSelectInput(session, "kommentar_column", choices = col_choices, selected = "BLANK")
+    }
+    
     detected_msg <- paste0(
       "Auto-detekteret og opdateret dropdowns: ",
       "X=", if(is.null(x_col)) "ingen" else x_col, ", ",
       "Y=", if(is.null(taeller_col)) "ingen" else taeller_col,
-      if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ", N=ingen"
+      if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ", N=ingen",
+      if (!is.null(skift_col)) paste0(", Skift=", skift_col) else ", Skift=ingen",
+      if (!is.null(kommentar_col)) paste0(", Kommentar=", kommentar_col) else ", Kommentar=ingen"
     )
     
     showNotification(

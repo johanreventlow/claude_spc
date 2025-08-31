@@ -58,8 +58,53 @@ setup_visualization <- function(input, output, session, values) {
       chart_selection <- if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type
       get_qic_chart_type(chart_selection)
     }),
-    show_targets_reactive = reactive(if(is.null(input$show_targets)) FALSE else input$show_targets),
-    show_phases_reactive = reactive(if(is.null(input$show_phases)) FALSE else input$show_phases),
+    target_value_reactive = reactive({
+      if (is.null(input$target_value) || input$target_value == "") {
+        return(NULL)
+      }
+      
+      # Get y-axis data for smart conversion
+      data <- active_data()
+      config <- column_config()
+      
+      if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
+        y_data <- data[[config$y_col]]
+        y_numeric <- parse_danish_number(y_data)
+        return(parse_danish_target(input$target_value, y_numeric))
+      } else {
+        return(parse_danish_target(input$target_value, NULL))
+      }
+    }),
+    skift_config_reactive = reactive({
+      # Determine if we should show phases based on Skift column selection and data
+      data <- active_data()
+      config <- column_config()
+      
+      if (is.null(data) || is.null(config)) {
+        return(list(show_phases = FALSE, skift_column = NULL))
+      }
+      
+      # Check if user has selected a Skift column
+      skift_col <- if (!is.null(input$skift_column) && input$skift_column != "" && input$skift_column != "BLANK") {
+        input$skift_column
+      } else {
+        NULL
+      }
+      
+      # If no Skift column selected, no phases
+      if (is.null(skift_col) || !skift_col %in% names(data)) {
+        return(list(show_phases = FALSE, skift_column = NULL))
+      }
+      
+      # Check if Skift column has any TRUE values
+      skift_data <- data[[skift_col]]
+      has_phase_shifts <- any(skift_data == TRUE, na.rm = TRUE)
+      
+      return(list(
+        show_phases = has_phase_shifts,
+        skift_column = skift_col
+      ))
+    }),
     chart_title_reactive = chart_title(input)
   )
   

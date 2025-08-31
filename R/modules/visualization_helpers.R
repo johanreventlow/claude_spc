@@ -66,7 +66,7 @@ detectChartConfiguration <- function(data, chart_type) {
       if (is.numeric(col_data)) {
         numeric_cols <- c(numeric_cols, col_name)
       } else {
-        numeric_test <- suppressWarnings(as.numeric(gsub(",", ".", as.character(col_data))))
+        numeric_test <- parse_danish_number(col_data)
         if (sum(!is.na(numeric_test)) > length(col_data) * 0.8) {
           numeric_cols <- c(numeric_cols, col_name)
         }
@@ -199,4 +199,39 @@ applyHospitalTheme <- function(plot) {
     cat("ERROR applying hospital theme:", e$message, "\n")
     return(plot)
   })
+}
+
+
+# Helper function: Detect Y-axis scale type
+detectYAxisScale <- function(y_data) {
+  if (is.null(y_data) || length(y_data) == 0) {
+    return("integer")
+  }
+  
+  # Remove NA values
+  y_clean <- y_data[!is.na(y_data)]
+  
+  if (length(y_clean) == 0) {
+    return("integer")
+  }
+  
+  max_val <- max(y_clean)
+  min_val <- min(y_clean)
+  
+  # Rule 1: Decimal scale (0-1)
+  if (max_val <= 1.0) {
+    return("decimal")
+  }
+  
+  # Rule 2: Percent scale (0-100+ with most values looking like percentages)
+  if (min_val >= 0 && max_val <= 200) {
+    # Check if most values look like percentages (0-100 range)
+    percent_like_count <- sum(y_clean >= 0 & y_clean <= 100)
+    if (percent_like_count / length(y_clean) >= 0.7) {  # 70% threshold
+      return("percent")
+    }
+  }
+  
+  # Rule 3: Integer/rate scale
+  return("integer")
 }
