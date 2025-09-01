@@ -3,26 +3,33 @@
 
 library(shiny)
 
-# Visualization Module UI
+# Visualization Module UI - Only the plot
 visualizationModuleUI <- function(id) {
   ns <- NS(id)
   
-  tagList(
-    # Plot container - always visible
-    div(
-      id = ns("plot_container"),
-      style = "position: relative; ",
-      
-      # Dynamic content that switches between plot and placeholder
-      uiOutput(ns("dynamic_content"))
-    ),
+  # Only the plot - no status info
+  div(
+    id = ns("plot_container"),
+    style = "position: relative; ",
     
-    br(),
+    # Dynamic content that switches between plot and placeholder
+    uiOutput(ns("dynamic_content"))
+  )
+}
+
+# Status elements UI - separate from plot
+visualizationStatusUI <- function(id) {
+  ns <- NS(id)
+  
+  # Use layout_column_wrap for proper value box display
+  layout_column_wrap(
+    width = 1/2,
+    heights_equal = "row",
     
-    # Plot information and warnings
-    uiOutput(ns("plot_info")),
+    # Plot information as value boxes
+    uiOutput(ns("plot_status_boxes")),
     
-    # Anhøj rules results for run charts
-    uiOutput(ns("anhoej_rules_section"))
+    # Anhøj rules results for run charts as value boxes
+    uiOutput(ns("anhoej_rules_boxes"))
   )
 }

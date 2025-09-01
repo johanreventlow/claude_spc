@@ -2,6 +2,8 @@
 # Server logic for the visualization module
 
 library(shiny)
+library(bslib)
+library(bsicons)
 library(qicharts2)
 library(ggplot2)
 library(dplyr)
@@ -297,7 +299,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       card(
         card_header(
           div(
-            icon("search-plus"),
+            icon("search"),
             " Anhøj Regler (Run Chart)",
             style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
           )
@@ -306,6 +308,116 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           renderAnhoejResults(values$anhoej_results)
         )
       )
+    })
+    
+    # NEW: Plot status as value boxes
+    output$plot_status_boxes <- renderUI({
+      data <- data_reactive()
+      hide_flag <- attr(data, "hide_anhoej_rules")
+      if (!is.null(hide_flag) && hide_flag) {
+        return(div()) # Return empty div instead of NULL
+      }
+      
+      if (length(values$plot_warnings) > 0) {
+        # Warning value box
+        value_box(
+          title = "Graf Status",
+          value = "Advarsler",
+          showcase = bsicons::bs_icon("exclamation-triangle"),
+          theme = "warning",
+          p(class = "fs-6 text-muted", paste(values$plot_warnings, collapse = " • "))
+        )
+      } else if (values$plot_ready && !is.null(data_reactive())) {
+        # Success value box
+        value_box(
+          title = "Graf Status", 
+          value = "Klar",
+          showcase = bsicons::bs_icon("check-circle"),
+          theme = "success",
+          p(class = "fs-6 text-muted", 
+            sprintf("Chart: %s | Punkter: %d", 
+                    chart_type_reactive() %||% "unknown",
+                    nrow(data_reactive())))
+        )
+      } else {
+        # Default state
+        value_box(
+          title = "Graf Status",
+          value = "Venter...",
+          showcase = bsicons::bs_icon("hourglass"),
+          theme = "secondary",
+          p(class = "fs-6 text-muted", "Konfigurer data og indstillinger")
+        )
+      }
+    })
+    
+    # NEW: Anhøj rules as value boxes
+    output$anhoej_rules_boxes <- renderUI({
+      data <- data_reactive()
+      hide_flag <- attr(data, "hide_anhoej_rules")
+      if (!is.null(hide_flag) && hide_flag) {
+        return(div()) # Return empty div instead of NULL
+      }
+      
+      # Only for run charts and sufficient data
+      if (is.null(chart_type_reactive()) || chart_type_reactive() != "run") {
+        # Default for non-run charts
+        value_box(
+          title = "Specielle Mønstre",
+          value = "N/A",
+          showcase = bsicons::bs_icon("graph-up"),
+          theme = "light",
+          p(class = "fs-6 text-muted", "Kun for run charts")
+        )
+      } else {
+        config <- chart_config()
+        if (is.null(config) || is.null(config$y_col) || !config$y_col %in% names(data)) {
+          # No valid config yet
+          value_box(
+            title = "Anhøj Regler", 
+            value = "Venter...",
+            showcase = bsicons::bs_icon("search"),
+            theme = "secondary",
+            p(class = "fs-6 text-muted", "Konfigurer kolonner")
+          )
+        } else {
+          # Check data count
+          meaningful_count <- if (!is.null(config$n_col) && config$n_col %in% names(data)) {
+            taeller <- parse_danish_number(data[[config$y_col]])
+            naevner <- parse_danish_number(data[[config$n_col]])
+            sum(!is.na(taeller) & !is.na(naevner) & naevner > 0)
+          } else {
+            y_data_raw <- data[[config$y_col]]
+            y_data <- parse_danish_number(y_data_raw)
+            sum(!is.na(y_data))
+          }
+          
+          if (meaningful_count < 10) {
+            value_box(
+              title = "Anhøj Regler",
+              value = "For få data",
+              showcase = bsicons::bs_icon("search"),
+              theme = "warning", 
+              p(class = "fs-6 text-muted", "Min. 10 punkter påkrævet")
+            )
+          } else {
+            # Count anhøj rules that were triggered
+            anhoej_count <- if (!is.null(values$anhoej_results)) {
+              sum(sapply(values$anhoej_results, function(x) length(x) > 0))
+            } else {
+              0
+            }
+            
+            value_box(
+              title = "Anhøj Regler",
+              value = paste(anhoej_count, "fund"),
+              showcase = bsicons::bs_icon("search"), 
+              theme = if (anhoej_count > 0) "info" else "secondary",
+              p(class = "fs-6 text-muted", "Run chart mønstre")
+            )
+          }
+        }
+      }
     })
     
     # Return reactive values

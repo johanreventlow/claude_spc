@@ -1,0 +1,41 @@
+meta:
+  name: "Bispebjerg og Frederiksberg Hospital SPC"
+  description: "Statistical Process Control værktøj for BFH"
+  link: "https://bfh.dk"
+
+logo:
+  image: "www/Logo_Bispebjerg_og Frederiksberg_RGB_neg.png"
+  alt: "Bispebjerg og Frederiksberg Hospital Logo"
+
+
+color:
+  palette:
+    # Exakte Flatly theme farver
+    primary: "#375a7f"      # Flatly primary blå
+    secondary: "#6c757d"    # Flatly secondary grå
+    success: "#00891a"      # Flatly success grøn
+    warning: "#f9b928"      # Flatly warning gul
+    danger: "#c10000"       # Flatly danger rød  
+    info: "#03c7e8"         # Flatly info cyan
+    light: "#f8f8f8"        # Flatly light
+    dark: "#202020"         # Flatly dark
+    accent: "#FF6B35"       # Hospital orange accent (behold)
+
+
+typography:
+  fonts:
+    - family: "Lato"
+      source: "google" 
+      weights: [300, 400, 700]
+  base: "Lato"
+  headings:
+    family: "Lato"
+    weight: 400
+    
+defaults:
+  bootstrap:
+  shiny:
+    theme:
+      preset: flatly
+      # TODO: Find an appropriate theme variable to set
+      # navbar-bg: $brand-purple

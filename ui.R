@@ -25,7 +25,7 @@ ui <- page_navbar(
     div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
   ),
   theme = my_theme,
-  inverse = FALSE,
+  navbar_options = navbar_options(theme = "light"),
   
   # Header components
   header = create_ui_header(),
