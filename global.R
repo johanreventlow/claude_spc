@@ -2,7 +2,6 @@ library(shiny)
 library(bslib)  # For page_navbar, card, sidebar etc.
 library(qicharts2)
 library(rhandsontable)
-# library(DT)
 library(dplyr)
 library(ggplot2)
 library(readr)
@@ -17,10 +16,16 @@ library(lubridate)
 library(openxlsx)  # For Excel export functionality
 library(waiter)
 library(yaml)  # For reading brand.yml
+library(later)  # For delayed execution
 
+# DEVELOPMENT FLAGS
 # TEST MODE: Auto-load example data for qic() debugging
 # Set to FALSE to disable auto-loading and return to normal user-controlled data loading
-TEST_MODE_AUTO_LOAD <- TRUE
+TEST_MODE_AUTO_LOAD <- FALSE
+
+# AUTO-RESTORE: Automatically restore previous sessions
+# Set to FALSE during development, TRUE for production
+AUTO_RESTORE_ENABLED <- FALSE
 
 # Load utility functions
 source("R/utils/danish_numbers.R")

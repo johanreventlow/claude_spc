@@ -95,18 +95,15 @@ setup_helper_observers <- function(input, output, session, values) {
     }
   })
   
-  # Anti-stuck mechanism
-  observeEvent(values$current_data, {
-    invalidateLater(200)
-  }, ignoreInit = TRUE, ignoreNULL = FALSE)
   
-  # Auto-save when data changes
+  # Auto-save when data changes (with guards to prevent infinite loops)
   observeEvent(values$current_data, {
-    # Guards to prevent auto-save under restore
+    # Strong guards to prevent auto-save during any table operations
     if (!values$auto_save_enabled || 
         values$updating_table || 
+        values$table_operation_in_progress ||
         values$restoring_session) {
-      cat("DEBUG: Auto-save skipped - guards active\n")
+      cat("DEBUG: Auto-save skipped - guards active (updating_table:", values$updating_table, ", table_operation_in_progress:", values$table_operation_in_progress, ")\n")
       return()
     }
     
@@ -117,18 +114,19 @@ setup_helper_observers <- function(input, output, session, values) {
       cat("DEBUG: Triggering auto-save for data change\n")
       
       metadata <- collect_metadata(input)
-      
       autoSaveAppState(session, values$current_data, metadata)
       values$last_save_time <- Sys.time()
     }
   }, ignoreInit = TRUE)
   
-  # Auto-save when settings change
+  # Auto-save when settings change (with guards to prevent conflicts)
   observe({
-    # Same guards as data auto-save
+    # Same strong guards as data auto-save  
     if (!values$auto_save_enabled || 
         values$updating_table || 
+        values$table_operation_in_progress ||
         values$restoring_session) {
+      cat("DEBUG: Settings auto-save skipped - guards active (updating_table:", values$updating_table, ", table_operation_in_progress:", values$table_operation_in_progress, ")\n")
       return()
     }
     
@@ -136,9 +134,6 @@ setup_helper_observers <- function(input, output, session, values) {
       cat("DEBUG: Settings changed - scheduling auto-save\n")
       
       metadata <- collect_metadata(input)
-      
-      # Debounce with 2 seconds delay
-      invalidateLater(2000)
       autoSaveAppState(session, values$current_data, metadata)
       values$last_save_time <- Sys.time()
     }

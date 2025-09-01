@@ -50,7 +50,6 @@ saveDataLocally <- function(session, data, metadata = NULL) {
       )
     )
     
-    cat("DEBUG: saveDataLocally completed\n")
     
   }, error = function(e) {
     cat("ERROR in saveDataLocally:", e$message, "\n")
@@ -67,7 +66,6 @@ loadDataLocally <- function(session) {
       type = "loadAppState", 
       message = list(key = "current_session")
     )
-    cat("DEBUG: loadDataLocally request sent\n")
   }, error = function(e) {
     cat("ERROR in loadDataLocally:", e$message, "\n")
   })
@@ -81,7 +79,6 @@ clearDataLocally <- function(session) {
       type = "clearAppState",
       message = list(key = "current_session")
     )
-    cat("DEBUG: clearDataLocally request sent\n")
   }, error = function(e) {
     cat("ERROR in clearDataLocally:", e$message, "\n")
   })

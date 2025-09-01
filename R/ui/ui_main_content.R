@@ -126,29 +126,51 @@ create_chart_settings_card <- function() {
       card_body(
         style = "overflow: visible;",
         
-        # Chart type selection
-        selectInput(
-          "chart_type",
-          "Diagram type:",
-          choices = CHART_TYPES_DA,
-          selected = "Seriediagram (Run Chart)"
+        # Chart type and target value side by side
+        layout_columns(
+          col_widths = c(7, 5),
+          
+          # Chart type selection
+          selectInput(
+            "chart_type",
+            "Diagram type:",
+            choices = CHART_TYPES_DA,
+            selected = "Seriediagram (Run Chart)"
+          ),
+          
+          # Target value input (moved up)
+          div(
+            textInput(
+              "target_value",
+              "Målværdi:",
+              value = "",
+              placeholder = "fx 85%, 0,85 eller 25"
+            ),
+            div(
+              style = "font-size: 0.7rem; color: #666; margin-top: -5px;",
+              icon("info-circle", style = "font-size: 0.6rem;"),
+              " Valgfri målværdi"
+            )
+          )
         ),
         
-        # Column mapping section
-        create_column_mapping_section(),
-        
+        # Collapsible column mapping section
+        create_column_mapping_section()
       )
     )
   )
 }
 
 create_column_mapping_section <- function() {
-  div(
-    style = "margin: 15px 0; padding: 10px; background-color: #f8f9fa; border-radius: 5px;",
-    h6("Kolonne Mapping:", style = "font-weight: 500; margin-bottom: 10px;"),
-    
-    # X-axis column
-    selectInput(
+  bslib::accordion(
+    id = "column_mapping_accordion",
+    open = FALSE,  # Start collapsed
+    bslib::accordion_panel(
+      title = tagList(icon("columns"), " Kolonne Mapping"),
+      value = "column_mapping",
+      
+      # X-axis column
+      selectInput(
       "x_column",
       "X-akse (tid/observation):",
       choices = NULL,
@@ -219,37 +241,21 @@ create_column_mapping_section <- function() {
       " Valgfri: Kolonne med kommentarer eller noter til datapunkter"
     ),
     
-    # Auto-detect button
-    actionButton(
-      "auto_detect_columns",
-      "Auto-detektér kolonner",
-      icon = icon("magic"),
-      class = "btn-outline-secondary btn-sm w-100",
-      style = "margin-top: 10px;"
-    ),
-    
-    # Target value input
-    div(
-      style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
-      textInput(
-        "target_value",
-        "Målværdi (target):",
-        value = "",
-        placeholder = "fx 85%, 0,85 eller 25"
+      # Auto-detect button
+      actionButton(
+        "auto_detect_columns",
+        "Auto-detektér kolonner",
+        icon = icon("magic"),
+        class = "btn-outline-secondary btn-sm w-100",
+        style = "margin-top: 10px;"
       ),
       
+      # Column validation feedback
       div(
-        style = "font-size: 0.8rem; color: #666; margin-top: 5px;",
-        icon("info-circle"),
-        " Valgfri: Indtast målværdi som procent (85%) eller decimaltal (0,85)"
+        id = "column_validation",
+        style = "margin-top: 10px;",
+        uiOutput("column_validation_messages")
       )
-    ),
-    
-    # Column validation feedback
-    div(
-      id = "column_validation",
-      style = "margin-top: 10px;",
-      uiOutput("column_validation_messages")
     )
   )
 }
