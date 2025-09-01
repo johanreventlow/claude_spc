@@ -31,6 +31,7 @@ setup_data_table <- function(input, output, session, values) {
         highlightRow = TRUE,
       ) %>%
       rhandsontable::hot_cols(
+        # colWidths = c(50, 80, 120, 300, 200),
         columnHeaderHeight = 50,
         manualColumnResize = TRUE
       )

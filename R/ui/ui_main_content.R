@@ -102,10 +102,10 @@ create_data_table_card <- function() {
       div(
         style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
         icon("info-circle"),
-        " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
-        br(),
-        " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
-        br(),
+        # " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
+        # br(),
+        # " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
+        # br(),
         strong("Dato-formater:"), " 01-01-2024, 1/1/2024, 01.01.24, 1 jan 2024, 2024-01-01 og mange flere"
       )
     )
