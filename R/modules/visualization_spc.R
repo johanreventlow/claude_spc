@@ -300,6 +300,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       
       qic_data <- do.call(qicharts2::qic, qic_args)
     
+    }, error = function(e) {
+      stop("Fejl ved qic() kald: ", e$message)
+    })
+    
     # Build custom ggplot using qic calculations
     plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) +
       # Data points
