@@ -16,35 +16,40 @@ library(rlang)     # For %||% operator
 library(lubridate)
 library(openxlsx)  # For Excel export functionality
 library(waiter)
+library(yaml)  # For reading brand.yml
 
 # TEST MODE: Auto-load example data for qic() debugging
 # Set to FALSE to disable auto-loading and return to normal user-controlled data loading
-TEST_MODE_AUTO_LOAD <- FALSE
+TEST_MODE_AUTO_LOAD <- TRUE
 
 # Load utility functions
 source("R/utils/danish_numbers.R")
 
 # -----------------------------------------------------------------------------
-# HOSPITAL BRANDING CONFIGURATION
+# 100% BRAND.YML BASERET KONFIGURATION
 # -----------------------------------------------------------------------------
 
-# Hospital information
-HOSPITAL_NAME <- "Bispebjerg og Frederiksberg Hospital"
-HOSPITAL_LOGO_PATH <- "www/Logo_Bispebjerg_og Frederiksberg_RGB_neg.png"  # Skal placeres i www/ mappen
+# Read brand.yml configuration
+brand_config <- yaml::read_yaml("_brand.yml")
 
-# Farvepalette (skal matches med hospital branding)
-theme_name <- "flatly"
-my_theme <- bs_theme(bootswatch = theme_name)
+# Create theme using brand.yml (auto-discovered as _brand.yml)
+my_theme <- bs_theme(brand = "_brand.yml")
 
+# Hospital information from brand.yml
+HOSPITAL_NAME <- brand_config$meta$name
+HOSPITAL_LOGO_PATH <- brand_config$logo$image
+
+# Extract ALL colors from brand.yml (via bs_theme)
 HOSPITAL_COLORS <- list(
-  primary = bs_get_variables(my_theme, "primary") |> as.character(),      # Primær blå
-  secondary = bs_get_variables(my_theme, "secondary") |> as.character(),    # Mørkere blå  
-  accent = "#FF6B35",       # Orange accent
-  success = bs_get_variables(my_theme, "success"),      # Grøn for positive signals
-  warning = bs_get_variables(my_theme, "warning"),      # Gul for advarsler
-  danger = bs_get_variables(my_theme, "danger"),       # Rød for alerts
-  light = bs_get_variables(my_theme, "light"),        # Lys baggrund
-  dark = bs_get_variables(my_theme, "dark")          # Mörk tekst
+  primary = brand_config$color$palette$primary,
+  secondary = brand_config$color$palette$secondary,
+  accent = brand_config$color$palette$accent,  # From brand.yml palette
+  success = brand_config$color$palette$success,
+  warning = brand_config$color$palette$warning,
+  danger = brand_config$color$palette$danger,
+  info = brand_config$color$palette$info,
+  light = brand_config$color$palette$light,
+  dark = brand_config$color$palette$dark
 )
 
 # Waiter configuration med hospital branding
@@ -229,170 +234,3 @@ validate_date_column <- function(data, column_name) {
   })
 }
 
-# Test data generator for udvikling og demo
-generate_test_data <- function(type = "infection_rates", n = 50) {
-  
-  # Create date sequence
-  dates <- seq(from = as.Date("2023-01-01"), by = "week", length.out = n)
-  
-  if (type == "infection_rates") {
-    # Hospital infection rates (per 1000 patient days)
-    set.seed(123)
-    baseline_rate <- 2.5
-    rates <- baseline_rate + rnorm(n, 0, 0.5)
-    
-    # Add some special cause variation
-    rates[20:25] <- rates[20:25] + 1.5  # Outbreak period
-    rates[35:40] <- rates[35:40] - 0.8  # Improvement
-    
-    # Ensure non-negative
-    rates <- pmax(rates, 0.1)
-    
-    data.frame(
-      Dato = dates,
-      Infektionsrate = round(rates, 2),
-      Patientdage = sample(800:1200, n),
-      Afdeling = sample(c("Medicinsk", "Kirurgisk", "Intensiv"), n, replace = TRUE),
-      stringsAsFactors = FALSE
-    )
-    
-  } else if (type == "waiting_times") {
-    # Waiting times in minutes
-    set.seed(456)
-    baseline_wait <- 45
-    wait_times <- baseline_wait + rnorm(n, 0, 10)
-    
-    # Add trend and variation
-    wait_times[1:20] <- wait_times[1:20] + seq(0, 15, length.out = 20)  # Increasing trend
-    wait_times[30:n] <- wait_times[30:n] - 5  # Improvement after intervention
-    
-    data.frame(
-      Dato = dates,
-      Ventetid_minutter = round(pmax(wait_times, 5), 1),
-      Antal_patienter = sample(50:150, n),
-      Klinik = sample(c("Ambulatorie", "Akutmodtagelse"), n, replace = TRUE),
-      stringsAsFactors = FALSE
-    )
-    
-  } else if (type == "medication_errors") {
-    # Medication errors (count data)
-    set.seed(789)
-    baseline_errors <- 3
-    errors <- rpois(n, baseline_errors)
-    
-    # Add special variation
-    errors[15:18] <- errors[15:18] + sample(3:8, 4)  # Bad period
-    
-    data.frame(
-      Dato = dates,
-      Medicinfejl = errors,
-      Udskrivninger = sample(200:400, n),
-      Afdeling = sample(c("Medicinsk", "Kirurgisk", "Pædiatrisk"), n, replace = TRUE),
-      stringsAsFactors = FALSE
-    )
-  } else if (type == "proportion_data") {
-    # Generate tæller/nævner data like user's CSV
-    set.seed(999)
-    baseline_rate <- 0.15  # 15% base rate
-    
-    dates <- seq(from = as.Date("2023-01-01"), by = "week", length.out = n)
-    naevner <- sample(500:800, n)  # Population sizes
-    
-    # Generate realistic proportions with some variation
-    rates <- baseline_rate + rnorm(n, 0, 0.03)
-    rates[20:25] <- rates[20:25] + 0.05  # Increase period
-    rates[35:40] <- rates[35:40] - 0.03  # Improvement
-    rates <- pmax(rates, 0.01)  # Ensure positive
-    rates <- pmin(rates, 0.3)   # Cap at reasonable level
-    
-    taeller <- round(naevner * rates)
-    
-    data.frame(
-      Dato = dates,
-      Taeller = taeller,
-      Naevner = naevner,
-      stringsAsFactors = FALSE
-    )
-  }
-}
-
-# Helper function to validate Skift column for center line phases
-validateSkiftColumn <- function(data) {
-  if (!"Skift" %in% names(data)) {
-    return(list(
-      valid = TRUE,
-      warnings = character(0),
-      info = "Ingen Skift kolonne - én center line for alle data",
-      phase_count = 1,
-      shift_points = integer(0)
-    ))
-  }
-  
-  skift_col <- data[["Skift"]]
-  warnings <- character(0)
-  info_messages <- character(0)
-  
-  # Konverter til logical og tjek for problemer
-  if (!is.logical(skift_col)) {
-    # Prøv at konvertere fra forskellige formater
-    if (is.character(skift_col)) {
-      # Håndter tekst som "TRUE", "FALSE", "1", "0", "ja", "nej"
-      skift_col_clean <- tolower(trimws(skift_col))
-      logical_col <- ifelse(skift_col_clean %in% c("true", "1", "ja", "yes", "x"), TRUE,
-                           ifelse(skift_col_clean %in% c("false", "0", "nej", "no", ""), FALSE, NA))
-      
-      if (any(is.na(logical_col) & !is.na(skift_col))) {
-        warnings <- c(warnings, "Nogle værdier i Skift kolonnen kunne ikke forstås (brug TRUE/FALSE eller 1/0)")
-      }
-      skift_col <- logical_col
-    } else {
-      converted <- as.logical(skift_col)
-      if (any(is.na(converted) & !is.na(skift_col))) {
-        warnings <- c(warnings, "Nogle værdier i Skift kolonnen kunne ikke konverteres til TRUE/FALSE")
-      }
-      skift_col <- converted
-    }
-  }
-  
-  # Tæl skift
-  skift_count <- sum(skift_col == TRUE, na.rm = TRUE)
-  total_points <- length(skift_col)
-  
-  if (skift_count == 0) {
-    info_messages <- c(info_messages, "Ingen phase shifts markeret - én center line beregnes")
-    phase_count <- 1
-  } else if (skift_count > total_points / 2) {
-    warnings <- c(warnings, paste("Meget mange phase shifts (", skift_count, ") - overvej om dette er hensigtsmæssigt"))
-    phase_count <- skift_count + 1
-  } else {
-    info_messages <- c(info_messages, paste(skift_count, "phase shift(s) detekteret -", skift_count + 1, "separate center lines beregnes"))
-    phase_count <- skift_count + 1
-  }
-  
-  # Find skift punkter
-  shift_points <- which(skift_col == TRUE)
-  
-  # Tjek for skift på første observation
-  if (length(shift_points) > 0 && 1 %in% shift_points) {
-    warnings <- c(warnings, "Phase shift på første observation ignoreres - phase 1 starter altid ved observation 1")
-    shift_points <- shift_points[shift_points != 1]
-    if (length(shift_points) == 0) {
-      phase_count <- 1
-      info_messages <- c("Phase shift kun på første observation ignoreret - én center line beregnes")
-    }
-  }
-  
-  return(list(
-    valid = length(warnings) == 0,
-    warnings = warnings,
-    info = info_messages,
-    phase_count = phase_count,
-    shift_points = shift_points
-  ))
-}
-
-# Quick access to test data
-get_demo_infection_data <- function() generate_test_data("infection_rates", 40)
-get_demo_waiting_data <- function() generate_test_data("waiting_times", 52)  # 1 year weekly
-get_demo_error_data <- function() generate_test_data("medication_errors", 30)
-get_demo_proportion_data <- function() generate_test_data("proportion_data", 36)  # Like user's data

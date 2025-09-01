@@ -21,25 +21,21 @@ create_ui_main_content <- function() {
     # Data table and visualization - only when user has started
     conditionalPanel(
       condition = "output.dataLoaded == 'TRUE'",
-      tagList(
-        # Status information as value boxes (top row)
-        create_status_value_boxes(),
-        
-        br(),
-        
-        # Main content in columns
-        layout_columns(
-          col_widths = c(6, 6),
-          height = "auto",
-          
-          # Left column: Data table and chart settings
+      layout_columns(
+        col_widths = c(6, 6),
+        height = "auto",
+        # Left column: Data table and chart settings
+        # tagList(
           create_data_table_card(),
-          create_plot_only_card(),
-          
-          # Right column: Chart settings and export
-          create_chart_settings_card(),
+          create_visualization_card(),
+          # Chart settings - only when we have meaningful data
+ 
+        # ),
+        # Right column: Visualization and export
+        # tagList(
+        create_chart_settings_card(),
           create_export_card()
-        )
+        # )
       )
     )
   )
@@ -254,14 +250,12 @@ create_column_mapping_section <- function() {
   )
 }
 
-# New function for plot-only card
-create_plot_only_card <- function() {
+create_visualization_card <- function() {
   card(
-    full_screen = TRUE,
     card_header(
       div(
         icon("chart-line"),
-        " SPC Graf",
+        " SPC Visualisering",
         style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
       )
     ),
@@ -269,11 +263,6 @@ create_plot_only_card <- function() {
       visualizationModuleUI("visualization")
     )
   )
-}
-
-# New function for status value boxes
-create_status_value_boxes <- function() {
-  visualizationStatusUI("visualization")
 }
 
 create_export_card <- function() {

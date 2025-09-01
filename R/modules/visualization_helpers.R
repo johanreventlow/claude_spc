@@ -129,17 +129,7 @@ validateDataForChart <- function(data, config, chart_type) {
     return(list(valid = FALSE, warnings = warnings))
   }
   
-  # Validate Skift column if it exists
-  if ("Skift" %in% names(data)) {
-    skift_validation <- validateSkiftColumn(data)
-    if (!skift_validation$valid) {
-      warnings <- c(warnings, skift_validation$warnings)
-    }
-    
-    if (skift_validation$phase_count > nrow(data) / 5) {
-      warnings <- c(warnings, "For mange phases i forhold til antallet af datapunkter")
-    }
-  }
+  # Skift column validation handled by qicharts2::qic() internally
   
   if (nrow(data) < 8) {
     warnings <- c(warnings, paste("Kun", nrow(data), "datapunkter - SPC analyse er mest pålidelig med mindst 15-20 punkter"))
