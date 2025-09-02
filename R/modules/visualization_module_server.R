@@ -3,7 +3,6 @@
 
 library(shiny)
 library(bslib)
-library(bsicons)
 library(qicharts2)
 library(ggplot2)
 library(dplyr)
@@ -323,7 +322,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         value_box(
           title = "Graf Status",
           value = "Advarsler",
-          showcase = bsicons::bs_icon("exclamation-triangle"),
+          showcase = icon("exclamation-triangle"),
           theme = "warning",
           p(class = "fs-6 text-muted", paste(values$plot_warnings, collapse = " • "))
         )
@@ -332,7 +331,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         value_box(
           title = "Graf Status", 
           value = "Klar",
-          showcase = bsicons::bs_icon("check-circle"),
+          showcase = icon("check-circle"),
           theme = "success",
           p(class = "fs-6 text-muted", 
             sprintf("Chart: %s | Punkter: %d", 
@@ -344,7 +343,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         value_box(
           title = "Graf Status",
           value = "Venter...",
-          showcase = bsicons::bs_icon("hourglass"),
+          showcase = icon("hourglass"),
           theme = "secondary",
           p(class = "fs-6 text-muted", "Konfigurer data og indstillinger")
         )
@@ -365,7 +364,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         value_box(
           title = "Specielle Mønstre",
           value = "N/A",
-          showcase = bsicons::bs_icon("graph-up"),
+          showcase = icon("chart-line"),
           theme = "light",
           p(class = "fs-6 text-muted", "Kun for run charts")
         )
@@ -376,7 +375,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           value_box(
             title = "Anhøj Regler", 
             value = "Venter...",
-            showcase = bsicons::bs_icon("search"),
+            showcase = icon("search"),
             theme = "secondary",
             p(class = "fs-6 text-muted", "Konfigurer kolonner")
           )
@@ -396,7 +395,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             value_box(
               title = "Anhøj Regler",
               value = "For få data",
-              showcase = bsicons::bs_icon("search"),
+              showcase = icon("search"),
               theme = "warning", 
               p(class = "fs-6 text-muted", "Min. 10 punkter påkrævet")
             )
@@ -411,7 +410,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             value_box(
               title = "Anhøj Regler",
               value = paste(anhoej_count, "fund"),
-              showcase = bsicons::bs_icon("search"), 
+              showcase = icon("search"), 
               theme = if (anhoej_count > 0) "info" else "secondary",
               p(class = "fs-6 text-muted", "Run chart mønstre")
             )
