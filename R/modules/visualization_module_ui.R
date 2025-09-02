@@ -30,6 +30,12 @@ visualizationStatusUI <- function(id) {
     uiOutput(ns("plot_status_boxes")),
     
     # Anhøj rules results for run charts as value boxes
-    uiOutput(ns("anhoej_rules_boxes"))
+    uiOutput(ns("anhoej_rules_boxes")),
+    
+    # Additional value box 1 - Data Quality
+    uiOutput(ns("data_quality_box")),
+    
+    # Additional value box 2 - Report Status
+    uiOutput(ns("report_status_box"))
   )
 }
