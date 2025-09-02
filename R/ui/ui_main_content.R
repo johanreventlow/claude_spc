@@ -114,8 +114,7 @@ create_data_table_card <- function() {
         rhandsontable::rHandsontableOutput("main_data_table")
       ),
       
-      # Tabel info
-<<<<<<< HEAD
+      # Tabel info (commented out for cleaner UI)
       # div(
       #   style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
       #   icon("info-circle"),
@@ -125,17 +124,6 @@ create_data_table_card <- function() {
       #   br(),
       #   strong("Dato-formater:"), " 01-01-2024, 1/1/2024, 01.01.24, 1 jan 2024, 2024-01-01 og mange flere"
       # )
-=======
-      div(
-        style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
-        icon("info-circle"),
-        # " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
-        # br(),
-        # " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
-        # br(),
-        strong("Dato-formater:"), " 01-01-2024, 1/1/2024, 01.01.24, 1 jan 2024, 2024-01-01 og mange flere"
-      )
->>>>>>> 5e4b32177e85caf04c58eda5ee8e975d2d5f861b
     )
   )
 }
