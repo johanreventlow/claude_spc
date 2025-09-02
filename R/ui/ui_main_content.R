@@ -104,13 +104,13 @@ create_data_table_card <- function() {
       )
     ),
     card_body(
-      style = "padding: 10px; height: 100%; display: flex; flex-direction: column;",
+      style = "padding: 10px;",
       
-      # Rhandsontable with dynamic height
+      # Rhandsontable with hybrid height (400px normal, dynamic fullscreen)
       div(
         id = "table_container",
         class = "dynamic-table-container",
-        style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; height: 100%; overflow: hidden; display: flex; flex-direction: column;",
+        style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; overflow: hidden;",
         rhandsontable::rHandsontableOutput("main_data_table")
       ),
       
