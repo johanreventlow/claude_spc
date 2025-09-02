@@ -43,28 +43,11 @@ create_ui_sidebar <- function() {
       
       hr(),
 
-      # Indikator metadata
-      textInput(
-        "indicator_title",
-        "Titel på indikator:",
-        value = "",
-        placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
-      ),
 
-      # Organisatorisk enhed
-      create_unit_selection(),
 
-      # Beskrivelse
-      textAreaInput(
-        "indicator_description",
-        "Beskrivelse:",
-        value = "",
-        placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
-        height = "100px",
-        resize = "vertical"
-      ),
 
-      hr(),
+
+      # hr(),
 
       # Session management
       div(

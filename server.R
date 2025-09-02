@@ -76,12 +76,12 @@ server <- function(input, output, session) {
   setup_helper_observers(input, output, session, values)
   
   # Welcome message
-  observe({
-    showNotification(
-      paste("Velkommen til", HOSPITAL_NAME, "SPC App! Indtast data i tabellen eller upload en fil."),
-      type = "message",
-      duration = 5
-    )
-  }) %>% 
-    bindEvent(TRUE, once = TRUE)
+  # observe({
+  #   showNotification(
+  #     paste("Velkommen til", HOSPITAL_NAME, "SPC App! Indtast data i tabellen eller upload en fil."),
+  #     type = "message",
+  #     duration = 5
+  #   )
+  # }) %>% 
+  #   bindEvent(TRUE, once = TRUE)
 }

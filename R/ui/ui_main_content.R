@@ -22,38 +22,38 @@ create_ui_main_content <- function() {
     conditionalPanel(
       condition = "output.dataLoaded == 'TRUE'",
       # tagList(
-        # Status information as value boxes (top row)
-        # create_status_value_boxes(),
-        
-        # br(),
-        
-        # Main content in columns
-        layout_column_wrap(
-          width = 1/2,
-          heights_equal = "row",
-          # height = "400px",
-          height = "45vh",
-          create_chart_settings_card(),
+      # Status information as value boxes (top row)
+      # create_status_value_boxes(),
+      
+      # br(),
+      
+      # Main content in columns
+      layout_column_wrap(
+        width = 1/2,
+        heights_equal = "row",
+        # height = "400px",
+        height = "45vh",
+        create_chart_settings_card(),
         # layout_columns(
-          # col_widths = c(6, 6),
-          # height = "400px",
-          
-
-          # min_height = "400px",
-          # max_height = "100%",
-          
-          # Left column: Data table and chart settings
-
-          create_plot_only_card()
-        ),
-          
+        # col_widths = c(6, 6),
+        # height = "400px",
+        
+        
+        # min_height = "400px",
+        # max_height = "100%",
+        
+        # Left column: Data table and chart settings
+        
+        create_plot_only_card()
+      ),
+      
       layout_column_wrap(
         width = 1/2,
         # height = "auto",
         # min_height = "400px",
         # max_height = "100%",
-          # Right column: Chart settings and export
-          
+        # Right column: Chart settings and export
+        
         create_data_table_card(),
         layout_column_wrap(
           width = 1,
@@ -70,6 +70,8 @@ create_ui_main_content <- function() {
 create_data_table_card <- function() {
   card(
     full_screen = TRUE,
+    # height = "400px",
+    height = "45vh",
     card_header(
       div(
         style = "display: flex; justify-content: space-between; align-items: center;",
@@ -101,24 +103,26 @@ create_data_table_card <- function() {
             title = "Tilføj række",
             class = "btn-outline-primary btn-sm"
           ),
-          actionButton(
-            "reset_table",
-            label = NULL,
-            icon = icon("refresh"),
-            title = "Reset tabel", 
-            class = "btn-outline-warning btn-sm"
-          )
+          # actionButton(
+          #   "reset_table",
+          #   label = NULL,
+          #   icon = icon("refresh"),
+          #   title = "Reset tabel", 
+          #   class = "btn-outline-warning btn-sm"
+          # )
         )
       )
     ),
     card_body(
       style = "padding: 10px;",
+      # fill = FALSE,
+      min_height = "400px",
       
       # Rhandsontable
-      div(
-        style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; min-height: 400px;",
-        rhandsontable::rHandsontableOutput("main_data_table")
-      ),
+      # div(
+      #   style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; min-height: 400px;",
+      rhandsontable::rHandsontableOutput("main_data_table")
+      # ),
       
       # Tabel info (commented out for cleaner UI)
       # div(
@@ -134,72 +138,100 @@ create_data_table_card <- function() {
   )
 }
 
-create_chart_settings_card <- function() {
-  conditionalPanel(
-    condition = "output.has_data == 'true'",
-    navset_card_underline(
-      title = list(
-        icon("sliders-h"), 
-        " Indstillinger"
-      ),
-      
-      # Tab 1: Diagram settings
-      nav_panel(
-        "Diagram",
-        icon = icon("chart-bar"),
-        
-        # Chart type and target value side by side
-        layout_columns(
-          col_widths = c(7, 5, 7, 12),
-          
-          # Indikator metadata
-          textInput(
-            "indicator_title",
-            "Titel på indikator:",
-            value = "",
-            placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
-          ),
-          
-          # Target value input
-          # div(
-            textInput(
-              "target_value",
-              "Målværdi:",
-              value = "",
-              placeholder = "fx 85%, 0,85 eller 25"
-            ),
-            # div(
-            #   style = "font-size: 0.7rem; color: #666; margin-top: -5px;",
-            #   icon("info-circle", style = "font-size: 0.6rem;"),
-            #   " Valgfri målværdi"
-            # )
-          # ),
-          
-          # Chart type selection
-          selectInput(
-            "chart_type",
-            "Diagram type:",
-            choices = CHART_TYPES_DA,
-            selected = "Seriediagram (Run Chart)"
-          ),
-          
-          # Beskrivelse
-          textAreaInput(
-            "indicator_description",
-            "Datadefinition:",
-            value = "",
-            placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
-            height = "100px",
-            resize = "vertical"
-          ),
-          
 
+create_chart_settings_card <- function() {
+  # conditionalPanel(
+  #   condition = "output.has_data == 'true'",
+  card(
+    full_screen = TRUE,
+    # height = "400px",
+    height = "45vh",
+    card_header(
+      div(
+        style = "display: flex; justify-content: space-between; align-items: center;",
+        div(
+          icon("sliders-h"),
+          # icon("pen-to-square"),
+          " Indstillinger",
+          style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+        )
+      )
+    ),
+    # title = list(
+    #   icon("list-check"),
+    #   " Indstillinger"
+    # )),
+    # Tab 1: Diagram settings
+    card_body(
+      # navset_underline(
+    navset_tab(
+      nav_panel(
+        "Detaljer",
+        # "Diagram",
+        icon = icon("pen-to-square"),
+        # icon = icon("cogs"),
+        # icon = icon("chart-bar"),
+        div(
+          style = "padding: 10px 0;",
+          #Chart type and target value side by side
+          # layout_columns(
+          #   col_widths = c(6, 6),
+          #   row_heights = c(3, 1),
+          #   fillable = TRUE,
+          layout_column_wrap(
+              width = 1/2,
+              layout_column_wrap(
+                width = 1,
+                heights_equal = "row",
+                # Indikator metadata
+                textInput(
+                  "indicator_title",
+                  "Titel på indikator:",
+                  value = "",
+                  placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
+                ),
+                
+                # Target value input
+                # div(
+                textInput(
+                  "target_value",
+                  "Målværdi:",
+                  value = "",
+                  placeholder = "fx 85%, 0,85 eller 25"
+                ),
+                # div(
+                #   style = "font-size: 0.7rem; color: #666; margin-top: -5px;",
+                #   icon("info-circle", style = "font-size: 0.6rem;"),
+                #   " Valgfri målværdi"
+                # )
+                # ),
+                
+                # Chart type selection
+                selectInput(
+                  "chart_type",
+                  "Diagram type:",
+                  choices = CHART_TYPES_DA,
+                  selected = "Seriediagram (Run Chart)"
+                )
+              ),
+              
+            # Beskrivelse
+            textAreaInput(
+              "indicator_description",
+              "Datadefinition:",
+              value = "",
+              placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
+              # height = "100px",
+              height = "200px",
+              resize = "none"
+            )
+          )
         )
       ),
       
       # Tab 2: Organisatorisk enhed
       nav_panel(
-        "Organisation",
+        "Organisatorisk",
         icon = icon("building"),
         
         div(
@@ -209,22 +241,7 @@ create_chart_settings_card <- function() {
         )
       ),
       
-      # Tab 3: Additional settings (placeholder) 
-      nav_panel(
-        "Indstillinger",
-        icon = icon("cogs"),
-        
-        div(
-          style = "padding: 20px; text-align: center; color: #666;",
-          icon("wrench", style = "font-size: 2rem; margin-bottom: 10px;"),
-          br(),
-          "Yderligere indstillinger kommer her",
-          br(),
-          tags$small("Denne tab er reserveret til fremtidige features")
-        )
-      ),
-      
-      # Tab 4: Column mapping (moved from accordion)
+      # Tab 3: Column mapping (moved from accordion)
       nav_panel(
         "Kolonner",
         icon = icon("columns"),
@@ -320,9 +337,24 @@ create_chart_settings_card <- function() {
             uiOutput("column_validation_messages")
           )
         )
-      )
-    )
-  )
+      ),
+      # Tab 3: Additional settings (placeholder) 
+      nav_panel(
+        "Avanceret",
+        icon = icon("cogs"),
+        
+        div(
+          style = "padding: 20px; text-align: center; color: #666;",
+          icon("wrench", style = "font-size: 2rem; margin-bottom: 10px;"),
+          br(),
+          "Yderligere indstillinger kommer her",
+          br(),
+          tags$small("Denne tab er reserveret til fremtidige features")
+        )
+      ) # nav_panel (Avanceret)
+    ) # navset_tab  
+  ) # card_body
+) # card
 }
 
 
