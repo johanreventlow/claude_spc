@@ -85,14 +85,18 @@ $(document).ready(function() {
   
   // Function to resize the rhandsontable
   function resizeTable(containerId) {
-    const newHeight = calculateTableHeight(containerId);
-    
-    // Find the Handsontable instance
     const container = document.getElementById(containerId);
     if (!container) {
       console.log("Container element not found:", containerId);
       return;
     }
+    
+    // Check current state
+    const card = container.closest('.card');
+    const isFullscreen = card && card.classList.contains('bslib-full-screen');
+    console.log("Resize check - Container found:", !!container, "Card found:", !!card, "Is fullscreen:", isFullscreen);
+    
+    const newHeight = calculateTableHeight(containerId);
     
     // Get the Handsontable instance from the container
     const hotInstance = $(container).data('handsontable');
@@ -101,7 +105,7 @@ $(document).ready(function() {
       return;
     }
     
-    console.log("Resizing table", containerId, "to height:", newHeight);
+    console.log("Resizing table", containerId, "to height:", newHeight, "(fullscreen:", isFullscreen, ")");
     
     // Update the table height
     hotInstance.updateSettings({
@@ -110,6 +114,8 @@ $(document).ready(function() {
     
     // Force a render to ensure the change takes effect
     hotInstance.render();
+    
+    console.log("Table resize completed");
   }
   
   // Debounce function to prevent excessive resize calls
@@ -146,20 +152,37 @@ $(document).ready(function() {
       debouncedResize(containerId);
     });
     
-    // 2. Card fullscreen events (bslib uses Bootstrap modal classes)
-    // Listen for modal events on the document
+    // 2. Card fullscreen events - multiple approaches to catch bslib events
+    
+    // Method A: Listen for Bootstrap modal events
     $(document).on('shown.bs.modal', '.modal', function() {
-      console.log("Fullscreen modal shown");
+      console.log("Bootstrap modal shown event detected");
       setTimeout(function() {
         debouncedResize(containerId);
       }, 100);
     });
     
     $(document).on('hidden.bs.modal', '.modal', function() {
-      console.log("Fullscreen modal hidden");
+      console.log("Bootstrap modal hidden event detected");
       setTimeout(function() {
         debouncedResize(containerId);
       }, 100);
+    });
+    
+    // Method B: Direct click listener on fullscreen button
+    $(document).on('click', '[data-bs-toggle="tooltip"][title*="full"]', function() {
+      console.log("Fullscreen button clicked");
+      setTimeout(function() {
+        debouncedResize(containerId);
+      }, 300); // Longer delay for DOM update
+    });
+    
+    // Method C: Listen for any button clicks in card header (more generic)
+    $(document).on('click', '.card-header button', function() {
+      console.log("Card header button clicked, checking for fullscreen");
+      setTimeout(function() {
+        debouncedResize(containerId);
+      }, 300);
     });
     
     // 3. MutationObserver for DOM changes (like fullscreen toggle)
@@ -167,14 +190,21 @@ $(document).ready(function() {
       let shouldResize = false;
       
       mutations.forEach(function(mutation) {
-        if (mutation.type === 'attributes' && 
-            (mutation.attributeName === 'class' || mutation.attributeName === 'style')) {
-          shouldResize = true;
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const target = mutation.target;
+          const classList = target.classList;
+          
+          // Check if bslib-full-screen class was added or removed
+          if (classList.contains('bslib-full-screen') || 
+              mutation.oldValue && mutation.oldValue.includes('bslib-full-screen')) {
+            console.log("Fullscreen class change detected on:", target);
+            shouldResize = true;
+          }
         }
       });
       
       if (shouldResize) {
-        console.log("DOM mutation detected, resizing table");
+        console.log("Fullscreen mutation detected, resizing table");
         debouncedResize(containerId);
       }
     });
@@ -184,9 +214,18 @@ $(document).ready(function() {
     if (container) {
       const card = container.closest('.card');
       if (card) {
+        console.log("Setting up MutationObserver on card:", card);
         observer.observe(card, {
           attributes: true,
-          attributeFilter: ['class', 'style'],
+          attributeFilter: ['class'],
+          attributeOldValue: true, // Important for detecting what changed
+          subtree: false // Only observe the card itself, not children
+        });
+        
+        // Also observe the document body for modal changes
+        observer.observe(document.body, {
+          attributes: true,
+          attributeFilter: ['class'],
           subtree: true
         });
       }
