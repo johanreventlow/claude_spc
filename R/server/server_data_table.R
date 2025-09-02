@@ -15,7 +15,7 @@ setup_data_table <- function(input, output, session, values) {
     
     hot <- rhandsontable::rhandsontable(
       data,
-      height = NULL,  # Let JavaScript control height dynamically
+      height = 400,  # Default height, JavaScript overrides in fullscreen
       # stretchH = "all",
       contextMenu = TRUE,
       manualColumnResize = TRUE,

@@ -8,22 +8,24 @@ $(document).ready(function() {
   // Add CSS styles for dynamic table containers
   const style = document.createElement('style');
   style.textContent = `
+    /* Normal mode - fixed container */
     .dynamic-table-container {
-      flex: 1;
-      min-height: 300px;
+      height: 400px;
+      min-height: 400px;
     }
     
+    /* Fullscreen mode - flex layout */
     .card.bslib-full-screen .dynamic-table-container {
+      flex: 1;
       min-height: 70vh;
-    }
-    
-    .dynamic-table-container .rhandsontable {
-      height: 100% !important;
+      height: auto;
     }
     
     /* Ensure card body takes full height in fullscreen */
     .card.bslib-full-screen .card-body {
       height: calc(100vh - 120px) !important;
+      display: flex !important;
+      flex-direction: column !important;
     }
   `;
   document.head.appendChild(style);
@@ -35,6 +37,17 @@ $(document).ready(function() {
       console.log("Container not found:", containerId);
       return 400; // fallback
     }
+    
+    // Check if we're in fullscreen mode
+    const card = container.closest('.card');
+    const isFullscreen = card && card.classList.contains('bslib-full-screen');
+    
+    if (!isFullscreen) {
+      console.log("Not in fullscreen, using default height 400px");
+      return 400; // Use fixed height in normal mode
+    }
+    
+    console.log("In fullscreen mode, calculating dynamic height");
     
     // Get the card body that contains the table
     const cardBody = container.closest('.card-body');
@@ -54,13 +67,14 @@ $(document).ready(function() {
     
     const availableHeight = cardBodyHeight - cardPadding - otherElementsHeight;
     
-    // Set minimum and maximum bounds
-    const minHeight = 200;
+    // Set minimum and maximum bounds for fullscreen
+    const minHeight = 400;
     const maxHeight = window.innerHeight * 0.8; // Max 80% of viewport height
     
     const calculatedHeight = Math.max(minHeight, Math.min(maxHeight, availableHeight));
     
     console.log("Height calculation for", containerId, ":", {
+      isFullscreen: isFullscreen,
       cardBodyHeight: cardBodyHeight,
       availableHeight: availableHeight,
       calculatedHeight: calculatedHeight
