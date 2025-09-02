@@ -59,6 +59,9 @@ create_ui_header <- function() {
         }, 500); // Reduced delay since no waiter
       }
     ")),
+      
+      # Include dynamic table resize script
+      tags$script(src = "table-resize.js"),
 
       tags$style(HTML(
         paste0("
