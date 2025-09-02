@@ -31,7 +31,8 @@ create_ui_main_content <- function() {
         layout_column_wrap(
           width = 1/2,
           heights_equal = "row",
-          height = "400px",
+          # height = "400px",
+          height = "45vh",
           create_chart_settings_card(),
         # layout_columns(
           # col_widths = c(6, 6),
@@ -136,20 +137,43 @@ create_data_table_card <- function() {
 create_chart_settings_card <- function() {
   conditionalPanel(
     condition = "output.has_data == 'true'",
-    card(
-      card_header(
-        div(
-          icon("sliders-h"), 
-          " Graf Indstillinger",
-          style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
-        )
+    navset_card_underline(
+      title = list(
+        icon("sliders-h"), 
+        " Indstillinger"
       ),
-      card_body(
-        style = "overflow: visible;",
+      
+      # Tab 1: Diagram settings
+      nav_panel(
+        "Diagram",
+        icon = icon("chart-bar"),
         
         # Chart type and target value side by side
         layout_columns(
-          col_widths = c(7, 5),
+          col_widths = c(7, 5, 7, 12),
+          
+          # Indikator metadata
+          textInput(
+            "indicator_title",
+            "Titel på indikator:",
+            value = "",
+            placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
+          ),
+          
+          # Target value input
+          # div(
+            textInput(
+              "target_value",
+              "Målværdi:",
+              value = "",
+              placeholder = "fx 85%, 0,85 eller 25"
+            ),
+            # div(
+            #   style = "font-size: 0.7rem; color: #666; margin-top: -5px;",
+            #   icon("info-circle", style = "font-size: 0.6rem;"),
+            #   " Valgfri målværdi"
+            # )
+          # ),
           
           # Chart type selection
           selectInput(
@@ -159,127 +183,148 @@ create_chart_settings_card <- function() {
             selected = "Seriediagram (Run Chart)"
           ),
           
-          # Target value input (moved up)
-          div(
-            textInput(
-              "target_value",
-              "Målværdi:",
-              value = "",
-              placeholder = "fx 85%, 0,85 eller 25"
-            ),
-            div(
-              style = "font-size: 0.7rem; color: #666; margin-top: -5px;",
-              icon("info-circle", style = "font-size: 0.6rem;"),
-              " Valgfri målværdi"
-            )
-          )
-        ),
+          # Beskrivelse
+          textAreaInput(
+            "indicator_description",
+            "Datadefinition:",
+            value = "",
+            placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
+            height = "100px",
+            resize = "vertical"
+          ),
+          
+
+        )
+      ),
+      
+      # Tab 2: Organisatorisk enhed
+      nav_panel(
+        "Organisation",
+        icon = icon("building"),
         
-        # Collapsible column mapping section
-        create_column_mapping_section()
+        div(
+          style = "padding: 10px 0;",
+          # Organisatorisk enhed selection
+          create_unit_selection()
+        )
+      ),
+      
+      # Tab 3: Additional settings (placeholder) 
+      nav_panel(
+        "Indstillinger",
+        icon = icon("cogs"),
+        
+        div(
+          style = "padding: 20px; text-align: center; color: #666;",
+          icon("wrench", style = "font-size: 2rem; margin-bottom: 10px;"),
+          br(),
+          "Yderligere indstillinger kommer her",
+          br(),
+          tags$small("Denne tab er reserveret til fremtidige features")
+        )
+      ),
+      
+      # Tab 4: Column mapping (moved from accordion)
+      nav_panel(
+        "Kolonner",
+        icon = icon("columns"),
+        
+        div(
+          style = "padding: 10px 0;",
+          
+          # X-axis column
+          selectInput(
+            "x_column",
+            "X-akse (tid/observation):",
+            choices = NULL,
+            selected = NULL
+          ),
+          
+          # Y-axis column  
+          selectInput(
+            "y_column",
+            "Y-akse (værdi):",
+            choices = NULL,
+            selected = NULL
+          ),
+          
+          # N column
+          selectInput(
+            "n_column",
+            "Nævner (n):",
+            choices = NULL,
+            selected = NULL
+          ),
+          
+          # Hjælpe-tekst for nævner
+          conditionalPanel(
+            condition = "input.chart_type == 'P-kort (Andele)' || input.chart_type == \"P'-kort (Andele, standardiseret)\" || input.chart_type == 'U-kort (Rater)' || input.chart_type == \"U'-kort (Rater, standardiseret)\"",
+            div(
+              class = "alert alert-info",
+              style = "font-size: 0.8rem; padding: 6px; margin-top: 5px;",
+              icon("info-circle"),
+              " Nævner-kolonne er ", strong("påkrævet"), " for denne chart type"
+            )
+          ),
+          
+          conditionalPanel(
+            condition = "input.chart_type != 'P-kort (Andele)' && input.chart_type != \"P'-kort (Andele, standardiseret)\" && input.chart_type != 'U-kort (Rater)' && input.chart_type != \"U'-kort (Rater, standardiseret)\"",
+            div(
+              style = "font-size: 0.8rem; color: #666; margin-top: 5px;",
+              icon("info-circle"),
+              " Nævner er valgfri for denne chart type. Vælg 'Ingen (tom)' hvis ikke relevant."
+            )
+          ),
+          
+          # Skift column
+          selectInput(
+            "skift_column",
+            "Skift (fase-markering):",
+            choices = NULL,
+            selected = NULL
+          ),
+          
+          div(
+            style = "font-size: 0.8rem; color: #666; margin-top: 5px; margin-bottom: 10px;",
+            icon("info-circle"),
+            " Valgfri: Kolonne til markering af processkift eller faser"
+          ),
+          
+          # Kommentar column  
+          selectInput(
+            "kommentar_column",
+            "Kommentar (noter):",
+            choices = NULL,
+            selected = NULL
+          ),
+          
+          div(
+            style = "font-size: 0.8rem; color: #666; margin-top: 5px; margin-bottom: 15px;",
+            icon("info-circle"),
+            " Valgfri: Kolonne med kommentarer eller noter til datapunkter"
+          ),
+          
+          # Auto-detect button
+          actionButton(
+            "auto_detect_columns",
+            "Auto-detektér kolonner",
+            icon = icon("magic"),
+            class = "btn-outline-secondary btn-sm w-100",
+            style = "margin-top: 10px;"
+          ),
+          
+          # Column validation feedback
+          div(
+            id = "column_validation",
+            style = "margin-top: 10px;",
+            uiOutput("column_validation_messages")
+          )
+        )
       )
     )
   )
 }
 
-create_column_mapping_section <- function() {
-  bslib::accordion(
-    id = "column_mapping_accordion",
-    open = FALSE,  # Start collapsed
-    bslib::accordion_panel(
-      title = tagList(icon("columns"), " Kolonne Mapping"),
-      value = "column_mapping",
-      
-      # X-axis column
-      selectInput(
-      "x_column",
-      "X-akse (tid/observation):",
-      choices = NULL,
-      selected = NULL
-    ),
-    
-    # Y-axis column  
-    selectInput(
-      "y_column",
-      "Y-akse (værdi):",
-      choices = NULL,
-      selected = NULL
-    ),
-    
-    # N column
-    selectInput(
-      "n_column",
-      "Nævner (n):",
-      choices = NULL,
-      selected = NULL
-    ),
-    
-    # Hjælpe-tekst for nævner
-    conditionalPanel(
-      condition = "input.chart_type == 'P-kort (Andele)' || input.chart_type == \"P'-kort (Andele, standardiseret)\" || input.chart_type == 'U-kort (Rater)' || input.chart_type == \"U'-kort (Rater, standardiseret)\"",
-      div(
-        class = "alert alert-info",
-        style = "font-size: 0.8rem; padding: 6px; margin-top: 5px;",
-        icon("info-circle"),
-        " Nævner-kolonne er ", strong("påkrævet"), " for denne chart type"
-      )
-    ),
-    
-    conditionalPanel(
-      condition = "input.chart_type != 'P-kort (Andele)' && input.chart_type != \"P'-kort (Andele, standardiseret)\" && input.chart_type != 'U-kort (Rater)' && input.chart_type != \"U'-kort (Rater, standardiseret)\"",
-      div(
-        style = "font-size: 0.8rem; color: #666; margin-top: 5px;",
-        icon("info-circle"),
-        " Nævner er valgfri for denne chart type. Vælg 'Ingen (tom)' hvis ikke relevant."
-      )
-    ),
-    
-    # Skift column
-    selectInput(
-      "skift_column",
-      "Skift (fase-markering):",
-      choices = NULL,
-      selected = NULL
-    ),
-    
-    div(
-      style = "font-size: 0.8rem; color: #666; margin-top: 5px; margin-bottom: 10px;",
-      icon("info-circle"),
-      " Valgfri: Kolonne til markering af processkift eller faser"
-    ),
-    
-    # Kommentar column  
-    selectInput(
-      "kommentar_column",
-      "Kommentar (noter):",
-      choices = NULL,
-      selected = NULL
-    ),
-    
-    div(
-      style = "font-size: 0.8rem; color: #666; margin-top: 5px; margin-bottom: 15px;",
-      icon("info-circle"),
-      " Valgfri: Kolonne med kommentarer eller noter til datapunkter"
-    ),
-    
-      # Auto-detect button
-      actionButton(
-        "auto_detect_columns",
-        "Auto-detektér kolonner",
-        icon = icon("magic"),
-        class = "btn-outline-secondary btn-sm w-100",
-        style = "margin-top: 10px;"
-      ),
-      
-      # Column validation feedback
-      div(
-        id = "column_validation",
-        style = "margin-top: 10px;",
-        uiOutput("column_validation_messages")
-      )
-    )
-  )
-}
 
 # New function for plot-only card
 create_plot_only_card <- function() {
