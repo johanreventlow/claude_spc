@@ -15,8 +15,8 @@ setup_data_table <- function(input, output, session, values) {
     
     hot <- rhandsontable::rhandsontable(
       data,
-      height = 400,  # Default height, JavaScript overrides in fullscreen
-      # stretchH = "all",
+      # height = 400,
+      stretchH = "all",
       contextMenu = TRUE,
       manualColumnResize = TRUE,
       fillHandle = list(direction = "vertical", autoInsertRow = FALSE),

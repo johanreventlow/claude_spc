@@ -30,29 +30,36 @@ create_ui_main_content <- function() {
         # Main content in columns
         layout_column_wrap(
           width = 1/2,
-      
+          heights_equal = "row",
+          height = "400px",
+          create_chart_settings_card(),
         # layout_columns(
           # col_widths = c(6, 6),
-          height = "auto",
-          max_height = "100%",
+          # height = "400px",
+          
+
+          # min_height = "400px",
+          # max_height = "100%",
           
           # Left column: Data table and chart settings
-          create_data_table_card(),
+
           create_plot_only_card()
         ),
           
       layout_column_wrap(
         width = 1/2,
-        height = "auto",
-        max_height = "100%",
+        # height = "auto",
+        # min_height = "400px",
+        # max_height = "100%",
           # Right column: Chart settings and export
-          create_chart_settings_card(),
+          
+        create_data_table_card(),
         layout_column_wrap(
           width = 1,
           heights_equal = "row",
           create_status_value_boxes()
         ),
-        create_export_card(),
+        # create_export_card(),
         # )
       )
     )
@@ -106,11 +113,9 @@ create_data_table_card <- function() {
     card_body(
       style = "padding: 10px;",
       
-      # Rhandsontable with hybrid height (400px normal, dynamic fullscreen)
+      # Rhandsontable
       div(
-        id = "table_container",
-        class = "dynamic-table-container",
-        style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; overflow: hidden;",
+        style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; min-height: 400px;",
         rhandsontable::rHandsontableOutput("main_data_table")
       ),
       
