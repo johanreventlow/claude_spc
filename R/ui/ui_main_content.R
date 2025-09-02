@@ -21,25 +21,39 @@ create_ui_main_content <- function() {
     # Data table and visualization - only when user has started
     conditionalPanel(
       condition = "output.dataLoaded == 'TRUE'",
-      tagList(
+      # tagList(
         # Status information as value boxes (top row)
-        create_status_value_boxes(),
+        # create_status_value_boxes(),
         
-        br(),
+        # br(),
         
         # Main content in columns
-        layout_columns(
-          col_widths = c(6, 6),
+        layout_column_wrap(
+          width = 1/2,
+      
+        # layout_columns(
+          # col_widths = c(6, 6),
           height = "auto",
+          max_height = "100%",
           
           # Left column: Data table and chart settings
           create_data_table_card(),
-          create_plot_only_card(),
+          create_plot_only_card()
+        ),
           
+      layout_column_wrap(
+        width = 1/2,
+        height = "auto",
+        max_height = "100%",
           # Right column: Chart settings and export
           create_chart_settings_card(),
-          create_export_card()
-        )
+        layout_column_wrap(
+          width = 1,
+          heights_equal = "row",
+          create_status_value_boxes()
+        ),
+        create_export_card(),
+        # )
       )
     )
   )
@@ -99,15 +113,15 @@ create_data_table_card <- function() {
       ),
       
       # Tabel info
-      div(
-        style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
-        icon("info-circle"),
-        " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
-        br(),
-        " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
-        br(),
-        strong("Dato-formater:"), " 01-01-2024, 1/1/2024, 01.01.24, 1 jan 2024, 2024-01-01 og mange flere"
-      )
+      # div(
+      #   style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
+      #   icon("info-circle"),
+      #   " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
+      #   br(),
+      #   " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
+      #   br(),
+      #   strong("Dato-formater:"), " 01-01-2024, 1/1/2024, 01.01.24, 1 jan 2024, 2024-01-01 og mange flere"
+      # )
     )
   )
 }

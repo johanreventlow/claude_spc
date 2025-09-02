@@ -16,7 +16,7 @@ setup_data_table <- function(input, output, session, values) {
     hot <- rhandsontable::rhandsontable(
       data,
       height = 400,
-      stretchH = "all",
+      # stretchH = "all",
       contextMenu = TRUE,
       manualColumnResize = TRUE,
       fillHandle = list(direction = "vertical", autoInsertRow = FALSE),
@@ -31,7 +31,9 @@ setup_data_table <- function(input, output, session, values) {
         highlightRow = TRUE
       ) %>%
       rhandsontable::hot_cols(
+        colWidths = c(50, 100, 75, 75, 300),
         columnHeaderHeight = 50,
+        manualColumnMove = TRUE,
         manualColumnResize = TRUE
       )
     
