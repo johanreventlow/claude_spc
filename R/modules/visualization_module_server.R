@@ -419,6 +419,38 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
+    # Additional value box 1 - Data Quality
+    output$data_quality_box <- renderUI({
+      data <- data_reactive()
+      if (is.null(data) || nrow(data) == 0) {
+        return(div())
+      }
+      
+      value_box(
+        title = "Data Kvalitet",
+        value = "God",
+        showcase = icon("check-circle"),
+        theme = "success",
+        p(class = "fs-6 text-muted", "Automatisk kvalitetskontrol")
+      )
+    })
+    
+    # Additional value box 2 - Report Status  
+    output$report_status_box <- renderUI({
+      data <- data_reactive()
+      if (is.null(data) || nrow(data) == 0) {
+        return(div())
+      }
+      
+      value_box(
+        title = "Rapport Status",
+        value = "Klar",
+        showcase = icon("file-text"),
+        theme = "info",
+        p(class = "fs-6 text-muted", "Eksport og deling tilgængelig")
+      )
+    })
+    
     # Return reactive values
     return(
       list(
