@@ -222,7 +222,7 @@ create_chart_settings_card <- function() {
               value = "",
               placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
               # height = "100px",
-              height = "200px",
+              height = "300px",
               resize = "none"
             )
           )
