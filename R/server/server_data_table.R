@@ -28,10 +28,14 @@ setup_data_table <- function(input, output, session, values) {
       ) %>%
       rhandsontable::hot_table(
         highlightCol = TRUE,
-        highlightRow = TRUE
+        highlightRow = TRUE,
       ) %>%
       rhandsontable::hot_cols(
+<<<<<<< HEAD
         colWidths = c(50, 100, 75, 75, 300),
+=======
+        # colWidths = c(50, 80, 120, 300, 200),
+>>>>>>> 5e4b32177e85caf04c58eda5ee8e975d2d5f861b
         columnHeaderHeight = 50,
         manualColumnMove = TRUE,
         manualColumnResize = TRUE
@@ -40,10 +44,15 @@ setup_data_table <- function(input, output, session, values) {
     # Configure checkbox column if Skift exists
     if ("Skift" %in% names(data)) {
       skift_col_index <- which(names(data) == "Skift")
-      hot <- hot %>% rhandsontable::hot_col(skift_col_index, type = "checkbox")
+      hot <- hot %>% 
+        rhandsontable::hot_col(
+          skift_col_index, 
+          type = "checkbox",
+          halign = "htCenter",  # Horizontal center alignment
+          valign = "htMiddle"   # Vertical middle alignment
+        )
     }
     
-    cat("DEBUG: Table rendered without column type definitions\n")
     
     return(hot)
   })
@@ -64,11 +73,20 @@ setup_data_table <- function(input, output, session, values) {
     
     req(input$main_data_table)
     
+    # Set both immediate and persistent flags
     values$updating_table <- TRUE
+    values$table_operation_in_progress <- TRUE
+    
     on.exit({ 
       values$updating_table <- FALSE 
       cat("DEBUG: Table change processing complete\n")
     }, add = TRUE)
+    
+    # Clear persistent flag after a delay to prevent auto-save interference
+    later::later(function() {
+      cat("DEBUG: Clearing table_operation_in_progress flag\n")
+      values$table_operation_in_progress <- FALSE
+    }, delay = 2)
     
     tryCatch({
       new_data <- rhandsontable::hot_to_r(input$main_data_table)
@@ -119,6 +137,37 @@ setup_data_table <- function(input, output, session, values) {
       
       values$current_data <- new_data
       
+      # AUTO-ROW ADDITION: Check if last row has meaningful data and add new row if needed
+      if (nrow(new_data) > 0) {
+        last_row_index <- nrow(new_data)
+        last_row <- new_data[last_row_index, ]
+        
+        # Check if last row has any meaningful data (excluding FALSE checkboxes)
+        has_meaningful_data <- any(sapply(last_row, function(x) {
+          if (is.logical(x)) return(isTRUE(x))  # Only TRUE checkboxes count
+          if (is.numeric(x)) return(!is.na(x))
+          if (is.character(x)) return(!is.na(x) && nzchar(trimws(x)))
+          return(FALSE)
+        }))
+        
+        if (has_meaningful_data) {
+          cat("DEBUG: Last row has meaningful data - adding new row\n")
+          
+          # Create new empty row with same structure
+          new_empty_row <- new_data[1, ]
+          new_empty_row[1, ] <- NA
+          
+          # Set logical columns to FALSE instead of NA
+          logical_cols <- sapply(new_empty_row, is.logical)
+          new_empty_row[logical_cols] <- FALSE
+          
+          # Add the new row
+          values$current_data <- rbind(values$current_data, new_empty_row)
+          
+          showNotification("Ny række tilføjet automatisk", type = "message", duration = 2)
+        }
+      }
+      
     }, error = function(e) {
       cat("ERROR in main_data_table observer:", e$message, "\n")
       showNotification(
@@ -133,17 +182,27 @@ setup_data_table <- function(input, output, session, values) {
   observeEvent(input$add_row, {
     req(values$current_data)
     
+    # Set persistent flag to prevent auto-save interference
+    values$table_operation_in_progress <- TRUE
+    
     new_row <- values$current_data[1, ]
     new_row[1, ] <- NA
     
     values$current_data <- rbind(values$current_data, new_row)
     
     showNotification("Ny række tilføjet", type = "message")
+    
+    # Clear persistent flag after delay
+    later::later(function() {
+      cat("DEBUG: Clearing table_operation_in_progress flag (add_row)\n")
+      values$table_operation_in_progress <- FALSE
+    }, delay = 1)
   })
   
   # Reset table
   observeEvent(input$reset_table, {
     values$updating_table <- TRUE
+    values$table_operation_in_progress <- TRUE
     
     values$current_data <- data.frame(
       Dato = rep(NA_character_, 5),
@@ -161,6 +220,12 @@ setup_data_table <- function(input, output, session, values) {
     })
     
     values$updating_table <- FALSE
+    
+    # Clear persistent flag after delay
+    later::later(function() {
+      cat("DEBUG: Clearing table_operation_in_progress flag (reset_table)\n")
+      values$table_operation_in_progress <- FALSE
+    }, delay = 1)
     
     showNotification(
       "Tabel og fil-upload tømt - indtast nye data eller upload ny fil. Titel og beskrivelse bevaret.", 

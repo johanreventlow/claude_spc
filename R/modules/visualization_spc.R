@@ -44,12 +44,39 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
   # Handle different chart types
   if (!is.null(config$n_col) && config$n_col %in% names(data)) {
     # Charts with numerator/denominator
-    taeller <- parse_danish_number(y_data_raw)
-    naevner <- parse_danish_number(data[[config$n_col]])
+    taeller_raw <- y_data_raw
+    naevner_raw <- data[[config$n_col]]
     
-    if (any(is.na(taeller)) || any(is.na(naevner)) || any(naevner == 0)) {
-      stop("Kunne ikke konvertere tæller eller nævner til numeriske værdier")
+    # Filter out rows with missing data BEFORE conversion
+    complete_rows <- !is.na(taeller_raw) & !is.na(naevner_raw) & 
+                     trimws(as.character(taeller_raw)) != "" & 
+                     trimws(as.character(naevner_raw)) != ""
+    
+    if (!any(complete_rows)) {
+      stop("Ingen komplette datarækker fundet. Tjek at både tæller og nævner kolonner har gyldige værdier.")
     }
+    
+    # Filter data to complete rows only
+    data_filtered <- data[complete_rows, , drop = FALSE]
+    taeller <- parse_danish_number(data_filtered[[config$y_col]])
+    naevner <- parse_danish_number(data_filtered[[config$n_col]])
+    
+    # Check conversion success
+    if (any(is.na(taeller)) || any(is.na(naevner))) {
+      invalid_taeller <- sum(is.na(taeller))
+      invalid_naevner <- sum(is.na(naevner))
+      stop(paste("Kunne ikke konvertere numeriske værdier:", 
+                 if(invalid_taeller > 0) paste(invalid_taeller, "ugyldige tæller værdier"), 
+                 if(invalid_naevner > 0) paste(invalid_naevner, "ugyldige nævner værdier")))
+    }
+    
+    # Check for zero denominators
+    if (any(naevner == 0)) {
+      stop("Nævner kan ikke være nul (division by zero)")
+    }
+    
+    # Update data reference to filtered data
+    data <- data_filtered
     
     if (chart_type == "run") {
       y_data <- (taeller / naevner) * 100
@@ -63,17 +90,32 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       ylab_text <- paste("Rate (", config$y_col, "/", config$n_col, ") %")
     }
   } else {
-    # Standard numeric data
-    y_data <- parse_danish_number(y_data_raw)
+    # Standard numeric data - filter out missing values first
+    complete_rows <- !is.na(y_data_raw) & trimws(as.character(y_data_raw)) != ""
+    
+    if (!any(complete_rows)) {
+      stop(paste("Ingen gyldige værdier fundet i", config$y_col, "kolonnen. Tjek at kolonne indeholder numeriske værdier."))
+    }
+    
+    # Filter data to complete rows only
+    data <- data[complete_rows, , drop = FALSE]
+    y_data <- parse_danish_number(data[[config$y_col]])
     ylab_text <- config$y_col
+    
+    # Check conversion success
+    if (all(is.na(y_data))) {
+      stop(paste("Kunne ikke konvertere", config$y_col, "til numeriske værdier. Tjek at værdier er gyldige tal."))
+    }
   }
   
-  # Check conversion success
-  if (all(is.na(y_data))) {
-    stop(paste("Kunne ikke konvertere", config$y_col, "til numeriske værdier"))
+  # Ensure we have minimum data points after filtering
+  if (length(y_data) < 3) {
+    stop(paste("For få gyldige datapunkter efter filtrering (", length(y_data), " fundet, minimum 3 påkrævet). Tilføj flere gyldige datapunkter."))
   }
   
-  # Handle x-axis data
+  # Handle x-axis data (update after data filtering)
+  x_data <- if (!is.null(config$x_col) && config$x_col %in% names(data)) data[[config$x_col]] else NULL
+  
   if (is.null(x_data)) {
     x_data <- 1:length(y_data)
     xlab_text <- "Observation"
