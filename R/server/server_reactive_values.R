@@ -10,6 +10,7 @@ initialize_reactive_values <- function() {
     hide_anhoej_rules = FALSE,    # NEW: Flag to force hide Anhøj rules
     
     updating_table = FALSE,
+    table_operation_in_progress = FALSE,  # Persistent flag for table operations
     auto_detect_done = FALSE,
     # Auto-save related values with restore guard
     auto_save_enabled = TRUE,
