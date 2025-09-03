@@ -3,8 +3,122 @@
 
 setup_data_table <- function(input, output, session, values) {
   
-  # Main table rendering
-  output$main_data_table <- rhandsontable::renderRHandsontable({
+  # Main table rendering - conditional on USE_DT_TABLE flag
+  if (USE_DT_TABLE) {
+    # DT implementation
+    output$main_data_table <- DT::renderDataTable({
+      req(values$current_data)
+      
+      # Include table_version to force re-render after restore
+      version_trigger <- values$table_version
+      cat("DEBUG: Rendering DT table with version", version_trigger, "\n")
+      
+      data <- values$current_data
+      
+      DT::datatable(
+        data,
+        selection = "none",
+        editable  = "all",  
+        # options   = list(pageLength = 10, dom = "t"),
+        # Gør redigering aktiv ved ét klik (simulerer dblclick)
+        callback  = JS("
+        table.on('click', 'tbody td', function() {
+          $(this).dblclick();
+        });
+      "),
+        
+        rownames = FALSE,
+        options = list(
+          paging = FALSE,  # Disable pagination to show all rows
+          scrollY = "400px",
+          scrollCollapse = TRUE,
+          dom = 'rt'  # Remove search box, info, and pagination
+          # columnDefs = list(
+          #   list(className = 'dt-center', targets = "_all")
+          # )
+        ),
+        # class = 'cell-border stripe'
+      )
+    })
+    
+    # Handle DT cell edits
+    observeEvent(input$main_data_table_cell_edit, {
+      cat("DEBUG: DT cell edit event triggered\n")
+      
+      if (values$updating_table || values$restoring_session) {
+        cat("DEBUG: Skipping DT edit - table updating or restoring\n")
+        return()
+      }
+      
+      values$updating_table <- TRUE
+      values$table_operation_in_progress <- TRUE
+      
+      on.exit({ 
+        values$updating_table <- FALSE 
+        cat("DEBUG: DT edit processing complete\n")
+      }, add = TRUE)
+      
+      # Clear persistent flag after delay
+      later::later(function() {
+        cat("DEBUG: Clearing table_operation_in_progress flag\n")
+        values$table_operation_in_progress <- FALSE
+      }, delay = 2)
+      
+      tryCatch({
+        info <- input$main_data_table_cell_edit
+        
+        # Get current data
+        data <- values$current_data
+        
+        # Update the edited cell
+        data[info$row, info$col] <- info$value
+        
+        values$current_data <- data
+        
+        # AUTO-ROW ADDITION: Check if last row has meaningful data
+        if (nrow(data) > 0) {
+          last_row_index <- nrow(data)
+          last_row <- data[last_row_index, ]
+          
+          # Check if last row has any meaningful data
+          has_meaningful_data <- any(sapply(last_row, function(x) {
+            if (is.logical(x)) return(isTRUE(x))
+            if (is.numeric(x)) return(!is.na(x))
+            if (is.character(x)) return(!is.na(x) && nzchar(trimws(x)))
+            return(FALSE)
+          }))
+          
+          if (has_meaningful_data) {
+            cat("DEBUG: Last row has meaningful data - adding new row\n")
+            
+            # Create new empty row with same structure
+            new_empty_row <- data[1, ]
+            new_empty_row[1, ] <- NA
+            
+            # Set logical columns to FALSE instead of NA
+            logical_cols <- sapply(new_empty_row, is.logical)
+            new_empty_row[logical_cols] <- FALSE
+            
+            # Add the new row
+            values$current_data <- rbind(values$current_data, new_empty_row)
+            
+            showNotification("Ny række tilføjet automatisk", type = "message", duration = 2)
+          }
+        }
+        
+      }, error = function(e) {
+        cat("ERROR in DT cell edit:\n", e$message, "\n")
+        showNotification(
+          paste("Fejl ved tabel-opdatering:", e$message),
+          type = "error",
+          duration = 3
+        )
+      })
+    }, ignoreInit = TRUE)
+    
+  } else {
+    # Original rhandsontable implementation
+    output$main_data_table <- rhandsontable::renderRHandsontable({
     req(values$current_data)
     
     # Include table_version to force re-render after restore
@@ -173,6 +287,8 @@ setup_data_table <- function(input, output, session, values) {
       )
     })
   }, ignoreInit = TRUE)
+  
+  } # End of USE_DT_TABLE else block
   
   # Add row
   observeEvent(input$add_row, {

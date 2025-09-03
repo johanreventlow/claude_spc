@@ -2,6 +2,7 @@ library(shiny)
 library(bslib)  # For page_navbar, card, sidebar etc.
 library(qicharts2)
 library(rhandsontable)
+library(DT)  # For alternative data table implementation
 library(dplyr)
 library(ggplot2)
 library(readr)
@@ -26,6 +27,10 @@ TEST_MODE_AUTO_LOAD <- TRUE
 # AUTO-RESTORE: Automatically restore previous sessions
 # Set to FALSE during development, TRUE for production
 AUTO_RESTORE_ENABLED <- FALSE
+
+# TABLE TYPE: Choose between DT and rhandsontable
+# Set to TRUE for DT (more stable), FALSE for rhandsontable (more features)
+USE_DT_TABLE <- TRUE
 
 # Load utility functions
 source("R/utils/danish_numbers.R")
