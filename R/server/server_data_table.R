@@ -67,13 +67,18 @@ setup_data_table <- function(input, output, session, values) {
       
       tryCatch({
         info <- input$main_data_table_cell_edit
+        cat("DEBUG: Edit info - row:", info$row, "col:", info$col, "value:", info$value, "\n")
         
         # Get current data
         data <- values$current_data
+        cat("DEBUG: Data dimensions:", nrow(data), "x", ncol(data), "\n")
+        cat("DEBUG: Column names:", paste(names(data), collapse=", "), "\n")
+        cat("DEBUG: Duplicate column names?", any(duplicated(names(data))), "\n")
         
         # Convert DT indices (0-based) to R indices (1-based)
         row_idx <- info$row + 1
         col_idx <- info$col + 1
+        cat("DEBUG: Converted indices - row:", row_idx, "col:", col_idx, "\n")
         
         # Update the edited cell
         data[row_idx, col_idx] <- info$value
