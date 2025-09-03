@@ -28,35 +28,19 @@ create_ui_main_content <- function() {
       # br(),
       
       # Main content in columns
-      layout_column_wrap(
-        width = 1/2,
-        heights_equal = "row",
-        # height = "400px",
-        # height = "45vh",
+      layout_columns(
+        # col_widths = c(12, 6, 6, 6, 6),
+        col_widths = c(6, 6, 6, 6),
+        height = "auto",
+        max_height = "100%",
         create_chart_settings_card(),
-        # layout_columns(
-        # col_widths = c(6, 6),
-        # height = "400px",
-        
-        
-        # min_height = "400px",
-        # max_height = "100%",
-        
         # Left column: Data table and chart settings
         
-        create_plot_only_card()
-      ),
-      
-      layout_column_wrap(
-        width = 1/2,
-        # height = "auto",
-        # min_height = "400px",
-        # max_height = "100%",
-        # Right column: Chart settings and export
-        
+        create_plot_only_card(),
+
         create_data_table_card(),
         layout_column_wrap(
-          width = 1,
+          width = 1/2,
           heights_equal = "row",
           create_status_value_boxes()
         ),
@@ -78,7 +62,7 @@ create_data_table_card <- function() {
         div(
           icon("table"),
           " Data",
-          style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+          # style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
         ),
         div(
           class = "btn-group",
@@ -145,16 +129,16 @@ create_chart_settings_card <- function() {
   card(
     full_screen = TRUE,
     # height = "400px",
-    height = "45vh",
+    # height = "45vh",
     card_header(
-      div(
-        style = "display: flex; justify-content: space-between; align-items: center;",
+      # div(
+      #   style = "display: flex; justify-content: space-between; align-items: center;",
         div(
           icon("sliders-h"),
           # icon("pen-to-square"),
           " Indstillinger",
-          style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-        )
+          # style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+        # )
       )
     ),
     # title = list(
@@ -366,7 +350,7 @@ create_plot_only_card <- function() {
       div(
         icon("chart-line"),
         " SPC Graf",
-        style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
+        # style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
       )
     ),
     card_body(
@@ -388,7 +372,7 @@ create_export_card <- function() {
         div(
           icon("download"), 
           " Eksport",
-          style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
+          # style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
         )
       ),
       card_body(
