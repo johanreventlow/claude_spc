@@ -72,82 +72,58 @@ create_ui_header <- function() {
        .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
        .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
 
-       .handsontable .htCore th {
-        background-color: ", HOSPITAL_COLORS$light, " !important;
-        color: ", HOSPITAL_COLORS$dark, " !important;
-        font-weight: 600 !important;
-       }
        
-        /* --- Excel-ish tema til DT --- */
-  table.dataTable {
-    font-family: Calibri, 'Segoe UI', Arial, sans-serif;
-    font-size: 13px;
+        /* --- Excel-ish tema til excelR --- */
+  .jexcel_container {
+    /*font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;*/
+    width: none !important;
+    height: auto !important;
+    padding-bottom: 25px !important;
+    position: none !important;
+    border: none !important;
   }
-  table.dataTable thead th {
+  
+  .jexcel thead td {
     background: #f3f3f3;
     border-bottom: 2px solid #bfbfbf;
     font-weight: 600;
     white-space: nowrap;
   }
 
-/* aktiv/redigeret celle: grøn kant som i Excel */
-  table.dataTable > tbody > td:focus-within {
-    outline: 2px solid #21a366;  /* Excel-grøn */
-    outline-offset: -2px;
+  /* Excel-lignende styling */
+  .jexcel tbody tr:nth-child(odd) {
+    background-color: #f9f9f9;
   }
-  /* gør scrolleren visuelt pænere */
-  .dataTables_scrollBody {
-    border-left: 1px solid #d9d9d9;
-    border-right: 1px solid #d9d9d9;
+  
+  .jexcel tbody tr:nth-child(even) {
+    background-color: #ffffff;
   }
-
-table.dataTable > tbody > tr:nth-child(odd) > td,
-table.dataTable > tbody > tr:nth-child(odd) > td > input,
-table.dataTable > tbody > tr:nth-child(odd):focus-within > td,
-table.dataTable > tbody > tr:nth-child(odd):focus-within > td > input,
-table.dataTable > tbody > tr:nth-child(odd) > th {
-  background-color: #f3f3f3 !important;
-  box-shadow: none !important;
-}
-table.dataTable > tbody > tr:nth-child(even) > td,
-table.dataTable > tbody > tr:nth-child(even) > td > input,
-table.dataTable > tbody > tr:nth-child(even):focus-within > td,
-table.dataTable > tbody > tr:nth-child(even):focus-within > td > input,
-table.dataTable > tbody > tr:nth-child(even) > th {
-  background-color: #ffffff !important;
-  box-shadow: none !important;
-}
-
-table.dataTable > tbody > tr:nth-child(odd):hover > td,
-table.dataTable > tbody > tr:nth-child(odd):hover > td > input,
-table.dataTable > tbody > tr:nth-child(even):hover > td,
-table.dataTable > tbody > tr:nth-child(even):hover > td > input {
-   background-color: #f8fbff !important;
-}
-
-table.dataTable > tbody > tr > td,
-table.dataTable > tbody > tr:focus-within > td {
-      border: 1px solid #d9d9d9 !important;   /* gitterlinjer */
-}
-
-table.dataTable > tbody > tr > td {
-   padding: 5px !important;
-}
-table.dataTable > tbody > tr:focus-within > td {
-   padding: 0px !important;
-}
-
-
-table.dataTable > tbody > tr > td > input,
-table.dataTable > tbody > tr:focus-within > td > input {
-  border: none !important;
-}
-
-table.dataTable > tbody > tr:focus-within > td > input {
-  padding: 6px 7px !important;
-}
-  table.dataTables_scrollBody (overflow: unset !important;
-}
+  
+  .jexcel tbody tr:hover {
+    background-color: #f0f8ff !important;
+  }
+  
+  .jexcel td {
+    border: 1px solid #d9d9d9;
+    padding: 4px 8px;
+  }
+  
+  /* Aktiv celle styling */
+  .jexcel .highlight {
+    background-color: #cce7ff !important;
+    border: 2px solid #0066cc !important;
+  }
+  
+  .jexcel_content {
+  overflow-y: unset !important; 
+  max-height: none !important;
+  padding-bottom: 25px !important; 
+  }
+  
+  .jexcel > thead > tr > td {
+    position: unset !important;
+  }
        
        
        
