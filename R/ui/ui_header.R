@@ -72,11 +72,84 @@ create_ui_header <- function() {
        .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
        .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
 
-      /* .handsontable .htCore th {
+       .handsontable .htCore th {
         background-color: ", HOSPITAL_COLORS$light, " !important;
         color: ", HOSPITAL_COLORS$dark, " !important;
         font-weight: 600 !important;
-       }*/
+       }
+       
+        /* --- Excel-ish tema til DT --- */
+  table.dataTable {
+    font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+  }
+  table.dataTable thead th {
+    background: #f3f3f3;
+    border-bottom: 2px solid #bfbfbf;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+/* aktiv/redigeret celle: grøn kant som i Excel */
+  table.dataTable > tbody > td:focus-within {
+    outline: 2px solid #21a366;  /* Excel-grøn */
+    outline-offset: -2px;
+  }
+  /* gør scrolleren visuelt pænere */
+  .dataTables_scrollBody {
+    border-left: 1px solid #d9d9d9;
+    border-right: 1px solid #d9d9d9;
+  }
+
+table.dataTable > tbody > tr:nth-child(odd) > td,
+table.dataTable > tbody > tr:nth-child(odd) > td > input,
+table.dataTable > tbody > tr:nth-child(odd):focus-within > td,
+table.dataTable > tbody > tr:nth-child(odd):focus-within > td > input,
+table.dataTable > tbody > tr:nth-child(odd) > th {
+  background-color: #f3f3f3 !important;
+  box-shadow: none !important;
+}
+table.dataTable > tbody > tr:nth-child(even) > td,
+table.dataTable > tbody > tr:nth-child(even) > td > input,
+table.dataTable > tbody > tr:nth-child(even):focus-within > td,
+table.dataTable > tbody > tr:nth-child(even):focus-within > td > input,
+table.dataTable > tbody > tr:nth-child(even) > th {
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+table.dataTable > tbody > tr:nth-child(odd):hover > td,
+table.dataTable > tbody > tr:nth-child(odd):hover > td > input,
+table.dataTable > tbody > tr:nth-child(even):hover > td,
+table.dataTable > tbody > tr:nth-child(even):hover > td > input {
+   background-color: #f8fbff !important;
+}
+
+table.dataTable > tbody > tr > td,
+table.dataTable > tbody > tr:focus-within > td {
+      border: 1px solid #d9d9d9 !important;   /* gitterlinjer */
+}
+
+table.dataTable > tbody > tr > td {
+   padding: 5px !important;
+}
+table.dataTable > tbody > tr:focus-within > td {
+   padding: 0px !important;
+}
+
+
+table.dataTable > tbody > tr > td > input,
+table.dataTable > tbody > tr:focus-within > td > input {
+  border: none !important;
+}
+
+table.dataTable > tbody > tr:focus-within > td > input {
+  padding: 6px 7px !important;
+}
+       
+       
+       
+       
       ")))
     )
   )
