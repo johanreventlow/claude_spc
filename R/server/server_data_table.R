@@ -71,8 +71,12 @@ setup_data_table <- function(input, output, session, values) {
         # Get current data
         data <- values$current_data
         
+        # Convert DT indices (0-based) to R indices (1-based)
+        row_idx <- info$row + 1
+        col_idx <- info$col + 1
+        
         # Update the edited cell
-        data[info$row, info$col] <- info$value
+        data[row_idx, col_idx] <- info$value
         
         values$current_data <- data
         
