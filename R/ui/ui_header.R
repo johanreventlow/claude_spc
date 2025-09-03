@@ -72,11 +72,11 @@ create_ui_header <- function() {
        .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
        .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
 
-       .handsontable .htCore th {
+      /* .handsontable .htCore th {
         background-color: ", HOSPITAL_COLORS$light, " !important;
         color: ", HOSPITAL_COLORS$dark, " !important;
         font-weight: 600 !important;
-       }
+       }*/
       ")))
     )
   )
