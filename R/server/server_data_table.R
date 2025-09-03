@@ -3,51 +3,51 @@
 
 setup_data_table <- function(input, output, session, values) {
   
-  # Main table rendering - conditional on USE_DT_TABLE flag
-  if (USE_DT_TABLE) {
-    # DT implementation
-    output$main_data_table <- DT::renderDataTable({
+  # Main table rendering using excelR
+    output$main_data_table <- excelR::renderExcel({
       req(values$current_data)
       
       # Include table_version to force re-render after restore
       version_trigger <- values$table_version
-      cat("DEBUG: Rendering DT table with version", version_trigger, "\n")
+      cat("DEBUG: Rendering excelR table with version", version_trigger, "\n")
       
       data <- values$current_data
       
-      DT::datatable(
-        data,
-        selection = "none",
-        editable  = "all",  
-        # options   = list(pageLength = 10, dom = "t"),
-        # Gør redigering aktiv ved ét klik (bruger DT's native API)
-        callback  = JS("
-        table.on('click', 'tbody td', function() {
-          var cell = table.cell(this);
-          if (!$(this).hasClass('editing')) {
-            cell.edit();
-          }
-        });
-      "),
-        
-        rownames = FALSE,
-        options = list(
-          paging = FALSE,  # Disable pagination to show all rows
-          # scrollY = "400px",
-          # scrollCollapse = TRUE,
-          # colReorder = FALSE,
-          dom = 'rt'  # Remove search box, info, and pagination
+      # Keep logical column as logical for excelR checkbox
+      # excelR handles logical values directly for checkbox type
+      
+      excelR::excelTable(
+        data = data,
+        columns = data.frame(
+          title = names(data),
+          type = ifelse(names(data) == "Skift", "checkbox", "text"),
+          width = case_when(
+            names(data) == "Skift" ~ 60,
+            names(data) == "Dato" ~ 100,
+            names(data) %in% c("Tæller", "Nævner") ~ 80,
+            names(data) == "Kommentar" ~ 300,
+            TRUE ~ 120
+          ),
+          stringsAsFactors = FALSE
         ),
-        # class = 'cell-border stripe'
+        allowInsertRow = FALSE,
+        allowInsertColumn = FALSE,
+        allowDeleteRow = FALSE,
+        allowDeleteColumn = FALSE,
+        allowRenameColumn = FALSE,
+        columnSorting = FALSE,
+        rowDrag = FALSE,
+        columnDrag = FALSE,
+        autoFill = TRUE
       )
     })
     
-    # Handle DT cell edits
-    observeEvent(input$main_data_table_cell_edit, {
-      cat("DEBUG: DT cell edit event triggered\n")
+    # Handle excelR table changes
+    observeEvent(input$main_data_table, {
+      cat("DEBUG: excelR table change event triggered\n")
       
       if (values$updating_table || values$restoring_session) {
-        cat("DEBUG: Skipping DT edit - table updating or restoring\n")
+        cat("DEBUG: Skipping excelR change - table updating or restoring\n")
         return()
       }
       
@@ -56,7 +56,7 @@ setup_data_table <- function(input, output, session, values) {
       
       on.exit({ 
         values$updating_table <- FALSE 
-        cat("DEBUG: DT edit processing complete\n")
+        cat("DEBUG: excelR change processing complete\n")
       }, add = TRUE)
       
       # Clear persistent flag after delay
@@ -66,58 +66,80 @@ setup_data_table <- function(input, output, session, values) {
       }, delay = 2)
       
       tryCatch({
-        info <- input$main_data_table_cell_edit
-        cat("DEBUG: Edit info - row:", info$row, "col:", info$col, "value:", info$value, "\n")
+        new_data <- input$main_data_table
         
-        # Get current data
-        data <- values$current_data
-        cat("DEBUG: Data dimensions:", nrow(data), "x", ncol(data), "\n")
-        cat("DEBUG: Column names:", paste(names(data), collapse=", "), "\n")
-        cat("DEBUG: Duplicate column names?", any(duplicated(names(data))), "\n")
-        
-        # Convert DT indices (0-based) to R indices (1-based)
-        row_idx <- info$row + 1
-        col_idx <- info$col + 1
-        cat("DEBUG: Converted indices - row:", row_idx, "col:", col_idx, "\n")
-        
-        # Update the edited cell
-        data[row_idx, col_idx] <- info$value
-        
-        values$current_data <- data
-        
-        # AUTO-ROW ADDITION: Check if last row has meaningful data
-        if (nrow(data) > 0) {
-          last_row_index <- nrow(data)
-          last_row <- data[last_row_index, ]
-          
-          # Check if last row has any meaningful data
-          has_meaningful_data <- any(sapply(last_row, function(x) {
-            if (is.logical(x)) return(isTRUE(x))
-            if (is.numeric(x)) return(!is.na(x))
-            if (is.character(x)) return(!is.na(x) && nzchar(trimws(x)))
-            return(FALSE)
-          }))
-          
-          if (has_meaningful_data) {
-            cat("DEBUG: Last row has meaningful data - adding new row\n")
-            
-            # Create new empty row with same structure
-            new_empty_row <- data[1, ]
-            new_empty_row[1, ] <- NA
-            
-            # Set logical columns to FALSE instead of NA
-            logical_cols <- sapply(new_empty_row, is.logical)
-            new_empty_row[logical_cols] <- FALSE
-            
-            # Add the new row
-            values$current_data <- rbind(values$current_data, new_empty_row)
-            
-            showNotification("Ny række tilføjet automatisk", type = "message", duration = 2)
-          }
+        if (is.null(new_data) || length(new_data) == 0) {
+          cat("DEBUG: No data received from excelR\n")
+          return()
         }
         
+        # Debug excelR data structure
+        cat("DEBUG: excelR data class:", class(new_data), "\n")
+        cat("DEBUG: excelR data structure:", str(new_data), "\n")
+        
+        # excelR sends data in new_data$data as list of rows
+        if (!is.null(new_data$data) && length(new_data$data) > 0) {
+          # Get column names from colHeaders
+          col_names <- unlist(new_data$colHeaders)
+          
+          # Convert list of rows to data frame
+          row_list <- new_data$data
+          
+          # Create empty data frame with correct structure
+          new_df <- data.frame(matrix(NA, nrow = length(row_list), ncol = length(col_names)))
+          names(new_df) <- col_names
+          
+          # Fill data frame row by row
+          for (i in seq_along(row_list)) {
+            row_data <- row_list[[i]]
+            for (j in seq_along(row_data)) {
+              if (j <= length(col_names)) {
+                new_df[i, j] <- row_data[[j]]
+              }
+            }
+          }
+          
+          # Convert data types properly
+          # Skift column (logical) - excelR sends checkbox as logical already
+          if ("Skift" %in% names(new_df)) {
+            # Handle both logical and string representations
+            skift_values <- new_df$Skift
+            if (is.character(skift_values)) {
+              new_df$Skift <- skift_values == "TRUE" | skift_values == "true" | skift_values == TRUE
+            } else {
+              new_df$Skift <- as.logical(skift_values)
+            }
+          }
+          
+          # Numeric columns
+          numeric_cols <- c("Tæller", "Nævner")
+          for (col in numeric_cols) {
+            if (col %in% names(new_df)) {
+              new_df[[col]] <- as.numeric(new_df[[col]])
+            }
+          }
+          
+          # Date column
+          if ("Dato" %in% names(new_df)) {
+            new_df$Dato <- as.character(new_df$Dato)
+          }
+          
+          # Character columns
+          if ("Kommentar" %in% names(new_df)) {
+            new_df$Kommentar <- as.character(new_df$Kommentar)
+          }
+          
+        } else {
+          cat("DEBUG: No data found in excelR structure\n")
+          return()
+        }
+        
+        values$current_data <- new_df
+        
+        showNotification("Tabel opdateret", type = "message", duration = 2)
+        
       }, error = function(e) {
-        cat("ERROR in DT cell edit:\n", e$message, "\n")
+        cat("ERROR in excelR table change:\n", e$message, "\n")
         showNotification(
           paste("Fejl ved tabel-opdatering:", e$message),
           type = "error",
@@ -125,180 +147,6 @@ setup_data_table <- function(input, output, session, values) {
         )
       })
     }, ignoreInit = TRUE)
-    
-  } else {
-    # Original rhandsontable implementation
-    output$main_data_table <- rhandsontable::renderRHandsontable({
-    req(values$current_data)
-    
-    # Include table_version to force re-render after restore
-    version_trigger <- values$table_version
-    cat("DEBUG: Rendering table with version", version_trigger, "\n")
-    
-    data <- values$current_data
-    
-    hot <- rhandsontable::rhandsontable(
-      data,
-      # height = 400,
-      stretchH = "all",
-      contextMenu = TRUE,
-      manualColumnResize = TRUE,
-      # fillHandle = list(direction = "vertical", autoInsertRow = FALSE),
-      useTypes = FALSE  # Disable types for better editability after restore
-    ) %>%
-      rhandsontable::hot_context_menu(
-        allowRowEdit = TRUE,
-        allowColEdit = TRUE
-      ) %>%
-      rhandsontable::hot_table(
-        highlightCol = TRUE,
-        highlightRow = TRUE,
-      ) %>%
-      rhandsontable::hot_cols(
-        colWidths = c(50, 100, 75, 75, 300),
-        columnHeaderHeight = 50,
-        manualColumnMove = TRUE,
-        manualColumnResize = TRUE
-      )
-    
-    # Configure checkbox column if Skift exists
-    if ("Skift" %in% names(data)) {
-      skift_col_index <- which(names(data) == "Skift")
-      hot <- hot %>% 
-        rhandsontable::hot_col(
-          skift_col_index, 
-          type = "checkbox",
-          halign = "htCenter",  # Horizontal center alignment
-          valign = "htMiddle"   # Vertical middle alignment
-        )
-    }
-    
-    
-    return(hot)
-  })
-  
-  # Handle table changes
-  observeEvent(input$main_data_table, {
-    cat("DEBUG: Table change event triggered\n")
-    
-    if (values$updating_table) {
-      cat("DEBUG: Skipping table change - updating_table is TRUE\n")
-      return()
-    }
-    
-    if (values$restoring_session) {
-      cat("DEBUG: Skipping table change - restoring_session is TRUE\n")
-      return()
-    }
-    
-    req(input$main_data_table)
-    
-    # Set both immediate and persistent flags
-    values$updating_table <- TRUE
-    values$table_operation_in_progress <- TRUE
-    
-    on.exit({ 
-      values$updating_table <- FALSE 
-      cat("DEBUG: Table change processing complete\n")
-    }, add = TRUE)
-    
-    # Clear persistent flag after a delay to prevent auto-save interference
-    later::later(function() {
-      cat("DEBUG: Clearing table_operation_in_progress flag\n")
-      values$table_operation_in_progress <- FALSE
-    }, delay = 2)
-    
-    tryCatch({
-      new_data <- rhandsontable::hot_to_r(input$main_data_table)
-      
-      if (!is.null(values$current_data) && identical(values$current_data, new_data)) {
-        return()
-      }
-      
-      # Check if column names are changed
-      current_names <- names(values$current_data)
-      new_names <- names(new_data)
-      
-      if (!identical(current_names, new_names)) {
-        # Validate new column names
-        if (length(new_names) != length(unique(new_names))) {
-          showNotification(
-            "Kolonnenavne skal være unikke. Ændring ignoreret.",
-            type = "error",
-            duration = 4
-          )
-          return()
-        }
-        
-        if (any(is.na(new_names) | new_names == "" | trimws(new_names) == "")) {
-          showNotification(
-            "Kolonnenavne kan ikke være tomme. Ændring ignoreret.",
-            type = "error", 
-            duration = 4
-          )
-          return()
-        }
-        
-        # Show confirmation of column name changes
-        changed_indices <- which(current_names != new_names)
-        if (length(changed_indices) > 0) {
-          change_summary <- paste(
-            paste0("'", current_names[changed_indices], "' → '", new_names[changed_indices], "'"),
-            collapse = ", "
-          )
-          
-          showNotification(
-            paste("Kolonnenavne opdateret:", change_summary),
-            type = "message",
-            duration = 4
-          )
-        }
-      }
-      
-      values$current_data <- new_data
-      
-      # AUTO-ROW ADDITION: Check if last row has meaningful data and add new row if needed
-      if (nrow(new_data) > 0) {
-        last_row_index <- nrow(new_data)
-        last_row <- new_data[last_row_index, ]
-        
-        # Check if last row has any meaningful data (excluding FALSE checkboxes)
-        has_meaningful_data <- any(sapply(last_row, function(x) {
-          if (is.logical(x)) return(isTRUE(x))  # Only TRUE checkboxes count
-          if (is.numeric(x)) return(!is.na(x))
-          if (is.character(x)) return(!is.na(x) && nzchar(trimws(x)))
-          return(FALSE)
-        }))
-        
-        if (has_meaningful_data) {
-          cat("DEBUG: Last row has meaningful data - adding new row\n")
-          
-          # Create new empty row with same structure
-          new_empty_row <- new_data[1, ]
-          new_empty_row[1, ] <- NA
-          
-          # Set logical columns to FALSE instead of NA
-          logical_cols <- sapply(new_empty_row, is.logical)
-          new_empty_row[logical_cols] <- FALSE
-          
-          # Add the new row
-          values$current_data <- rbind(values$current_data, new_empty_row)
-          
-          showNotification("Ny række tilføjet automatisk", type = "message", duration = 2)
-        }
-      }
-      
-    }, error = function(e) {
-      cat("ERROR in main_data_table observer:", e$message, "\n")
-      showNotification(
-        paste("Fejl ved tabel-opdatering:", e$message),
-        type = "error",
-        duration = 3
-      )
-    })
-  }, ignoreInit = TRUE)
-  
-  } # End of USE_DT_TABLE else block
   
   # Add row
   observeEvent(input$add_row, {

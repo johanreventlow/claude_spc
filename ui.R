@@ -3,7 +3,6 @@
 
 library(shiny)
 library(bslib)
-library(rhandsontable)
 
 # Load modules needed for UI
 source("R/modules/visualization_module.R")

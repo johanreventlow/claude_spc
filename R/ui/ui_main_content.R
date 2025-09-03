@@ -102,16 +102,8 @@ create_data_table_card <- function() {
       # fill = FALSE,
       min_height = "400px",
       
-      # Data table - conditional on USE_DT_TABLE flag
-      if (USE_DT_TABLE) {
-        DT::dataTableOutput("main_data_table")
-      } else {
-        # Rhandsontable
-        # div(
-        #   style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; min-height: 400px;",
-        rhandsontable::rHandsontableOutput("main_data_table")
-        # ),
-      }
+      # Data table using excelR
+      excelR::excelOutput("main_data_table", height = "auto")
       
       # Tabel info (commented out for cleaner UI)
       # div(

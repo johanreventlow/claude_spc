@@ -1,4 +1,4 @@
-# app.R
+# app.R0
 # Main application file that loads all components
 
 # Load global configuration and utilities
