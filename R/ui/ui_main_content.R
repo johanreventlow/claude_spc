@@ -32,7 +32,7 @@ create_ui_main_content <- function() {
         width = 1/2,
         heights_equal = "row",
         # height = "400px",
-        height = "45vh",
+        # height = "45vh",
         create_chart_settings_card(),
         # layout_columns(
         # col_widths = c(6, 6),
