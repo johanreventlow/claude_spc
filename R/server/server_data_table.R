@@ -19,7 +19,7 @@ setup_data_table <- function(input, output, session, values) {
       stretchH = "all",
       contextMenu = TRUE,
       manualColumnResize = TRUE,
-      fillHandle = list(direction = "vertical", autoInsertRow = FALSE),
+      # fillHandle = list(direction = "vertical", autoInsertRow = FALSE),
       useTypes = FALSE  # Disable types for better editability after restore
     ) %>%
       rhandsontable::hot_context_menu(
