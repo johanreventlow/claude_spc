@@ -20,22 +20,23 @@ setup_data_table <- function(input, output, session, values) {
         selection = "none",
         editable  = "all",  
         # options   = list(pageLength = 10, dom = "t"),
-        # Gør redigering aktiv ved ét klik (simulerer dblclick)
+        # Gør redigering aktiv ved ét klik (bruger DT's native API)
         callback  = JS("
         table.on('click', 'tbody td', function() {
-          $(this).dblclick();
+          var cell = table.cell(this);
+          if (!$(this).hasClass('editing')) {
+            cell.edit();
+          }
         });
       "),
         
         rownames = FALSE,
         options = list(
           paging = FALSE,  # Disable pagination to show all rows
-          scrollY = "400px",
-          scrollCollapse = TRUE,
+          # scrollY = "400px",
+          # scrollCollapse = TRUE,
+          # colReorder = FALSE,
           dom = 'rt'  # Remove search box, info, and pagination
-          # columnDefs = list(
-          #   list(className = 'dt-center', targets = "_all")
-          # )
         ),
         # class = 'cell-border stripe'
       )

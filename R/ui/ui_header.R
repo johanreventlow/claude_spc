@@ -146,6 +146,8 @@ table.dataTable > tbody > tr:focus-within > td > input {
 table.dataTable > tbody > tr:focus-within > td > input {
   padding: 6px 7px !important;
 }
+  table.dataTables_scrollBody (overflow: unset !important;
+}
        
        
        
