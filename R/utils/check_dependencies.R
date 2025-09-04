@@ -5,7 +5,6 @@ required_packages <- c(
   "shiny",
   "bslib", 
   "qicharts2",
-  "rhandsontable",
   "dplyr",
   "ggplot2",
   "readr",
