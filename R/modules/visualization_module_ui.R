@@ -10,7 +10,7 @@ visualizationModuleUI <- function(id) {
   # Only the plot - no status info
   div(
     id = ns("plot_container"),
-    style = "position: relative; ",
+    style = "position: relative; height: 100%;",
     
     # Dynamic content that switches between plot and placeholder
     uiOutput(ns("dynamic_content"))
