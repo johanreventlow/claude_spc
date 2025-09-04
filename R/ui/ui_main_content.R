@@ -298,6 +298,7 @@ create_chart_settings_card <- function() {
 create_plot_only_card <- function() {
   card(
     full_screen = TRUE,
+    fillable = TRUE,
     card_header(
       div(
         icon("chart-line"),
@@ -305,7 +306,11 @@ create_plot_only_card <- function() {
       )
     ),
     card_body(
-      visualizationModuleUI("visualization")
+      div(
+        style ="height: 100%",
+        fill = TRUE, 
+        visualizationModuleUI("visualization")
+      )
     )
   )
 }
