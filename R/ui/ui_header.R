@@ -118,7 +118,7 @@ create_ui_header <- function() {
   .jexcel_content {
   overflow-y: unset !important; 
   max-height: none !important;
-  padding-bottom: 25px !important; 
+  margin-bottom: 25px !important; 
   }
   
   .jexcel > thead > tr > td {
