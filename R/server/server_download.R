@@ -66,7 +66,7 @@ create_complete_excel_export <- function(file, input, values) {
   
   if (!is.null(active_data_for_export)) {
     tryCatch({
-      cat("DEBUG: Creating Excel complete export with 2 sheets\n")
+      # Creating Excel complete export with 2 sheets
       
       # Create Excel workbook
       wb <- openxlsx::createWorkbook()
