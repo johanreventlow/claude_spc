@@ -62,9 +62,6 @@ create_ui_header <- function() {
 
       tags$style(HTML(
         paste0("
-        .htContextMenu {
-         z-index: 99999 !important;
-        }
        .nav-link {padding: .5rem 1rem !important}
 
        .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }

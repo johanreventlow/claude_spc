@@ -147,7 +147,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     output$dynamic_content <- renderUI({
       div(
         style = "width: 100%; aspect-ratio: 16/9; max-height: 60vh;",
-        # style = "width: 100%; height: 100%;", #max-height: 60vh;",
         plotOutput(ns("spc_plot"), height = "100%", width = "100%")
       )
     })
