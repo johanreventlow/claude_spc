@@ -2,7 +2,8 @@
 # SPC plot generation functions
 
 library(qicharts2)
-library(ggplot2)
+# library(ggplot2)
+library(plotly)
 library(lubridate)
 
 # Helper function: Generate SPC plot
@@ -340,39 +341,105 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       if (!is.null(n_col_name)) qic_args$n <- as.name(n_col_name)
       if (!is.null(part_positions)) qic_args$part <- part_positions
       
+      cat("DEBUG: About to call qic() with these arguments:\n")
+      cat("  - data dim:", paste(dim(data), collapse = "x"), "\n")
+      cat("  - chart:", chart_type, "\n")
+      cat("  - x column:", x_col_for_qic, "\n")
+      cat("  - y column:", y_col_name, "\n")
+      cat("  - n column:", n_col_name, "\n")
+      cat("  - part positions:", paste(part_positions, collapse = ", "), "\n")
+      cat("  - sample data rows (first 3):\n")
+      print(head(data, 3))
+      
       qic_data <- do.call(qicharts2::qic, qic_args)
+      
+      cat("SUCCESS: qic() completed successfully!\n")
+      cat("  - qic_data dimensions:", paste(dim(qic_data), collapse = "x"), "\n")
+      cat("  - qic_data columns:", paste(names(qic_data), collapse = ", "), "\n")
+      cat("  - First few rows of qic_data:\n")
+      print(head(qic_data, 3))
+      
+      # Convert proportions to percentages for run charts with rate data
+      if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
+        cat("DEBUG: Converting qic proportions to percentages for display\n")
+        qic_data$y <- qic_data$y * 100
+        qic_data$cl <- qic_data$cl * 100
+        if (!is.null(qic_data$ucl)) qic_data$ucl <- qic_data$ucl * 100
+        if (!is.null(qic_data$lcl)) qic_data$lcl <- qic_data$lcl * 100
+      }
     
     }, error = function(e) {
+      cat("ERROR: qic() failed with message:", e$message, "\n")
+      cat("ERROR: Full error details:\n")
+      print(e)
+      cat("ERROR: Data summary at time of failure:\n")
+      cat("  - Data rows:", nrow(data), "\n")
+      cat("  - Chart type:", chart_type, "\n")
+      cat("  - Y column:", y_col_name, "exists:", y_col_name %in% names(data), "\n")
+      cat("  - N column:", n_col_name, "exists:", !is.null(n_col_name) && n_col_name %in% names(data), "\n")
+      cat("  - X column:", x_col_for_qic, "exists:", x_col_for_qic %in% names(data), "\n")
+      cat("  - Part positions:", part_positions, "\n")
       stop("Fejl ved qic() kald: ", e$message)
     })
     
-    # Build custom ggplot using qic calculations
-    plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) +
-      # Data points
-      ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$primary) +
-      ggplot2::geom_line(color = HOSPITAL_COLORS$primary, alpha = 0.7) +
-      
-      # Center line
-      ggplot2::geom_line(ggplot2::aes(y = cl), color = HOSPITAL_COLORS$secondary, 
-                        linetype = "solid", size = 1) +
-      
-      # Control limits
-      ggplot2::geom_line(ggplot2::aes(y = ucl), color = HOSPITAL_COLORS$danger, 
-                        linetype = "dashed", size = 0.8) +
-      ggplot2::geom_line(ggplot2::aes(y = lcl), color = HOSPITAL_COLORS$danger, 
-                        linetype = "dashed", size = 0.8) +
-      
-      # Labels and theme
-      ggplot2::labs(title = call_args$title, x = call_args$xlab, y = call_args$ylab) +
-      ggplot2::theme_minimal()
+    # Build custom plotly plot using qic calculations
+    cat("DEBUG: Starting plotly plot construction...\n")
     
-    # Fix x-axis if we converted dates to numeric
-    if (call_args$xlab == "Dato" && is.numeric(qic_data$x)) {
-      plot <- plot + 
-        ggplot2::scale_x_continuous(
-          labels = function(x) format(as.Date(x, origin = "1970-01-01"), "%Y-%m"),
-          breaks = scales::pretty_breaks(n = 6)
-        )
+    # Start with empty plot and add data points only
+    tryCatch({
+      plot <- plotly::plot_ly(qic_data) %>%
+        plotly::add_trace(x = ~x, y = ~y, type = "scatter", mode = "markers+lines",
+                         name = "Data", 
+                         marker = list(color = HOSPITAL_COLORS$secondary, size = 8),
+                         line = list(color = HOSPITAL_COLORS$secondary)) |> 
+        
+        # Center line - using add_trace with explicit mode=lines and no markers
+        plotly::add_trace(x = ~x, y = ~cl, name = "Median", 
+                         type = "scatter", mode = "lines",
+                         line = list(color = HOSPITAL_COLORS$hospitalblue, width = 2, dash = "solid"),
+                         marker = list(opacity = 0))
+      
+      cat("DEBUG: Basic plot and center line added successfully\n")
+    }, error = function(e) {
+      cat("ERROR: Failed to create basic plotly plot:", e$message, "\n")
+      stop("Plotly basic construction failed: ", e$message)
+    })
+      
+    # Only add control limits if they exist (not NA)
+    if (!all(is.na(qic_data$ucl))) {
+      plot <- plot %>%
+        plotly::add_trace(x = ~x, y = ~ucl, name = "UCL", type = "scatter", mode = "lines",
+                         line = list(color = HOSPITAL_COLORS$danger, width = 2, dash = "dash"),
+                         marker = list(opacity = 0))
+    }
+    
+    if (!all(is.na(qic_data$lcl))) {
+      plot <- plot %>%
+        plotly::add_trace(x = ~x, y = ~lcl, name = "LCL", type = "scatter", mode = "lines",
+                         line = list(color = HOSPITAL_COLORS$danger, width = 2, dash = "dash"), 
+                         marker = list(opacity = 0))
+    }
+    
+    # Layout and labels - conditional % suffix
+    y_axis_config <- list(title = "", showgrid = FALSE)
+    if (grepl("%", call_args$ylab) || (!is.null(config$n_col) && config$n_col %in% names(data))) {
+      y_axis_config$ticksuffix <- "%"
+    }
+    
+    plot <- plot %>%
+      plotly::layout(
+        title = call_args$title,
+        xaxis = list(title = "", showgrid = FALSE),
+        yaxis = y_axis_config,
+        hovermode = "x unified",
+        showlegend = TRUE
+      )
+    
+    # Add target line if provided
+    if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+      plot <- plot %>%
+        plotly::add_lines(y = target_value, name = "Target", 
+                         line = list(color = "#2E8B57", width = 2, dash = "solid"))
     }
     
     # Add phase separation lines if parts exist
@@ -381,43 +448,71 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
       if (length(phase_changes) > 0) {
         for (change_point in phase_changes) {
-          plot <- plot + 
-            ggplot2::geom_vline(xintercept = qic_data$x[change_point + 1], 
-                               color = HOSPITAL_COLORS$warning, 
-                               linetype = "dotted", size = 1, alpha = 0.7)
+          plot <- plot %>%
+            plotly::add_lines(x = c(qic_data$x[change_point + 1], qic_data$x[change_point + 1]),
+                             y = c(min(qic_data$y, na.rm = TRUE), max(qic_data$y, na.rm = TRUE)),
+                             name = paste("Phase Change", change_point),
+                             line = list(color = HOSPITAL_COLORS$warning, width = 1, dash = "dot"))
         }
       }
     }
     
-    # Add target line if provided
-    if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
-      plot <- plot + 
-        ggplot2::geom_hline(yintercept = target_value, 
-                           color = "#2E8B57", linetype = "solid", size = 1.2,
-                           alpha = 0.8)
-    }
+    cat("DEBUG: Plotly plot construction completed successfully!\n")
+    cat("DEBUG: Plot class:", class(plot), "\n")
+    
+    # Configure plotly toolbar
+    plot <- plot |> 
+      plotly::config(displayModeBar = FALSE,
+        modeBarButtonsToRemove = c('zoom2d','pan2d','lasso2d','select','resetScale',
+                                  'hoverClosestCartesian','hoverCompareCartesian'),
+        displaylogo = FALSE
+      ) |> layout(showlegend = FALSE)
     
     return(plot)
     
   }, error = function(e) {
-    # Fallback to basic ggplot if qic() fails
+    # Fallback to basic plotly plot if qic() fails
     plot_data <- data.frame(x = call_args$x, y = call_args$y)
     
-    plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = x, y = y)) +
-      ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$primary) +
-      ggplot2::geom_line(color = HOSPITAL_COLORS$primary, alpha = 0.7) +
-      ggplot2::geom_hline(yintercept = median(call_args$y, na.rm = TRUE), 
-                         color = HOSPITAL_COLORS$secondary, linetype = "dashed") +
-      ggplot2::labs(title = call_args$title, x = call_args$xlab, y = call_args$ylab) +
-      ggplot2::theme_minimal()
+    plot <- plotly::plot_ly(plot_data) %>%
+      plotly::add_trace(x = ~x, y = ~y, type = "scatter", mode = "markers+lines",
+                       name = "Data",
+                       marker = list(color = HOSPITAL_COLORS$secondary, size = 8),
+                       line = list(color = HOSPITAL_COLORS$secondary)) %>%
+      plotly::add_trace(x = ~x, y = median(call_args$y, na.rm = TRUE), name = "Median",
+                       type = "scatter", mode = "lines",
+                       line = list(color = HOSPITAL_COLORS$hospitalblue, width = 2, dash = "dash"),
+                       marker = list(size = 0))
+    
+    # Conditional % suffix for fallback too
+    y_axis_config <- list(title = "", showgrid = FALSE)
+    if (grepl("%", call_args$ylab)) {
+      y_axis_config$ticksuffix <- "%"
+    }
+    
+    plot <- plot %>%
+      plotly::layout(
+        title = call_args$title,
+        xaxis = list(title = "", showgrid = FALSE),
+        yaxis = y_axis_config,
+        hovermode = "x unified",
+        showlegend = TRUE
+      )
     
     # Add target line if provided
     if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
-      plot <- plot + 
-        ggplot2::geom_hline(yintercept = target_value, 
-                           color = "#2E8B57", linetype = "solid", size = 1.2,
-                           alpha = 0.8)
+      plot <- plot %>%
+        plotly::add_lines(y = target_value, name = "Target",
+                         line = list(color = "#2E8B57", width = 2, dash = "solid"))
     }
+    
+    # Configure plotly toolbar for fallback too
+    plot <- plot %>%
+      plotly::config(
+        modeBarButtonsToRemove = c('zoom2d','pan2d','lasso2d','select','resetScale',
+                                  'hoverClosestCartesian','hoverCompareCartesian'),
+        displaylogo = FALSE
+      )
     
     return(plot)
   })
