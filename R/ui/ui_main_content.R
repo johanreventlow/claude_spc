@@ -21,15 +21,10 @@ create_ui_main_content <- function() {
     # Data table and visualization - only when user has started
     conditionalPanel(
       condition = "output.dataLoaded == 'TRUE'",
-      # tagList(
-      # Status information as value boxes (top row)
-      # create_status_value_boxes(),
-      
-      # br(),
+
       
       # Main content in columns
       layout_columns(
-        # col_widths = c(12, 6, 6, 6, 6),
         col_widths = c(6, 6, 6, 6),
         height = "auto",
         max_height = "100%",
@@ -42,10 +37,10 @@ create_ui_main_content <- function() {
         layout_column_wrap(
           width = 1/2,
           heights_equal = "row",
-          create_status_value_boxes()
+        # Status information as value boxes  
+        create_status_value_boxes()
         ),
         # create_export_card(),
-        # )
       )
     )
   )
@@ -54,15 +49,12 @@ create_ui_main_content <- function() {
 create_data_table_card <- function() {
   card(
     full_screen = TRUE,
-    # height = "400px",
-    height = "45vh",
     card_header(
       div(
         style = "display: flex; justify-content: space-between; align-items: center;",
         div(
           icon("table"),
           " Data",
-          # style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
         ),
         div(
           class = "btn-group",
@@ -98,23 +90,9 @@ create_data_table_card <- function() {
       )
     ),
     card_body(
-      style = "padding: 10px;",
-      # fill = FALSE,
-      min_height = "400px",
-      
       # Data table using excelR
       excelR::excelOutput("main_data_table", height = "auto")
       
-      # Tabel info (commented out for cleaner UI)
-      # div(
-      #   style = "margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;",
-      #   icon("info-circle"),
-      #   " Dobbeltklik på ", strong("kolonnenavn"), " for at redigere • Dobbeltklik på celle for data • Højreklik for menu",
-      #   br(),
-      #   " Alternativt: Brug redigér-knappen ", icon("edit"), " for modal dialog",
-      #   br(),
-      #   strong("Dato-formater:"), " 01-01-2024, 1/1/2024, 01.01.24, 1 jan 2024, 2024-01-01 og mange flere"
-      # )
     )
   )
 }
@@ -125,26 +103,14 @@ create_chart_settings_card <- function() {
   #   condition = "output.has_data == 'true'",
   card(
     full_screen = TRUE,
-    # height = "400px",
-    # height = "45vh",
     card_header(
-      # div(
-      #   style = "display: flex; justify-content: space-between; align-items: center;",
         div(
           icon("sliders-h"),
-          # icon("pen-to-square"),
           " Indstillinger",
-          # style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-        # )
       )
     ),
-    # title = list(
-    #   icon("list-check"),
-    #   " Indstillinger"
-    # )),
     # Tab 1: Diagram settings
     card_body(
-      # navset_underline(
     navset_tab(
       nav_panel(
         "Detaljer",
@@ -155,10 +121,6 @@ create_chart_settings_card <- function() {
         div(
           style = "padding: 10px 0;",
           #Chart type and target value side by side
-          # layout_columns(
-          #   col_widths = c(6, 6),
-          #   row_heights = c(3, 1),
-          #   fillable = TRUE,
           layout_column_wrap(
               width = 1/2,
               layout_column_wrap(
@@ -173,19 +135,13 @@ create_chart_settings_card <- function() {
                 ),
                 
                 # Target value input
-                # div(
                 textInput(
                   "target_value",
                   "Målværdi:",
                   value = "",
                   placeholder = "fx 85%, 0,85 eller 25"
                 ),
-                # div(
-                #   style = "font-size: 0.7rem; color: #666; margin-top: -5px;",
-                #   icon("info-circle", style = "font-size: 0.6rem;"),
-                #   " Valgfri målværdi"
-                # )
-                # ),
+
                 
                 # Chart type selection
                 selectInput(
@@ -202,8 +158,7 @@ create_chart_settings_card <- function() {
               "Datadefinition:",
               value = "",
               placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
-              # height = "100px",
-              height = "300px",
+              height = "200px",
               resize = "none"
             )
           )
@@ -347,7 +302,6 @@ create_plot_only_card <- function() {
       div(
         icon("chart-line"),
         " SPC Graf",
-        # style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
       )
     ),
     card_body(
@@ -369,7 +323,6 @@ create_export_card <- function() {
         div(
           icon("download"), 
           " Eksport",
-          # style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
         )
       ),
       card_body(
