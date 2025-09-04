@@ -21,7 +21,7 @@ library(later)  # For delayed execution
 # DEVELOPMENT FLAGS
 # TEST MODE: Auto-load example data for qic() debugging
 # Set to FALSE to disable auto-loading and return to normal user-controlled data loading
-TEST_MODE_AUTO_LOAD <- TRUE
+TEST_MODE_AUTO_LOAD <- FALSE
 
 # AUTO-RESTORE: Automatically restore previous sessions
 # Set to FALSE during development, TRUE for production
