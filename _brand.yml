@@ -7,6 +7,29 @@ logo:
   image: "www/Logo_Bispebjerg_og Frederiksberg_RGB_neg.png"
   alt: "Bispebjerg og Frederiksberg Hospital Logo"
 
+# RegionH Hospitalsfarver
+# --celestial-blue: #009ce8ff;
+# --picton-blue: #4db9efff;
+# --pale-azure: #99d7f6ff;
+# --columbia-blue: #ccebfaff;
+# --teal: #38827fff;
+# --jet: #333333ff;
+# --davys-gray: #565656ff;
+# --battleship-gray: #858585ff;
+# --timberwolf: #d6d6d6ff;
+
+# BFH blå toner
+# --prussian-blue: #00293dff;
+# --indigo-dye: #003e5dff;
+# --indigo-dye-2: #00537cff;
+# --bice-blue: #00689cff;
+# --honolulu-blue: #007dbbff;
+# --celestial-blue: #009ce8ff;
+# --picton-blue: #33b0edff;
+# --light-sky-blue: #66c4f1ff;
+# --pale-azure: #99d8f6ff;
+# --columbia-blue: #ccebfaff;
+
 
 color:
   palette:
@@ -15,11 +38,30 @@ color:
     secondary: "#6c757d"    # Flatly secondary grå
     success: "#00891a"      # Flatly success grøn
     warning: "#f9b928"      # Flatly warning gul
-    danger: "#c10000"       # Flatly danger rød  
-    info: "#03c7e8"         # Flatly info cyan
+    danger: "#c10000"       # Flatly danger rød
+    info: "#009ce8"         # Flatly info cyan
     light: "#f8f8f8"        # Flatly light
     dark: "#202020"         # Flatly dark
     accent: "#FF6B35"       # Hospital orange accent (behold)
+    
+    hospitalblue: "#009ce8"      # Region H Hospitalblå
+    prussianblue: "#00293d"     # BFH Prussian Blue for navbar
+    
+    
+    
+    # Exakte RegionH theme farver
+    # primary: "#007dbb"      # Region H primary blå
+    # hospitalblue: "#009ce8"      # Region H Hospitalblå
+    # prussianblue: "#00293d"     # BFH Prussian Blue for navbar
+    # secondary: "#646c6f"    # Region H secondary grå
+    # 
+    # success: "#4f8325"      # Region H success grøn
+    # warning: "#f9b928"      # Region H warning gul
+    # danger: "#dc202b"       # Region H danger rød  
+    # info: "#497d83"         # Region H info cyan
+    # light: "#f8f8f8"        # Region H light
+    # dark: "#202020"         # Region H dark
+    # accent: "#FF6B35"       # Hospital orange accent (behold)
 
 
 typography:
@@ -33,9 +75,11 @@ typography:
     weight: 400
     
 defaults:
-  bootstrap:
+  # bootstrap:
+  #   navbar-bg: "#00293dff"
+  #   navbar-brand-color: white
+  #   navbar-nav-link-color: white
+  #   navbar-nav-link-hover-color: white
   shiny:
     theme:
       preset: flatly
-      # TODO: Find an appropriate theme variable to set
-      # navbar-bg: $brand-purple

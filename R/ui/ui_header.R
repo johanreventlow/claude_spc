@@ -63,6 +63,16 @@ create_ui_header <- function() {
       tags$style(HTML(
         paste0("
        .nav-link {padding: .5rem 1rem !important}
+       
+       /* Tab styling - ikke-aktive tabs */
+       .nav-tabs .nav-link:not(.active) {
+         color: #009ce8 !important;
+       }
+       
+       /* Tab styling - aktive tabs (behold default) */
+       .nav-tabs .nav-link.active {
+         color: inherit;
+       }
 
        .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }
        .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }

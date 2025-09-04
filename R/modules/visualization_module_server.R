@@ -5,6 +5,7 @@ library(shiny)
 library(bslib)
 library(qicharts2)
 library(ggplot2)
+library(plotly)
 library(dplyr)
 library(scales)
 
@@ -147,61 +148,81 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     output$dynamic_content <- renderUI({
       div(
         style = "width: 100%; height: 100%;",
-        plotOutput(ns("spc_plot"), width = "100%", height = "100%")
+        # This will contain either the plot or a message
+        uiOutput(ns("plot_or_message"))
       )
     })
     
-    # Render plot
-    output$spc_plot <- renderPlot({
+    # New unified output that handles both messages and plots
+    output$plot_or_message <- renderUI({
       data <- data_reactive()
       config <- chart_config()
       
-      if (is.null(data) || is.null(config) || is.null(config$y_col)) {
-        return(ggplot() + 
-          xlim(0, 1) + ylim(0, 1) +
-          annotate(
-            "text", x = 0.5, y = 0.5,
-            label = "Indlæs eller indtast data og vælg kolonner for at se grafen.",
-            size = 5,
-            color = HOSPITAL_COLORS$secondary
-          ) +
-          theme_void() +
-          theme(
-            plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA),
-            plot.margin = margin(20, 20, 20, 20)
-          ))
+      # Smart message logic based on app state
+      if (is.null(data) || nrow(data) == 0) {
+        return(createPlotMessage("welcome"))
+      }
+      
+      # Check if user has meaningful data vs empty session template
+      # Exclude the "Skift" column which is always FALSE in new sessions
+      data_without_skift <- data[, !names(data) %in% "Skift", drop = FALSE]
+      has_meaningful_data <- any(!is.na(data_without_skift), na.rm = TRUE) && 
+                            !all(sapply(data_without_skift, function(col) all(is.na(col))))
+      
+      # If table is completely empty (all NA except Skift column), show welcome message
+      # This means user hasn't started entering data yet
+      if (!has_meaningful_data) {
+        return(createPlotMessage("welcome"))
+      }
+      
+      if (is.null(config) || is.null(config$y_col)) {
+        return(createPlotMessage("config_needed"))
       }
       
       plot <- spc_plot()
       
       if (is.null(plot)) {
-        warning_text <- if (length(values$plot_warnings) > 0) {
-          paste(values$plot_warnings, collapse = "\n")
+        # Determine specific error type
+        if (length(values$plot_warnings) > 0) {
+          warning_details <- paste(values$plot_warnings, collapse = " • ")
+          
+          # Check for insufficient data
+          if (any(grepl("datapunkter", values$plot_warnings, ignore.case = TRUE)) ||
+              any(grepl("points", values$plot_warnings, ignore.case = TRUE))) {
+            return(createPlotMessage("insufficient_data", details = warning_details))
+          }
+          
+          # Check for validation errors
+          if (any(grepl("kolonne|column|påkrævet|required", values$plot_warnings, ignore.case = TRUE))) {
+            return(createPlotMessage("validation_error", details = warning_details))
+          }
+          
+          # Generic validation error
+          return(createPlotMessage("validation_error", details = warning_details))
         } else {
-          "Kunne ikke generere graf - tjek data og indstillinger"
+          return(createPlotMessage("technical_error"))
         }
-        
-        return(ggplot() + 
-          xlim(0, 1) + ylim(0, 1) +
-          annotate(
-            "text", x = 0.5, y = 0.5,
-            label = warning_text,
-            size = 4,
-            color = HOSPITAL_COLORS$danger
-          ) +
-          theme_void() +
-          theme(
-            plot.background = element_rect(fill = HOSPITAL_COLORS$light, color = NA),
-            plot.margin = margin(20, 20, 20, 20)
-          ))
       }
       
-      if (inherits(plot, "ggplot")) {
+      if (inherits(plot, "plotly")) {
+        # Return the actual plot wrapped in a plotlyOutput
+        return(
+          plotlyOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
+        )
+      } else {
+        return(createPlotMessage("technical_error"))
+      }
+    })
+    
+    # Separate renderPlotly for the actual SPC plot
+    output$spc_plot_actual <- renderPlotly({
+      plot <- spc_plot()
+      if (inherits(plot, "plotly")) {
         return(plot)
       } else {
-        return(showPlaceholder())
+        return(NULL)  # This shouldn't happen due to logic above
       }
-    }, res = 96)
+    })
     
     # Plot ready status
     output$plot_ready <- reactive({
