@@ -88,10 +88,10 @@ create_data_table_card <- function() {
     card_body(
       style = "padding: 10px;",
       
-      # Rhandsontable
+      # Data table (placeholder - this backup file uses old table system)
       div(
         style = "border: 1px solid #ddd; border-radius: 5px; background-color: white; min-height: 400px;",
-        rhandsontable::rHandsontableOutput("main_data_table")
+        p("Data table placeholder - denne backup fil bruger gammelt table system")
       ),
       
       # Tabel info
