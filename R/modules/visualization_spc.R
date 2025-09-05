@@ -385,6 +385,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
     # Build custom plotly plot using qic calculations
     cat("DEBUG: Starting plotly plot construction...\n")
     
+    # PLOT START ----
     # Start with empty plot and add data points only
     tryCatch({
       plot <- plotly::plot_ly(qic_data) %>%
