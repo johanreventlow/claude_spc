@@ -263,15 +263,15 @@ create_plot_only_card <- function() {
     ),
     card_body(
       div(
-        style ="height: 90%",
+        # style ="height: 100%",
         fill = TRUE, 
         visualizationModuleUI("visualization")
-      ), 
-      div(
-        style ="height: 90%",
-        fill = TRUE, 
-        "TEKST"
-        
+      # ), 
+      # div(
+      #   style ="height: 10%",
+      #   fill = TRUE,
+      #   "TEKST"
+
       )
     )
   )
