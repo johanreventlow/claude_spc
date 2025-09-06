@@ -249,12 +249,32 @@ showPlaceholder <- function() {
 
 # Helper function: Apply hospital theme to plots
 applyHospitalTheme <- function(plot) {
+  cat("DEBUG: applyHospitalTheme called, plot class:", class(plot), "\n")
+  
   if (is.null(plot) || !inherits(plot, "ggplot")) {
+    cat("DEBUG: Plot is NULL or not ggplot, returning as-is\n")
     return(plot)
   }
   
+  cat("DEBUG: Starting hospital theme application\n")
+  
   tryCatch({
-    plot + 
+    cat("DEBUG: Checking create_plot_footer function exists:", exists("create_plot_footer"), "\n")
+    
+    footer_text <- tryCatch({
+      create_plot_footer(
+        afdeling = "",
+        data_kilde = "Upload", 
+        dato = Sys.Date()
+      )
+    }, error = function(e) {
+      cat("ERROR creating footer:", e$message, "\n")
+      "SPC Analyse"  # fallback text
+    })
+    
+    cat("DEBUG: Footer text created:", substr(footer_text, 1, 50), "...\n")
+    
+    themed_plot <- plot + 
       theme_minimal() +
       theme(
         plot.title = element_text(color = HOSPITAL_COLORS$primary, size = 14, face = "bold"),
@@ -267,18 +287,17 @@ applyHospitalTheme <- function(plot) {
         panel.grid.minor = element_line(color = HOSPITAL_COLORS$light),
         strip.text = element_text(color = HOSPITAL_COLORS$primary, face = "bold")
       ) +
-      labs(
-        caption = create_plot_footer(
-          afdeling = "",
-          data_kilde = "Upload",
-          dato = Sys.Date()
-        )
-      ) +
+      labs(caption = footer_text) +
       theme(
         plot.caption = element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
       )
+    
+    cat("DEBUG: Hospital theme applied successfully\n")
+    return(themed_plot)
+    
   }, error = function(e) {
     cat("ERROR applying hospital theme:", e$message, "\n")
+    cat("ERROR details:", toString(e), "\n")
     return(plot)
   })
 }

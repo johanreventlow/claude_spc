@@ -5,7 +5,6 @@ library(shiny)
 library(bslib)
 library(qicharts2)
 library(ggplot2)
-library(plotly)
 library(dplyr)
 library(scales)
 
@@ -111,7 +110,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         # Get phase configuration
         skift_config <- skift_config_reactive()
         
-        plot <- generateSPCPlot(
+        spc_result <- generateSPCPlot(
           data = data, 
           config = config, 
           chart_type = chart_type,
@@ -121,14 +120,26 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           chart_title_reactive = chart_title_reactive
         )
         
-        plot <- applyHospitalTheme(plot)
+        plot <- applyHospitalTheme(spc_result$plot)
+        qic_data <- spc_result$qic_data
         
         values$plot_object <- plot
         values$plot_ready <- TRUE
         
-        # Calculate Anhøj rules for run charts
-        if (chart_type == "run") {
-          values$anhoej_results <- calculateAnhoejRules(data, config)
+        # Extract Anhøj rules from qic() results (built-in analysis)
+        if (chart_type == "run" && !is.null(qic_data)) {
+          cat("DEBUG: Extracting Anhøj rules from qic() results\n")
+          values$anhoej_results <- list(
+            runs_signal = any(qic_data$runs.signal, na.rm = TRUE),
+            crossings_signal = FALSE, # qic doesn't provide crossings signal directly  
+            any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
+            longest_run = max(qic_data$longest.run, na.rm = TRUE),
+            longest_run_max = max(qic_data$longest.run.max, na.rm = TRUE),
+            n_crossings = max(qic_data$n.crossings, na.rm = TRUE),
+            n_crossings_min = max(qic_data$n.crossings.min, na.rm = TRUE),
+            message = if(any(qic_data$sigma.signal, na.rm = TRUE)) "Særlig årsag detekteret" else "Ingen særlige årsager fundet"
+          )
+          cat("DEBUG: Anhøj results extracted from qic data\n")
         } else {
           values$anhoej_results <- NULL
         }
@@ -204,25 +215,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         }
       }
       
-      if (inherits(plot, "plotly")) {
-        # Return the actual plot wrapped in a plotlyOutput
+      if (inherits(plot, "ggplot")) {
+        # Return the actual plot wrapped in a plotOutput
         return(
-          plotlyOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
+          plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
         )
       } else {
         return(createPlotMessage("technical_error"))
       }
     })
     
-    # Separate renderPlotly for the actual SPC plot
-    output$spc_plot_actual <- renderPlotly({
+    # Separate renderPlot for the actual SPC plot
+    output$spc_plot_actual <- renderPlot({
       plot <- spc_plot()
-      if (inherits(plot, "plotly")) {
+      if (inherits(plot, "ggplot")) {
         return(plot)
       } else {
         return(NULL)  # This shouldn't happen due to logic above
       }
-    })
+    }, res = 96)
     
     # Plot ready status
     output$plot_ready <- reactive({
@@ -230,18 +241,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     })
     outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
     
-    # Plot info and warnings
+    # Plot info and warnings - ALWAYS SHOW
     output$plot_info <- renderUI({
-      # Check data first to get hide_anhoej_rules flag
       data <- data_reactive()
-      
-      # SOLUTION: Check hide_anhoej_rules flag passed via data attribute
-      # This flag is set to TRUE when "start ny session" is clicked
-      # and set to FALSE when real data is uploaded
-      hide_flag <- attr(data, "hide_anhoej_rules")
-      if (!is.null(hide_flag) && hide_flag) {
-        return(NULL)
-      }
+      # Always show plot info - removed hide_anhoej_rules condition
       
       if (length(values$plot_warnings) > 0) {
         div(
@@ -265,179 +268,232 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
-    # Anhøj rules section - only for run charts with sufficient data
-    output$anhoej_rules_section <- renderUI({
-      # Check data first to get hide_anhoej_rules flag
-      data <- data_reactive()
-      
-      # SOLUTION: Check hide_anhoej_rules flag passed via data attribute
-      # This flag is set to TRUE when "start ny session" is clicked
-      # and set to FALSE when real data is uploaded
-      hide_flag <- attr(data, "hide_anhoej_rules")
-      if (!is.null(hide_flag) && hide_flag) {
-        return(NULL)
-      }
-      
-      # Only show for run charts
-      if (is.null(chart_type_reactive()) || chart_type_reactive() != "run") {
-        return(NULL)
-      }
-      
-      # Check data and config first
-      data <- data_reactive()
-      config <- chart_config()
-      
-      if (is.null(data) || is.null(config) || is.null(config$y_col)) {
-        return(NULL)
-      }
-      
-      
-      # Only show if we have Anhøj results and enough data
-      if (is.null(values$anhoej_results)) {
-        return(NULL)
-      }
-      
-      # Count meaningful data points (non-NA values)
-      if (!is.null(config$n_col) && config$n_col %in% names(data)) {
-        # For rate data: count where both numerator and denominator are valid
-        taeller <- parse_danish_number(data[[config$y_col]])
-        naevner <- parse_danish_number(data[[config$n_col]])
-        meaningful_count <- sum(!is.na(taeller) & !is.na(naevner) & naevner > 0)
-      } else {
-        # For simple data: count non-NA values
-        y_data_raw <- data[[config$y_col]]
-        y_data <- parse_danish_number(y_data_raw)
-        meaningful_count <- sum(!is.na(y_data))
-      }
-      
-      # Only show Anhøj rules if we have minimum 10 meaningful observations
-      if (meaningful_count < 10) {
-        return(NULL)
-      }
-      
-      # Show the Anhøj rules card
-      card(
-        card_header(
-          div(
-            icon("search"),
-            " Anhøj Regler (Run Chart)",
-            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 500;")
-          )
-        ),
-        card_body(
-          renderAnhoejResults(values$anhoej_results)
-        )
-      )
-    })
     
-    # NEW: Plot status as value boxes
+    # Data summary value box (more SPC-relevant) - ALWAYS VISIBLE
     output$plot_status_boxes <- renderUI({
       data <- data_reactive()
-      hide_flag <- attr(data, "hide_anhoej_rules")
-      if (!is.null(hide_flag) && hide_flag) {
-        return(div()) # Return empty div instead of NULL
-      }
+      # Always show data summary - removed hide_anhoej_rules condition
       
-      if (length(values$plot_warnings) > 0) {
-        # Warning value box
-        value_box(
-          title = "Graf Status",
-          value = "Advarsler",
-          showcase = icon("exclamation-triangle"),
-          theme = "warning",
-          p(class = "fs-6 text-muted", paste(values$plot_warnings, collapse = " • "))
+      if (values$plot_ready && !is.null(data)) {
+        config <- chart_config()
+        data_count <- nrow(data)
+        chart_name <- switch(chart_type_reactive() %||% "run",
+          "run" = "Run Chart",
+          "p" = "P-kort", 
+          "u" = "U-kort",
+          "i" = "I-kort",
+          "mr" = "MR-kort",
+          chart_type_reactive() %||% "Unknown"
         )
-      } else if (values$plot_ready && !is.null(data_reactive())) {
-        # Success value box
+        
         value_box(
-          title = "Graf Status", 
-          value = "Klar",
-          showcase = icon("check-circle"),
-          theme = "success",
-          p(class = "fs-6 text-muted", 
-            sprintf("Chart: %s | Punkter: %d", 
-                    chart_type_reactive() %||% "unknown",
-                    nrow(data_reactive())))
+          title = "Data Overblik",
+          value = paste(data_count, "punkter"),
+          showcase = icon("chart-line"),
+          theme = if(data_count >= 15) "info" else "warning",
+          height = "120px",
+          p(class = "fs-7 text-muted mb-0", paste(chart_name, if(data_count < 15) "| Få datapunkter" else "| Tilstrækkelig data"))
         )
       } else {
         # Default state
         value_box(
-          title = "Graf Status",
-          value = "Venter...",
-          showcase = icon("hourglass"),
+          title = "Data Status",
+          value = "Ingen data",
+          showcase = icon("database"),
           theme = "secondary",
-          p(class = "fs-6 text-muted", "Konfigurer data og indstillinger")
+          height = "120px",
+          p(class = "fs-7 text-muted mb-0", "Upload eller indtast data")
         )
       }
     })
     
-    # NEW: Anhøj rules as value boxes
-    output$anhoej_rules_boxes <- renderUI({
+    # NEW: Data summary value box for error checking
+    output$data_summary_box <- renderUI({
       data <- data_reactive()
-      hide_flag <- attr(data, "hide_anhoej_rules")
-      if (!is.null(hide_flag) && hide_flag) {
-        return(div()) # Return empty div instead of NULL
+      config <- chart_config()
+      
+      if (is.null(data) || nrow(data) == 0) {
+        return(
+          value_box(
+            title = "Data Summary",
+            value = "Ingen data",
+            showcase = icon("table"),
+            theme = "light",
+            height = "120px",
+            p(class = "fs-7 text-muted mb-0", "Vent på data load")
+          )
+        )
       }
       
-      # Only for run charts and sufficient data
-      if (is.null(chart_type_reactive()) || chart_type_reactive() != "run") {
-        # Default for non-run charts
-        value_box(
-          title = "Specielle Mønstre",
-          value = "N/A",
-          showcase = icon("chart-line"),
-          theme = "light",
-          p(class = "fs-6 text-muted", "Kun for run charts")
+      # Generate summary info
+      total_rows <- nrow(data)
+      total_cols <- ncol(data)
+      
+      # Check for configured columns
+      summary_text <- ""
+      if (!is.null(config)) {
+        if (!is.null(config$y_col) && config$y_col %in% names(data)) {
+          y_data <- data[[config$y_col]]
+          valid_y <- sum(!is.na(y_data))
+          summary_text <- paste0("Y: ", valid_y, "/", total_rows, " gyldige")
+          
+          if (!is.null(config$n_col) && config$n_col %in% names(data)) {
+            n_data <- data[[config$n_col]]  
+            valid_n <- sum(!is.na(n_data))
+            zeros_n <- sum(n_data == 0, na.rm = TRUE)
+            summary_text <- paste0(summary_text, " | N: ", valid_n, "/", total_rows)
+            if (zeros_n > 0) summary_text <- paste0(summary_text, " (", zeros_n, " nuller)")
+          }
+        } else {
+          summary_text <- "Kolonner ikke konfigureret"
+        }
+      } else {
+        summary_text <- "Config ikke klar"
+      }
+      
+      value_box(
+        title = "Data Summary",
+        value = paste0(total_rows, "×", total_cols),
+        showcase = icon("table"),
+        theme = "light",
+        height = "120px",
+        p(class = "fs-7 text-muted mb-0", summary_text)
+      )
+    })
+    
+    # NEW: Anhøj rules as value boxes - ALWAYS VISIBLE
+    output$anhoej_rules_boxes <- renderUI({
+      data <- data_reactive()
+      # Always show value boxes - removed hide_anhoej_rules condition
+      
+      # Smart content based on current status - ALWAYS show boxes
+      config <- chart_config()
+      chart_type <- chart_type_reactive() %||% "run"
+      anhoej <- values$anhoej_results
+      
+      
+      # Simplified logic - if we have data with meaningful content, we're good to go
+      has_meaningful_data <- !is.null(data) && nrow(data) > 0 && 
+        any(sapply(data, function(x) {
+          if (is.logical(x)) return(any(x, na.rm = TRUE))
+          if (is.numeric(x)) return(any(!is.na(x)))
+          if (is.character(x)) return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
+          return(FALSE)
+        }))
+      
+      # Determine current status and appropriate content
+      status_info <- if (!has_meaningful_data) {
+        list(
+          status = "no_data",
+          message = "Upload data eller start ny session",
+          theme = "secondary"
+        )
+      } else if (is.null(config) || is.null(config$y_col)) {
+        list(
+          status = "not_configured",
+          message = "Vælg kolonner i indstillinger",
+          theme = "warning"
+        )
+      } else if (chart_type != "run") {
+        list(
+          status = "not_run_chart",
+          message = "Kun relevant for run charts", 
+          theme = "light"
         )
       } else {
-        config <- chart_config()
-        if (is.null(config) || is.null(config$y_col) || !config$y_col %in% names(data)) {
-          # No valid config yet
-          value_box(
-            title = "Anhøj Regler", 
-            value = "Venter...",
-            showcase = icon("search"),
-            theme = "secondary",
-            p(class = "fs-6 text-muted", "Konfigurer kolonner")
+        # Check if we have enough meaningful data
+        meaningful_count <- if (!is.null(config$n_col) && config$n_col %in% names(data)) {
+          sum(!is.na(data[[config$y_col]]) & !is.na(data[[config$n_col]]) & data[[config$n_col]] > 0)
+        } else {
+          sum(!is.na(data[[config$y_col]]))
+        }
+        
+        if (meaningful_count < 10) {
+          list(
+            status = "insufficient_data",
+            message = "Mindst 10 datapunkter nødvendigt",
+            theme = "warning"
+          )
+        } else if (!(values$plot_ready %||% FALSE)) {
+          list(
+            status = "processing",
+            message = "Behandler data og beregner...",
+            theme = "info"
           )
         } else {
-          # Check data count
-          meaningful_count <- if (!is.null(config$n_col) && config$n_col %in% names(data)) {
-            taeller <- parse_danish_number(data[[config$y_col]])
-            naevner <- parse_danish_number(data[[config$n_col]])
-            sum(!is.na(taeller) & !is.na(naevner) & naevner > 0)
-          } else {
-            y_data_raw <- data[[config$y_col]]
-            y_data <- parse_danish_number(y_data_raw)
-            sum(!is.na(y_data))
-          }
           
-          if (meaningful_count < 10) {
-            value_box(
-              title = "Anhøj Regler",
-              value = "For få data",
-              showcase = icon("search"),
-              theme = "warning", 
-              p(class = "fs-6 text-muted", "Min. 10 punkter påkrævet")
-            )
-          } else {
-            # Count anhøj rules that were triggered
-            anhoej_count <- if (!is.null(values$anhoej_results)) {
-              sum(sapply(values$anhoej_results, function(x) length(x) > 0))
-            } else {
-              0
-            }
-            
-            value_box(
-              title = "Anhøj Regler",
-              value = paste(anhoej_count, "fund"),
-              showcase = icon("search"), 
-              theme = if (anhoej_count > 0) "info" else "secondary",
-              p(class = "fs-6 text-muted", "Run chart mønstre")
-            )
-          }
+          list(
+            status = "ready",
+            message = "SPC analyse klar",
+            theme = "success"
+          )
         }
       }
+      
+      # Always return the two key boxes with appropriate content
+      tagList(
+        # Series length box
+        value_box(
+          title = "Serielængde",
+          value = if (status_info$status == "ready" && !is.null(anhoej$longest_run)) {anhoej$longest_run} else {
+            tags$span(#style = "font-size: 1.2rem;", 
+              switch(status_info$status,
+                "no_data" = "Ingen data",
+                "not_started" = "Afventer start",
+                "not_configured" = "Ikke konfigureret",
+                "not_run_chart" = "N/A",
+                "insufficient_data" = "For få data",
+                "processing" = "Behandler...",
+                "calculating" = "Beregner...",
+                "Afventer data"
+              ))
+          },
+          # showcase = icon("trending-up"),
+          # showcase = icon("trending-up"),
+          theme = if (status_info$status == "ready" && !is.null(anhoej$runs_signal) && (anhoej$runs_signal %||% FALSE)) {
+            "warning"
+          } else if (status_info$status == "ready") {
+            "light" 
+          } else {
+            status_info$theme
+          },
+          height = "120px",
+          p(class = "fs-7 text-muted mb-0", 
+            if (status_info$status == "ready" && !is.null(anhoej$longest_run_max)) {
+              paste("Forventet (maks.):", anhoej$longest_run_max, "punkter")
+            } else {
+              status_info$message
+            })
+        ),
+        
+        # Number of crossings box  
+        value_box(
+          title = "Antal Kryds",
+          value = if (status_info$status == "ready" && !is.null(anhoej$n_crossings)) {anhoej$n_crossings
+          } else {
+            tags$span(#style = "font-size: 1.2rem; color: #666;",
+              switch(status_info$status,
+                "no_data" = "Ingen data",
+                "not_started" = "Afventer start", 
+                "not_configured" = "Ikke konfigureret",
+                "not_run_chart" = "N/A",
+                "insufficient_data" = "For få data",
+                "processing" = "Behandler...",
+                "calculating" = "Beregner...",
+                "Afventer data"
+              ))
+          },
+          showcase = icon("exchange-alt"),
+          theme = if (status_info$status == "ready") "light" else status_info$theme,
+          height = "120px", 
+          p(class = "fs-7 text-muted mb-0",
+            if (status_info$status == "ready" && !is.null(anhoej$n_crossings_min)) {
+              paste("Forventet (min.):", anhoej$n_crossings_min, "kryds")
+            } else {
+              status_info$message
+            })
+        )
+      )
     })
     
     # Additional value box 1 - Data Quality

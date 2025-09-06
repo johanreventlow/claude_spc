@@ -12,6 +12,7 @@ source("R/server/server_column_management.R")
 source("R/server/server_visualization.R")
 source("R/server/server_download.R")
 source("R/server/server_helpers.R")
+source("R/server/server_welcome_page.R")
 
 # Main server function
 server <- function(input, output, session) {
@@ -25,12 +26,16 @@ server <- function(input, output, session) {
     
     if (file.exists(test_file_path)) {
       tryCatch({
-        # Load test data with proper encoding
-        test_data <- tryCatch({
-          read.csv(test_file_path, stringsAsFactors = FALSE, sep = ";", dec = ",", encoding = "UTF-8")
-        }, error = function(e1) {
-          read.csv(test_file_path, stringsAsFactors = FALSE, sep = ";", dec = ",", encoding = "latin1")
-        })
+        # Load test data using readr::read_csv2 (same as working file upload)
+        test_data <- readr::read_csv2(
+          test_file_path,
+          locale = readr::locale(
+            decimal_mark = ",",
+            grouping_mark = ".",
+            encoding = "ISO-8859-1"
+          ),
+          show_col_types = FALSE
+        )
         
         # Ensure standard columns are present
         test_data <- ensure_standard_columns(test_data)
@@ -53,6 +58,9 @@ server <- function(input, output, session) {
     html = WAITER_CONFIG$file_upload$html,
     color = WAITER_CONFIG$file_upload$color
   )
+  
+  # Welcome page interactions
+  setup_welcome_page_handlers(input, output, session, values, waiter_file)
   
   # Session management logic
   setup_session_management(input, output, session, values, waiter_file)

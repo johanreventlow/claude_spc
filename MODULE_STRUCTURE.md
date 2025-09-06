@@ -39,7 +39,7 @@ claude_spc/
 │       │   ├── visualization_module_server.R  # Server logik
 │       │   ├── visualization_helpers.R        # Helper funktioner
 │       │   ├── visualization_spc.R            # SPC plot generering
-│       │   ├── visualization_anhoej.R         # Anhøj regler analyse
+# │       │   ├── visualization_anhoej.R         # Removed: Now using qic() built-in Anhøj analysis
 │       │   └── visualization_module.R         # Main viz modul
 │       │
 │       └── local_storage_*/        # Browser storage moduler
