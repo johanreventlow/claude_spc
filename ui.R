@@ -11,6 +11,7 @@ source("R/modules/local_storage_module.R")
 source("R/ui/ui_header.R")
 source("R/ui/ui_sidebar.R") 
 source("R/ui/ui_main_content.R")
+source("R/ui/ui_welcome_page.R")
 
 # Main UI structure
 ui <- page_navbar(

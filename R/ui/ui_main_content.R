@@ -3,19 +3,10 @@
 
 create_ui_main_content <- function() {
   tagList(
-    # Welcome message when no meaningful data is loaded
+    # Welcome page when no meaningful data is loaded
     conditionalPanel(
       condition = "output.dataLoaded != 'TRUE'", 
-      div(
-        style = "margin-top: 20px;",
-        h4("Velkommen til BFHs SPC værktøj"),
-        p("For at komme i gang kan du:"),
-        tags$ul(
-          tags$li("Upload en Excel (.xlsx eller .xls) eller CSV-fil med dine data i menuen til venstre, eller"),
-          tags$li('Klik på "Start ny session" i sidepanelet for at begynde med manuel indtastning')
-        ),
-        p("Når data er indlæst, vil du kunne se SPC-grafer og konfigurere dine analyser.")
-      )
+      create_welcome_page()
     ),
     
     # Data table and visualization - only when user has started
@@ -34,12 +25,13 @@ create_ui_main_content <- function() {
         create_plot_only_card(),
         
         create_data_table_card(),
-        # layout_column_wrap(
-        #   width = 1/2,
-        #   heights_equal = "row",
-        #   # Status information as value boxes  
-        #   # create_status_value_boxes()
-        # ),
+        layout_column_wrap(
+          # width = 1/2,  # 2 boxes per row - wider and easier to read
+          # heights_equal = "row", 
+          fill = FALSE,
+          # Status information as value boxes  
+          create_status_value_boxes()
+        ),
         # create_export_card(),
       )
     )
@@ -295,21 +287,21 @@ create_data_table_card <- function() {
             label = NULL,
             icon = icon("edit"),
             title = "Redigér kolonnenavne",
-            class = "btn-outline-secondary btn-sm"
+            class = "btn-secondary btn-sm"
           ),
           actionButton(
             "add_column",
             label = NULL,
             icon = icon("plus"),
             title = "Tilføj kolonne",
-            class = "btn-outline-primary btn-sm"
+            class = "btn-secondary btn-sm"
           ),
           actionButton(
             "add_row",
             label = NULL,
             icon = icon("plus-square"),
             title = "Tilføj række",
-            class = "btn-outline-primary btn-sm"
+            class = "btn-secondary btn-sm"
           ),
           # actionButton(
           #   "reset_table",
