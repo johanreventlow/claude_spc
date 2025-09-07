@@ -23,11 +23,11 @@ visualizationStatusUI <- function(id) {
   
   # Use layout_column_wrap for proper value box display
   layout_column_wrap(
-    width = 1/2,
+    width = 1,
     heights_equal = "row",
     
     # Plot information as value boxes
-    uiOutput(ns("plot_status_boxes")),
+    # uiOutput(ns("plot_status_boxes")),
     
     # Anhøj rules results for run charts as value boxes
     uiOutput(ns("anhoej_rules_boxes")),

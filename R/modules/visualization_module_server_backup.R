@@ -509,7 +509,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           # showcase = icon("trending-up"),
           # showcase = icon("trending-up"),
           showcase =  spc_run_chart_icon,
-          # showcase_layout = "top right",
+          showcase_layout = "top right",
           theme = if (status_info$status == "ready" && !is.null(anhoej$runs_signal) && (anhoej$runs_signal %||% FALSE)) {
             "warning"
           } else if (status_info$status == "ready") {
