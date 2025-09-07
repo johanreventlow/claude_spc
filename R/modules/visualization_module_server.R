@@ -200,37 +200,33 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         values$plot_object <- plot
         values$plot_ready <- TRUE
         
-        # Udtræk Anhøj rules og out-of-control punkter fra qic() resultater
+        # Udtræk ALL qic() resultater for ALLE chart typer - vigtig for konsistent beregning
         if (!is.null(qic_data)) {
           cat("DEBUG: Extracting results from qic() data for chart type:", chart_type, "\n")
           
-          if (chart_type == "run") {
-            # Run charts: Anhøj rules + out-of-control points
-            values$anhoej_results <- list(
-              runs_signal = any(qic_data$runs.signal, na.rm = TRUE),
-              crossings_signal = FALSE, # qic leverer ikke crossings signal direkte
-              any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
-              longest_run = max(qic_data$longest.run, na.rm = TRUE),
-              out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
-              longest_run_max = max(qic_data$longest.run.max, na.rm = TRUE),
-              n_crossings = max(qic_data$n.crossings, na.rm = TRUE),
-              n_crossings_min = max(qic_data$n.crossings.min, na.rm = TRUE),
-              message = if(any(qic_data$sigma.signal, na.rm = TRUE)) "Særlig årsag detekteret" else "Ingen særlige årsager fundet"
-            )
-          } else {
-            # Alle andre chart typer (p, pp, u, up, i, mr, c, g): Kun out-of-control points
-            values$anhoej_results <- list(
-              runs_signal = FALSE,
-              crossings_signal = FALSE,
-              any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
-              longest_run = NA_real_,
-              out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
-              longest_run_max = NA_real_,
-              n_crossings = NA_real_,
-              n_crossings_min = NA_real_,
-              message = if(any(qic_data$sigma.signal, na.rm = TRUE)) "Punkter uden for kontrol detekteret" else "Alle punkter inden for kontrol"
-            )
-          }
+          # Udtræk ALLE tilgængelige metrics fra qic() - lad value boxes bestemme visning
+          qic_results <- list(
+            # Standard SPC beregninger (altid tilgængelig fra qic)
+            any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
+            out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
+            
+            # Anhøj rules (kun meningsfulde for run charts)
+            runs_signal = if("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE,
+            crossings_signal = FALSE, # qic leverer ikke crossings signal direkte
+            longest_run = if("longest.run" %in% names(qic_data)) max(qic_data$longest.run, na.rm = TRUE) else NA_real_,
+            longest_run_max = if("longest.run.max" %in% names(qic_data)) max(qic_data$longest.run.max, na.rm = TRUE) else NA_real_,
+            n_crossings = if("n.crossings" %in% names(qic_data)) max(qic_data$n.crossings, na.rm = TRUE) else NA_real_,
+            n_crossings_min = if("n.crossings.min" %in% names(qic_data)) max(qic_data$n.crossings.min, na.rm = TRUE) else NA_real_,
+            
+            # Chart-type specifik besked
+            message = if (chart_type == "run") {
+              if(any(qic_data$sigma.signal, na.rm = TRUE)) "Særlig årsag detekteret" else "Ingen særlige årsager fundet"
+            } else {
+              if(any(qic_data$sigma.signal, na.rm = TRUE)) "Punkter uden for kontrol detekteret" else "Alle punkter inden for kontrol"
+            }
+          )
+          
+          values$anhoej_results <- qic_results
           cat("DEBUG: Results extracted from qic data for chart type:", chart_type, "\n")
         } else {
           values$anhoej_results <- NULL
@@ -395,7 +391,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           value = paste(data_count, "punkter"),
           showcase = icon("chart-line"),
           theme = if(data_count >= 15) "info" else "warning",
-          height = "120px",
+          # height = "120px",
           p(class = "fs-7 text-muted mb-0", paste(chart_name, if(data_count < 15) "| Få datapunkter" else "| Tilstrækkelig data"))
         )
       } else {
@@ -405,7 +401,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           value = "Ingen data",
           showcase = icon("database"),
           theme = "secondary",
-          height = "120px",
+          # height = "120px",
           p(class = "fs-7 text-muted mb-0", "Upload eller indtast data")
         )
       }
@@ -426,7 +422,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             showcase = spc_out_of_control_icon,
             showcase_layout = "top right",
             theme = "light",
-            height = "120px",
+            # height = "120px",
             p(class = "fs-7 text-muted mb-0", "Vent på data load")
           )
         )
@@ -464,7 +460,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         showcase = spc_out_of_control_icon,
         showcase_layout = "top right",
         theme = "light",
-        height = "120px",
+        # height = "120px",
         p(class = "fs-7 text-muted mb-0", summary_text)
       )
     })
@@ -536,24 +532,24 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       tagList(
         ### Serielængde Box ----
         value_box(
-          title = "Serielængde",
-          value = if (status_info$status == "ready" && chart_type == "run" && !is.null(anhoej$longest_run)) {
-            anhoej$longest_run
+          title = "Maksimal serielængde",
+          value = if (status_info$status == "ready") {
+            if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
+              anhoej$longest_run
+            } else {
+              "Beregner..."
+            }
           } else {
             tags$span(
-              if (status_info$status == "ready" && chart_type != "run") {
-                "N/A"
-              } else {
-                switch(status_info$status,
-                  "no_data" = "Ingen data",
-                  "not_started" = "Afventer start",
-                  "not_configured" = "Ikke konfigureret",
-                  "insufficient_data" = "For få data",
-                  "processing" = "Behandler...",
-                  "calculating" = "Beregner...",
-                  "Afventer data"
-                )
-              })
+              switch(status_info$status,
+                "no_data" = "Ingen data",
+                "not_started" = "Afventer start",
+                "not_configured" = "Ikke konfigureret",
+                "insufficient_data" = "For få data",
+                "processing" = "Behandler...",
+                "calculating" = "Beregner...",
+                "Afventer data"
+              ))
           },
           showcase = spc_run_chart_icon,
           theme = if (status_info$status == "ready" && chart_type == "run" && !is.null(anhoej$runs_signal) && (anhoej$runs_signal %||% FALSE)) {
@@ -563,15 +559,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           } else {
             status_info$theme
           },
-          height = "120px",
+          # height = "120px",
           p(class = "fs-7 text-muted mb-0", 
             if (status_info$status == "ready") {
-              if (chart_type == "run" && !is.null(anhoej$longest_run_max)) {
+              if (!is.null(anhoej$longest_run_max) && !is.na(anhoej$longest_run_max)) {
                 paste("Forventet (maks.):", anhoej$longest_run_max, "punkter")
-              } else if (chart_type != "run") {
-                "Kun relevant for run charts"
               } else {
-                "Beregner serielængde..."
+                "Anhøj rules analysis - serielængde"
               }
             } else {
               status_info$message
@@ -580,47 +574,46 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         
         ### Antal Kryds Box ----
         value_box(
-          title = "Antal Kryds",
-          value = if (status_info$status == "ready" && chart_type == "run" && !is.null(anhoej$n_crossings)) {
-            anhoej$n_crossings
+          title = "Minimum antal kryds",
+          value = if (status_info$status == "ready") {
+            if (!is.null(anhoej$n_crossings) && !is.na(anhoej$n_crossings)) {
+              anhoej$n_crossings
+            } else {
+              "Beregner..."
+            }
           } else {
             tags$span(
-              if (status_info$status == "ready" && chart_type != "run") {
-                "N/A"
-              } else {
-                switch(status_info$status,
-                  "no_data" = "Ingen data",
-                  "not_started" = "Afventer start", 
-                  "not_configured" = "Ikke konfigureret",
-                  "insufficient_data" = "For få data",
-                  "processing" = "Behandler...",
-                  "calculating" = "Beregner...",
-                  "Afventer data"
-                )
-              })
+              switch(status_info$status,
+                "no_data" = "Ingen data",
+                "not_started" = "Afventer start", 
+                "not_configured" = "Ikke konfigureret",
+                "insufficient_data" = "For få data",
+                "processing" = "Behandler...",
+                "calculating" = "Beregner...",
+                "Afventer data"
+              ))
           },
           showcase = spc_median_crossings_icon,
           theme = if (status_info$status == "ready") "light" else status_info$theme,
-          height = "120px", 
+          # height = "120px", 
           p(class = "fs-7 text-muted mb-0",
             if (status_info$status == "ready") {
-              if (chart_type == "run" && !is.null(anhoej$n_crossings_min)) {
+              if (!is.null(anhoej$n_crossings_min) && !is.na(anhoej$n_crossings_min)) {
                 paste("Forventet (min.):", anhoej$n_crossings_min, "kryds")
-              } else if (chart_type != "run") {
-                "Kun relevant for run charts"
               } else {
-                "Beregner antal kryds..."
+                "Anhøj rules analysis - median krydsninger"
               }
             } else {
               status_info$message
             })
         ),
         
-        ### Outliers/Out-of-Control Box ----
+        ### Særlige Årsager/Out-of-Control Box ----
         value_box(
-          title = if (chart_type == "run") "Outliers" else "Out-of-Control",
-          value = if (status_info$status == "ready" && !is.null(anhoej$out_of_control_count)) {
+          title = "Uden for kontrolgrænser",
+          value = if (status_info$status == "ready" && !chart_type == "run" && !is.null(anhoej$out_of_control_count)) {
             anhoej$out_of_control_count
+          } else if (status_info$status == "ready" && chart_type == "run") {div(style = "font-size:1em", class = "fs-7 text-muted mb-0", "Anvendes ikke ved analyse af seridiagrammer (run charts)")
           } else {
             tags$span(
               switch(status_info$status,
@@ -641,13 +634,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           } else {
             status_info$theme
           },
-          height = "120px",
+          # height = "120px",
           p(class = "fs-7 text-muted mb-0", 
             if (status_info$status == "ready") {
               if (chart_type == "run") {
-                "Ikke relevant for run charts"
+                "test"
               } else {
-                "Punkter uden for kontrolgrænser"
+                "Punkter"
               }
             } else {
               status_info$message
