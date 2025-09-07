@@ -503,12 +503,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           message = "Vælg kolonner i indstillinger",
           theme = "warning"
         )
-      } else if (chart_type != "run") {
-        list(
-          status = "not_run_chart",
-          message = "Kun relevant for run charts", 
-          theme = "light"
-        )
       } else {
         # Check om vi har nok meningsfuldt data
         meaningful_count <- if (!is.null(config$n_col) && config$n_col %in% names(data)) {
@@ -543,23 +537,26 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         ### Serielængde Box ----
         value_box(
           title = "Serielængde",
-          value = if (status_info$status == "ready" && !is.null(anhoej$longest_run)) {
+          value = if (status_info$status == "ready" && chart_type == "run" && !is.null(anhoej$longest_run)) {
             anhoej$longest_run
           } else {
             tags$span(
-              switch(status_info$status,
-                "no_data" = "Ingen data",
-                "not_started" = "Afventer start",
-                "not_configured" = "Ikke konfigureret",
-                "not_run_chart" = "N/A",
-                "insufficient_data" = "For få data",
-                "processing" = "Behandler...",
-                "calculating" = "Beregner...",
-                "Afventer data"
-              ))
+              if (status_info$status == "ready" && chart_type != "run") {
+                "N/A"
+              } else {
+                switch(status_info$status,
+                  "no_data" = "Ingen data",
+                  "not_started" = "Afventer start",
+                  "not_configured" = "Ikke konfigureret",
+                  "insufficient_data" = "For få data",
+                  "processing" = "Behandler...",
+                  "calculating" = "Beregner...",
+                  "Afventer data"
+                )
+              })
           },
           showcase = spc_run_chart_icon,
-          theme = if (status_info$status == "ready" && !is.null(anhoej$runs_signal) && (anhoej$runs_signal %||% FALSE)) {
+          theme = if (status_info$status == "ready" && chart_type == "run" && !is.null(anhoej$runs_signal) && (anhoej$runs_signal %||% FALSE)) {
             "warning"
           } else if (status_info$status == "ready") {
             "light" 
@@ -568,8 +565,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           height = "120px",
           p(class = "fs-7 text-muted mb-0", 
-            if (status_info$status == "ready" && !is.null(anhoej$longest_run_max)) {
-              paste("Forventet (maks.):", anhoej$longest_run_max, "punkter")
+            if (status_info$status == "ready") {
+              if (chart_type == "run" && !is.null(anhoej$longest_run_max)) {
+                paste("Forventet (maks.):", anhoej$longest_run_max, "punkter")
+              } else if (chart_type != "run") {
+                "Kun relevant for run charts"
+              } else {
+                "Beregner serielængde..."
+              }
             } else {
               status_info$message
             })
@@ -578,27 +581,36 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         ### Antal Kryds Box ----
         value_box(
           title = "Antal Kryds",
-          value = if (status_info$status == "ready" && !is.null(anhoej$n_crossings)) {
+          value = if (status_info$status == "ready" && chart_type == "run" && !is.null(anhoej$n_crossings)) {
             anhoej$n_crossings
           } else {
             tags$span(
-              switch(status_info$status,
-                "no_data" = "Ingen data",
-                "not_started" = "Afventer start", 
-                "not_configured" = "Ikke konfigureret",
-                "not_run_chart" = "N/A",
-                "insufficient_data" = "For få data",
-                "processing" = "Behandler...",
-                "calculating" = "Beregner...",
-                "Afventer data"
-              ))
+              if (status_info$status == "ready" && chart_type != "run") {
+                "N/A"
+              } else {
+                switch(status_info$status,
+                  "no_data" = "Ingen data",
+                  "not_started" = "Afventer start", 
+                  "not_configured" = "Ikke konfigureret",
+                  "insufficient_data" = "For få data",
+                  "processing" = "Behandler...",
+                  "calculating" = "Beregner...",
+                  "Afventer data"
+                )
+              })
           },
           showcase = spc_median_crossings_icon,
           theme = if (status_info$status == "ready") "light" else status_info$theme,
           height = "120px", 
           p(class = "fs-7 text-muted mb-0",
-            if (status_info$status == "ready" && !is.null(anhoej$n_crossings_min)) {
-              paste("Forventet (min.):", anhoej$n_crossings_min, "kryds")
+            if (status_info$status == "ready") {
+              if (chart_type == "run" && !is.null(anhoej$n_crossings_min)) {
+                paste("Forventet (min.):", anhoej$n_crossings_min, "kryds")
+              } else if (chart_type != "run") {
+                "Kun relevant for run charts"
+              } else {
+                "Beregner antal kryds..."
+              }
             } else {
               status_info$message
             })
@@ -615,7 +627,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 "no_data" = "Ingen data",
                 "not_started" = "Afventer start",
                 "not_configured" = "Ikke konfigureret",
-                "not_run_chart" = if (chart_type == "run") "N/A" else "N/A",
                 "insufficient_data" = "For få data", 
                 "processing" = "Behandler...",
                 "calculating" = "Beregner...",
@@ -627,8 +638,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             "danger"
           } else if (status_info$status == "ready") {
             "light" 
-          } else if (status_info$status == "not_run_chart" && chart_type == "run") {
-            "secondary"
           } else {
             status_info$theme
           },
@@ -638,7 +647,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               if (chart_type == "run") {
                 "Ikke relevant for run charts"
               } else {
-                paste("Punkter uden for kontrolgrænser")
+                "Punkter uden for kontrolgrænser"
               }
             } else {
               status_info$message
