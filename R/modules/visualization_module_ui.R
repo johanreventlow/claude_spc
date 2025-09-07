@@ -35,7 +35,7 @@ visualizationStatusUI <- function(id) {
   ## Value Box Layout ####
   # Brug layout_column_wrap for korrekt value box visning
   layout_column_wrap(
-    width = 1,
+    width = 1/2,
     heights_equal = "row",
     
     ### Anhøj Rules Value Boxes ####
@@ -44,6 +44,6 @@ visualizationStatusUI <- function(id) {
     
     ### Data Summary Box ####
     # Data oversigt og fejl kontrol
-    uiOutput(ns("data_summary_box"))
+    # uiOutput(ns("data_summary_box"))
   )
 }

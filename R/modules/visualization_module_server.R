@@ -8,7 +8,7 @@ library(ggplot2)
 library(dplyr)
 library(scales)
 
-# SPC Ikoner ####
+# SPC Ikoner ----
 
 #' Custom SVG ikoner til SPC value boxes
 #' Definerede som HTML-variabler for genbrugelige visualiseringer
@@ -62,7 +62,7 @@ spc_out_of_control_icon <- HTML('
   </svg>
 ')
 
-# Hovedfunktion ####
+# Hovedfunktion ----
 
 #' Visualization Module Server
 #' 
@@ -75,7 +75,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # State Management ####
+    # State Management ----
     
     # Reactive values til tilstandshåndtering
     values <- reactiveValues(
@@ -93,9 +93,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       color = WAITER_CONFIG$plot_generation$color
     )
     
-    # Konfiguration og Validering ####
+    # Konfiguration og Validering ----
     
-    ## Chart Configuration ####
+    ## Chart Configuration ----
     
     #' Reaktiv konfiguration for chart setup
     #' Håndterer kolonne-validering og auto-detection
@@ -135,9 +135,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       ))
     })
     
-    # Plot Generering ####
+    # Plot Generering ----
     
-    ## Main SPC Plot Reactive ####
+    ## Main SPC Plot Reactive ----
     
     #' Hovedfunktion for SPC plot generering
     #' Håndterer data validering, plot oprettelse og Anhøj rules analyse
@@ -200,20 +200,38 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         values$plot_object <- plot
         values$plot_ready <- TRUE
         
-        # Udtræk Anhøj rules fra qic() resultater (built-in analyse)
-        if (chart_type == "run" && !is.null(qic_data)) {
-          cat("DEBUG: Extracting Anhøj rules from qic() results\n")
-          values$anhoej_results <- list(
-            runs_signal = any(qic_data$runs.signal, na.rm = TRUE),
-            crossings_signal = FALSE, # qic leverer ikke crossings signal direkte
-            any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
-            longest_run = max(qic_data$longest.run, na.rm = TRUE),
-            longest_run_max = max(qic_data$longest.run.max, na.rm = TRUE),
-            n_crossings = max(qic_data$n.crossings, na.rm = TRUE),
-            n_crossings_min = max(qic_data$n.crossings.min, na.rm = TRUE),
-            message = if(any(qic_data$sigma.signal, na.rm = TRUE)) "Særlig årsag detekteret" else "Ingen særlige årsager fundet"
-          )
-          cat("DEBUG: Anhøj results extracted from qic data\n")
+        # Udtræk Anhøj rules og out-of-control punkter fra qic() resultater
+        if (!is.null(qic_data)) {
+          cat("DEBUG: Extracting results from qic() data for chart type:", chart_type, "\n")
+          
+          if (chart_type == "run") {
+            # Run charts: Anhøj rules + out-of-control points
+            values$anhoej_results <- list(
+              runs_signal = any(qic_data$runs.signal, na.rm = TRUE),
+              crossings_signal = FALSE, # qic leverer ikke crossings signal direkte
+              any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
+              longest_run = max(qic_data$longest.run, na.rm = TRUE),
+              out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
+              longest_run_max = max(qic_data$longest.run.max, na.rm = TRUE),
+              n_crossings = max(qic_data$n.crossings, na.rm = TRUE),
+              n_crossings_min = max(qic_data$n.crossings.min, na.rm = TRUE),
+              message = if(any(qic_data$sigma.signal, na.rm = TRUE)) "Særlig årsag detekteret" else "Ingen særlige årsager fundet"
+            )
+          } else {
+            # Alle andre chart typer (p, pp, u, up, i, mr, c, g): Kun out-of-control points
+            values$anhoej_results <- list(
+              runs_signal = FALSE,
+              crossings_signal = FALSE,
+              any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
+              longest_run = NA_real_,
+              out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
+              longest_run_max = NA_real_,
+              n_crossings = NA_real_,
+              n_crossings_min = NA_real_,
+              message = if(any(qic_data$sigma.signal, na.rm = TRUE)) "Punkter uden for kontrol detekteret" else "Alle punkter inden for kontrol"
+            )
+          }
+          cat("DEBUG: Results extracted from qic data for chart type:", chart_type, "\n")
         } else {
           values$anhoej_results <- NULL
         }
@@ -229,9 +247,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       })
     })
     
-    # UI Output Funktioner ####
+    # UI Output Funktioner ----
     
-    ## Plot Display Logic ####
+    ## Plot Display Logic ----
     
     #' Dynamisk indhold output - håndterer både plot og beskeder
     output$dynamic_content <- renderUI({
@@ -302,7 +320,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
-    ## Actual Plot Rendering ####
+    ## Actual Plot Rendering ----
     
     #' Separat renderPlot for det faktiske SPC plot
     output$spc_plot_actual <- renderPlot({
@@ -314,9 +332,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     }, res = 96)
     
-    # Status og Information ####
+    # Status og Information ----
     
-    ## Plot Status ####
+    ## Plot Status ----
     
     #' Plot klar status
     output$plot_ready <- reactive({
@@ -324,7 +342,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     })
     outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
     
-    ## Plot Information ####
+    ## Plot Information ----
     
     #' Plot info og advarsler - ALTID VIS
     output$plot_info <- renderUI({
@@ -352,9 +370,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
-    # Value Boxes ####
+    # Value Boxes ----
     
-    ## Plot Status Box ####
+    ## Plot Status Box ----
     
     #' Data summary value box (mere SPC-relevant) - ALTID SYNLIG
     output$plot_status_boxes <- renderUI({
@@ -393,7 +411,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
-    ## Data Summary Box ####
+    ## Data Summary Box ----
     
     #' Data summary value box til fejl kontrol
     output$data_summary_box <- renderUI({
@@ -451,7 +469,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
     })
     
-    ## Anhøj Rules Value Boxes ####
+    ## Anhøj Rules Value Boxes ----
     
     #' Anhøj rules som value boxes - ALTID SYNLIG
     #' Disse viser serielængde og antal kryds for run charts
@@ -522,7 +540,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       
       # Altid returner de to hovd boxes med passende indhold
       tagList(
-        ### Serielængde Box ####
+        ### Serielængde Box ----
         value_box(
           title = "Serielængde",
           value = if (status_info$status == "ready" && !is.null(anhoej$longest_run)) {
@@ -557,7 +575,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             })
         ),
         
-        ### Antal Kryds Box ####
+        ### Antal Kryds Box ----
         value_box(
           title = "Antal Kryds",
           value = if (status_info$status == "ready" && !is.null(anhoej$n_crossings)) {
@@ -584,13 +602,54 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             } else {
               status_info$message
             })
+        ),
+        
+        ### Outliers/Out-of-Control Box ----
+        value_box(
+          title = if (chart_type == "run") "Outliers" else "Out-of-Control",
+          value = if (status_info$status == "ready" && !is.null(anhoej$out_of_control_count)) {
+            anhoej$out_of_control_count
+          } else {
+            tags$span(
+              switch(status_info$status,
+                "no_data" = "Ingen data",
+                "not_started" = "Afventer start",
+                "not_configured" = "Ikke konfigureret",
+                "not_run_chart" = if (chart_type == "run") "N/A" else "N/A",
+                "insufficient_data" = "For få data", 
+                "processing" = "Behandler...",
+                "calculating" = "Beregner...",
+                "Afventer data"
+              ))
+          },
+          showcase = spc_out_of_control_icon,
+          theme = if (status_info$status == "ready" && !is.null(anhoej$out_of_control_count) && (anhoej$out_of_control_count > 0)) {
+            "danger"
+          } else if (status_info$status == "ready") {
+            "light" 
+          } else if (status_info$status == "not_run_chart" && chart_type == "run") {
+            "secondary"
+          } else {
+            status_info$theme
+          },
+          height = "120px",
+          p(class = "fs-7 text-muted mb-0", 
+            if (status_info$status == "ready") {
+              if (chart_type == "run") {
+                "Ikke relevant for run charts"
+              } else {
+                paste("Punkter uden for kontrolgrænser")
+              }
+            } else {
+              status_info$message
+            })
         )
       )
     })
     
-    ## Placeholder Value Boxes ####
+    ## Placeholder Value Boxes ----
     
-    ### Data Quality Box (placeholder) ####
+    ### Data Quality Box (placeholder) ----
     output$data_quality_box <- renderUI({
       data <- data_reactive()
       if (is.null(data) || nrow(data) == 0) {
@@ -606,7 +665,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
     })
     
-    ### Report Status Box (placeholder) ####
+    ### Report Status Box (placeholder) ----
     output$report_status_box <- renderUI({
       data <- data_reactive()
       if (is.null(data) || nrow(data) == 0) {
@@ -622,7 +681,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
     })
     
-    # Return Values ####
+    # Return Values ----
     
     #' Returner reactive values til parent scope
     #' Giver adgang til plot objekt, status og Anhøj resultater
