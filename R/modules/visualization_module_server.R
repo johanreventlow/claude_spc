@@ -8,7 +8,11 @@ library(ggplot2)
 library(dplyr)
 library(scales)
 
-# Definer ikonet som en R-variabel
+# SPC Ikoner ####
+
+#' Custom SVG ikoner til SPC value boxes
+#' Definerede som HTML-variabler for genbrugelige visualiseringer
+
 spc_run_chart_icon <- HTML('
   <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
     <path fill-rule="evenodd" d="M0 0h1v15h15v1H0z"/>
@@ -58,15 +62,22 @@ spc_out_of_control_icon <- HTML('
   </svg>
 ')
 
-# Visualization Module Server
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, skift_config_reactive, chart_title_reactive = NULL) {
+# Hovedfunktion ####
 
-  
-    
+#' Visualization Module Server
+#' 
+#' Håndterer al server-logik for SPC visualisering inklusiv:
+#' - Plot generering og konfiguration
+#' - Anhøj rules analyse (for run charts)
+#' - Value box status displays
+#' - Fejlhåndtering og brugerfeedback
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, skift_config_reactive, chart_title_reactive = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Reactive values for state management
+    # State Management ####
+    
+    # Reactive values til tilstandshåndtering
     values <- reactiveValues(
       plot_object = NULL,
       plot_ready = FALSE,
@@ -75,12 +86,19 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       is_computing = FALSE
     )
     
+    # Waiter til plot loading feedback
     waiter_plot <- waiter::Waiter$new(
       id = ns("plot_container"),
       html = WAITER_CONFIG$plot_generation$html,
       color = WAITER_CONFIG$plot_generation$color
     )
     
+    # Konfiguration og Validering ####
+    
+    ## Chart Configuration ####
+    
+    #' Reaktiv konfiguration for chart setup
+    #' Håndterer kolonne-validering og auto-detection
     chart_config <- reactive({
       data <- data_reactive()
       config <- column_config_reactive()
@@ -90,7 +108,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         return(NULL)
       }
       
-      # Validate columns exist in data
+      # Valider at kolonner eksisterer i data
       if (!is.null(config$x_col) && !(config$x_col %in% names(data))) {
         config$x_col <- NULL
       }
@@ -101,7 +119,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         config$n_col <- NULL
       }
       
-      # Auto-detect if needed
+      # Auto-detect hvis nødvendigt
       if (is.null(config$x_col) || is.null(config$y_col)) {
         auto_config <- detectChartConfiguration(data, chart_type)
         if (is.null(config$x_col)) config$x_col <- auto_config$x_col
@@ -117,21 +135,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       ))
     })
     
-    # Main plot generation reactive
+    # Plot Generering ####
+    
+    ## Main SPC Plot Reactive ####
+    
+    #' Hovedfunktion for SPC plot generering
+    #' Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- reactive({
       data <- data_reactive()
       config <- chart_config()
       
       values$is_computing <- FALSE
       
-      # Reset Anhøj results when no data or invalid config
+      # Reset Anhøj resultater når der ikke er data eller ugyldig config
       if (is.null(data) || is.null(config)) {
         values$plot_ready <- FALSE
         values$plot_warnings <- character(0)
-        values$anhoej_results <- NULL  # CLEAR Anhøj results when no data
+        values$anhoej_results <- NULL
         return(NULL)
       }
-      
       
       waiter_plot$show()
       
@@ -145,21 +167,21 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       
       chart_type <- if(is.null(chart_type_reactive())) "run" else chart_type_reactive()
       
-      # Validate data
+      # Valider data
       validation <- validateDataForChart(data, config, chart_type)
       
       if (!validation$valid) {
         values$plot_warnings <- validation$warnings
         values$plot_ready <- FALSE
-        values$anhoej_results <- NULL  # CLEAR Anhøj results when validation fails
+        values$anhoej_results <- NULL
         return(NULL)
       }
       
       values$plot_warnings <- character(0)
       
-      # Generate plot
+      # Generer plot
       tryCatch({
-        # Get phase configuration
+        # Hent fase konfiguration
         skift_config <- skift_config_reactive()
         
         spc_result <- generateSPCPlot(
@@ -178,12 +200,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         values$plot_object <- plot
         values$plot_ready <- TRUE
         
-        # Extract Anhøj rules from qic() results (built-in analysis)
+        # Udtræk Anhøj rules fra qic() resultater (built-in analyse)
         if (chart_type == "run" && !is.null(qic_data)) {
           cat("DEBUG: Extracting Anhøj rules from qic() results\n")
           values$anhoej_results <- list(
             runs_signal = any(qic_data$runs.signal, na.rm = TRUE),
-            crossings_signal = FALSE, # qic doesn't provide crossings signal directly  
+            crossings_signal = FALSE, # qic leverer ikke crossings signal direkte
             any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
             longest_run = max(qic_data$longest.run, na.rm = TRUE),
             longest_run_max = max(qic_data$longest.run.max, na.rm = TRUE),
@@ -202,38 +224,41 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         cat("ERROR in spc_plot reactive:", e$message, "\n")
         values$plot_warnings <- c("Graf-generering fejlede:", e$message)
         values$plot_ready <- FALSE
-        values$anhoej_results <- NULL  # CLEAR Anhøj results on error
+        values$anhoej_results <- NULL
         return(NULL)
       })
     })
     
-    # Dynamic content output
+    # UI Output Funktioner ####
+    
+    ## Plot Display Logic ####
+    
+    #' Dynamisk indhold output - håndterer både plot og beskeder
     output$dynamic_content <- renderUI({
       div(
         style = "width: 100%; height: 100%;",
-        # This will contain either the plot or a message
         uiOutput(ns("plot_or_message"))
       )
     })
     
-    # New unified output that handles both messages and plots
+    #' Unified output der håndterer både beskeder og plots
+    #' Smart besked logik baseret på app tilstand
     output$plot_or_message <- renderUI({
       data <- data_reactive()
       config <- chart_config()
       
-      # Smart message logic based on app state
+      # Smart besked logik baseret på app tilstand
       if (is.null(data) || nrow(data) == 0) {
         return(createPlotMessage("welcome"))
       }
       
-      # Check if user has meaningful data vs empty session template
-      # Exclude the "Skift" column which is always FALSE in new sessions
+      # Check om bruger har meningsfuldt data vs empty session template
+      # Ekskluder "Skift" kolonnen som altid er FALSE i nye sessioner
       data_without_skift <- data[, !names(data) %in% "Skift", drop = FALSE]
       has_meaningful_data <- any(!is.na(data_without_skift), na.rm = TRUE) && 
                             !all(sapply(data_without_skift, function(col) all(is.na(col))))
       
-      # If table is completely empty (all NA except Skift column), show welcome message
-      # This means user hasn't started entering data yet
+      # Hvis tabel er helt tom (alle NA undtagen Skift kolonne), vis velkomst besked
       if (!has_meaningful_data) {
         return(createPlotMessage("welcome"))
       }
@@ -245,22 +270,22 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       plot <- spc_plot()
       
       if (is.null(plot)) {
-        # Determine specific error type
+        # Bestem specifik fejl type
         if (length(values$plot_warnings) > 0) {
           warning_details <- paste(values$plot_warnings, collapse = " • ")
           
-          # Check for insufficient data
+          # Check for utilstrækkelig data
           if (any(grepl("datapunkter", values$plot_warnings, ignore.case = TRUE)) ||
               any(grepl("points", values$plot_warnings, ignore.case = TRUE))) {
             return(createPlotMessage("insufficient_data", details = warning_details))
           }
           
-          # Check for validation errors
+          # Check for validerings fejl
           if (any(grepl("kolonne|column|påkrævet|required", values$plot_warnings, ignore.case = TRUE))) {
             return(createPlotMessage("validation_error", details = warning_details))
           }
           
-          # Generic validation error
+          # Generisk validerings fejl
           return(createPlotMessage("validation_error", details = warning_details))
         } else {
           return(createPlotMessage("technical_error"))
@@ -268,7 +293,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
       
       if (inherits(plot, "ggplot")) {
-        # Return the actual plot wrapped in a plotOutput
+        # Returner det faktiske plot wrapped i plotOutput
         return(
           plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
         )
@@ -277,26 +302,33 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
-    # Separate renderPlot for the actual SPC plot
+    ## Actual Plot Rendering ####
+    
+    #' Separat renderPlot for det faktiske SPC plot
     output$spc_plot_actual <- renderPlot({
       plot <- spc_plot()
       if (inherits(plot, "ggplot")) {
         return(plot)
       } else {
-        return(NULL)  # This shouldn't happen due to logic above
+        return(NULL)
       }
     }, res = 96)
     
-    # Plot ready status
+    # Status og Information ####
+    
+    ## Plot Status ####
+    
+    #' Plot klar status
     output$plot_ready <- reactive({
       values$plot_ready
     })
     outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
     
-    # Plot info and warnings - ALWAYS SHOW
+    ## Plot Information ####
+    
+    #' Plot info og advarsler - ALTID VIS
     output$plot_info <- renderUI({
       data <- data_reactive()
-      # Always show plot info - removed hide_anhoej_rules condition
       
       if (length(values$plot_warnings) > 0) {
         div(
@@ -320,11 +352,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
+    # Value Boxes ####
     
-    # Data summary value box (more SPC-relevant) - ALWAYS VISIBLE
+    ## Plot Status Box ####
+    
+    #' Data summary value box (mere SPC-relevant) - ALTID SYNLIG
     output$plot_status_boxes <- renderUI({
       data <- data_reactive()
-      # Always show data summary - removed hide_anhoej_rules condition
       
       if (values$plot_ready && !is.null(data)) {
         config <- chart_config()
@@ -347,7 +381,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           p(class = "fs-7 text-muted mb-0", paste(chart_name, if(data_count < 15) "| Få datapunkter" else "| Tilstrækkelig data"))
         )
       } else {
-        # Default state
+        # Default tilstand
         value_box(
           title = "Data Status",
           value = "Ingen data",
@@ -359,7 +393,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     })
     
-    # NEW: Data summary value box for error checking
+    ## Data Summary Box ####
+    
+    #' Data summary value box til fejl kontrol
     output$data_summary_box <- renderUI({
       data <- data_reactive()
       config <- chart_config()
@@ -378,11 +414,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         )
       }
       
-      # Generate summary info
+      # Generer summary info
       total_rows <- nrow(data)
       total_cols <- ncol(data)
       
-      # Check for configured columns
+      # Check for konfigurerede kolonner
       summary_text <- ""
       if (!is.null(config)) {
         if (!is.null(config$y_col) && config$y_col %in% names(data)) {
@@ -415,18 +451,19 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
     })
     
-    # NEW: Anhøj rules as value boxes - ALWAYS VISIBLE
+    ## Anhøj Rules Value Boxes ####
+    
+    #' Anhøj rules som value boxes - ALTID SYNLIG
+    #' Disse viser serielængde og antal kryds for run charts
     output$anhoej_rules_boxes <- renderUI({
       data <- data_reactive()
-      # Always show value boxes - removed hide_anhoej_rules condition
       
-      # Smart content based on current status - ALWAYS show boxes
+      # Smart indhold baseret på nuværende status - ALTID vis boxes
       config <- chart_config()
       chart_type <- chart_type_reactive() %||% "run"
       anhoej <- values$anhoej_results
       
-      
-      # Simplified logic - if we have data with meaningful content, we're good to go
+      # Simplificeret logik - hvis vi har data med meningsfuldt indhold, er vi klar
       has_meaningful_data <- !is.null(data) && nrow(data) > 0 && 
         any(sapply(data, function(x) {
           if (is.logical(x)) return(any(x, na.rm = TRUE))
@@ -435,7 +472,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           return(FALSE)
         }))
       
-      # Determine current status and appropriate content
+      # Bestem nuværende status og passende indhold
       status_info <- if (!has_meaningful_data) {
         list(
           status = "no_data",
@@ -455,7 +492,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           theme = "light"
         )
       } else {
-        # Check if we have enough meaningful data
+        # Check om vi har nok meningsfuldt data
         meaningful_count <- if (!is.null(config$n_col) && config$n_col %in% names(data)) {
           sum(!is.na(data[[config$y_col]]) & !is.na(data[[config$n_col]]) & data[[config$n_col]] > 0)
         } else {
@@ -475,7 +512,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             theme = "info"
           )
         } else {
-          
           list(
             status = "ready",
             message = "SPC analyse klar",
@@ -484,17 +520,15 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         }
       }
       
-      
-  
-      
-      
-      # Always return the two key boxes with appropriate content
+      # Altid returner de to hovd boxes med passende indhold
       tagList(
-        # Series length box
+        ### Serielængde Box ####
         value_box(
           title = "Serielængde",
-          value = if (status_info$status == "ready" && !is.null(anhoej$longest_run)) {anhoej$longest_run} else {
-            tags$span(#style = "font-size: 1.2rem;", 
+          value = if (status_info$status == "ready" && !is.null(anhoej$longest_run)) {
+            anhoej$longest_run
+          } else {
+            tags$span(
               switch(status_info$status,
                 "no_data" = "Ingen data",
                 "not_started" = "Afventer start",
@@ -506,10 +540,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 "Afventer data"
               ))
           },
-          # showcase = icon("trending-up"),
-          # showcase = icon("trending-up"),
-          showcase =  spc_run_chart_icon,
-          # showcase_layout = "top right",
+          showcase = spc_run_chart_icon,
           theme = if (status_info$status == "ready" && !is.null(anhoej$runs_signal) && (anhoej$runs_signal %||% FALSE)) {
             "warning"
           } else if (status_info$status == "ready") {
@@ -526,16 +557,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             })
         ),
         
-        
-        
-
-        
-        # Number of crossings box  
+        ### Antal Kryds Box ####
         value_box(
           title = "Antal Kryds",
-          value = if (status_info$status == "ready" && !is.null(anhoej$n_crossings)) {anhoej$n_crossings
+          value = if (status_info$status == "ready" && !is.null(anhoej$n_crossings)) {
+            anhoej$n_crossings
           } else {
-            tags$span(#style = "font-size: 1.2rem; color: #666;",
+            tags$span(
               switch(status_info$status,
                 "no_data" = "Ingen data",
                 "not_started" = "Afventer start", 
@@ -547,8 +575,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 "Afventer data"
               ))
           },
-          # showcase = icon("exchange-alt"),
-          showcase =  spc_median_crossings_icon,
+          showcase = spc_median_crossings_icon,
           theme = if (status_info$status == "ready") "light" else status_info$theme,
           height = "120px", 
           p(class = "fs-7 text-muted mb-0",
@@ -561,7 +588,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
     })
     
-    # Additional value box 1 - Data Quality
+    ## Placeholder Value Boxes ####
+    
+    ### Data Quality Box (placeholder) ####
     output$data_quality_box <- renderUI({
       data <- data_reactive()
       if (is.null(data) || nrow(data) == 0) {
@@ -577,7 +606,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
     })
     
-    # Additional value box 2 - Report Status  
+    ### Report Status Box (placeholder) ####
     output$report_status_box <- renderUI({
       data <- data_reactive()
       if (is.null(data) || nrow(data) == 0) {
@@ -593,7 +622,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
     })
     
-    # Return reactive values
+    # Return Values ####
+    
+    #' Returner reactive values til parent scope
+    #' Giver adgang til plot objekt, status og Anhøj resultater
     return(
       list(
         plot = reactive(values$plot_object),
