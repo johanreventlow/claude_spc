@@ -146,25 +146,17 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
   if (show_phases && !is.null(skift_column) && skift_column %in% names(data)) {
     skift_data <- data[[skift_column]]
     
-    cat("DEBUG: Phase detection:\n")
-    cat("  - show_phases:", show_phases, "\n")
-    cat("  - skift_column:", skift_column, "\n")
-    cat("  - skift_data:", paste(skift_data, collapse = ", "), "\n")
-    
     # Convert to logical if needed
     if (!is.logical(skift_data)) {
       skift_data <- as.logical(skift_data)
-      cat("  - converted to logical:", paste(skift_data, collapse = ", "), "\n")
     }
     
     # Get positions where TRUE values occur (these are where new phases start)
     skift_points <- which(skift_data == TRUE)
-    cat("  - TRUE positions found:", paste(skift_points, collapse = ", "), "\n")
     
     if (length(skift_points) > 0) {
       # qic() expects integer vector of positions where new phases start
       part_positions <- sort(skift_points)
-      cat("  - part_positions (integer):", paste(part_positions, collapse = ", "), "\n")
     }
   }
   
@@ -235,52 +227,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
     stop("For få datapunkter efter rensning (minimum 3 påkrævet)")
   }
   
-  # Debug: Print detailed qic call arguments
-  cat("DEBUG: Detailed qic call arguments:\n")
-  cat("  - Chart type:", chart_type, "\n")
-  cat("  - Data points:", length(call_args$y), "\n")
-  
-  # X data analysis
-  cat("  - X data type:", class(call_args$x), "\n")
-  cat("  - X data length:", length(call_args$x), "\n")
-  cat("  - X data sample (first 10):", paste(head(call_args$x, 10), collapse = ", "), "\n")
-  cat("  - X data has NA:", any(is.na(call_args$x)), "\n")
-  
-  # Y data analysis
-  cat("  - Y data type:", class(call_args$y), "\n")
-  cat("  - Y data length:", length(call_args$y), "\n")
-  cat("  - Y data sample (first 10):", paste(head(call_args$y, 10), collapse = ", "), "\n")
-  cat("  - Y data has NA:", any(is.na(call_args$y)), "\n")
-  cat("  - Y data range:", paste(range(call_args$y, na.rm = TRUE), collapse = " to "), "\n")
-  
-  # N data analysis (if present)
-  if ("n" %in% names(call_args)) {
-    cat("  - N data type:", class(call_args$n), "\n")
-    cat("  - N data length:", length(call_args$n), "\n")
-    cat("  - N data sample (first 10):", paste(head(call_args$n, 10), collapse = ", "), "\n")
-    cat("  - N data has NA:", any(is.na(call_args$n)), "\n")
-    cat("  - N data has zeros:", any(call_args$n == 0, na.rm = TRUE), "\n")
-  }
-  
-  # Part analysis
-  if ("part" %in% names(call_args)) {
-    cat("  - Part type:", class(call_args$part), "\n")
-    cat("  - Part content:", paste(call_args$part, collapse = ", "), "\n")
-    cat("  - Part length:", length(call_args$part), "\n")
-  } else {
-    cat("  - Part positions: None\n")
-  }
-  
-  # Target analysis
-  if ("target" %in% names(call_args)) {
-    cat("  - Target value:", call_args$target, "\n")
-    cat("  - Target type:", class(call_args$target), "\n")
-  }
-  
-  # Additional parameters
-  cat("  - Title:", if(is.null(call_args$title)) "NULL" else call_args$title, "\n")
-  cat("  - X label:", if(is.null(call_args$xlab)) "NULL" else call_args$xlab, "\n")  
-  cat("  - Y label:", if(is.null(call_args$ylab)) "NULL" else call_args$ylab, "\n")
+  # Generate SPC data using qicharts2
   
   # Generate SPC data using qicharts2 and build custom ggplot
   tryCatch({
@@ -303,27 +250,22 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
                                                    orders = c("dmy", "ymd", "mdy"), quiet = TRUE))))
       
       if (is_date_column) {
-        cat("DEBUG: Using detected date column:", x_col_name, "\n")
         
         # Convert character dates to actual Date objects (like your working example)
         if (is.character(data[[x_col_name]])) {
-          cat("DEBUG: Converting character dates to Date objects\n")
           data[[x_col_name]] <- lubridate::parse_date_time(
             data[[x_col_name]], 
             orders = c("dmy", "ymd", "mdy"), 
             quiet = TRUE
           ) |> as.Date()
-          cat("DEBUG: Converted to Date class:", class(data[[x_col_name]]), "\n")
         }
         
         x_col_for_qic <- x_col_name
       } else {
-        cat("DEBUG: X column", x_col_name, "is not a date, creating sequence\n")
         data$obs_sequence <- 1:nrow(data)
         x_col_for_qic <- "obs_sequence"
       }
     } else {
-      cat("DEBUG: No X column detected, creating observation sequence\n")
       data$obs_sequence <- 1:nrow(data)
       x_col_for_qic <- "obs_sequence"
     }
@@ -343,62 +285,29 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       if (!is.null(n_col_name)) qic_args$n <- as.name(n_col_name)
       if (!is.null(part_positions)) qic_args$part <- part_positions
       
-      cat("DEBUG: About to call qic() with these arguments:\n")
-      cat("  - data dim:", paste(dim(data), collapse = "x"), "\n")
-      cat("  - chart:", chart_type, "\n")
-      cat("  - x column:", x_col_for_qic, "\n")
-      cat("  - y column:", y_col_name, "\n")
-      cat("  - n column:", n_col_name, "\n")
-      cat("  - part positions:", paste(part_positions, collapse = ", "), "\n")
-      cat("  - sample data rows (first 3):\n")
-      print(head(data, 3))
+      # Call qic() with prepared arguments
       
       qic_data <- do.call(qicharts2::qic, qic_args)
       
-      cat("SUCCESS: qic() completed successfully!\n")
-      cat("  - qic_data dimensions:", paste(dim(qic_data), collapse = "x"), "\n")
-      cat("  - qic_data columns:", paste(names(qic_data), collapse = ", "), "\n")
-      cat("  - First few rows of qic_data:\n")
-      print(head(qic_data, 3))
-      
       # Convert proportions to percentages for run charts with rate data
       if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
-        cat("DEBUG: Converting qic proportions to percentages for display\n")
-        cat("DEBUG: Before conversion - y class:", class(qic_data$y), ", cl class:", class(qic_data$cl), "\n")
         
         qic_data$y <- qic_data$y * 100
-        cat("DEBUG: Y values converted to percentages\n")
-        
         qic_data$cl <- qic_data$cl * 100
-        cat("DEBUG: CL values converted to percentages\n")
         
         if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
           qic_data$ucl <- qic_data$ucl * 100
-          cat("DEBUG: UCL values converted to percentages\n")
         }
         if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
           qic_data$lcl <- qic_data$lcl * 100
-          cat("DEBUG: LCL values converted to percentages\n")
         }
-        cat("DEBUG: Percentage conversion completed\n")
       }
     
     }, error = function(e) {
-      cat("ERROR: qic() failed with message:", e$message, "\n")
-      cat("ERROR: Full error details:\n")
-      print(e)
-      cat("ERROR: Data summary at time of failure:\n")
-      cat("  - Data rows:", nrow(data), "\n")
-      cat("  - Chart type:", chart_type, "\n")
-      cat("  - Y column:", y_col_name, "exists:", y_col_name %in% names(data), "\n")
-      cat("  - N column:", n_col_name, "exists:", !is.null(n_col_name) && n_col_name %in% names(data), "\n")
-      cat("  - X column:", x_col_for_qic, "exists:", x_col_for_qic %in% names(data), "\n")
-      cat("  - Part positions:", part_positions, "\n")
       stop("Fejl ved qic() kald: ", e$message)
     })
     
     # Build custom ggplot using qic calculations
-    cat("DEBUG: Starting ggplot construction\n")
     plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) +
       # Data points
       ggplot2::geom_line(color = HOSPITAL_COLORS$lightgrey, linewidth = 1) + #, alpha = 0.7) +
@@ -412,43 +321,30 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       ggplot2::labs(title = call_args$title, x = "", y = "") +
       ggplot2::theme_minimal()
     
-    cat("DEBUG: Base ggplot created successfully\n")
-    
     # Add control limits conditionally
-    cat("DEBUG: Checking UCL condition: not null =", !is.null(qic_data$ucl), ", not all NA =", !all(is.na(qic_data$ucl)), "\n")
     if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
-      cat("DEBUG: Adding UCL line\n")
       plot <- plot + 
         ggplot2::geom_line(ggplot2::aes(y = ucl), color = HOSPITAL_COLORS$danger, 
                           linetype = "dashed", linewidth = 0.8)
-      cat("DEBUG: UCL line added\n")
     }
     
-    cat("DEBUG: Checking LCL condition: not null =", !is.null(qic_data$lcl), ", not all NA =", !all(is.na(qic_data$lcl)), "\n")
     if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
-      cat("DEBUG: Adding LCL line\n")
       plot <- plot + 
         ggplot2::geom_line(ggplot2::aes(y = lcl), color = HOSPITAL_COLORS$danger, 
                           linetype = "dashed", linewidth = 0.8)
-      cat("DEBUG: LCL line added\n")
     }
     
     # Fix x-axis if we converted dates to numeric
-    cat("DEBUG: Checking x-axis fix condition: xlab is Dato =", call_args$xlab == "Dato", ", x is numeric =", is.numeric(qic_data$x), "\n")
     if (call_args$xlab == "Dato" && is.numeric(qic_data$x)) {
-      cat("DEBUG: Applying x-axis date formatting\n")
       plot <- plot + 
         ggplot2::scale_x_continuous(
           labels = function(x) format(as.Date(x, origin = "1970-01-01"), "%Y-%m"),
           breaks = scales::pretty_breaks(n = 6)
         )
-      cat("DEBUG: X-axis date formatting applied\n")
     }
     
     # Add phase separation lines if parts exist
-    cat("DEBUG: Checking phase separation condition\n")
     if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
-      cat("DEBUG: Adding phase separation lines\n")
       # Find phase change points
       phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
       if (length(phase_changes) > 0) {
@@ -459,21 +355,15 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
                                linetype = "dotted", linewidth = 1, alpha = 0.7)
         }
       }
-      cat("DEBUG: Phase separation lines added\n")
     }
     
     # Add target line if provided
-    cat("DEBUG: Checking target line condition: target_value =", target_value, "\n")
     if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
-      cat("DEBUG: Adding target line\n")
       plot <- plot + 
         ggplot2::geom_hline(yintercept = target_value, 
                            color = HOSPITAL_COLORS$darkgrey, linetype="42", linewidth = 1.2,
                            alpha = 0.8)
-      cat("DEBUG: Target line added\n")
     }
-    
-    cat("DEBUG: Plot construction completed successfully\n")
     return(list(plot = plot, qic_data = qic_data))
     
   }, error = function(e) {

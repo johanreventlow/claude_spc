@@ -46,7 +46,6 @@ setup_helper_observers <- function(input, output, session, values) {
       
       if (meaningful_data || user_has_started) "TRUE" else "FALSE"
     }
-    cat("DEBUG: output$dataLoaded returning:", result, "\n")
     result
   })
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
@@ -109,15 +108,12 @@ setup_helper_observers <- function(input, output, session, values) {
         values$updating_table || 
         values$table_operation_in_progress ||
         values$restoring_session) {
-      cat("DEBUG: Auto-save skipped - guards active (updating_table:", values$updating_table, ", table_operation_in_progress:", values$table_operation_in_progress, ")\n")
       return()
     }
     
     if (!is.null(values$current_data) && 
         nrow(values$current_data) > 0 && 
         any(!is.na(values$current_data))) {
-      
-      cat("DEBUG: Triggering auto-save for data change\n")
       
       metadata <- collect_metadata(input)
       autoSaveAppState(session, values$current_data, metadata)
@@ -132,12 +128,10 @@ setup_helper_observers <- function(input, output, session, values) {
         values$updating_table || 
         values$table_operation_in_progress ||
         values$restoring_session) {
-      cat("DEBUG: Settings auto-save skipped - guards active (updating_table:", values$updating_table, ", table_operation_in_progress:", values$table_operation_in_progress, ")\n")
       return()
     }
     
     if (!is.null(values$current_data)) {
-      cat("DEBUG: Settings changed - scheduling auto-save\n")
       
       metadata <- collect_metadata(input)
       autoSaveAppState(session, values$current_data, metadata)

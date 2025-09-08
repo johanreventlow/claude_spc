@@ -212,7 +212,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         
         # Udtræk ALLE qic() resultater for ALLE chart typer - vigtig for konsistent beregning
         if (!is.null(qic_data)) {
-          cat("DEBUG: Udtrækker resultater fra qic() data for chart type:", chart_type, "\n")
           
           # Udtræk ALLE tilgængelige metrics fra qic() - lad value boxes bestemme visning
           qic_results <- list(
@@ -237,7 +236,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           )
           
           values$anhoej_results <- qic_results
-          cat("DEBUG: Resultater udtrukket fra qic data for chart type:", chart_type, "\n")
         } else {
           values$anhoej_results <- NULL
         }
@@ -245,7 +243,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         return(plot)
         
       }, error = function(e) {
-        cat("FEJL i spc_plot reactive:", e$message, "\n")
         values$plot_warnings <- c("Graf-generering fejlede:", e$message)
         values$plot_ready <- FALSE
         values$anhoej_results <- NULL

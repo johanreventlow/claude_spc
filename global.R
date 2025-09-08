@@ -207,7 +207,6 @@ get_qic_chart_type <- function(danish_selection) {
   }
   
   # Fallback
-  cat("ADVARSEL: Ukendt diagram type valg:", danish_selection, "- bruger 'run' som fallback\n")
   return("run")
 }
 

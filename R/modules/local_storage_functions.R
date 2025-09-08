@@ -10,8 +10,6 @@ library(jsonlite)
 ## Local Storage funktioner til server med datastruktur preservation
 saveDataLocally <- function(session, data, metadata = NULL) {
   tryCatch({
-    cat("DEBUG: Preparing app state for save\n")
-    cat("DEBUG: Original data dimensions:", nrow(data), "rows x", ncol(data), "cols\n")
     
     # CRITICAL: Preserve data structure explicitly - improved method
     data_to_save <- list(
@@ -42,8 +40,6 @@ saveDataLocally <- function(session, data, metadata = NULL) {
       stop("JSON conversion resulted in empty data")
     }
     
-    cat("DEBUG: JSON data size:", nchar(json_data), "characters\n")
-    
     # Send til browser localStorage
     session$sendCustomMessage(
       type = "saveAppState",
@@ -55,7 +51,6 @@ saveDataLocally <- function(session, data, metadata = NULL) {
     
     
   }, error = function(e) {
-    cat("ERROR in saveDataLocally:", e$message, "\n")
     stop(paste("Failed to save data locally:", e$message))
   })
 }
@@ -63,27 +58,25 @@ saveDataLocally <- function(session, data, metadata = NULL) {
 ## Load data med logging
 loadDataLocally <- function(session) {
   tryCatch({
-    cat("DEBUG: Requesting data from localStorage\n")
     # Anmod om data fra localStorage
     session$sendCustomMessage(
       type = "loadAppState", 
       message = list(key = "current_session")
     )
   }, error = function(e) {
-    cat("ERROR in loadDataLocally:", e$message, "\n")
+    # Load failed silently
   })
 }
 
 ## Clear data med logging
 clearDataLocally <- function(session) {
   tryCatch({
-    cat("DEBUG: Clearing localStorage\n")
     session$sendCustomMessage(
       type = "clearAppState",
       message = list(key = "current_session")
     )
   }, error = function(e) {
-    cat("ERROR in clearDataLocally:", e$message, "\n")
+    # Clear failed silently
   })
 }
 
@@ -95,14 +88,11 @@ autoSaveAppState <- function(session, current_data, metadata) {
       
       # Begræns data størrelse for localStorage (max ~5MB i de fleste browsers)
       data_size <- object.size(current_data)
-      cat("DEBUG: Auto-saving data - size:", format(data_size, units = "Kb"), "\n")
       
       if (data_size < 1000000) {  # 1MB limit
         tryCatch({
           saveDataLocally(session, current_data, metadata)
-          cat("DEBUG: Auto-save completed successfully\n")
         }, error = function(e) {
-          cat("ERROR: Auto-save failed:", e$message, "\n")
           showNotification(
             paste("Auto-gem fejlede:", e$message),
             type = "error",
@@ -110,17 +100,12 @@ autoSaveAppState <- function(session, current_data, metadata) {
           )
         })
       } else {
-        cat("WARNING: Data too large for auto-save:", format(data_size, units = "Mb"), "\n")
         showNotification(
           "Data for stor til automatisk gem - brug Download funktion",
           type = "warning",
           duration = 3
         )
       }
-    } else {
-      cat("DEBUG: Skipping auto-save - no meaningful data\n")
     }
-  } else {
-    cat("DEBUG: Skipping auto-save - current_data is NULL\n")
   }
 }

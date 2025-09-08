@@ -50,7 +50,6 @@ handle_excel_upload <- function(file_path, session, values) {
   excel_sheets <- readxl::excel_sheets(file_path)
   
   if ("Data" %in% excel_sheets && "Metadata" %in% excel_sheets) {
-    cat("DEBUG: Detected complete export file - importing with session info\n")
     
     # Read data from Data sheet
     data <- readxl::read_excel(file_path, sheet = "Data", col_names = TRUE)

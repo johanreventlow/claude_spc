@@ -36,6 +36,6 @@ for (pkg in required_packages) {
     library(pkg, character.only = TRUE)
     cat("✓ Loaded", pkg, "\n")
   }, error = function(e) {
-    cat("✗ Failed to load", pkg, ":", e$message, "\n")
+    # Silent error - package failed to load
   })
 }

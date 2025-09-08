@@ -15,16 +15,13 @@ setup_session_management <- function(input, output, session, values, waiter_file
     
     # Tjek om auto-gendannelse er aktiveret
     if (!AUTO_RESTORE_ENABLED) {
-      cat("DEBUG: Auto-restore is disabled (AUTO_RESTORE_ENABLED = FALSE)\n")
       return()
     }
     
     tryCatch({
-      cat("DEBUG: Auto-restoring saved session data\n")
       saved_state <- input$auto_restore_data
       
       if (!is.null(saved_state$data)) {
-        cat("DEBUG: Found saved data for auto-restore\n")
         
         # Sæt gendannelses guards for at forhindre interferens
         values$restoring_session <- TRUE
@@ -34,7 +31,6 @@ setup_session_management <- function(input, output, session, values, waiter_file
         
         # Oprydningsfunktion til at nulstille guards
         on.exit({
-          cat("DEBUG: Auto-restore cleanup - re-enabling auto-save\n")
           values$updating_table <- FALSE
           values$restoring_session <- FALSE
           values$auto_save_enabled <- TRUE
@@ -48,7 +44,6 @@ setup_session_management <- function(input, output, session, values, waiter_file
         saved_data <- saved_state$data
         
         if (!is.null(saved_data$values) && !is.null(saved_data$nrows) && !is.null(saved_data$ncols)) {
-          cat("DEBUG: Reconstructing data.frame from structured format\n")
           
           # Reconstruct data.frame manually
           reconstructed_data <- data.frame(
@@ -96,7 +91,6 @@ setup_session_management <- function(input, output, session, values, waiter_file
         
         # Restore metadata if available
         if (!is.null(saved_state$metadata)) {
-          cat("DEBUG: Restoring metadata\n")
           restore_metadata(session, saved_state$metadata)
         }
         
@@ -114,14 +108,9 @@ setup_session_management <- function(input, output, session, values, waiter_file
           duration = 5
         )
         
-        cat("DEBUG: Auto-restore completed successfully\n")
-        
-      } else {
-        cat("DEBUG: No saved data found in session state\n")
       }
       
     }, error = function(e) {
-      cat("ERROR during auto-restore:", e$message, "\n")
       showNotification(paste("Fejl ved automatisk genindlæsning:", e$message), type = "error")
       
       # Reset guards even on error

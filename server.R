@@ -54,7 +54,7 @@ server <- function(input, output, session) {
         values$hide_anhoej_rules <- FALSE  # Show Anhøj rules for real data
         
       }, error = function(e) {
-        cat("ERROR: Failed to load test data:", e$message, "\n")
+        # Test data loading failed silently
       })
     }
   }

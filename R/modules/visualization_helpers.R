@@ -263,17 +263,12 @@ showPlaceholder <- function() {
 ## Hospital Tema til Plots
 # Anvender hospital branding og farvepalette på SPC plots
 applyHospitalTheme <- function(plot) {
-  cat("DEBUG: applyHospitalTheme called, plot class:", class(plot), "\n")
   
   if (is.null(plot) || !inherits(plot, "ggplot")) {
-    cat("DEBUG: Plot is NULL or not ggplot, returning as-is\n")
     return(plot)
   }
   
-  cat("DEBUG: Starting hospital theme application\n")
-  
   tryCatch({
-    cat("DEBUG: Checking create_plot_footer function exists:", exists("create_plot_footer"), "\n")
     
     footer_text <- tryCatch({
       create_plot_footer(
@@ -282,11 +277,8 @@ applyHospitalTheme <- function(plot) {
         dato = Sys.Date()
       )
     }, error = function(e) {
-      cat("ERROR creating footer:", e$message, "\n")
       "SPC Analyse"  # fallback text
     })
-    
-    cat("DEBUG: Footer text created:", substr(footer_text, 1, 50), "...\n")
     
     themed_plot <- plot + 
       theme_minimal() +
@@ -306,12 +298,9 @@ applyHospitalTheme <- function(plot) {
         plot.caption = element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
       )
     
-    cat("DEBUG: Hospital theme applied successfully\n")
     return(themed_plot)
     
   }, error = function(e) {
-    cat("ERROR applying hospital theme:", e$message, "\n")
-    cat("ERROR details:", toString(e), "\n")
     return(plot)
   })
 }
