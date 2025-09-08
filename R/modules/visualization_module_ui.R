@@ -32,18 +32,47 @@ visualizationModuleUI <- function(id) {
 visualizationStatusUI <- function(id) {
   ns <- NS(id)
   
+  # layout_column_wrap(
+  #   width = 1/2,
+  #   heights_equal = "row",
+  #   value_box(
+  #     title = "Box 1", value = "100",
+  #     style = "flex: 1;"
+  #   ),
+  #   value_box(
+  #     title = "Box 2", value = "200",
+  #     style = "flex: 1;"
+  #   ),
+  #   value_box(
+  #     title = "Box 3", value = "300",
+  #     style = "flex: 1;"
+  #   ),
+  #   value_box(
+  #     title = "Box 4", value = "400",
+  #     style = "flex: 1;"
+  #   ),
+  #   value_box(
+  #     title = "Box 5", value = "500",
+  #     style = "flex: 1;"
+  #   ),
+  #   value_box(
+  #     title = "Box 6", value = "600",
+  #     style = "flex: 1;"
+  #   )
+  # )
+  
   ## Value Box Layout ####
   # Brug layout_column_wrap for korrekt value box visning
   layout_column_wrap(
     width = 1/2,
     heights_equal = "row",
-    
-    ### Anhøj Rules Value Boxes ####
-    # Hovedmetrics: Serielængde og Antal Kryds for run charts
+
+  ### Anhøj Rules Value Boxes ####
+  # Hovedmetrics: Serielængde og Antal Kryds for run charts
     uiOutput(ns("anhoej_rules_boxes")),
-    
-    ### Data Summary Box ####
-    # Data oversigt og fejl kontrol
-    # uiOutput(ns("data_summary_box"))
+     
+  ### Data Summary Box ####
+  # Data oversigt og fejl kontrol
+  #   # uiOutput(ns("data_summary_box"))
   )
 }

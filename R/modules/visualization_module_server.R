@@ -54,11 +54,10 @@ spc_out_of_control_icon <- HTML('
     <circle cx="3" cy="7" r="0.5"/>
     <circle cx="5" cy="8.5" r="0.5"/>
     <circle cx="7" cy="6.5" r="0.5"/>
-    <circle cx="9" cy="2.5" r="0.6" fill="red"/>
+    <circle cx="9" cy="2.5" r="0.5" />
     <circle cx="11" cy="7.5" r="0.5"/>
     <circle cx="13" cy="8" r="0.5"/>
     <path d="M3 7 L5 8.5 L7 6.5 L9 2.5 L11 7.5 L13 8" stroke="currentColor" stroke-width="0.5" fill="none"/>
-    <path d="M8.5 2 L9.5 2 M9 1.5 L9 2.5" stroke="red" stroke-width="0.5"/>
   </svg>
 ')
 
@@ -533,6 +532,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         ### Serielængde Box ----
         value_box(
           title = "Maksimal serielængde",
+          style = "flex: 1;",
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
               anhoej$longest_run
@@ -553,7 +553,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           showcase = spc_run_chart_icon,
           theme = if (status_info$status == "ready" && chart_type == "run" && !is.null(anhoej$runs_signal) && (anhoej$runs_signal %||% FALSE)) {
-            "warning"
+            "dark"
           } else if (status_info$status == "ready") {
             "light" 
           } else {
@@ -575,6 +575,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         ### Antal Kryds Box ----
         value_box(
           title = "Minimum antal kryds",
+          style = "flex: 1;",
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$n_crossings) && !is.na(anhoej$n_crossings)) {
               anhoej$n_crossings
@@ -608,12 +609,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             })
         ),
         
-        ### Særlige Årsager/Out-of-Control Box ----
+        ### Særlige årsager/Out-of-Control Box ----
         value_box(
           title = "Uden for kontrolgrænser",
+          style = "flex: 1;",
           value = if (status_info$status == "ready" && !chart_type == "run" && !is.null(anhoej$out_of_control_count)) {
             anhoej$out_of_control_count
-          } else if (status_info$status == "ready" && chart_type == "run") {div(style = "font-size:1em", class = "fs-7 text-muted mb-0", "Anvendes ikke ved analyse af seridiagrammer (run charts)")
+          } else if (status_info$status == "ready" && chart_type == "run") {div(style = "font-size:1em", class = "fs-7 text-muted mb-0", "Anvendes ikke ved analyse af seriediagrammer (run charts)")
           } else {
             tags$span(
               switch(status_info$status,
@@ -628,7 +630,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           showcase = spc_out_of_control_icon,
           theme = if (status_info$status == "ready" && !is.null(anhoej$out_of_control_count) && (anhoej$out_of_control_count > 0)) {
-            "danger"
+            "dark"
           } else if (status_info$status == "ready") {
             "light" 
           } else {
@@ -638,7 +640,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           p(class = "fs-7 text-muted mb-0", 
             if (status_info$status == "ready") {
               if (chart_type == "run") {
-                "test"
+                "   "
               } else {
                 "Punkter"
               }

@@ -25,13 +25,13 @@ create_ui_main_content <- function() {
         create_plot_only_card(),
         
         create_data_table_card(),
-        layout_column_wrap(
+        # layout_column_wrap(
           # width = 1/2,  # 2 boxes per row - wider and easier to read
           # heights_equal = "row", 
-          fill = FALSE,
+          # fill = FALSE,
           # Status information as value boxes  
           create_status_value_boxes()
-        ),
+        # ),
         # create_export_card(),
       )
     )
