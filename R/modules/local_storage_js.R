@@ -1,7 +1,12 @@
-# R/modules/local_storage_js.R
-# JavaScript functions for localStorage operations
+# local_storage_js.R
+# JavaScript funktioner til browser localStorage integration
 
-# JavaScript funktioner til localStorage
+# Dependencies ----------------------------------------------------------------
+# Ingen R-biblioteker nødvendige - kun JavaScript kode
+
+# JAVASCRIPT FUNKTIONER ======================================================
+
+## JavaScript funktioner til localStorage
 localStorage_js <- "
 // Save data to localStorage - FIXED: Konsistent brug af localStorage
 window.saveAppState = function(key, data) {

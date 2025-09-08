@@ -1,12 +1,17 @@
-# R/modules/local_storage_module.R
-# Main local storage module - loads all components
+# local_storage_module.R
+# Hovedfil for local storage modul - koordinerer alle komponenter
 
+# Dependencies ----------------------------------------------------------------
 library(shiny)
 library(shinyjs)
 
-# Source all local storage module components
+# MODULKOMPONENTER ============================================================
+
+## Kilde alle local storage modul komponenter
 source("R/modules/local_storage_js.R")
 source("R/modules/local_storage_functions.R")
 
-# Re-export main functions for backwards compatibility
-# The actual functions are defined in the component files above
+# BAGUDKOMPATIBILITET =========================================================
+
+## Re-eksporter hovedfunktioner for bagudkompatibilitet
+# De faktiske funktioner er defineret i komponentfilerne ovenfor

@@ -1,11 +1,14 @@
-# R/modules/visualization_spc.R
-# SPC plot generation functions
+# visualization_spc.R
+# SPC plotgenerering med qicharts2 og tilpasset ggplot styling
 
+# Dependencies ----------------------------------------------------------------
 library(qicharts2)
 library(ggplot2)
 library(lubridate)
 
-# Helper function: Generate SPC plot
+# SPC PLOT GENERERING =========================================================
+
+## Generér SPC plot med tilpasset styling
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_phases = FALSE, skift_column = NULL, chart_title_reactive = NULL) {
   
   # Safety checks

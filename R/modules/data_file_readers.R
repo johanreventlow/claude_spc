@@ -1,14 +1,17 @@
-# R/modules/data_file_readers.R
-# File reading functions for data module
+# data_file_readers.R
+# Modul til læsning af datafiler med støtte for danske formater og separatorer
 
+# Dependencies ----------------------------------------------------------------
 library(readr)
 library(readxl)
 
-# Read CSV file with error handling - Danish-optimized
+# CSV LÆSNING =================================================================
+
+## Læs CSV fil med fejlhåndtering - dansk-optimeret
 readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8", header = TRUE) {
   
   tryCatch({
-    # For Danish CSV files, use read_csv2 when sep=";" and decimal=","
+    # Til danske CSV filer, brug read_csv2 når sep=";" og decimal=","
     if(sep == ";" && decimal == ",") {
       data <- readr::read_csv2(
         file_path,
@@ -22,7 +25,7 @@ readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8",
         trim_ws = TRUE
       )
     } else if(decimal == ",") {
-      # Custom delimiter with comma decimal
+      # Brugerdefineret separator med komma decimal
       data <- readr::read_delim(
         file_path,
         delim = sep,
@@ -36,7 +39,7 @@ readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8",
         trim_ws = TRUE
       )
     } else {
-      # Standard delimited file
+      # Standard separeret fil
       data <- readr::read_delim(
         file_path,
         delim = sep,
@@ -51,16 +54,16 @@ readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8",
       )
     }
     
-    # Convert to data.frame and clean up
+    # Konverter til data.frame og rens op
     data <- as.data.frame(data)
     
-    # Clean column names (remove extra spaces, etc.)
+    # Rens kolonnenavne (fjern ekstra mellemrum osv.)
     names(data) <- trimws(names(data))
     
     return(data)
     
   }, error = function(e1) {
-    # Fallback: base R read functions
+    # Fallback: basis R læsefunktioner
     tryCatch({
       data <- read.csv(
         file_path,
@@ -72,7 +75,7 @@ readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8",
         strip.white = TRUE
       )
       
-      # Clean column names
+      # Rens kolonnenavne
       names(data) <- trimws(names(data))
       
       return(data)
@@ -83,14 +86,16 @@ readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8",
   })
 }
 
-# Read Excel file with error handling
+# EXCEL LÆSNING ==============================================================
+
+## Læs Excel fil med fejlhåndtering
 readExcelFile <- function(file_path) {
   
   tryCatch({
-    # Get sheet names
+    # Hent ark-navne
     sheets <- readxl::excel_sheets(file_path)
     
-    # Read first sheet
+    # Læs første ark
     data <- readxl::read_excel(
       file_path,
       sheet = sheets[1],
@@ -98,7 +103,7 @@ readExcelFile <- function(file_path) {
       .name_repair = "minimal"
     )
     
-    # Convert to data.frame
+    # Konverter til data.frame
     return(as.data.frame(data))
     
   }, error = function(e) {

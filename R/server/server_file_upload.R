@@ -1,6 +1,12 @@
-# R/server/server_file_upload.R
-# File upload handling logic
+# server_file_upload.R
+# Server logik til håndtering af fil uploads og import
 
+# Dependencies ----------------------------------------------------------------
+# Bruger readxl og readr til fil-import
+
+# UPLOAD HÅNDTERING ===========================================================
+
+## Setup fil upload funktionalitet
 setup_file_upload <- function(input, output, session, values, waiter_file) {
   
   # File upload handler
@@ -39,6 +45,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file) {
   })
 }
 
+## Håndter Excel fil upload
 handle_excel_upload <- function(file_path, session, values) {
   excel_sheets <- readxl::excel_sheets(file_path)
   
@@ -104,8 +111,9 @@ handle_excel_upload <- function(file_path, session, values) {
   }
 }
 
+## Håndter CSV fil upload
 handle_csv_upload <- function(file_path, values) {
-  # CSV processing with Danish defaults
+  # CSV behandling med danske standarder
   data <- readr::read_csv2(
     file_path,
     locale = readr::locale(
@@ -132,6 +140,7 @@ handle_csv_upload <- function(file_path, values) {
   )
 }
 
+## Parse session metadata fra importerede filer
 parse_session_metadata <- function(session_lines, data_cols) {
   metadata <- list()
   

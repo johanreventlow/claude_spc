@@ -1,10 +1,13 @@
-# R/modules/local_storage_functions.R
-# R functions for localStorage operations
+# local_storage_functions.R
+# Server-side funktioner til localStorage integration og databehandling
 
+# Dependencies ----------------------------------------------------------------
 library(shiny)
 library(jsonlite)
 
-# FIXED: Local Storage funktioner til server med data structure preservation
+# LOCAL STORAGE FUNKTIONER ===================================================
+
+## Local Storage funktioner til server med datastruktur preservation
 saveDataLocally <- function(session, data, metadata = NULL) {
   tryCatch({
     cat("DEBUG: Preparing app state for save\n")
@@ -57,7 +60,7 @@ saveDataLocally <- function(session, data, metadata = NULL) {
   })
 }
 
-# FIXED: Load data med logging
+## Load data med logging
 loadDataLocally <- function(session) {
   tryCatch({
     cat("DEBUG: Requesting data from localStorage\n")
@@ -71,7 +74,7 @@ loadDataLocally <- function(session) {
   })
 }
 
-# FIXED: Clear data med logging
+## Clear data med logging
 clearDataLocally <- function(session) {
   tryCatch({
     cat("DEBUG: Clearing localStorage\n")
@@ -84,7 +87,7 @@ clearDataLocally <- function(session) {
   })
 }
 
-# FIXED: Auto-save funktion med bedre logging og error handling
+## Auto-save funktion med bedre logging og error handling
 autoSaveAppState <- function(session, current_data, metadata) {
   if (!is.null(current_data)) {
     # Kun gem hvis der er meaningful data

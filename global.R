@@ -1,7 +1,11 @@
+# GLOBAL KONFIGURATIONSFIL ================================================
+
+# BIBLIOTEKER OG DEPENDENCIES --------------------------------
+
 library(shiny)
-library(bslib)  # For page_navbar, card, sidebar etc.
+library(bslib)  # Til page_navbar, card, sidebar etc.
 library(qicharts2)
-library(excelR)  # For Excel-like editable table implementation
+library(excelR)  # Til Excel-lignende redigerbare tabeller
 library(dplyr)
 library(ggplot2)
 library(readr)
@@ -9,48 +13,53 @@ library(readxl)
 library(shinycssloaders)
 library(shinyWidgets)
 library(shinyjs)
-library(zoo)  # For rolling means in calculated fields
-library(scales)  # For percent formatting in plots
-library(rlang)     # For %||% operator
+library(zoo)  # Til rullende gennemsnit i beregnede felter
+library(scales)  # Til procent-formatering i plots
+library(rlang)     # Til %||% operatoren
 library(lubridate)
-library(openxlsx)  # For Excel export functionality
+library(openxlsx)  # Til Excel export funktionalitet
 library(waiter)
-library(yaml)  # For reading brand.yml
-library(later)  # For delayed execution
+library(yaml)  # Til læsning af brand.yml
+library(later)  # Til forsinket udførelse
 
-# DEVELOPMENT FLAGS
-# TEST MODE: Auto-load example data for qic() debugging
-# Set to FALSE to disable auto-loading and return to normal user-controlled data loading
+# UDVIKLINGSINDSTILLINGER --------------------------------
+
+## Testmodus -----
+# TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
+# Sæt til FALSE for at deaktivere auto-indlæsning og vende tilbage til normal brugerstyret dataindlæsning
 TEST_MODE_AUTO_LOAD <- TRUE
 
-# AUTO-RESTORE: Automatically restore previous sessions
-# Set to FALSE during development, TRUE for production
+## Auto-gendannelse -----
+# AUTO-RESTORE: Gendan automatisk tidligere sessioner
+# Sæt til FALSE under udvikling, TRUE til produktion
 AUTO_RESTORE_ENABLED <- FALSE
 
-# TABLE TYPE: Using excelR for Excel-like editable tables
+## Tabeltype -----
+# TABLE TYPE: Bruger excelR til Excel-lignende redigerbare tabeller
 
-# Load utility functions
+# HJÆLPEFUNKTIONER --------------------------------
+
 source("R/utils/danish_numbers.R")
 
-# -----------------------------------------------------------------------------
-# 100% BRAND.YML BASERET KONFIGURATION
-# -----------------------------------------------------------------------------
+# HOSPITAL BRANDING ================================
 
-# Read brand.yml configuration
+## Brand.yml konfiguration -----
+# Læs brand.yml konfiguration
 brand_config <- yaml::read_yaml("_brand.yml")
 
-# Create theme using brand.yml (auto-discovered as _brand.yml)
+# Opret tema baseret på brand.yml (auto-opdaget som _brand.yml)
 my_theme <- bs_theme(brand = "_brand.yml")
 
-# Hospital information from brand.yml
+## Hospital information -----
 HOSPITAL_NAME <- brand_config$meta$name
 HOSPITAL_LOGO_PATH <- brand_config$logo$image
 
-# Extract ALL colors from brand.yml (via bs_theme)
+## Hospital farver -----
+# Hent ALLE farver fra brand.yml (via bs_theme)
 HOSPITAL_COLORS <- list(
   primary = brand_config$color$palette$primary,
   secondary = brand_config$color$palette$secondary,
-  accent = brand_config$color$palette$accent,  # From brand.yml palette
+  accent = brand_config$color$palette$accent,  # Fra brand.yml palette
   success = brand_config$color$palette$success,
   warning = brand_config$color$palette$warning,
   danger = brand_config$color$palette$danger,
@@ -66,10 +75,11 @@ HOSPITAL_COLORS <- list(
   
 )
 
-# Waiter configuration med hospital branding
-# Waiter configuration med hospital branding
+# WAITER KONFIGURATION ================================
+
+## Hospital branding til loading screens -----
 WAITER_CONFIG <- list(
-  # App start loading - FULLSCREEN OVERLAY
+  # App start loading - FULDSKÆRM OVERLAY
   app_start = list(
     html = tagList(
       div(
@@ -79,7 +89,7 @@ WAITER_CONFIG <- list(
            style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 300; margin-bottom: 20px;")),
         h4("Indlæser...", 
            style = paste("color:", HOSPITAL_COLORS$secondary, "; font-weight: 300; margin-bottom: 30px;")),
-        waiter::spin_6(), # Hospital-friendly spinner
+        waiter::spin_6(), # Hospital-venligt spinner
         br(),br(),br(),
         p("Vent venligst mens appen initialiseres", 
           style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.9rem;"))
@@ -113,7 +123,9 @@ WAITER_CONFIG <- list(
   )
 )
 
-# ggplot2 tema for alle grafer
+# GRAFIK TEMAER ================================
+
+## ggplot2 hospital tema -----
 HOSPITAL_THEME <- function() {
   theme_minimal() +
     theme(
@@ -129,7 +141,7 @@ HOSPITAL_THEME <- function() {
     )
 }
 
-# Standard footer til alle grafer
+## Standard footer til alle grafer -----
 create_plot_footer <- function(afdeling = "", data_kilde = "", dato = Sys.Date()) {
   paste0(
     HOSPITAL_NAME, 
@@ -140,7 +152,9 @@ create_plot_footer <- function(afdeling = "", data_kilde = "", dato = Sys.Date()
   )
 }
 
-# Dansk oversættelse af chart typer - UPDATED STRUCTURE
+# DIAGRAM TYPER ================================
+
+## Dansk oversættelse af chart typer -----
 CHART_TYPES_DA <- list(
   "Seriediagram (Run Chart)" = "run",
   "I-kort (Individuelle værdier)" = "i", 
@@ -153,7 +167,7 @@ CHART_TYPES_DA <- list(
   "G-kort (Tid mellem hændelser)" = "g"
 )
 
-# Reverse mapping for converting back to English codes
+## Omvendt mapping til engelske koder -----
 CHART_TYPES_EN <- list(
   "run" = "run",
   "i" = "i", 
@@ -166,24 +180,25 @@ CHART_TYPES_EN <- list(
   "g" = "g"
 )
 
-# Helper function to convert Danish display names to English qic codes
+## Hjælpefunktion til konvertering -----
+# Konverter danske displaynavne til engelske qic-koder
 get_qic_chart_type <- function(danish_selection) {
   if (is.null(danish_selection) || danish_selection == "") {
-    return("run")  # default
+    return("run")  # standard
   }
   
-  # If it's already an English code, return as-is
+  # Hvis det allerede er en engelsk kode, returner som-den-er
   if (danish_selection %in% names(CHART_TYPES_EN)) {
     return(danish_selection)
   }
   
-  # Look up in the Danish-to-English mapping
+  # Slå op i dansk-til-engelsk mapping
   english_code <- CHART_TYPES_DA[[danish_selection]]
   if (!is.null(english_code)) {
     return(english_code)
   }
   
-  # Special handling for exact matches
+  # Særlig håndtering for eksakte match
   if (danish_selection == "Seriediagram (Run Chart)") {
     return("run")
   }
@@ -192,16 +207,19 @@ get_qic_chart_type <- function(danish_selection) {
   }
   
   # Fallback
-  cat("WARNING: Unknown chart type selection:", danish_selection, "- using 'run' as fallback\n")
+  cat("ADVARSEL: Ukendt diagram type valg:", danish_selection, "- bruger 'run' som fallback\n")
   return("run")
 }
 
-# Helper function to ensure standard columns are present and in correct order
+# DATABEHANDLING ================================
+
+## Standardkolonner hjælpefunktion -----
+# Sikrer at standardkolonner er til stede og i korrekt rækkefølge
 ensure_standard_columns <- function(data) {
-  # Define standard columns in the correct order
+  # Definer standardkolonner i den korrekte rækkefølge
   standard_cols <- c("Skift", "Dato", "Tæller", "Nævner", "Kommentar")
   
-  # Add missing standard columns
+  # Tilføj manglende standardkolonner
   for (col in standard_cols) {
     if (!col %in% names(data)) {
       if (col == "Skift") {
@@ -214,17 +232,19 @@ ensure_standard_columns <- function(data) {
     }
   }
   
-  # Get non-standard columns (user's additional columns)
+  # Hent ikke-standard kolonner (brugerens ekstra kolonner)
   extra_cols <- setdiff(names(data), standard_cols)
   
-  # Reorder: standard columns first (in correct order), then user's columns
+  # Omorganiser: standardkolonner først (i korrekt rækkefølge), derefter brugerens kolonner
   final_order <- c(standard_cols, extra_cols)
   
-  # Return data with correct column order
+  # Returner data med korrekt kolonnerækkefølge
   return(data[, final_order, drop = FALSE])
 }
 
-# Validation functions
+# VALIDERINGSFUNKTIONER ================================
+
+## Numerisk kolonnevalidering -----
 validate_numeric_column <- function(data, column_name) {
   if (!column_name %in% names(data)) {
     return(paste("Kolonne", column_name, "ikke fundet"))
@@ -235,6 +255,7 @@ validate_numeric_column <- function(data, column_name) {
   return(NULL)
 }
 
+## Dato kolonnevalidering -----
 validate_date_column <- function(data, column_name) {
   if (!column_name %in% names(data)) {
     return(paste("Kolonne", column_name, "ikke fundet"))

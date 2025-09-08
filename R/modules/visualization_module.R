@@ -1,12 +1,19 @@
-# R/modules/visualization_module.R
-# Main visualization module - loads all components
+# visualization_module.R
+# Hovedfil for visualization modul - koordinerer alle visualiseringskomponenter
 
-# Source all visualization module components
+# Dependencies ----------------------------------------------------------------
+# Ingen direkte dependencies - komponenterne indlæser deres egne
+
+# MODULKOMPONENTER ============================================================
+
+## Kilde alle visualization modul komponenter
 source("R/modules/visualization_module_ui.R")
 source("R/modules/visualization_module_server.R")
 source("R/modules/visualization_helpers.R")
 source("R/modules/visualization_spc.R")
-# source("R/modules/visualization_anhoej.R")  # No longer needed - using qic built-in Anhøj analysis
+# source("R/modules/visualization_anhoej.R")  # Ikke længere nødvendig - bruger qic indbygget Anhøj analyse
 
-# Re-export main functions for backwards compatibility
-# The actual functions are defined in the component files above
+# BAGUDKOMPATIBILITET =========================================================
+
+## Re-eksporter hovedfunktioner for bagudkompatibilitet
+# De faktiske funktioner er defineret i komponentfilerne ovenfor

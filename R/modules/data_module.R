@@ -1,13 +1,18 @@
-# R/modules/data_module.R
-# Main data module - loads all components
+# data_module.R
+# Hovedfil for data modul - koordinerer alle databehandlingskomponenter
 
+# Dependencies ----------------------------------------------------------------
 library(shiny)
 library(dplyr)
 library(shinyjs)
 
-# Source all data module components
+# MODULKOMPONENTER ============================================================
+
+## Kilde alle data modul komponenter
 source("R/modules/data_file_readers.R")
 source("R/modules/data_validation.R")
 
-# Re-export main functions for backwards compatibility
-# The actual functions are defined in the component files above
+# BAGUDKOMPATIBILITET =========================================================
+
+## Re-eksporter hovedfunktioner for bagudkompatibilitet
+# De faktiske funktioner er defineret i komponentfilerne ovenfor

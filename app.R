@@ -1,19 +1,21 @@
 # app.R
-# Main application file that loads all components
+# Hovedapplikationsfil der indlæser alle komponenter
 
-# Load global configuration and utilities
+# KONFIGURATION ===============================================================
+# Indlæs globale indstillinger og hjælpefunktioner
 source("global.R")
 
-# Load all modules
+# MODULER =====================================================================
+# Indlæs alle Shiny-moduler
 source("R/modules/data_module.R")
 source("R/modules/visualization_module.R")
 source("R/modules/local_storage_module.R")
 
-# Load UI components
+# UI/SERVER KOMPONENTER =======================================================
+# Indlæs UI og server komponenter
 source("ui.R")
-
-# Load server components  
 source("server.R")
 
-# Create the Shiny application
+# SHINY APPLIKATION ===========================================================
+# Opret og start Shiny applikationen
 shinyApp(ui = ui, server = server)

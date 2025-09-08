@@ -1,7 +1,10 @@
 # R/utils/danish_numbers.R
-# Utility functions for handling Danish number formats (comma as decimal separator)
+# Hjælpefunktioner til håndtering af danske talformater (komma som decimalseparator)
 
-# Convert Danish number string to numeric (handles both comma and dot)
+# DANSK TAL KONVERTERING =====================================================
+
+## Konverter dansk talstreng til numerisk værdi
+# Håndterer både komma og punktum som decimalseparator
 parse_danish_number <- function(x) {
   if (is.null(x) || length(x) == 0) {
     return(numeric(0))
@@ -37,7 +40,8 @@ parse_danish_number <- function(x) {
   return(result)
 }
 
-# Format numeric as Danish (dot to comma)
+## Formatér numerisk værdi som dansk (punktum til komma)
+# Konverterer numeriske værdier til dansk format med komma
 format_danish_number <- function(x, digits = NULL) {
   if (is.null(x) || length(x) == 0) {
     return(character(0))
@@ -61,7 +65,8 @@ format_danish_number <- function(x, digits = NULL) {
   return(formatted)
 }
 
-# Parse target value with Danish number support
+## Behandl målværdi med dansk talunderstøttelse
+# Håndterer målværdier med danske talformater og procenttegn
 parse_danish_target <- function(target_input, y_data = NULL) {
   if (is.null(target_input) || target_input == "" || is.na(target_input)) {
     return(NULL)
@@ -120,7 +125,8 @@ parse_danish_target <- function(target_input, y_data = NULL) {
   }
 }
 
-# Validate that a string can be parsed as a Danish number
+## Validér om streng kan fortolkes som dansk tal
+# Tjekker om en given streng er et gyldigt dansk talformat
 is_valid_danish_number <- function(x) {
   if (is.null(x) || is.na(x) || trimws(x) == "") {
     return(FALSE)

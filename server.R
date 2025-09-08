@@ -1,9 +1,12 @@
 # server.R
-# Main server definition
+# Hovedserver definition
 
+# Dependencies ----------------------------------------------------------------
 library(shiny)
 library(openxlsx)
 
+# SERVER KOMPONENTER ==========================================================
+# Indlæs alle server-komponenter
 source("R/server/server_reactive_values.R")
 source("R/server/server_session_management.R")
 source("R/server/server_file_upload.R")
@@ -14,13 +17,16 @@ source("R/server/server_download.R")
 source("R/server/server_helpers.R")
 source("R/server/server_welcome_page.R")
 
-# Main server function
+# HOVEDSERVER FUNKTION =======================================================
+# Hovedserver funktion der koordinerer alle server-komponenter
 server <- function(input, output, session) {
   
-  # Initialize reactive values
+  # Reaktive Værdier --------------------------------------------------------
+  # Initialiser reaktive værdier
   values <- initialize_reactive_values()
   
-  # TEST MODE: Auto-load example data if enabled
+  # Test Tilstand ------------------------------------------------------------
+  # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
   if (TEST_MODE_AUTO_LOAD) {
     test_file_path <- "R/data/spc_exampledata.csv"
     
@@ -53,37 +59,42 @@ server <- function(input, output, session) {
     }
   }
   
-  # Initialize file upload waiter
+  # Waiter Konfiguration -----------------------------------------------------
+  # Initialiser fil upload waiter
   waiter_file <- waiter::Waiter$new(
     html = WAITER_CONFIG$file_upload$html,
     color = WAITER_CONFIG$file_upload$color
   )
   
-  # Welcome page interactions
+  # Server Setup ------------------------------------------------------------
+  # Opsæt alle server-komponenter
+  
+  ## Velkomstside interaktioner
   setup_welcome_page_handlers(input, output, session, values, waiter_file)
   
-  # Session management logic
+  ## Session management logik
   setup_session_management(input, output, session, values, waiter_file)
   
-  # File upload logic
+  ## Fil upload logik
   setup_file_upload(input, output, session, values, waiter_file)
   
-  # Data table logic  
+  ## Data tabel logik  
   setup_data_table(input, output, session, values)
   
-  # Column management logic
+  ## Kolonne management logik
   setup_column_management(input, output, session, values)
   
-  # Visualization logic
+  ## Visualiserings logik
   visualization <- setup_visualization(input, output, session, values)
   
-  # Download handlers
+  ## Download handlers
   setup_download_handlers(input, output, session, values)
   
-  # Helper observers
+  ## Hjælpe observers
   setup_helper_observers(input, output, session, values)
   
-  # Welcome message
+  # Velkomst Besked ---------------------------------------------------------
+  # Udkommenteret velkomst besked
   # observe({
   #   showNotification(
   #     paste("Velkommen til", HOSPITAL_NAME, "SPC App! Indtast data i tabellen eller upload en fil."),
@@ -92,4 +103,4 @@ server <- function(input, output, session) {
   #   )
   # }) %>% 
   #   bindEvent(TRUE, once = TRUE)
-}
+} # End server function

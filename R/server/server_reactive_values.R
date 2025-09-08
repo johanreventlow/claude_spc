@@ -1,6 +1,12 @@
-# R/server/server_reactive_values.R
-# Initialize reactive values
+# server_reactive_values.R
+# Initialisering af reaktive værdier til server state management
 
+# Dependencies ----------------------------------------------------------------
+# Ingen direkte dependencies - kun shiny reactive system
+
+# REACTIVE VALUES INITIALISERING ==============================================
+
+## Initialiser reaktive værdier
 initialize_reactive_values <- function() {
   reactiveValues(
     current_data = NULL,

@@ -1,19 +1,23 @@
-# ui.R
-# Main UI definition
+# UI HOVEDFIL ================================================
+
+# BIBLIOTEKER OG DEPENDENCIES --------------------------------
 
 library(shiny)
 library(bslib)
 
-# Load modules needed for UI
+# MODULER --------------------------------
+
+## Funktionalitetsmoduler -----
 source("R/modules/visualization_module.R")
 source("R/modules/local_storage_module.R")
 
+## UI-komponenter -----
 source("R/ui/ui_header.R")
 source("R/ui/ui_sidebar.R") 
 source("R/ui/ui_main_content.R")
 source("R/ui/ui_welcome_page.R")
 
-# Main UI structure
+# HOVED-UI STRUKTUR --------------------------------
 ui <- page_navbar(
   title = tagList(
     img(
@@ -27,13 +31,13 @@ ui <- page_navbar(
   theme = my_theme,
   navbar_options = navbar_options(theme = "light", underline = FALSE),
   
-  # Header components
+  # Header-komponenter
   header = create_ui_header(),
   
   # Sidebar
   sidebar = create_ui_sidebar(),
   
-  # Main content
+  # Hovedindhold
   nav_panel(
     title = NULL,
     create_ui_main_content()

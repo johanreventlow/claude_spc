@@ -1,7 +1,12 @@
-# R/modules/data_validation.R
-# Data validation functions
+# data_validation.R
+# Modul til validering af data til SPC analyse
 
-# Validate data structure for SPC analysis
+# Dependencies ----------------------------------------------------------------
+# Bruger funktioner fra danish_numbers.R
+
+# VALIDERING FUNKTIONER =======================================================
+
+## Valider datastruktur til SPC analyse
 validateDataStructure <- function(data) {
   
   errors <- character(0)
