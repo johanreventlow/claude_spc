@@ -1,6 +1,12 @@
-# R/ui/ui_sidebar.R
-# UI sidebar components
+# ui_sidebar.R
+# UI sidebar komponenter
 
+# Dependencies ----------------------------------------------------------------
+
+# UI SIDEBAR KOMPONENTER ======================================================
+
+## Hovedfunktion for UI sidebar
+# Opretter komplet sidebar med data upload og konfiguration
 create_ui_sidebar <- function() {
   sidebar(
     # title = div(
@@ -13,7 +19,7 @@ create_ui_sidebar <- function() {
     open = TRUE,
     collapsible = TRUE,
     
-    # Upload eller start ny session sektion - ALWAYS VISIBLE
+    # Upload eller start ny session sektion - ALTID SYNLIG
     # div(
       # style = "margin-bottom: 15px;",
       # h6("Vælg handling:", style = "font-weight: 500; margin-bottom: 15px;"),
@@ -27,7 +33,7 @@ create_ui_sidebar <- function() {
         title = "Start med tom standardtabel"
       ),
       
-      # Upload fil knap - opens modal
+      # Upload fil knap - åbner modal
       actionButton(
         "show_upload_modal",
         "Upload datafil",

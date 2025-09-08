@@ -1,9 +1,15 @@
-# R/server/server_helpers.R
-# Helper functions and utility observers
+# server_helpers.R
+# Server hjælpefunktioner og utility observers
 
+# Dependencies ----------------------------------------------------------------
+
+# HJÆLPEFUNKTIONER SETUP ====================================================
+
+## Hovedfunktion for hjælper
+# Opsætter alle hjælper observers og status funktioner
 setup_helper_observers <- function(input, output, session, values) {
   
-  # Don't auto-initialize empty table on startup - wait for user action
+  # Initialiser ikke automatisk tom tabel ved opstart - vent på bruger aktion
   # observe({
   #   if (is.null(values$current_data)) {
   #     empty_data <- data.frame(
@@ -18,13 +24,13 @@ setup_helper_observers <- function(input, output, session, values) {
   #   }
   # })
   
-  # Data loading status flags - following BFH UTH pattern
+  # Data indlæsnings status flags - følger BFH UTH mønster
   output$dataLoaded <- renderText({
     result <- if (is.null(values$current_data)) {
       "FALSE"
     } else {
-      # Check if data has meaningful content (not just empty template)
-      # Also check if user has actively started working (file uploaded or started manually)
+      # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
+      # Tjek også om bruger aktivt er startet på at arbejde (fil uploadet eller startet manuelt)
       meaningful_data <- any(sapply(values$current_data, function(x) {
         if (is.logical(x)) return(any(x, na.rm = TRUE))
         if (is.numeric(x)) return(any(!is.na(x)))
@@ -32,10 +38,10 @@ setup_helper_observers <- function(input, output, session, values) {
         return(FALSE)
       }))
       
-      # Only consider data loaded if:
-      # 1. There's meaningful data, OR
-      # 2. User has uploaded a file, OR 
-      # 3. User has explicitly started a new session
+      # Betragt kun data som indlæst hvis:
+      # 1. Der er meningsfuldt data, ELLER
+      # 2. Bruger har uploadet en fil, ELLER 
+      # 3. Bruger har eksplicit startet en ny session
       user_has_started <- values$file_uploaded || values$user_started_session %||% FALSE
       
       if (meaningful_data || user_has_started) "TRUE" else "FALSE"
@@ -49,7 +55,7 @@ setup_helper_observers <- function(input, output, session, values) {
     if (is.null(values$current_data)) {
       "false"
     } else {
-      # Check if data has meaningful content (not just empty template)
+      # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
       meaningful_data <- any(sapply(values$current_data, function(x) {
         if (is.logical(x)) return(any(x, na.rm = TRUE))
         if (is.numeric(x)) return(any(!is.na(x)))
@@ -62,7 +68,7 @@ setup_helper_observers <- function(input, output, session, values) {
   outputOptions(output, "has_data", suspendWhenHidden = FALSE)
   
   
-  # Data status display
+  # Data status visning
   output$data_status_display <- renderUI({
     if (is.null(values$current_data)) {
       div(
@@ -96,9 +102,9 @@ setup_helper_observers <- function(input, output, session, values) {
   })
   
   
-  # Auto-save when data changes (with guards to prevent infinite loops)
+  # Auto-gem når data ændres (med guards for at forhindre uendelige løkker)
   observeEvent(values$current_data, {
-    # Strong guards to prevent auto-save during any table operations
+    # Starkere guards for at forhindre auto-gem under tabel operationer
     if (!values$auto_save_enabled || 
         values$updating_table || 
         values$table_operation_in_progress ||
@@ -119,9 +125,9 @@ setup_helper_observers <- function(input, output, session, values) {
     }
   }, ignoreInit = TRUE)
   
-  # Auto-save when settings change (with guards to prevent conflicts)
+  # Auto-gem når indstillinger ændres (med guards for at forhindre konflikter)
   observe({
-    # Same strong guards as data auto-save  
+    # Samme starkere guards som data auto-gem  
     if (!values$auto_save_enabled || 
         values$updating_table || 
         values$table_operation_in_progress ||
@@ -156,15 +162,17 @@ setup_helper_observers <- function(input, output, session, values) {
     }, ignoreInit = TRUE)
 }
 
-# Helper function to ensure standard columns
+# HJÆLPEFUNKTIONER ============================================================
+
+## Sikr standard kolonner
+# Denne funktion sikrer at uploadede data har vores standard kolonner
+# i den rigtige rækkefølge mens eksisterende data bevares
 ensure_standard_columns <- function(data) {
-  # This function ensures that uploaded data has our standard columns
-  # in the right order while preserving existing data
   
   standard_cols <- c("Skift", "Dato", "Tæller", "Nævner", "Kommentar")
   current_cols <- names(data)
   
-  # Add missing standard columns
+  # Tilføj manglende standard kolonner
   for (col in standard_cols) {
     if (!col %in% current_cols) {
       if (col == "Skift") {
@@ -175,7 +183,7 @@ ensure_standard_columns <- function(data) {
     }
   }
   
-  # Reorder to put standard columns first
+  # Omorganiser for at sætte standard kolonner først
   other_cols <- setdiff(current_cols, standard_cols)
   final_order <- c(standard_cols, other_cols)
   
@@ -184,7 +192,8 @@ ensure_standard_columns <- function(data) {
   return(data)
 }
 
-# Reactive for current organizational unit
+## Aktuel organisatorisk enhed
+# Reaktiv funktion for nuværende organisatoriske enhed
 current_unit <- function(input) {
   reactive({
     if (input$unit_type == "select") {
@@ -209,7 +218,8 @@ current_unit <- function(input) {
   })
 }
 
-# Reactive for complete chart title
+## Komplet chart titel
+# Reaktiv funktion for komplet chart titel
 chart_title <- function(input) {
   reactive({
     base_title <- if(is.null(input$indicator_title) || input$indicator_title == "") "SPC Analyse" else input$indicator_title

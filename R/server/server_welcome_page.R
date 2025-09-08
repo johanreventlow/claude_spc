@@ -1,20 +1,26 @@
-# R/server/server_welcome_page.R
-# Server logic for welcome page interactions
+# server_welcome_page.R
+# Server logik for velkomstside interaktioner
 
+# Dependencies ----------------------------------------------------------------
+
+# VELKOMSTSIDE SETUP ==========================================================
+
+## Hovedfunktion for velkomstside
+# Opsætter alle handlers for velkomstside interaktioner
 setup_welcome_page_handlers <- function(input, output, session, values, waiter_file) {
   
-  # Handle "Start ny analyse" button from welcome page
+  # Håndtér "Start ny analyse" knap fra velkomstsiden
   observeEvent(input$start_new_session, {
     cat("Welcome page: Start new session clicked\n")
     
-    # Same logic as existing start_new_session
+    # Samme logik som eksisterende start_new_session
     values$current_data <- create_empty_session_data()
     values$original_data <- values$current_data
     values$file_uploaded <- TRUE
     values$hide_anhoej_rules <- TRUE
     values$session_file_name <- NULL
     
-    # Reset configurations
+    # Nulstil konfigurationer
     values$auto_detect_done <- FALSE
     updateSelectInput(session, "x_column", selected = "")
     updateSelectInput(session, "y_column", selected = "")
@@ -23,28 +29,28 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     cat("Welcome page: New empty session created\n")
   })
   
-  # Handle "Upload data" button from welcome page  
+  # Håndtér "Upload data" knap fra velkomstsiden
   observeEvent(input$upload_data_welcome, {
     cat("Welcome page: Upload data clicked\n")
-    # Focus on file input or open file dialog
+    # Fokusér på fil input eller åbn fil dialog
     shinyjs::click("file_upload")
   })
   
-  # Handle "Quick start demo" button
+  # Håndtér "Quick start demo" knap
   observeEvent(input$quick_start_demo, {
     cat("Welcome page: Quick start demo clicked\n")
     
-    # Load example data
+    # Indlæs eksempel data
     test_file_path <- "R/data/spc_exampledata.csv"
     
     if (file.exists(test_file_path)) {
       tryCatch({
         cat("Welcome page: Starting demo data load...\n")
         
-        # Show loading waiter
+        # Vis indlæsnings waiter
         waiter_file$show()
         
-        # Load demo data using readr::read_csv2 (same as working file upload)
+        # Indlæs demo data med readr::read_csv2 (samme som fungerende fil upload)
         cat("Loading demo data with readr::read_csv2...\n")
         demo_data <- readr::read_csv2(
           test_file_path,
@@ -66,28 +72,28 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
         
         cat("Demo data column names before ensure_standard_columns:", paste(names(demo_data), collapse = ", "), "\n")
         
-        # Ensure standard columns are present
+        # Sikr at standard kolonner er til stede
         demo_data <- ensure_standard_columns(demo_data)
         
         cat("Demo data column names after ensure_standard_columns:", paste(names(demo_data), collapse = ", "), "\n")
         cat("Final data dimensions:", paste(dim(demo_data), collapse = "x"), "\n")
         
-        # Set reactive values
+        # Sæt reaktive værdier
         values$current_data <- demo_data
         values$original_data <- demo_data
         values$file_uploaded <- TRUE
-        values$auto_detect_done <- FALSE  # Will trigger auto-detect
-        values$hide_anhoej_rules <- FALSE  # Show Anhøj rules for real data
+        values$auto_detect_done <- FALSE  # Vil udløse auto-detekt
+        values$hide_anhoej_rules <- FALSE  # Vis Anhøj regler for rigtige data
         values$session_file_name <- "Eksempel data (SPC demo)"
         
-        # Hide waiter
+        # Skjul waiter
         later::later(function() {
           waiter_file$hide()
         }, 0.5)
         
         cat("Welcome page: Demo data loaded successfully\n")
         
-        # Show success notification
+        # Vis succes besked
         showNotification(
           "Eksempel data indlæst! Du kan nu se SPC analysen.",
           type = "message",
@@ -101,7 +107,7 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
         
         waiter_file$hide()
         
-        # Show error message to user
+        # Vis fejlbesked til bruger
         showNotification(
           paste("Kunne ikke indlæse eksempel data:", e$message),
           type = "error",

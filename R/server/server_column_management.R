@@ -1,9 +1,15 @@
-# R/server/server_column_management.R
-# Column management logic including auto-detection and validation
+# server_column_management.R
+# Server logik for kolonnehåndtering inklusive auto-detektion og validering
 
+# Dependencies ----------------------------------------------------------------
+
+# KOLONNEHÅNDTERING SETUP ====================================================
+
+## Hovedfunktion for kolonnehåndtering
+# Opsætter al server logik relateret til kolonne-management
 setup_column_management <- function(input, output, session, values) {
   
-  # Update column choices when data changes
+  # Opdater kolonnevalg når data ændres
   observe({
     if (values$updating_table) {
       return()
@@ -15,14 +21,14 @@ setup_column_management <- function(input, output, session, values) {
     all_cols <- names(data)
     
     if (length(all_cols) > 0) {
-      # Always add "Ingen (tom)" option together with "Vælg kolonne..."
+      # Tilføj altid "Ingen (tom)" option sammen med "Vælg kolonne..."
       col_choices <- setNames(
         c("", "BLANK", all_cols), 
         c("Vælg kolonne...", "Ingen (tom)", all_cols)
       )
       
       isolate({
-        # Preserve current selected values when updating choices
+        # Bevar nuværende valgte værdier når choices opdateres
         current_x <- input$x_column
         current_y <- input$y_column  
         current_n <- input$n_column
@@ -39,27 +45,27 @@ setup_column_management <- function(input, output, session, values) {
     }
   })
   
-  # Auto-detect trigger flag
+  # Auto-detekterings trigger flag
   observeEvent(values$current_data, {
     if (!is.null(values$current_data) && 
         (is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK") &&
         (is.null(input$y_column) || input$y_column == "" || input$y_column == "BLANK")) {
       
-      values$auto_detect_trigger <- Sys.time()  # Use timestamp to ensure reactivity
+      values$auto_detect_trigger <- Sys.time()  # Brug timestamp for at sikre reaktivitet
     }
   }, ignoreInit = TRUE)
   
-  # Delayed auto-detect execution
+  # Forsinket auto-detekterings udførelse
   observeEvent(values$auto_detect_trigger, {
     auto_detect_and_update_columns(input, session, values)
   }, ignoreInit = TRUE)
   
-  # Auto-detect button handler
+  # Auto-detekterings knap handler
   observeEvent(input$auto_detect_columns, {
     auto_detect_and_update_columns(input, session, values)
   })
   
-  # Column validation output
+  # Kolonnevaliderings output
   output$column_validation_messages <- renderUI({
     req(values$current_data)
     
@@ -71,7 +77,7 @@ setup_column_management <- function(input, output, session, values) {
     chart_type <- get_qic_chart_type(if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
     warnings <- character(0)
     
-    # Check if Y-column is numeric
+    # Tjek om Y-kolonne er numerisk
     if (!is.null(input$y_column) && input$y_column != "" && input$y_column %in% names(values$current_data)) {
       y_data <- values$current_data[[input$y_column]]
       if (!is.numeric(y_data)) {
@@ -82,7 +88,7 @@ setup_column_management <- function(input, output, session, values) {
       }
     }
     
-    # Check P/U chart requirements
+    # Tjek P/U chart krav
     if (chart_type %in% c("p", "pp", "u", "up")) {
       if (is.null(input$n_column) || input$n_column == "" || input$n_column == "BLANK") {
         warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne (N)"))
@@ -97,7 +103,7 @@ setup_column_management <- function(input, output, session, values) {
       }
     }
     
-    # Check for same column selected multiple times
+    # Tjek om samme kolonne er valgt flere gange
     selected_cols <- c(input$x_column, input$y_column, input$n_column)
     selected_cols <- selected_cols[!is.null(selected_cols) & selected_cols != "" & selected_cols != "BLANK"]
     
@@ -105,7 +111,7 @@ setup_column_management <- function(input, output, session, values) {
       warnings <- c(warnings, "Samme kolonne kan ikke bruges til flere formål")
     }
     
-    # Show results
+    # Vis resultater
     if (length(warnings) > 0) {
       div(
         class = "alert alert-warning",
@@ -128,17 +134,17 @@ setup_column_management <- function(input, output, session, values) {
     }
   })
   
-  # Edit column names modal
+  # Redigér kolonnenavne modal
   observeEvent(input$edit_column_names, {
     show_column_edit_modal(session, values)
   })
   
-  # Confirm column name changes
+  # Bekræft kolonnenavn ændringer
   observeEvent(input$confirm_column_names, {
     handle_column_name_changes(input, session, values)
   })
   
-  # Add column
+  # Tilføj kolonne
   observeEvent(input$add_column, {
     show_add_column_modal()
   })
@@ -148,14 +154,17 @@ setup_column_management <- function(input, output, session, values) {
   })
 }
 
-# Auto-detect column function
+# AUTO-DETEKTION FUNKTIONER ==================================================
+
+## Auto-detekter og opdater kolonner
+# Automatisk detektion af kolonnetyper baseret på data indhold
 auto_detect_and_update_columns <- function(input, session, values) {
   req(values$current_data)
   
   data <- values$current_data
   col_names <- names(data)
   
-  # Detect potential date columns
+  # Detekter potentielle dato-kolonner
   x_col <- NULL
   for (col_name in col_names) {
     col_data <- data[[col_name]]
@@ -188,7 +197,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
     x_col <- col_names[1]
   }
   
-  # Detect numeric columns
+  # Detekter numeriske kolonner
   numeric_cols <- character(0)
   for (col_name in col_names) {
     if (col_name != x_col) {
@@ -200,7 +209,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
     }
   }
   
-  # Smart detect tæller/nævner
+  # Smart detektion af tæller/nævner
   col_names_lower <- tolower(col_names)
   taeller_col <- NULL
   naevner_col <- NULL
@@ -218,14 +227,14 @@ auto_detect_and_update_columns <- function(input, session, values) {
     taeller_col <- numeric_cols[1]
   }
   
-  # Detect skift/fase column (boolean or text with shift-related terms)
+  # Detekter skift/fase kolonne (boolean eller tekst med skift-relaterede termer)
   skift_col <- NULL
   skift_idx <- which(grepl("skift|shift|fase|phase|change|periode", col_names_lower, ignore.case = TRUE))
   
   if (length(skift_idx) > 0) {
     skift_col <- col_names[skift_idx[1]]
   } else {
-    # Look for boolean columns that might represent shifts
+    # Søg efter boolean kolonner som kan repræsentere skift
     for (col_name in col_names) {
       col_data <- data[[col_name]]
       if (is.logical(col_data)) {
@@ -235,14 +244,14 @@ auto_detect_and_update_columns <- function(input, session, values) {
     }
   }
   
-  # Detect kommentar column (text-based columns)
+  # Detekter kommentar kolonne (tekst-baserede kolonner)
   kommentar_col <- NULL
   kommentar_idx <- which(grepl("kommentar|comment|note|noter|bemærk|remark", col_names_lower, ignore.case = TRUE))
   
   if (length(kommentar_idx) > 0) {
     kommentar_col <- col_names[kommentar_idx[1]]
   } else {
-    # Look for character columns that aren't already assigned and contain text
+    # Søg efter karakter kolonner som ikke allerede er tildelt og indeholder tekst
     for (col_name in col_names) {
       if (col_name != x_col && col_name != taeller_col && col_name != naevner_col && col_name != skift_col) {
         col_data <- data[[col_name]]
@@ -254,8 +263,8 @@ auto_detect_and_update_columns <- function(input, session, values) {
     }
   }
   
-  # Update dropdowns to SHOW the detected values
-  # First, ensure choices are updated with current column names
+  # Opdater dropdowns til at VISE de detekterede værdier
+  # Først sikr at choices er opdateret med nuværende kolonnenavne
   all_cols <- col_names
   col_choices <- setNames(
     c("", "BLANK", all_cols), 
@@ -310,6 +319,10 @@ auto_detect_and_update_columns <- function(input, session, values) {
   })
 }
 
+# MODAL FUNKTIONER ============================================================
+
+## Vis kolonne-redigeré modal
+# Viser modal dialog for redigering af kolonnenavne
 show_column_edit_modal <- function(session, values) {
   req(values$current_data)
   
@@ -346,6 +359,8 @@ show_column_edit_modal <- function(session, values) {
   ))
 }
 
+## Håndtér kolonnenavn ændringer
+# Behandler ændringer af kolonnenavne fra modal dialog
 handle_column_name_changes <- function(input, session, values) {
   req(values$current_data)
   
@@ -391,6 +406,8 @@ handle_column_name_changes <- function(input, session, values) {
   }
 }
 
+## Vis tilføj kolonne modal
+# Viser modal dialog for tilføjelse af nye kolonner
 show_add_column_modal <- function() {
   showModal(modalDialog(
     title = "Tilføj ny kolonne",
@@ -404,6 +421,8 @@ show_add_column_modal <- function() {
   ))
 }
 
+## Håndtér tilføjelse af kolonne
+# Behandler tilføjelse af nye kolonner til data
 handle_add_column <- function(input, session, values) {
   req(input$new_col_name, values$current_data)
   

@@ -1,12 +1,18 @@
-# R/server/server_download.R
-# Download handlers for various export formats
+# server_download.R
+# Server logik for download handlers og eksport formater
 
+# Dependencies ----------------------------------------------------------------
+
+# DOWNLOAD SETUP ==============================================================
+
+## Hovedfunktion for downloads
+# Opsætter alle download handlers for forskellige eksport formater
 setup_download_handlers <- function(input, output, session, values) {
   
-  # Get visualization object for download handlers
+  # Hent visualisering objekt til download handlers
   visualization <- setup_visualization(input, output, session, values)
   
-  # Complete Excel export
+  # Komplet Excel eksport
   output$download_complete_excel <- downloadHandler(
     filename = function() {
       title_clean <- gsub("[^A-Za-z0-9æøåÆØÅ ]", "", chart_title(input)())
@@ -52,11 +58,13 @@ setup_download_handlers <- function(input, output, session, values) {
   )
 }
 
+## Opret komplet Excel eksport
+# Opretter omfattende Excel eksport med data og metadata
 create_complete_excel_export <- function(file, input, values) {
-  # Get active data for export
+  # Hent aktive data til eksport
   active_data_for_export <- values$current_data
   
-  # Filter out empty rows
+  # Filtrer tomme rækker fra
   if (!is.null(active_data_for_export)) {
     non_empty_rows <- apply(active_data_for_export, 1, function(row) any(!is.na(row)))
     if (any(non_empty_rows)) {
@@ -163,6 +171,8 @@ create_complete_excel_export <- function(file, input, values) {
   }
 }
 
+## Opret session info linjer
+# Opretter detaljerede session informations linjer til metadata
 create_session_info_lines <- function(input, active_data_for_export, values) {
   c(
     paste(HOSPITAL_NAME, "- SPC ANALYSE"),

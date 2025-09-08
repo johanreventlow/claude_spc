@@ -1,20 +1,26 @@
-# R/server/server_data_table.R
-# Data table rendering and interaction logic
+# server_data_table.R  
+# Server logik for data tabel rendering og interaktion
 
+# Dependencies ----------------------------------------------------------------
+
+# DATATABEL SETUP =============================================================
+
+## Hovedfunktion for datatabel
+# Opsætter al server logik relateret til data-tabel håndtering
 setup_data_table <- function(input, output, session, values) {
   
-  # Main table rendering using excelR
+  # Hovedtabel rendering med excelR
     output$main_data_table <- excelR::renderExcel({
       req(values$current_data)
       
-      # Include table_version to force re-render after restore
+      # Inkluder table_version for at tvinge re-render efter gendannelse
       version_trigger <- values$table_version
       cat("DEBUG: Rendering excelR table with version", version_trigger, "\n")
       
       data <- values$current_data
       
-      # Keep logical column as logical for excelR checkbox
-      # excelR handles logical values directly for checkbox type
+      # Behold logiske kolonner som logiske for excelR checkbox
+      # excelR håndterer logiske værdier direkte for checkbox type
       
       excelR::excelTable(
         data = data,
@@ -42,7 +48,7 @@ setup_data_table <- function(input, output, session, values) {
       )
     })
     
-    # Handle excelR table changes
+    # Håndtér excelR tabel ændringer
     observeEvent(input$main_data_table, {
       cat("DEBUG: excelR table change event triggered\n")
       
@@ -73,23 +79,23 @@ setup_data_table <- function(input, output, session, values) {
           return()
         }
         
-        # Debug excelR data structure
+        # Debug excelR data struktur
         cat("DEBUG: excelR data class:", class(new_data), "\n")
         cat("DEBUG: excelR data structure:", str(new_data), "\n")
         
-        # excelR sends data in new_data$data as list of rows
+        # excelR sender data i new_data$data som liste af rækker
         if (!is.null(new_data$data) && length(new_data$data) > 0) {
-          # Get column names from colHeaders
+          # Hent kolonnenavne fra colHeaders
           col_names <- unlist(new_data$colHeaders)
           
-          # Convert list of rows to data frame
+          # Konvertér liste af rækker til data frame
           row_list <- new_data$data
           
-          # Create empty data frame with correct structure
+          # Opret tom data frame med korrekt struktur
           new_df <- data.frame(matrix(NA, nrow = length(row_list), ncol = length(col_names)))
           names(new_df) <- col_names
           
-          # Fill data frame row by row
+          # Fyld data frame række for række
           for (i in seq_along(row_list)) {
             row_data <- row_list[[i]]
             for (j in seq_along(row_data)) {
@@ -99,10 +105,10 @@ setup_data_table <- function(input, output, session, values) {
             }
           }
           
-          # Convert data types properly
-          # Skift column (logical) - excelR sends checkbox as logical already
+          # Konvertér datatyper korrekt
+          # Skift kolonne (logisk) - excelR sender checkbox som logisk allerede
           if ("Skift" %in% names(new_df)) {
-            # Handle both logical and string representations
+            # Håndtér både logiske og streng repræsentationer
             skift_values <- new_df$Skift
             if (is.character(skift_values)) {
               new_df$Skift <- skift_values == "TRUE" | skift_values == "true" | skift_values == TRUE
@@ -111,7 +117,7 @@ setup_data_table <- function(input, output, session, values) {
             }
           }
           
-          # Numeric columns
+          # Numeriske kolonner
           numeric_cols <- c("Tæller", "Nævner")
           for (col in numeric_cols) {
             if (col %in% names(new_df)) {
@@ -119,12 +125,12 @@ setup_data_table <- function(input, output, session, values) {
             }
           }
           
-          # Date column
+          # Dato kolonne
           if ("Dato" %in% names(new_df)) {
             new_df$Dato <- as.character(new_df$Dato)
           }
           
-          # Character columns
+          # Karakter kolonner
           if ("Kommentar" %in% names(new_df)) {
             new_df$Kommentar <- as.character(new_df$Kommentar)
           }
@@ -148,11 +154,11 @@ setup_data_table <- function(input, output, session, values) {
       })
     }, ignoreInit = TRUE)
   
-  # Add row
+  # Tilføj række
   observeEvent(input$add_row, {
     req(values$current_data)
     
-    # Set persistent flag to prevent auto-save interference
+    # Sæt vedvarende flag for at forhindre auto-save interferens
     values$table_operation_in_progress <- TRUE
     
     new_row <- values$current_data[1, ]
@@ -162,14 +168,14 @@ setup_data_table <- function(input, output, session, values) {
     
     showNotification("Ny række tilføjet", type = "message")
     
-    # Clear persistent flag after delay
+    # Ryd vedvarende flag efter forsinkelse
     later::later(function() {
       cat("DEBUG: Clearing table_operation_in_progress flag (add_row)\n")
       values$table_operation_in_progress <- FALSE
     }, delay = 1)
   })
   
-  # Reset table
+  # Nulstil tabel
   observeEvent(input$reset_table, {
     values$updating_table <- TRUE
     values$table_operation_in_progress <- TRUE
@@ -191,7 +197,7 @@ setup_data_table <- function(input, output, session, values) {
     
     values$updating_table <- FALSE
     
-    # Clear persistent flag after delay
+    # Ryd vedvarende flag efter forsinkelse
     later::later(function() {
       cat("DEBUG: Clearing table_operation_in_progress flag (reset_table)\n")
       values$table_operation_in_progress <- FALSE

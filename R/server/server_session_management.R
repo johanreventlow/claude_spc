@@ -1,13 +1,19 @@
-# R/server/server_session_management.R
-# Session management logic including auto-restore and manual save/clear
+# server_session_management.R
+# Server logik for session management inklusive auto-gendannelse og manuel gem/ryd
 
+# Dependencies ----------------------------------------------------------------
+
+# SESSION MANAGEMENT SETUP ====================================================
+
+## Hovedfunktion for session management
+# Opsætter al server logik relateret til session håndtering
 setup_session_management <- function(input, output, session, values, waiter_file) {
   
-  # Auto-restore session data when available (if enabled)
+  # Auto-gendan session data når tilgængelig (hvis aktiveret)
   observeEvent(input$auto_restore_data, {
     req(input$auto_restore_data)
     
-    # Check if auto-restore is enabled
+    # Tjek om auto-gendannelse er aktiveret
     if (!AUTO_RESTORE_ENABLED) {
       cat("DEBUG: Auto-restore is disabled (AUTO_RESTORE_ENABLED = FALSE)\n")
       return()
@@ -20,25 +26,25 @@ setup_session_management <- function(input, output, session, values, waiter_file
       if (!is.null(saved_state$data)) {
         cat("DEBUG: Found saved data for auto-restore\n")
         
-        # Set restore guards to prevent interference
+        # Sæt gendannelses guards for at forhindre interferens
         values$restoring_session <- TRUE
         values$updating_table <- TRUE
         values$table_operation_in_progress <- TRUE
         values$auto_save_enabled <- FALSE
         
-        # Cleanup function to reset guards
+        # Oprydningsfunktion til at nulstille guards
         on.exit({
           cat("DEBUG: Auto-restore cleanup - re-enabling auto-save\n")
           values$updating_table <- FALSE
           values$restoring_session <- FALSE
           values$auto_save_enabled <- TRUE
-          # Keep table_operation_in_progress for a bit longer to prevent auto-save
+          # Behold table_operation_in_progress længere for at forhindre auto-gem
           later::later(function() {
             values$table_operation_in_progress <- FALSE
           }, delay = 2)
         }, add = TRUE)
         
-        # Reconstruct data.frame from saved structure
+        # Rekonstruer data.frame fra gemt struktur
         saved_data <- saved_state$data
         
         if (!is.null(saved_data$values) && !is.null(saved_data$nrows) && !is.null(saved_data$ncols)) {

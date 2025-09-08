@@ -1,15 +1,21 @@
-# R/ui/ui_header.R
-# UI header components including scripts and styles
+# ui_header.R
+# UI header komponenter inklusive scripts og styles
 
+# Dependencies ----------------------------------------------------------------
+
+# UI HEADER KOMPONENTER =======================================================
+
+## Hovedfunktion for UI header
+# Opretter alle header komponenter inklusive scripts, styles og waiter
 create_ui_header <- function() {
   tagList(
     waiter::use_waiter(),
-    # Enable shinyjs
+    # Aktivér shinyjs
     shinyjs::useShinyjs(),
     tags$head(
       tags$script(HTML("
       $(document).ready(function() {
-        // Function to properly show UI when waiter hides
+        // Funktion til korrekt at vise UI når waiter skjules
         window.showAppUI = function() {
           setTimeout(function() {
             $('body').css('opacity', '1');
@@ -24,7 +30,7 @@ create_ui_header <- function() {
     ")),
       tags$script(HTML(localStorage_js)),
       tags$script(HTML("
-      // FIXED: Custom message handlers med bedre error handling
+      // FIKSET: Tilpassede besked handlers med bedre fejlhåndtering
       Shiny.addCustomMessageHandler('saveAppState', function(message) {
         console.log('Received saveAppState message:', message);
         var success = window.saveAppState(message.key, message.data);
@@ -47,7 +53,7 @@ create_ui_header <- function() {
         }
       });
 
-      // UPDATED: Auto-load existing data ved app start
+      // OPDATERET: Auto-indlæs eksisterende data ved app start
       if (window.hasAppState('current_session')) {
         setTimeout(function() {
           console.log('Auto-loading saved session data...');
@@ -69,7 +75,7 @@ create_ui_header <- function() {
          color: #009ce8 !important;
        }
        
-       /* Tab styling - aktive tabs (behold default) */
+       /* Tab styling - aktive tabs (behold standard) */
        .nav-tabs .nav-link.active {
          color: inherit;
        }
@@ -80,7 +86,7 @@ create_ui_header <- function() {
        .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
 
        
-        /* --- Excel-ish tema til excelR --- */
+        /* --- Excel-lignende tema til excelR --- */
   .jexcel_container {
     /*font-family: Calibri, 'Segoe UI', Arial, sans-serif;
     font-size: 13px;*/

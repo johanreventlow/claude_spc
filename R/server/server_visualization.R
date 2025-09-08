@@ -1,23 +1,29 @@
-# R/server/server_visualization.R
-# Visualization setup and data preparation logic
+# server_visualization.R
+# Server logik for visualisering og data forberedelse
 
+# Dependencies ----------------------------------------------------------------
+
+# VISUALISERING SETUP =========================================================
+
+## Hovedfunktion for visualisering
+# Opsætter al server logik relateret til visualisering og data forberedelse
 setup_visualization <- function(input, output, session, values) {
   
-  # Data for visualization module
+  # Data til visualiserings modul
   active_data <- reactive({
     req(values$current_data)
     
     data <- values$current_data
     
-    # Add hide_anhoej_rules flag as attribute to data
+    # Tilføj hide_anhoej_rules flag som attribut til data
     attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
     
-    # Check if this is the empty standard table from session reset
+    # Tjek om dette er den tomme standard tabel fra session reset
     if (nrow(data) == 5 && all(c("Skift", "Dato", "Tæller", "Nævner", "Kommentar") %in% names(data))) {
       if (all(is.na(data$Dato)) && all(is.na(data$Tæller)) && all(is.na(data$Nævner))) {
-        # This is empty standard table but we still need to pass the hide flag
+        # Dette er tom standard tabel men vi skal stadig videregive hide flag
         attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
-        return(data)  # Return data with flag instead of NULL
+        return(data)  # Retur nér data med flag i stedet for NULL
       }
     }
     
@@ -28,13 +34,13 @@ setup_visualization <- function(input, output, session, values) {
       attr(filtered_data, "hide_anhoej_rules") <- values$hide_anhoej_rules
       return(filtered_data)
     } else {
-      # Even when no meaningful data, pass the flag
+      # Selv når ingen meningsfuld data, videregiv flaget
       attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
       return(data)
     }
   })
   
-  # Column configuration for visualization
+  # Kolonne konfiguration til visualisering
   column_config <- reactive({
     x_col <- if (!is.null(input$x_column) && input$x_column != "" && input$x_column != "BLANK") input$x_column else NULL
     y_col <- if (!is.null(input$y_column) && input$y_column != "" && input$y_column != "BLANK") input$y_column else NULL
@@ -49,7 +55,7 @@ setup_visualization <- function(input, output, session, values) {
   })
   
   
-  # Initialize visualization module  
+  # Initialiser visualiserings modul  
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = active_data,
@@ -63,7 +69,7 @@ setup_visualization <- function(input, output, session, values) {
         return(NULL)
       }
       
-      # Get y-axis data for smart conversion
+      # Hent y-akse data til smart konvertering
       data <- active_data()
       config <- column_config()
       
@@ -76,7 +82,7 @@ setup_visualization <- function(input, output, session, values) {
       }
     }),
     skift_config_reactive = reactive({
-      # Determine if we should show phases based on Skift column selection and data
+      # Bestem om vi skal vise faser baseret på Skift kolonne valg og data
       data <- active_data()
       config <- column_config()
       
@@ -84,19 +90,19 @@ setup_visualization <- function(input, output, session, values) {
         return(list(show_phases = FALSE, skift_column = NULL))
       }
       
-      # Check if user has selected a Skift column
+      # Tjek om bruger har valgt en Skift kolonne
       skift_col <- if (!is.null(input$skift_column) && input$skift_column != "" && input$skift_column != "BLANK") {
         input$skift_column
       } else {
         NULL
       }
       
-      # If no Skift column selected, no phases
+      # Hvis ingen Skift kolonne valgt, ingen faser
       if (is.null(skift_col) || !skift_col %in% names(data)) {
         return(list(show_phases = FALSE, skift_column = NULL))
       }
       
-      # Check if Skift column has any TRUE values
+      # Tjek om Skift kolonne har nogen TRUE værdier
       skift_data <- data[[skift_col]]
       has_phase_shifts <- any(skift_data == TRUE, na.rm = TRUE)
       
@@ -108,13 +114,13 @@ setup_visualization <- function(input, output, session, values) {
     chart_title_reactive = chart_title(input)
   )
   
-  # Plot ready check
+  # Plot klar tjek
   output$plot_ready <- reactive({
     result <- !is.null(visualization$plot_ready()) && visualization$plot_ready()
     return(if(result) "true" else "false")
   })
   outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
   
-  # Return visualization object for use in download handlers
+  # Retur nér visualiserings objekt til brug i download handlers
   return(visualization)
 }

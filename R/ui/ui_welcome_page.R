@@ -1,12 +1,18 @@
-# R/ui/ui_welcome_page.R
-# Welcome page UI components
+# ui_welcome_page.R
+# UI komponenter for velkomstside
 
+# Dependencies ----------------------------------------------------------------
+
+# UI VELKOMSTSIDE KOMPONENTER =================================================
+
+## Hovedfunktion for velkomstside
+# Opretter komplet velkomstside med hero sektion og handlingsknapper
 create_welcome_page <- function() {
   div(
     class = "welcome-page",
     style = "min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);",
     
-    # Hero Section
+    # Hero Sektion
     div(
       class = "hero-section py-5",
       div(
