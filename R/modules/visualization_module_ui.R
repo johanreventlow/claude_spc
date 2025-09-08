@@ -1,9 +1,10 @@
 # R/modules/visualization_module_ui.R
-# UI components for the visualization module
+# UI komponenter for visualiseringsmodulet
 
+# Dependencies ----------------------------------------------------------------
 library(shiny)
 
-# Plot Modul UI ####
+# PLOT MODUL UI ===============================================================
 
 #' Visualization Module UI - Kun plot området
 #' 
@@ -17,13 +18,13 @@ visualizationModuleUI <- function(id) {
     id = ns("plot_container"),
     style = "position: relative; height: 100%;",
     
-    ## Dynamic Content Container ####
+    # Dynamic Content Container -------------------------------------------
     # Dynamisk indhold der skifter mellem plot og placeholder beskeder
     uiOutput(ns("dynamic_content"))
   )
 }
 
-# Status Elementer UI ####
+# STATUS ELEMENTER UI ========================================================
 
 #' Visualization Status UI - Status og metrics displays
 #' 
@@ -61,18 +62,18 @@ visualizationStatusUI <- function(id) {
   #   )
   # )
   
-  ## Value Box Layout ####
+  # Value Box Layout --------------------------------------------------------
   # Brug layout_column_wrap for korrekt value box visning
   layout_column_wrap(
     width = 1/2,
     heights_equal = "row",
 
-  ### Anhøj Rules Value Boxes ####
-  # Hovedmetrics: Serielængde og Antal Kryds for run charts
+    ## Anhøj Rules Value Boxes
+    # Hovedmetrics: Serielængde og Antal Kryds for alle chart typer
     uiOutput(ns("anhoej_rules_boxes")),
      
-  ### Data Summary Box ####
-  # Data oversigt og fejl kontrol
+    ## Data Summary Box
+    # Data oversigt og fejl kontrol (udkommenteret)
   #   # uiOutput(ns("data_summary_box"))
   )
 }

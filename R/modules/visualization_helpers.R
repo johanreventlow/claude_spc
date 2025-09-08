@@ -1,11 +1,15 @@
 # R/modules/visualization_helpers.R
-# Helper functions for the visualization module
+# Hjælpefunktioner for visualiseringsmodulet
 
+# Dependencies ----------------------------------------------------------------
 library(ggplot2)
 library(dplyr)
 library(lubridate)
 
-# Helper function: Detect chart configuration
+# CHART KONFIGURATION =========================================================
+
+## Auto-detektering af Chart Konfiguration
+# Automatisk identifikation af kolonner til X/Y-akser og nævner
 detectChartConfiguration <- function(data, chart_type) {
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0 || ncol(data) == 0) {
     return(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = chart_type))
@@ -101,7 +105,10 @@ detectChartConfiguration <- function(data, chart_type) {
   ))
 }
 
-# Helper function: Validate data
+# DATA VALIDERING =============================================================
+
+## Validering af Data til Chart Generering
+# Tjekker data kvalitet og kompatibilitet med valgt chart type
 validateDataForChart <- function(data, config, chart_type) {
   warnings <- character(0)
   
@@ -138,7 +145,10 @@ validateDataForChart <- function(data, config, chart_type) {
   return(list(valid = TRUE, warnings = warnings))
 }
 
-# Helper function: Create HTML-styled plot messages  
+# PLOT BESKEDER ==============================================================
+
+## HTML-formaterede Plot Beskeder
+# Opretter brugervenlige beskeder til forskellige plot tilstande  
 createPlotMessage <- function(type = "welcome", message = NULL, details = NULL) {
   
   # Define message types
@@ -242,12 +252,16 @@ createPlotMessage <- function(type = "welcome", message = NULL, details = NULL) 
   )
 }
 
-# Legacy function for backwards compatibility
+## Legacy Kompatibilitet
+# Bagudkompatibilitet for ældre kode
 showPlaceholder <- function() {
   createPlotMessage("technical_error")
 }
 
-# Helper function: Apply hospital theme to plots
+# PLOT STYLING ===============================================================
+
+## Hospital Tema til Plots
+# Anvender hospital branding og farvepalette på SPC plots
 applyHospitalTheme <- function(plot) {
   cat("DEBUG: applyHospitalTheme called, plot class:", class(plot), "\n")
   
@@ -303,7 +317,8 @@ applyHospitalTheme <- function(plot) {
 }
 
 
-# Helper function: Detect Y-axis scale type
+## Y-akse Skalering
+# Automatisk detektering af passende Y-akse format (decimal, procent, heltal)
 detectYAxisScale <- function(y_data) {
   if (is.null(y_data) || length(y_data) == 0) {
     return("integer")
