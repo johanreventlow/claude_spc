@@ -615,7 +615,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           style = "flex: 1;",
           value = if (status_info$status == "ready" && !chart_type == "run" && !is.null(anhoej$out_of_control_count)) {
             anhoej$out_of_control_count
-          } else if (status_info$status == "ready" && chart_type == "run") {div(style = "font-size:1em", class = "fs-7 text-muted mb-0", "Anvendes ikke ved analyse af seriediagrammer (run charts)")
+          } else if (status_info$status == "ready" && chart_type == "run") {div(style = "font-size:1em", class = "fs-7 text-muted mb-0", "Anvendes ikke ved analyse af seriediagrammer (run charts)
+                                                                                 ")
           } else {
             tags$span(
               switch(status_info$status,

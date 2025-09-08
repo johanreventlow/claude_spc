@@ -49,7 +49,6 @@ HOSPITAL_LOGO_PATH <- brand_config$logo$image
 # Extract ALL colors from brand.yml (via bs_theme)
 HOSPITAL_COLORS <- list(
   primary = brand_config$color$palette$primary,
-  hospitalblue = brand_config$color$palette$hospitalblue,
   secondary = brand_config$color$palette$secondary,
   accent = brand_config$color$palette$accent,  # From brand.yml palette
   success = brand_config$color$palette$success,
@@ -57,7 +56,14 @@ HOSPITAL_COLORS <- list(
   danger = brand_config$color$palette$danger,
   info = brand_config$color$palette$info,
   light = brand_config$color$palette$light,
-  dark = brand_config$color$palette$dark
+  dark = brand_config$color$palette$dark,
+  
+  hospitalblue = brand_config$color$palette$hospitalblue,
+  darkgrey = brand_config$color$palette$darkgrey,
+  lightgrey = brand_config$color$palette$lightgrey,
+  mediumgrey = brand_config$color$palette$mediumgrey,
+  regionhblue = brand_config$color$palette$regionhblue
+  
 )
 
 # Waiter configuration med hospital branding

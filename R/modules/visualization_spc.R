@@ -398,11 +398,11 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
     cat("DEBUG: Starting ggplot construction\n")
     plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) +
       # Data points
-      ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$primary) +
-      ggplot2::geom_line(color = HOSPITAL_COLORS$primary, alpha = 0.7) +
+      ggplot2::geom_line(color = HOSPITAL_COLORS$lightgrey, linewidth = 1) + #, alpha = 0.7) +
+      ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$mediumgrey) +
       
       # Center line
-      ggplot2::geom_line(ggplot2::aes(y = cl), color = HOSPITAL_COLORS$secondary, 
+      ggplot2::geom_line(ggplot2::aes(y = cl), color = HOSPITAL_COLORS$hospitalblue, 
                         linetype = "solid", linewidth = 1) +
       
       # Labels and theme
@@ -465,7 +465,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       cat("DEBUG: Adding target line\n")
       plot <- plot + 
         ggplot2::geom_hline(yintercept = target_value, 
-                           color = "#2E8B57", linetype = "solid", linewidth = 1.2,
+                           color = HOSPITAL_COLORS$darkgrey, linetype="42", linewidth = 1.2,
                            alpha = 0.8)
       cat("DEBUG: Target line added\n")
     }

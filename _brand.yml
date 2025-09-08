@@ -36,6 +36,7 @@ color:
     # Exakte Flatly theme farver
     primary: "#375a7f"      # Flatly primary blå
     secondary: "#6c757d"    # Flatly secondary grå
+    
     success: "#00891a"      # Flatly success grøn
     warning: "#f9b928"      # Flatly warning gul
     danger: "#c10000"       # Flatly danger rød
@@ -44,9 +45,11 @@ color:
     dark: "#202020"         # Flatly dark
     accent: "#FF6B35"       # Hospital orange accent (behold)
     
-    hospitalblue: "#009ce8"      # Region H Hospitalblå
-    prussianblue: "#00293d"     # BFH Prussian Blue for navbar
-    
+    hospitalblue: "#009ce8"     # Region H Hospitalblå
+    darkgrey: "#565656"         # BFH mørk grå
+    lightgrey: "#AEAEAE"        # BFH light grå
+    mediumgrey: "#858585"       # BFH mediumgrey grå
+    regionhblue: "#00293d"     # BFH Prussian Blue for navbar
     
     
     # Exakte RegionH theme farver
