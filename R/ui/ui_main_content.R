@@ -25,13 +25,6 @@ create_ui_main_content <- function() {
         create_chart_settings_card(),
         # Left column: Data table and chart settings
         
-
-        
-        
-        # layout_column_wrap(
-          # width = 1/2,  # 2 boxes per row - wider and easier to read
-          # heights_equal = "row", 
-          # fill = FALSE,
           # Status information as value boxes  
           
         # ),
@@ -82,15 +75,35 @@ create_chart_settings_card <- function() {
             #Chart type and target value side by side
             layout_column_wrap(
               width = 1/2,
-              layout_column_wrap(
-                width = 1,
-                heights_equal = "row",
+              # layout_column_wrap(
+              #   width = 1,
+                # heights_equal = "row",
                 # Indikator metadata
+              div(
                 textInput(
                   "indicator_title",
                   "Titel på indikator:",
                   value = "",
                   placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
+                ),
+                # Beskrivelse
+                textAreaInput(
+                  "indicator_description",
+                  "Datadefinition:",
+                  value = "",
+                  placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
+                  height = "200px",
+                  resize = "none"
+                ),
+              ),
+              div(
+                
+                # Chart type selection
+                selectInput(
+                  "chart_type",
+                  "Diagram type:",
+                  choices = CHART_TYPES_DA,
+                  selected = "Seriediagram (Run Chart)"
                 ),
                 
                 # Target value input
@@ -99,26 +112,7 @@ create_chart_settings_card <- function() {
                   "Målværdi:",
                   value = "",
                   placeholder = "fx 85%, 0,85 eller 25"
-                ),
-                
-                
-                # Chart type selection
-                selectInput(
-                  "chart_type",
-                  "Diagram type:",
-                  choices = CHART_TYPES_DA,
-                  selected = "Seriediagram (Run Chart)"
                 )
-              ),
-              
-              # Beskrivelse
-              textAreaInput(
-                "indicator_description",
-                "Datadefinition:",
-                value = "",
-                placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
-                height = "200px",
-                resize = "none"
               )
             )
           )
