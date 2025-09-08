@@ -266,6 +266,7 @@ reset_to_empty_session <- function(session, values) {
   # Reset to standard column order
   values$current_data <- data.frame(
     Skift = rep(FALSE, 5),
+    Frys = rep(FALSE, 5),
     Dato = rep(NA_character_, 5),
     Tæller = rep(NA_real_, 5),
     Nævner = rep(NA_real_, 5),

@@ -9,7 +9,7 @@ library(lubridate)
 # SPC PLOT GENERERING =========================================================
 
 ## Generér SPC plot med tilpasset styling
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_phases = FALSE, skift_column = NULL, chart_title_reactive = NULL) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL) {
   
   # Safety checks
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
@@ -160,6 +160,25 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
     }
   }
   
+  # Handle baseline freeze from selected Frys column
+  freeze_position <- NULL
+  if (!is.null(frys_column) && frys_column %in% names(data)) {
+    frys_data <- data[[frys_column]]
+    
+    # Convert to logical if needed
+    if (!is.logical(frys_data)) {
+      frys_data <- as.logical(frys_data)
+    }
+    
+    # Get positions where TRUE values occur (baseline freeze points)
+    frys_points <- which(frys_data == TRUE)
+    
+    if (length(frys_points) > 0) {
+      # Use the last TRUE position as freeze point (baseline up to this point)
+      freeze_position <- max(frys_points)
+    }
+  }
+  
   # Build qic call arguments dynamically
   call_args <- list(
     x = x_data,
@@ -175,7 +194,12 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
     call_args$n <- n_data
   }
   
-  # Add part for phases (integer positions where new phases start)
+  # Add freeze for baseline - can be used together with part
+  if (!is.null(freeze_position)) {
+    call_args$freeze <- freeze_position
+  }
+  
+  # Add part for phase splits - can be used together with freeze
   if (!is.null(part_positions)) {
     call_args$part <- part_positions
   }
@@ -283,7 +307,16 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       if (!is.null(x_col_for_qic)) qic_args$x <- as.name(x_col_for_qic)
       if (!is.null(y_col_name)) qic_args$y <- as.name(y_col_name) 
       if (!is.null(n_col_name)) qic_args$n <- as.name(n_col_name)
-      if (!is.null(part_positions)) qic_args$part <- part_positions
+      
+      # Add freeze for baseline - can be used together with part
+      if (!is.null(freeze_position)) {
+        qic_args$freeze <- freeze_position
+      }
+      
+      # Add part for phase splits - can be used together with freeze
+      if (!is.null(part_positions)) {
+        qic_args$part <- part_positions
+      }
       
       # Call qic() with prepared arguments
       

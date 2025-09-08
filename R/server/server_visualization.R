@@ -111,6 +111,29 @@ setup_visualization <- function(input, output, session, values) {
         skift_column = skift_col
       ))
     }),
+    frys_config_reactive = reactive({
+      # Bestem frys kolonne for baseline freeze
+      data <- active_data()
+      config <- column_config()
+      
+      if (is.null(data) || is.null(config)) {
+        return(NULL)
+      }
+      
+      # Tjek om bruger har valgt en Frys kolonne
+      frys_col <- if (!is.null(input$frys_column) && input$frys_column != "" && input$frys_column != "BLANK") {
+        input$frys_column
+      } else {
+        NULL
+      }
+      
+      # Hvis ingen Frys kolonne valgt eller ikke i data, returner NULL
+      if (is.null(frys_col) || !frys_col %in% names(data)) {
+        return(NULL)
+      }
+      
+      return(frys_col)
+    }),
     chart_title_reactive = chart_title(input)
   )
   

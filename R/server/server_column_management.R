@@ -244,6 +244,25 @@ auto_detect_and_update_columns <- function(input, session, values) {
     }
   }
   
+  # Detekter frys/kontrol-frysning kolonne (boolean eller tekst med frys-relaterede termer)
+  frys_col <- NULL
+  frys_idx <- which(grepl("frys|freeze|kontrol|control|stop|pause", col_names_lower, ignore.case = TRUE))
+  
+  if (length(frys_idx) > 0) {
+    frys_col <- col_names[frys_idx[1]]
+  } else {
+    # Søg efter boolean kolonner som kan repræsentere frysning (efter skift kolonne)
+    for (col_name in col_names) {
+      if (col_name != skift_col) {  # Skip skift kolonne
+        col_data <- data[[col_name]]
+        if (is.logical(col_data)) {
+          frys_col <- col_name
+          break
+        }
+      }
+    }
+  }
+  
   # Detekter kommentar kolonne (tekst-baserede kolonner)
   kommentar_col <- NULL
   kommentar_idx <- which(grepl("kommentar|comment|note|noter|bemærk|remark", col_names_lower, ignore.case = TRUE))
@@ -253,7 +272,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
   } else {
     # Søg efter karakter kolonner som ikke allerede er tildelt og indeholder tekst
     for (col_name in col_names) {
-      if (col_name != x_col && col_name != taeller_col && col_name != naevner_col && col_name != skift_col) {
+      if (col_name != x_col && col_name != taeller_col && col_name != naevner_col && col_name != skift_col && col_name != frys_col) {
         col_data <- data[[col_name]]
         if (is.character(col_data) && any(nzchar(col_data, keepNA = FALSE), na.rm = TRUE)) {
           kommentar_col <- col_name
@@ -296,6 +315,12 @@ auto_detect_and_update_columns <- function(input, session, values) {
       updateSelectInput(session, "skift_column", choices = col_choices, selected = "BLANK")
     }
     
+    if (!is.null(frys_col) && frys_col %in% col_names) {
+      updateSelectInput(session, "frys_column", choices = col_choices, selected = frys_col)
+    } else {
+      updateSelectInput(session, "frys_column", choices = col_choices, selected = "BLANK")
+    }
+    
     if (!is.null(kommentar_col) && kommentar_col %in% col_names) {
       updateSelectInput(session, "kommentar_column", choices = col_choices, selected = kommentar_col)
     } else {
@@ -308,6 +333,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
       "Y=", if(is.null(taeller_col)) "ingen" else taeller_col,
       if (!is.null(naevner_col)) paste0(", N=", naevner_col) else ", N=ingen",
       if (!is.null(skift_col)) paste0(", Skift=", skift_col) else ", Skift=ingen",
+      if (!is.null(frys_col)) paste0(", Frys=", frys_col) else ", Frys=ingen",
       if (!is.null(kommentar_col)) paste0(", Kommentar=", kommentar_col) else ", Kommentar=ingen"
     )
     

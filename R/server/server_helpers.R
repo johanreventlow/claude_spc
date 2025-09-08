@@ -163,13 +163,14 @@ setup_helper_observers <- function(input, output, session, values) {
 # i den rigtige rækkefølge mens eksisterende data bevares
 ensure_standard_columns <- function(data) {
   
-  standard_cols <- c("Skift", "Dato", "Tæller", "Nævner", "Kommentar")
+  # Standard kolonner med Skift og Frys altid først
+  standard_cols <- c("Skift", "Frys", "Dato", "Tæller", "Nævner", "Kommentar")
   current_cols <- names(data)
   
   # Tilføj manglende standard kolonner
   for (col in standard_cols) {
     if (!col %in% current_cols) {
-      if (col == "Skift") {
+      if (col == "Skift" || col == "Frys") {
         data[[col]] <- rep(FALSE, nrow(data))
       } else {
         data[[col]] <- rep(NA_character_, nrow(data))

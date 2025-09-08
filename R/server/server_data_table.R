@@ -25,9 +25,14 @@ setup_data_table <- function(input, output, session, values) {
         data = data,
         columns = data.frame(
           title = names(data),
-          type = ifelse(names(data) == "Skift", "checkbox", "text"),
+          type = case_when(
+            names(data) == "Skift" ~ "checkbox",
+            names(data) == "Frys" ~ "radio",
+            TRUE ~ "text"
+          ),
           width = case_when(
             names(data) == "Skift" ~ 60,
+            names(data) == "Frys" ~ 60,
             names(data) == "Dato" ~ 100,
             names(data) %in% c("Tæller", "Nævner") ~ 80,
             names(data) == "Kommentar" ~ 300,
@@ -105,6 +110,17 @@ setup_data_table <- function(input, output, session, values) {
               new_df$Skift <- skift_values == "TRUE" | skift_values == "true" | skift_values == TRUE
             } else {
               new_df$Skift <- as.logical(skift_values)
+            }
+          }
+          
+          # Frys kolonne (logisk) - excelR sender radio som logisk
+          if ("Frys" %in% names(new_df)) {
+            # Håndtér både logiske og streng repræsentationer
+            frys_values <- new_df$Frys
+            if (is.character(frys_values)) {
+              new_df$Frys <- frys_values == "TRUE" | frys_values == "true" | frys_values == TRUE
+            } else {
+              new_df$Frys <- as.logical(frys_values)
             }
           }
           

@@ -81,10 +81,11 @@ spc_out_of_control_icon <- HTML('
 #' @param chart_type_reactive Reaktiv chart type
 #' @param target_value_reactive Reaktiv målværdi
 #' @param skift_config_reactive Reaktiv fase konfiguration
+#' @param frys_config_reactive Reaktiv freeze konfiguration
 #' @param chart_title_reactive Reaktiv chart titel (optional)
 #' 
 #' @return Liste med reactive values for plot, status og resultater
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, skift_config_reactive, chart_title_reactive = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -194,6 +195,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         # Hent fase konfiguration
         skift_config <- skift_config_reactive()
         
+        # Hent freeze konfiguration
+        frys_column <- frys_config_reactive()
+        
         spc_result <- generateSPCPlot(
           data = data, 
           config = config, 
@@ -201,6 +205,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           target_value = target_value_reactive(),
           show_phases = skift_config$show_phases,
           skift_column = skift_config$skift_column,
+          frys_column = frys_column,
           chart_title_reactive = chart_title_reactive
         )
         
@@ -528,11 +533,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       tagList(
         ### Serielængde Box-----
         value_box(
-          title = "Maksimal serielængde",
+          title = "Serielængde",
           style = "flex: 1;",
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
-              anhoej$longest_run
+              
+              layout_column_wrap(
+                width = 1 / 2,
+                div(anhoej$longest_run_max),
+                div(anhoej$longest_run)
+              )
+              
             } else {
               "Beregner..."
             }
@@ -556,10 +567,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           } else {
             status_info$theme
           },
-          p(class = "fs-7 text-muted mb-0", 
+          p(class = "fs-7 text-muted mb-0",
             if (status_info$status == "ready") {
               if (!is.null(anhoej$longest_run_max) && !is.na(anhoej$longest_run_max)) {
-                paste("Forventet (maks.):", anhoej$longest_run_max, "punkter")
+                layout_column_wrap(
+                  width = 1 / 2,
+                  div("Forventet (maksimum)"),
+                  div("Faktisk")
+                )
               } else {
                 "Anhøj rules analyse - serielængde"
               }
@@ -570,11 +585,16 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         
         ### Antal Kryds Box -----
         value_box(
-          title = "Minimum antal kryds",
+          title = "Antal kryds",
           style = "flex: 1;",
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$n_crossings) && !is.na(anhoej$n_crossings)) {
-              anhoej$n_crossings
+              layout_column_wrap(
+                width = 1 / 2,
+                div(anhoej$n_crossings_min),
+                div(anhoej$n_crossings)
+              )
+              
             } else {
               "Beregner..."
             }
@@ -595,7 +615,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           p(class = "fs-7 text-muted mb-0",
             if (status_info$status == "ready") {
               if (!is.null(anhoej$n_crossings_min) && !is.na(anhoej$n_crossings_min)) {
-                paste("Forventet (min.):", anhoej$n_crossings_min, "kryds")
+                layout_column_wrap(
+                  width = 1 / 2,
+                  div("Forventet (minimum)"),
+                  div("Faktisk")
+                )
               } else {
                 "Anhøj rules analyse - median krydsninger"
               }

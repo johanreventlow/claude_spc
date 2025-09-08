@@ -179,6 +179,15 @@ create_chart_settings_card <- function() {
             ) |>
               tooltip("Valgfri: Kolonne til markering af processkift eller faser"),
             
+            # Frys column
+            selectInput(
+              "frys_column",
+              span("Frys (frysning af kontrol):", icon("info-circle")),
+              choices = NULL,
+              selected = NULL
+            ) |>
+              tooltip("Valgfri: Kolonne til markering af kontrol-frysning perioder"),
+            
             # Kommentar column
             selectInput(
               "kommentar_column",

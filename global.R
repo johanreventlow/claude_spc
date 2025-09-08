@@ -215,13 +215,13 @@ get_qic_chart_type <- function(danish_selection) {
 ## Standardkolonner hjælpefunktion -----
 # Sikrer at standardkolonner er til stede og i korrekt rækkefølge
 ensure_standard_columns <- function(data) {
-  # Definer standardkolonner i den korrekte rækkefølge
-  standard_cols <- c("Skift", "Dato", "Tæller", "Nævner", "Kommentar")
+  # Definer standardkolonner i den korrekte rækkefølge - Skift og Frys altid først
+  standard_cols <- c("Skift", "Frys", "Dato", "Tæller", "Nævner", "Kommentar")
   
   # Tilføj manglende standardkolonner
   for (col in standard_cols) {
     if (!col %in% names(data)) {
-      if (col == "Skift") {
+      if (col == "Skift" || col == "Frys") {
         data[[col]] <- FALSE
       } else if (col %in% c("Tæller", "Nævner")) {
         data[[col]] <- NA_real_
