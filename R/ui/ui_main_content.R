@@ -47,27 +47,36 @@ create_ui_main_content <- function() {
 create_chart_settings_card <- function() {
   # conditionalPanel(
   #   condition = "output.has_data == 'true'",
-  card(
-    full_screen = TRUE,
-    fillable = TRUE,
-    card_header(
-      div(
+  # card(
+  #   full_screen = TRUE,
+  #   fillable = TRUE,
+  #   card_header(
+  #     div(
+  #       icon("sliders-h"),
+  #       " Indstillinger",
+  #     )
+  #   ),
+    # Tab 1: Diagram settings
+    # card_body(
+      # class = "d-flex flex-column h-100",
+      # div(
+      #   class = "flex-fill h-100",
+        # navset_tab(
+    navset_card_tab(
+      title = span(
         icon("sliders-h"),
         " Indstillinger",
-      )
-    ),
-    # Tab 1: Diagram settings
-    card_body(
-      class = "d-flex flex-column h-100",
-      div(
-        class = "flex-fill h-100",
-        navset_tab(
+      ),
+      full_screen = TRUE,
+
         nav_panel(
-          "Detaljer",
+          title = "Detaljer",
+          # "Indstillinger",
           # "Diagram",
           icon = icon("pen-to-square"),
           # icon = icon("cogs"),
           # icon = icon("chart-bar"),
+          # icon("sliders-h"),
           div(
             style = "padding: 10px 0;",
             #Chart type and target value side by side
@@ -239,9 +248,9 @@ create_chart_settings_card <- function() {
           )
         ) # nav_panel (Avanceret)
         ) # navset_tab
-      ) # div wrapper
-    ) # card_body
-  ) # card
+      # ) # div wrapper
+    # ) # card_body
+  # ) # card
 }
 
 

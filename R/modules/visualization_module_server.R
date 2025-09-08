@@ -526,7 +526,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       
       # Altid returner de tre hoved boxes med passende indhold
       tagList(
-        ### Serielængde Box
+        ### Serielængde Box-----
         value_box(
           title = "Maksimal serielængde",
           style = "flex: 1;",
@@ -568,7 +568,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             })
         ),
         
-        ### Antal Kryds Box
+        ### Antal Kryds Box -----
         value_box(
           title = "Minimum antal kryds",
           style = "flex: 1;",
@@ -604,7 +604,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             })
         ),
         
-        ### Kontrolgrænser Box
+        ### Kontrolgrænser Box ----
         value_box(
           title = "Uden for kontrolgrænser",
           style = "flex: 1;",

@@ -33,35 +33,6 @@ visualizationModuleUI <- function(id) {
 visualizationStatusUI <- function(id) {
   ns <- NS(id)
   
-  # layout_column_wrap(
-  #   width = 1/2,
-  #   heights_equal = "row",
-  #   value_box(
-  #     title = "Box 1", value = "100",
-  #     style = "flex: 1;"
-  #   ),
-  #   value_box(
-  #     title = "Box 2", value = "200",
-  #     style = "flex: 1;"
-  #   ),
-  #   value_box(
-  #     title = "Box 3", value = "300",
-  #     style = "flex: 1;"
-  #   ),
-  #   value_box(
-  #     title = "Box 4", value = "400",
-  #     style = "flex: 1;"
-  #   ),
-  #   value_box(
-  #     title = "Box 5", value = "500",
-  #     style = "flex: 1;"
-  #   ),
-  #   value_box(
-  #     title = "Box 6", value = "600",
-  #     style = "flex: 1;"
-  #   )
-  # )
-  
   # Value Box Layout --------------------------------------------------------
   # Brug layout_column_wrap for korrekt value box visning
   layout_column_wrap(
@@ -74,6 +45,6 @@ visualizationStatusUI <- function(id) {
      
     ## Data Summary Box
     # Data oversigt og fejl kontrol (udkommenteret)
-  #   # uiOutput(ns("data_summary_box"))
+    # uiOutput(ns("data_summary_box"))
   )
 }
