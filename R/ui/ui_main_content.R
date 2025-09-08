@@ -19,18 +19,21 @@ create_ui_main_content <- function() {
         col_widths = c(6, 6, 6, 6),
         height = "auto",
         max_height = "100%",
+        create_plot_only_card(),
+        create_status_value_boxes(),
+        create_data_table_card(),
         create_chart_settings_card(),
         # Left column: Data table and chart settings
         
-        create_plot_only_card(),
+
         
-        create_data_table_card(),
+        
         # layout_column_wrap(
           # width = 1/2,  # 2 boxes per row - wider and easier to read
           # heights_equal = "row", 
           # fill = FALSE,
           # Status information as value boxes  
-          create_status_value_boxes()
+          
         # ),
         # create_export_card(),
       )
