@@ -15,7 +15,6 @@ setup_data_table <- function(input, output, session, values) {
       
       # Inkluder table_version for at tvinge re-render efter gendannelse
       version_trigger <- values$table_version
-      cat("DEBUG: Rendering excelR table with version", version_trigger, "\n")
       
       data <- values$current_data
       
@@ -50,10 +49,8 @@ setup_data_table <- function(input, output, session, values) {
     
     # Håndtér excelR tabel ændringer
     observeEvent(input$main_data_table, {
-      cat("DEBUG: excelR table change event triggered\n")
       
       if (values$updating_table || values$restoring_session) {
-        cat("DEBUG: Skipping excelR change - table updating or restoring\n")
         return()
       }
       
@@ -62,12 +59,10 @@ setup_data_table <- function(input, output, session, values) {
       
       on.exit({ 
         values$updating_table <- FALSE 
-        cat("DEBUG: excelR change processing complete\n")
       }, add = TRUE)
       
       # Clear persistent flag after delay
       later::later(function() {
-        cat("DEBUG: Clearing table_operation_in_progress flag\n")
         values$table_operation_in_progress <- FALSE
       }, delay = 2)
       
@@ -75,13 +70,9 @@ setup_data_table <- function(input, output, session, values) {
         new_data <- input$main_data_table
         
         if (is.null(new_data) || length(new_data) == 0) {
-          cat("DEBUG: No data received from excelR\n")
           return()
         }
         
-        # Debug excelR data struktur
-        cat("DEBUG: excelR data class:", class(new_data), "\n")
-        cat("DEBUG: excelR data structure:", str(new_data), "\n")
         
         # excelR sender data i new_data$data som liste af rækker
         if (!is.null(new_data$data) && length(new_data$data) > 0) {
@@ -136,7 +127,6 @@ setup_data_table <- function(input, output, session, values) {
           }
           
         } else {
-          cat("DEBUG: No data found in excelR structure\n")
           return()
         }
         
@@ -170,7 +160,6 @@ setup_data_table <- function(input, output, session, values) {
     
     # Ryd vedvarende flag efter forsinkelse
     later::later(function() {
-      cat("DEBUG: Clearing table_operation_in_progress flag (add_row)\n")
       values$table_operation_in_progress <- FALSE
     }, delay = 1)
   })
@@ -199,7 +188,6 @@ setup_data_table <- function(input, output, session, values) {
     
     # Ryd vedvarende flag efter forsinkelse
     later::later(function() {
-      cat("DEBUG: Clearing table_operation_in_progress flag (reset_table)\n")
       values$table_operation_in_progress <- FALSE
     }, delay = 1)
     

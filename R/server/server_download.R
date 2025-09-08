@@ -146,8 +146,6 @@ create_complete_excel_export <- function(file, input, values) {
       # Save Excel file
       openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
       
-      cat("DEBUG: Excel complete export created successfully\n")
-      
       showNotification(
         paste("Komplet Excel session eksporteret:", basename(file)),
         type = "message",
