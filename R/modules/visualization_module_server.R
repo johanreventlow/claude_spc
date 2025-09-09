@@ -642,14 +642,22 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         
         ### Kontrolgrænser Box ----
         value_box(
-          title = "Uden for kontrolgrænser",
-          style = "flex: 1;",
+          title = if (status_info$status == "ready" && chart_type == "run") {
+            div("Uden for kontrolgrænser", style = "color: #999999 !important;")
+          } else {
+            "Uden for kontrolgrænser"
+          },
+          style = if (status_info$status == "ready" && chart_type == "run") {
+            "flex: 1; background-color: white !important; color: #999999 !important;"
+          } else {
+            "flex: 1;"
+          },
           value = if (status_info$status == "ready" && !chart_type == "run" && !is.null(anhoej$out_of_control_count)) {
             anhoej$out_of_control_count
           } else if (status_info$status == "ready" && chart_type == "run") {
             div(
-              style = "font-size:1em", 
-              class = "fs-7 text-muted mb-0", 
+              style = "font-size:1em; color: #999999 !important;", 
+              class = "fs-7 mb-0", 
               "Anvendes ikke ved analyse af seriediagrammer (run charts)"
             )
           } else {
@@ -665,14 +673,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               ))
           },
           showcase = spc_out_of_control_icon,
-          theme = if (status_info$status == "ready" && !is.null(anhoej$out_of_control_count) && (anhoej$out_of_control_count > 0)) {
+          theme = if (status_info$status == "ready" && chart_type == "run") {
+            NULL  # No theme when we use custom styling
+          } else if (status_info$status == "ready" && !is.null(anhoej$out_of_control_count) && (anhoej$out_of_control_count > 0)) {
             "dark"
           } else if (status_info$status == "ready") {
             "light" 
           } else {
             status_info$theme
           },
-          p(class = "fs-7 text-muted mb-0", 
+          p(class = if (status_info$status == "ready" && chart_type == "run") "fs-7 mb-0" else "fs-7 text-muted mb-0", 
+            style = if (status_info$status == "ready" && chart_type == "run") "color: #999999 !important;" else NULL,
             if (status_info$status == "ready") {
               if (chart_type == "run") {
                 "Ikke relevant for run charts"
