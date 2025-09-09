@@ -80,12 +80,13 @@ spc_out_of_control_icon <- HTML('
 #' @param column_config_reactive Reaktiv kolonne konfiguration
 #' @param chart_type_reactive Reaktiv chart type
 #' @param target_value_reactive Reaktiv målværdi
+#' @param centerline_value_reactive Reaktiv centerline værdi
 #' @param skift_config_reactive Reaktiv fase konfiguration
 #' @param frys_config_reactive Reaktiv freeze konfiguration
 #' @param chart_title_reactive Reaktiv chart titel (optional)
 #' 
 #' @return Liste med reactive values for plot, status og resultater
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -203,6 +204,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           config = config, 
           chart_type = chart_type,
           target_value = target_value_reactive(),
+          centerline_value = centerline_value_reactive(),
           show_phases = skift_config$show_phases,
           skift_column = skift_config$skift_column,
           frys_column = frys_column,

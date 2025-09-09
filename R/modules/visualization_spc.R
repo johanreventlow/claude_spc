@@ -9,7 +9,7 @@ library(lubridate)
 # SPC PLOT GENERERING =========================================================
 
 ## Generér SPC plot med tilpasset styling
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL) {
   
   # Safety checks
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
@@ -316,6 +316,11 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, show_
       # Add part for phase splits - can be used together with freeze
       if (!is.null(part_positions)) {
         qic_args$part <- part_positions
+      }
+      
+      # Add centerline if provided
+      if (!is.null(centerline_value) && is.numeric(centerline_value) && !is.na(centerline_value)) {
+        qic_args$cl <- centerline_value
       }
       
       # Call qic() with prepared arguments

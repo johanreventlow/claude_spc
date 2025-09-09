@@ -86,7 +86,7 @@ setup_visualization <- function(input, output, session, values) {
         return(NULL)
       }
       
-      # Hent y-akse data til smart konvertering (samme logik som target_value)
+      # Hent y-akse data til smart konvertering
       data <- active_data()
       config <- column_config()
       
