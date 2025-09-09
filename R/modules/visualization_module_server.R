@@ -228,7 +228,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             
             # Anhøj rules (meningsfulde for alle chart typer)
             runs_signal = if("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE,
-            crossings_signal = FALSE, # qic leverer ikke crossings signal direkte
+            crossings_signal = if("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
+              n_cross <- max(qic_data$n.crossings, na.rm = TRUE)
+              n_cross_min <- max(qic_data$n.crossings.min, na.rm = TRUE)
+              !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
+            } else FALSE,
             longest_run = if("longest.run" %in% names(qic_data)) max(qic_data$longest.run, na.rm = TRUE) else NA_real_,
             longest_run_max = if("longest.run.max" %in% names(qic_data)) max(qic_data$longest.run.max, na.rm = TRUE) else NA_real_,
             n_crossings = if("n.crossings" %in% names(qic_data)) max(qic_data$n.crossings, na.rm = TRUE) else NA_real_,
@@ -613,7 +617,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               ))
           },
           showcase = spc_median_crossings_icon,
-          theme = if (status_info$status == "ready") "light" else status_info$theme,
+          theme = if (status_info$status == "ready" && !is.null(anhoej$crossings_signal) && (anhoej$crossings_signal %||% FALSE)) {
+            "dark"
+          } else if (status_info$status == "ready") {
+            "light" 
+          } else {
+            status_info$theme
+          },
           p(class = "fs-7 text-muted mb-0",
             if (status_info$status == "ready") {
               if (!is.null(anhoej$n_crossings_min) && !is.na(anhoej$n_crossings_min)) {
