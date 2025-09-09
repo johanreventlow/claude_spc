@@ -94,9 +94,8 @@ parse_danish_target <- function(target_input, y_data = NULL) {
     return(numeric_value)
   }
   
-  # Use existing scale detection logic
-  source("R/modules/visualization_helpers.R", local = TRUE)
-  scale_type <- detectYAxisScale(y_data)
+  # Use scale detection logic
+  scale_type <- detect_y_axis_scale(y_data)
   
   # Convert based on scale and input format
   if (scale_type == "decimal") {
@@ -135,4 +134,39 @@ is_valid_danish_number <- function(x) {
   # Try to parse - if it returns NA, it's invalid
   parsed <- parse_danish_number(x)
   return(!is.na(parsed))
+}
+
+## Y-akse Skalerings Detektering
+# Automatisk detektering af passende Y-akse format (decimal, procent, heltal)
+detect_y_axis_scale <- function(y_data) {
+  if (is.null(y_data) || length(y_data) == 0) {
+    return("integer")
+  }
+  
+  # Remove NA values
+  y_clean <- y_data[!is.na(y_data)]
+  
+  if (length(y_clean) == 0) {
+    return("integer")
+  }
+  
+  max_val <- max(y_clean)
+  min_val <- min(y_clean)
+  
+  # Rule 1: Decimal scale (0-1)
+  if (max_val <= 1.0) {
+    return("decimal")
+  }
+  
+  # Rule 2: Percent scale (0-100+ with most values looking like percentages)
+  if (min_val >= 0 && max_val <= 200) {
+    # Check if most values look like percentages (0-100 range)
+    percent_like_count <- sum(y_clean >= 0 & y_clean <= 100)
+    if (percent_like_count / length(y_clean) >= 0.7) {  # 70% threshold
+      return("percent")
+    }
+  }
+  
+  # Rule 3: Integer/rate scale
+  return("integer")
 }

@@ -27,7 +27,8 @@ detectChartConfiguration <- function(data, chart_type) {
       next
     }
     
-    if (grepl("dato|date|tid|time", col_name, ignore.case = TRUE)) {
+    # Enhanced name-based detection including time units
+    if (grepl("dato|date|tid|time|år|year|måned|month|uge|week|dag|day", col_name, ignore.case = TRUE)) {
       x_col <- col_name
       break
     }
@@ -37,19 +38,23 @@ detectChartConfiguration <- function(data, chart_type) {
       if (length(char_data) > 0) {
         test_sample <- char_data[1:min(3, length(char_data))]
         
-        date_test <- suppressWarnings(
-          lubridate::parse_date_time(
-            test_sample, 
-            orders = c("dmy", "ymd", "mdy", "dby"),
-            quiet = TRUE
-          )
+        # Use guess_formats for more intelligent date detection
+        guessed_formats <- suppressWarnings(
+          lubridate::guess_formats(test_sample, c("dmy", "ymd", "mdy", "dby", "dmY", "Ymd", "mdY"))
         )
         
-        if (!is.null(date_test) && length(date_test) > 0) {
-          success_rate <- sum(!is.na(date_test)) / length(date_test)
-          if (success_rate >= 0.5) {
-            x_col <- col_name
-            break
+        if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+          # Test the guessed formats
+          date_test <- suppressWarnings(
+            lubridate::parse_date_time(test_sample, orders = guessed_formats, quiet = TRUE)
+          )
+          
+          if (!is.null(date_test) && length(date_test) > 0) {
+            success_rate <- sum(!is.na(date_test)) / length(date_test)
+            if (success_rate >= 0.5) {
+              x_col <- col_name
+              break
+            }
           }
         }
       }

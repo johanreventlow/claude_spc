@@ -171,7 +171,8 @@ auto_detect_and_update_columns <- function(input, session, values) {
   for (col_name in col_names) {
     col_data <- data[[col_name]]
     
-    if (grepl("dato|date|tid|time", col_name, ignore.case = TRUE)) {
+    # Enhanced name-based detection including time units
+    if (grepl("dato|date|tid|time|år|year|måned|month|uge|week|dag|day", col_name, ignore.case = TRUE)) {
       x_col <- col_name
       break
     }
@@ -179,18 +180,23 @@ auto_detect_and_update_columns <- function(input, session, values) {
     char_data <- as.character(col_data)[!is.na(col_data)]
     if (length(char_data) > 0) {
       test_sample <- char_data[1:min(3, length(char_data))]
-      danish_formats <- c("dmy", "ymd", "dby", "dbY")
       
-      date_test <- lubridate::parse_date_time(
-        test_sample, 
-        orders = danish_formats,
-        quiet = TRUE
+      # Use guess_formats for more intelligent date detection
+      guessed_formats <- suppressWarnings(
+        lubridate::guess_formats(test_sample, c("dmy", "ymd", "mdy", "dby", "dmY", "Ymd", "mdY"))
       )
       
-      success_rate <- sum(!is.na(date_test)) / length(date_test)
-      if (success_rate >= 0.5) {
-        x_col <- col_name
-        break
+      if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+        # Test the guessed formats
+        date_test <- suppressWarnings(
+          lubridate::parse_date_time(test_sample, orders = guessed_formats, quiet = TRUE)
+        )
+        
+        success_rate <- sum(!is.na(date_test)) / length(date_test)
+        if (success_rate >= 0.5) {
+          x_col <- col_name
+          break
+        }
       }
     }
   }
