@@ -84,7 +84,7 @@ create_chart_settings_card <- function() {
           ),
           div(
             # Chart type selection
-            selectInput(
+            selectizeInput(
               "chart_type",
               "Diagram type:",
               choices = CHART_TYPES_DA,
@@ -125,7 +125,7 @@ create_chart_settings_card <- function() {
           
           div(
             # X-axis column
-            selectInput(
+            selectizeInput(
               "x_column",
               "X-akse (tid/observation):",
               choices = NULL,
@@ -133,7 +133,7 @@ create_chart_settings_card <- function() {
             ),
             
             # Y-axis column
-            selectInput(
+            selectizeInput(
               "y_column",
               "Y-akse (værdi):",
               choices = NULL,
@@ -141,7 +141,7 @@ create_chart_settings_card <- function() {
             ),
             
             # N column
-            selectInput(
+            selectizeInput(
               "n_column",
               span("Nævner (n):",icon("info-circle")),
               choices = NULL,
@@ -171,7 +171,7 @@ create_chart_settings_card <- function() {
             
             
             # Skift column
-            selectInput(
+            selectizeInput(
               "skift_column",
               span("Skift (fase-markering):", icon("info-circle")),
               choices = NULL,
@@ -180,7 +180,7 @@ create_chart_settings_card <- function() {
               tooltip("Valgfri: Kolonne til markering af processkift eller faser"),
             
             # Frys column
-            selectInput(
+            selectizeInput(
               "frys_column",
               span("Frys (frysning af kontrol):", icon("info-circle")),
               choices = NULL,
@@ -189,7 +189,7 @@ create_chart_settings_card <- function() {
               tooltip("Valgfri: Kolonne til markering af kontrol-frysning perioder"),
             
             # Kommentar column
-            selectInput(
+            selectizeInput(
               "kommentar_column",
               span("Kommentar (noter):",icon("info-circle")),
               choices = NULL,
@@ -329,7 +329,7 @@ create_unit_selection <- function() {
     ),
     
     # Dropdown for standard enheder
-    conditionalPanel(condition = "input.unit_type == 'select'", selectInput(
+    conditionalPanel(condition = "input.unit_type == 'select'", selectizeInput(
       "unit_select",
       NULL,
       choices = list(
