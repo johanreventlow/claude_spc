@@ -656,7 +656,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             anhoej$out_of_control_count
           } else if (status_info$status == "ready" && chart_type == "run") {
             div(
-              style = "font-size:1em; color: #999999 !important;", 
+              style = "font-size:1em; color: #999999 !important; padding-bottom: 1em;", 
               class = "fs-7 mb-0", 
               "Anvendes ikke ved analyse af seriediagrammer (run charts)"
             )
@@ -686,7 +686,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             style = if (status_info$status == "ready" && chart_type == "run") "color: #999999 !important;" else NULL,
             if (status_info$status == "ready") {
               if (chart_type == "run") {
-                "Ikke relevant for run charts"
+                # "Ikke relevant for run charts"
+                ""
               } else {
                 "Punkter uden for kontrolgrænser"
               }
