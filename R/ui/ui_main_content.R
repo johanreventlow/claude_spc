@@ -35,23 +35,6 @@ create_ui_main_content <- function() {
 
 
 create_chart_settings_card <- function() {
-  # conditionalPanel(
-  #   condition = "output.has_data == 'true'",
-  # card(
-  #   full_screen = TRUE,
-  #   fillable = TRUE,
-  #   card_header(
-  #     div(
-  #       icon("sliders-h"),
-  #       " Indstillinger",
-  #     )
-  #   ),
-  # Tab 1: Diagram settings
-  # card_body(
-  # class = "d-flex flex-column h-100",
-  # div(
-  #   class = "flex-fill h-100",
-  # navset_tab(
   navset_card_tab(
     title = span(icon("sliders-h"), " Indstillinger", ),
     full_screen = TRUE,
@@ -124,9 +107,57 @@ create_chart_settings_card <- function() {
     nav_panel(
       "Kolonner",
       icon = icon("columns"),
-      max_height = "calc(50vh - 60px)",
-      min_height = "100%",
-      height = "calc(50vh - 60px)",
+      
+      # Custom CSS and JavaScript for smart selectize dropdown direction
+      tags$style(HTML("
+        /* Target selectize dropdowns within our dropup wrapper class */
+        .selectize-dropup .selectize-control .selectize-dropdown {
+          position: absolute !important;
+          top: auto !important;
+          bottom: 100% !important;
+          border-top: 1px solid #d0d7de !important;
+          border-bottom: none !important;
+          border-radius: 4px 4px 0 0 !important;
+          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1) !important;
+          margin-bottom: 2px !important;
+        }
+        
+        /* Ensure dropup wrapper has proper positioning context */
+        .selectize-dropup {
+          position: relative !important;
+        }
+        
+        /* Specific styling for dropup selectize controls */
+        .selectize-dropup .selectize-control {
+          position: relative !important;
+        }
+        
+        /* Ensure all dropdowns stay within reasonable limits */
+        .selectize-dropdown {
+          max-height: 200px !important;
+          overflow-y: auto !important;
+          z-index: 1050 !important;
+        }
+      ")),
+      
+      # JavaScript to ensure dropup behavior
+      tags$script(HTML("
+        $(document).ready(function() {
+          // Force dropup behavior for selectize inputs in .selectize-dropup containers
+          $('.selectize-dropup').find('select').each(function() {
+            if (this.selectize) {
+              // Override the dropdown positioning
+              var selectize = this.selectize;
+              var originalSetup = selectize.setup;
+              selectize.setup = function() {
+                originalSetup.call(this);
+                // Force dropdown to open upward
+                this.$dropdown.addClass('dropup-forced');
+              };
+            }
+          });
+        });
+      ")),
       
         layout_column_wrap(
           width = 1 / 2,
@@ -148,36 +179,18 @@ create_chart_settings_card <- function() {
               selected = NULL
             ),
             
-            # N column
-            selectizeInput(
-              "n_column",
-              span("Nævner (n):",icon("info-circle")),
-              choices = NULL,
-              selected = NULL
-            ) |>
-              tooltip(
-            
-            # Hjælpe-tekst for nævner
-            conditionalPanel(
-              condition = "input.chart_type == 'P-kort (Andele)' || input.chart_type == \"P'-kort (Andele, standardiseret)\" || input.chart_type == 'U-kort (Rater)' || input.chart_type == \"U'-kort (Rater, standardiseret)\"",
-              div(
-                " Nævner-kolonne er ",
-                strong("påkrævet"),
-                " for denne chart type"
-              )
-            ),
-            
-            conditionalPanel(
-              condition = "input.chart_type != 'P-kort (Andele)' && input.chart_type != \"P'-kort (Andele, standardiseret)\" && input.chart_type != 'U-kort (Rater)' && input.chart_type != \"U'-kort (Rater, standardiseret)\"",
-              div(
-                "Nævner er valgfri for denne chart type. Vælg 'Ingen (tom)' hvis ikke relevant."
-              )
-            ))
-            
+            # N column - wrapped for dropup behavior
+            div(
+              class = "selectize-dropup",
+              selectizeInput(
+                "n_column",
+                span("Nævner (n):",icon("info-circle")),
+                choices = NULL,
+                selected = NULL
+              ) |>
+                tooltip("Valgfri: Nævner-kolonne til beregning af andele og rater")
             ),
           div(
-            
-            
             # Skift column
             selectizeInput(
               "skift_column",
@@ -197,13 +210,16 @@ create_chart_settings_card <- function() {
               tooltip("Valgfri: Kolonne til markering af kontrol-frysning perioder"),
             
             # Kommentar column
-            selectizeInput(
-              "kommentar_column",
-              span("Kommentar (noter):",icon("info-circle")),
-              choices = NULL,
-              selected = NULL
-            )|>
-              tooltip("Valgfri: Kolonne med kommentarer eller noter til datapunkter"),
+            div(
+              class = "selectize-dropup",
+              selectizeInput(
+                "kommentar_column",
+                span("Kommentar (noter):",icon("info-circle")),
+                choices = NULL,
+                selected = NULL
+              ) |>
+                tooltip("Valgfri: Kolonne med kommentarer eller noter til datapunkter")
+            ),
             div(
               style = "padding: 10px 0;",
               div(class="text-center",
@@ -243,10 +259,7 @@ create_chart_settings_card <- function() {
         tags$small("Denne tab er reserveret til fremtidige features")
       )
     ) # nav_panel (Avanceret)
-  ) # navset_tab
-  # ) # div wrapper
-  # ) # card_body
-  # ) # card
+  ) # navset_card_tab
 }
 
 
@@ -262,12 +275,6 @@ create_plot_only_card <- function() {
            style = "height: 100%",
            fill = TRUE,
            visualizationModuleUI("visualization")
-           # ),
-           # div(
-           #   style ="height: 10%",
-           #   fill = TRUE,
-           #   "TEKST"
-           
          )
        ))
 }
