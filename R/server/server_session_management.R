@@ -205,6 +205,12 @@ restore_metadata <- function(session, metadata) {
     if (!is.null(metadata$n_column)) {
       updateSelectInput(session, "n_column", selected = metadata$n_column)
     }
+    if (!is.null(metadata$target_value)) {
+      updateTextInput(session, "target_value", value = metadata$target_value)
+    }
+    if (!is.null(metadata$centerline_value)) {
+      updateTextInput(session, "centerline_value", value = metadata$centerline_value)
+    }
   })
 }
 
@@ -221,7 +227,8 @@ collect_metadata <- function(input) {
     skift_column = if(is.null(input$skift_column) || input$skift_column == "") "" else input$skift_column,
     kommentar_column = if(is.null(input$kommentar_column) || input$kommentar_column == "") "" else input$kommentar_column,
     chart_type = input$chart_type,
-    target_value = input$target_value
+    target_value = input$target_value,
+    centerline_value = input$centerline_value
   )
 }
 
@@ -290,6 +297,8 @@ reset_to_empty_session <- function(session, values) {
     updateSelectInput(session, "x_column", selected = "")
     updateSelectInput(session, "y_column", selected = "")
     updateSelectInput(session, "n_column", selected = "")
+    updateTextInput(session, "target_value", value = "")
+    updateTextInput(session, "centerline_value", value = "")
     shinyjs::reset("data_file")
   })
   

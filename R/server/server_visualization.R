@@ -81,6 +81,23 @@ setup_visualization <- function(input, output, session, values) {
         return(parse_danish_target(input$target_value, NULL))
       }
     }),
+    centerline_value_reactive = reactive({
+      if (is.null(input$centerline_value) || input$centerline_value == "") {
+        return(NULL)
+      }
+      
+      # Hent y-akse data til smart konvertering (samme logik som target_value)
+      data <- active_data()
+      config <- column_config()
+      
+      if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
+        y_data <- data[[config$y_col]]
+        y_numeric <- parse_danish_number(y_data)
+        return(parse_danish_target(input$centerline_value, y_numeric))
+      } else {
+        return(parse_danish_target(input$centerline_value, NULL))
+      }
+    }),
     skift_config_reactive = reactive({
       # Bestem om vi skal vise faser baseret på Skift kolonne valg og data
       data <- active_data()

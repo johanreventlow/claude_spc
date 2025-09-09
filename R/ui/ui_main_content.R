@@ -64,7 +64,7 @@ create_chart_settings_card <- function() {
               "Datadefinition:",
               value = "",
               placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
-              height = "200px",
+              height = "240px",
               resize = "none"
             ),
           ),
@@ -83,6 +83,14 @@ create_chart_settings_card <- function() {
               "Målværdi:",
               value = "",
               placeholder = "fx 85%, 0,85 eller 25"
+            ),
+            
+            # Centerline input
+            textInput(
+              "centerline_value",
+              "Centerlinie (baseline):",
+              value = "",
+              placeholder = "fx 78%, 0,78 eller 22"
             )
           )
         )
@@ -189,7 +197,7 @@ create_chart_settings_card <- function() {
                 selected = NULL
               ) |>
                 tooltip("Valgfri: Nævner-kolonne til beregning af andele og rater")
-            ),
+            )),
           div(
             # Skift column
             selectizeInput(
