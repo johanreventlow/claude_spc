@@ -55,8 +55,11 @@ create_chart_settings_card <- function() {
   navset_card_tab(
     title = span(icon("sliders-h"), " Indstillinger", ),
     full_screen = TRUE,
+    height = "100%",
     # Tab 1: Detaljer ----
     nav_panel(
+      max_height = "100%",
+      min_height = "100%",
       title = "Detaljer",
       icon = icon("pen-to-square"),
       div(
@@ -107,6 +110,8 @@ create_chart_settings_card <- function() {
     nav_panel(
       "Organisatorisk",
       icon = icon("building"),
+      max_height = "100%",
+      min_height = "100%",
       
       div(
         style = "padding: 10px 0;",
@@ -119,6 +124,8 @@ create_chart_settings_card <- function() {
     nav_panel(
       "Kolonner",
       icon = icon("columns"),
+      max_height = "100%",
+      min_height = "100%",
       
         layout_column_wrap(
           width = 1 / 2,
@@ -223,6 +230,8 @@ create_chart_settings_card <- function() {
     nav_panel(
       "Avanceret",
       icon = icon("cogs"),
+      max_height = "100%",
+      min_height = "100%",
       
       div(
         style = "padding: 20px; text-align: center; color: #666;",
@@ -244,6 +253,8 @@ create_chart_settings_card <- function() {
 create_plot_only_card <- function() {
   card(full_screen = TRUE,
        fillable = TRUE,
+       max_height = "100%",
+       min_height = "100%",
        card_header(div(icon("chart-line"), " SPC Graf", )),
        card_body(
          div(
@@ -263,6 +274,9 @@ create_plot_only_card <- function() {
 
 create_data_table_card <- function() {
   card(full_screen = TRUE,
+       # max_height = "100%",
+       min_height = "calc(50vh - 60px)",
+       # height = "100%",
        card_header(
          div(
            style = "display: flex; justify-content: space-between; align-items: center;",
