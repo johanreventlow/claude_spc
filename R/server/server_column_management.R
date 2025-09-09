@@ -21,10 +21,10 @@ setup_column_management <- function(input, output, session, values) {
     all_cols <- names(data)
     
     if (length(all_cols) > 0) {
-      # Tilføj altid "Ingen (tom)" option sammen med "Vælg kolonne..."
+      # Kun "Vælg kolonne..." som første option - selectizeInput kan rydde selv
       col_choices <- setNames(
-        c("", "BLANK", all_cols), 
-        c("Vælg kolonne...", "Ingen (tom)", all_cols)
+        c("", all_cols), 
+        c("Vælg kolonne...", all_cols)
       )
       
       isolate({
@@ -33,12 +33,14 @@ setup_column_management <- function(input, output, session, values) {
         current_y <- input$y_column  
         current_n <- input$n_column
         current_skift <- input$skift_column
+        current_frys <- input$frys_column
         current_kommentar <- input$kommentar_column
         
         updateSelectInput(session, "x_column", choices = col_choices, selected = current_x)
         updateSelectInput(session, "y_column", choices = col_choices, selected = current_y)
         updateSelectInput(session, "n_column", choices = col_choices, selected = current_n)
         updateSelectInput(session, "skift_column", choices = col_choices, selected = current_skift)
+        updateSelectInput(session, "frys_column", choices = col_choices, selected = current_frys)
         updateSelectInput(session, "kommentar_column", choices = col_choices, selected = current_kommentar)
       })
       
@@ -48,8 +50,8 @@ setup_column_management <- function(input, output, session, values) {
   # Auto-detekterings trigger flag
   observeEvent(values$current_data, {
     if (!is.null(values$current_data) && 
-        (is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK") &&
-        (is.null(input$y_column) || input$y_column == "" || input$y_column == "BLANK")) {
+        (is.null(input$x_column) || input$x_column == "") &&
+        (is.null(input$y_column) || input$y_column == "")) {
       
       values$auto_detect_trigger <- Sys.time()  # Brug timestamp for at sikre reaktivitet
     }
@@ -69,8 +71,8 @@ setup_column_management <- function(input, output, session, values) {
   output$column_validation_messages <- renderUI({
     req(values$current_data)
     
-    if ((is.null(input$x_column) || input$x_column == "" || input$x_column == "BLANK") ||
-        (is.null(input$y_column) || input$y_column == "" || input$y_column == "BLANK")) {
+    if ((is.null(input$x_column) || input$x_column == "") ||
+        (is.null(input$y_column) || input$y_column == "")) {
       return(NULL)
     }
     
@@ -90,7 +92,7 @@ setup_column_management <- function(input, output, session, values) {
     
     # Tjek P/U chart krav
     if (chart_type %in% c("p", "pp", "u", "up")) {
-      if (is.null(input$n_column) || input$n_column == "" || input$n_column == "BLANK") {
+      if (is.null(input$n_column) || input$n_column == "") {
         warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne (N)"))
       } else if (input$n_column %in% names(values$current_data)) {
         n_data <- values$current_data[[input$n_column]]
@@ -105,7 +107,7 @@ setup_column_management <- function(input, output, session, values) {
     
     # Tjek om samme kolonne er valgt flere gange
     selected_cols <- c(input$x_column, input$y_column, input$n_column)
-    selected_cols <- selected_cols[!is.null(selected_cols) & selected_cols != "" & selected_cols != "BLANK"]
+    selected_cols <- selected_cols[!is.null(selected_cols) & selected_cols != ""]
     
     if (length(selected_cols) != length(unique(selected_cols))) {
       warnings <- c(warnings, "Samme kolonne kan ikke bruges til flere formål")
@@ -286,8 +288,8 @@ auto_detect_and_update_columns <- function(input, session, values) {
   # Først sikr at choices er opdateret med nuværende kolonnenavne
   all_cols <- col_names
   col_choices <- setNames(
-    c("", "BLANK", all_cols), 
-    c("Vælg kolonne...", "Ingen (tom)", all_cols)
+    c("", all_cols), 
+    c("Vælg kolonne...", all_cols)
   )
   
   isolate({
@@ -306,25 +308,25 @@ auto_detect_and_update_columns <- function(input, session, values) {
     if (!is.null(naevner_col) && naevner_col %in% col_names) {
       updateSelectInput(session, "n_column", choices = col_choices, selected = naevner_col)
     } else {
-      updateSelectInput(session, "n_column", choices = col_choices, selected = "BLANK")
+      updateSelectInput(session, "n_column", choices = col_choices, selected = "")
     }
     
     if (!is.null(skift_col) && skift_col %in% col_names) {
       updateSelectInput(session, "skift_column", choices = col_choices, selected = skift_col)
     } else {
-      updateSelectInput(session, "skift_column", choices = col_choices, selected = "BLANK")
+      updateSelectInput(session, "skift_column", choices = col_choices, selected = "")
     }
     
     if (!is.null(frys_col) && frys_col %in% col_names) {
       updateSelectInput(session, "frys_column", choices = col_choices, selected = frys_col)
     } else {
-      updateSelectInput(session, "frys_column", choices = col_choices, selected = "BLANK")
+      updateSelectInput(session, "frys_column", choices = col_choices, selected = "")
     }
     
     if (!is.null(kommentar_col) && kommentar_col %in% col_names) {
       updateSelectInput(session, "kommentar_column", choices = col_choices, selected = kommentar_col)
     } else {
-      updateSelectInput(session, "kommentar_column", choices = col_choices, selected = "BLANK")
+      updateSelectInput(session, "kommentar_column", choices = col_choices, selected = "")
     }
     
     detected_msg <- paste0(

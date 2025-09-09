@@ -55,7 +55,7 @@ create_chart_settings_card <- function() {
   navset_card_tab(
     title = span(icon("sliders-h"), " Indstillinger", ),
     full_screen = TRUE,
-    height = "100%",
+    height = "calc(50vh - 60px)",
     # Tab 1: Detaljer ----
     nav_panel(
       max_height = "100%",
@@ -124,8 +124,9 @@ create_chart_settings_card <- function() {
     nav_panel(
       "Kolonner",
       icon = icon("columns"),
-      max_height = "100%",
+      max_height = "calc(50vh - 60px)",
       min_height = "100%",
+      height = "calc(50vh - 60px)",
       
         layout_column_wrap(
           width = 1 / 2,
@@ -271,35 +272,32 @@ create_plot_only_card <- function() {
        ))
 }
 
-
 create_data_table_card <- function() {
   card(full_screen = TRUE,
-       # max_height = "100%",
        min_height = "calc(50vh - 60px)",
-       # height = "100%",
        card_header(
          div(
            style = "display: flex; justify-content: space-between; align-items: center;",
            div(icon("table"), " Data", ),
            div(
-             class = "btn-group",
+             class = "btn-group-sm",
              actionButton(
                "edit_column_names",
-               label = NULL,
+               label = "Redigér kolonnenavne",
                icon = icon("edit"),
                title = "Redigér kolonnenavne",
                class = "btn-secondary btn-sm"
-             ),
+             ), 
              actionButton(
                "add_column",
-               label = NULL,
+               label = "Tilføj kolonne",
                icon = icon("plus"),
                title = "Tilføj kolonne",
                class = "btn-secondary btn-sm"
-             ),
+             ), 
              actionButton(
                "add_row",
-               label = NULL,
+               label = "Tilføj række",
                icon = icon("plus-square"),
                title = "Tilføj række",
                class = "btn-secondary btn-sm"

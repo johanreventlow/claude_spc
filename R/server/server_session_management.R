@@ -215,11 +215,11 @@ collect_metadata <- function(input) {
     unit_select = input$unit_select,
     unit_custom = input$unit_custom,
     description = input$indicator_description,
-    x_column = if(input$x_column == "BLANK") "" else input$x_column,
-    y_column = if(input$y_column == "BLANK") "" else input$y_column,
-    n_column = if(input$n_column == "BLANK") "" else input$n_column,
-    skift_column = if(input$skift_column == "BLANK") "" else input$skift_column,
-    kommentar_column = if(input$kommentar_column == "BLANK") "" else input$kommentar_column,
+    x_column = if(is.null(input$x_column) || input$x_column == "") "" else input$x_column,
+    y_column = if(is.null(input$y_column) || input$y_column == "") "" else input$y_column,
+    n_column = if(is.null(input$n_column) || input$n_column == "") "" else input$n_column,
+    skift_column = if(is.null(input$skift_column) || input$skift_column == "") "" else input$skift_column,
+    kommentar_column = if(is.null(input$kommentar_column) || input$kommentar_column == "") "" else input$kommentar_column,
     chart_type = input$chart_type,
     target_value = input$target_value
   )

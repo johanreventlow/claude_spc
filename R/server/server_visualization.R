@@ -42,9 +42,9 @@ setup_visualization <- function(input, output, session, values) {
   
   # Kolonne konfiguration til visualisering
   column_config <- reactive({
-    x_col <- if (!is.null(input$x_column) && input$x_column != "" && input$x_column != "BLANK") input$x_column else NULL
-    y_col <- if (!is.null(input$y_column) && input$y_column != "" && input$y_column != "BLANK") input$y_column else NULL
-    n_col <- if (!is.null(input$n_column) && input$n_column != "" && input$n_column != "BLANK") input$n_column else NULL
+    x_col <- if (!is.null(input$x_column) && input$x_column != "") input$x_column else NULL
+    y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL
+    n_col <- if (!is.null(input$n_column) && input$n_column != "") input$n_column else NULL
     
     return(list(
       x_col = x_col,
@@ -91,7 +91,7 @@ setup_visualization <- function(input, output, session, values) {
       }
       
       # Tjek om bruger har valgt en Skift kolonne
-      skift_col <- if (!is.null(input$skift_column) && input$skift_column != "" && input$skift_column != "BLANK") {
+      skift_col <- if (!is.null(input$skift_column) && input$skift_column != "") {
         input$skift_column
       } else {
         NULL
@@ -121,7 +121,7 @@ setup_visualization <- function(input, output, session, values) {
       }
       
       # Tjek om bruger har valgt en Frys kolonne
-      frys_col <- if (!is.null(input$frys_column) && input$frys_column != "" && input$frys_column != "BLANK") {
+      frys_col <- if (!is.null(input$frys_column) && input$frys_column != "") {
         input$frys_column
       } else {
         NULL
