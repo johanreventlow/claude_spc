@@ -158,6 +158,20 @@ setup_helper_observers <- function(input, output, session, values) {
 
 # HJÆLPEFUNKTIONER ============================================================
 
+## Opret tom session data
+# Opretter standarddatastruktur for nye sessioner
+create_empty_session_data <- function() {
+  data.frame(
+    Skift = rep(FALSE, 5),
+    Frys = rep(FALSE, 5),
+    Dato = rep(NA_character_, 5),
+    Tæller = rep(NA_real_, 5),
+    Nævner = rep(NA_real_, 5),
+    Kommentar = rep(NA_character_, 5),
+    stringsAsFactors = FALSE
+  )
+}
+
 ## Sikr standard kolonner
 # Denne funktion sikrer at uploadede data har vores standard kolonner
 # i den rigtige rækkefølge mens eksisterende data bevares

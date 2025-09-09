@@ -27,7 +27,7 @@ library(later)  # Til forsinket udførelse
 ## Testmodus -----
 # TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
 # Sæt til FALSE for at deaktivere auto-indlæsning og vende tilbage til normal brugerstyret dataindlæsning
-TEST_MODE_AUTO_LOAD <- TRUE
+TEST_MODE_AUTO_LOAD <- FALSE
 
 ## Auto-gendannelse -----
 # AUTO-RESTORE: Gendan automatisk tidligere sessioner

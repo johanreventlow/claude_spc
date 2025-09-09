@@ -93,6 +93,13 @@ server <- function(input, output, session) {
   ## Hjælpe observers
   setup_helper_observers(input, output, session, values)
   
+  # Initial UI Setup --------------------------------------------------------
+  # Sæt standard chart_type når appen starter
+  observe({
+    updateSelectizeInput(session, "chart_type", selected = "run")
+  }) %>%
+    bindEvent(TRUE, once = TRUE)
+  
   # Velkomst Besked ---------------------------------------------------------
   # Udkommenteret velkomst besked
   # observe({

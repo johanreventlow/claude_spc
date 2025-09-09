@@ -185,7 +185,7 @@ restore_metadata <- function(session, metadata) {
       updateRadioButtons(session, "unit_type", selected = metadata$unit_type)
     }
     if (!is.null(metadata$unit_select)) {
-      updateSelectInput(session, "unit_select", selected = metadata$unit_select)
+      updateSelectizeInput(session, "unit_select", selected = metadata$unit_select)
     }
     if (!is.null(metadata$unit_custom)) {
       updateTextInput(session, "unit_custom", value = metadata$unit_custom)
@@ -194,16 +194,16 @@ restore_metadata <- function(session, metadata) {
       updateTextAreaInput(session, "indicator_description", value = metadata$description)
     }
     if (!is.null(metadata$chart_type)) {
-      updateSelectInput(session, "chart_type", selected = metadata$chart_type)
+      updateSelectizeInput(session, "chart_type", selected = metadata$chart_type)
     }
     if (!is.null(metadata$x_column)) {
-      updateSelectInput(session, "x_column", selected = metadata$x_column)
+      updateSelectizeInput(session, "x_column", selected = metadata$x_column)
     }
     if (!is.null(metadata$y_column)) {
-      updateSelectInput(session, "y_column", selected = metadata$y_column)
+      updateSelectizeInput(session, "y_column", selected = metadata$y_column)
     }
     if (!is.null(metadata$n_column)) {
-      updateSelectInput(session, "n_column", selected = metadata$n_column)
+      updateSelectizeInput(session, "n_column", selected = metadata$n_column)
     }
     if (!is.null(metadata$target_value)) {
       updateTextInput(session, "target_value", value = metadata$target_value)
@@ -270,16 +270,8 @@ reset_to_empty_session <- function(session, values) {
   # Force hide Anhøj rules until real data is loaded
   values$hide_anhoej_rules <- TRUE
   
-  # Reset to standard column order
-  values$current_data <- data.frame(
-    Skift = rep(FALSE, 5),
-    Frys = rep(FALSE, 5),
-    Dato = rep(NA_character_, 5),
-    Tæller = rep(NA_real_, 5),
-    Nævner = rep(NA_real_, 5),
-    Kommentar = rep(NA_character_, 5),
-    stringsAsFactors = FALSE
-  )
+  # Reset to standard column order using helper function
+  values$current_data <- create_empty_session_data()
   
   values$file_uploaded <- FALSE
   values$user_started_session <- TRUE  # NEW: Set flag that user has started
@@ -290,13 +282,13 @@ reset_to_empty_session <- function(session, values) {
   isolate({
     updateTextInput(session, "indicator_title", value = "")
     updateRadioButtons(session, "unit_type", selected = "select")
-    updateSelectInput(session, "unit_select", selected = "")
+    updateSelectizeInput(session, "unit_select", selected = "")
     updateTextInput(session, "unit_custom", value = "")
     updateTextAreaInput(session, "indicator_description", value = "")
-    updateSelectInput(session, "chart_type", selected = "Seriediagram (Run Chart)")
-    updateSelectInput(session, "x_column", selected = "")
-    updateSelectInput(session, "y_column", selected = "")
-    updateSelectInput(session, "n_column", selected = "")
+    updateSelectizeInput(session, "chart_type", selected = "run")
+    updateSelectizeInput(session, "x_column", selected = "")
+    updateSelectizeInput(session, "y_column", selected = "")
+    updateSelectizeInput(session, "n_column", selected = "")
     updateTextInput(session, "target_value", value = "")
     updateTextInput(session, "centerline_value", value = "")
     shinyjs::reset("data_file")

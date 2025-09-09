@@ -430,7 +430,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             title = "Data Oversigt",
             value = "Ingen data",
             showcase = spc_out_of_control_icon,
-            showcase_layout = "top right",
             theme = "light",
             p(class = "fs-7 text-muted mb-0", "Vent på data load")
           )
@@ -517,8 +516,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         if (meaningful_count < 10) {
           list(
             status = "insufficient_data",
-            message = "Mindst 10 datapunkter nødvendigt",
-            theme = "warning"
+            message = "Mindst 10 datapunkter nødvendigt for SPC analyse"
           )
         } else if (!(values$plot_ready %||% FALSE)) {
           list(
@@ -540,7 +538,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         ### Serielængde Box-----
         value_box(
           title = "Serielængde",
-          style = "flex: 1;",
+          style = if (status_info$status == "insufficient_data" ) {
+            "flex: 1;  background-color: white !important; color: #999999;"
+          } else {
+            "flex: 1;"
+          },
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
               
@@ -554,7 +556,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               "Beregner..."
             }
           } else {
-            tags$span(
+            span(style = "font-size:1.5em; color: #999999 !important;",
               switch(status_info$status,
                 "no_data" = "Ingen data",
                 "not_started" = "Afventer start",
@@ -585,14 +587,19 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 "Anhøj rules analyse - serielængde"
               }
             } else {
-              status_info$message
+              span(style = "color: #999999;",
+                   status_info$message)
             })
         ),
         
         ### Antal Kryds Box -----
         value_box(
           title = "Antal kryds",
-          style = "flex: 1;",
+          style = if (status_info$status == "insufficient_data" ) {
+            "flex: 1;  background-color: white !important; color: #999999;"
+          } else {
+            "flex: 1;"
+          },
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$n_crossings) && !is.na(anhoej$n_crossings)) {
               layout_column_wrap(
@@ -605,7 +612,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               "Beregner..."
             }
           } else {
-            tags$span(
+            span(style = "font-size:1.5em; color: #999999 !important;",
               switch(status_info$status,
                 "no_data" = "Ingen data",
                 "not_started" = "Afventer start", 
@@ -636,7 +643,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 "Anhøj rules analyse - median krydsninger"
               }
             } else {
-              status_info$message
+              span(style = "color: #999999;",
+              status_info$message)
             })
         ),
         
@@ -649,6 +657,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           style = if (status_info$status == "ready" && chart_type == "run") {
             "flex: 1; background-color: white !important; color: #999999 !important;"
+          } else if (status_info$status == "insufficient_data" ) {
+              "flex: 1;  background-color: white !important; color: #999999;"
           } else {
             "flex: 1;"
           },
@@ -661,7 +671,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               "Anvendes ikke ved analyse af seriediagrammer (run charts)"
             )
           } else {
-            tags$span(
+            span(style = "font-size:1.5em; color: #999999 !important;",
               switch(status_info$status,
                 "no_data" = "Ingen data",
                 "not_started" = "Afventer start",
@@ -686,13 +696,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             style = if (status_info$status == "ready" && chart_type == "run") "color: #999999 !important;" else NULL,
             if (status_info$status == "ready") {
               if (chart_type == "run") {
-                # "Ikke relevant for run charts"
                 ""
               } else {
                 "Punkter uden for kontrolgrænser"
               }
             } else {
-              status_info$message
+              span(style = "color: #999999;",
+                   status_info$message)
             })
         )
       )

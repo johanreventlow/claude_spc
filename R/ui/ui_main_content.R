@@ -74,7 +74,7 @@ create_chart_settings_card <- function() {
               "chart_type",
               "Diagram type:",
               choices = CHART_TYPES_DA,
-              selected = "Seriediagram (Run Chart)"
+              selected = "run"
             ),
             
             # Target value input
