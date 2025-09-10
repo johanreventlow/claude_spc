@@ -6,10 +6,28 @@ library(qicharts2)
 library(ggplot2)
 library(lubridate)
 
+# HJÆLPEFUNKTIONER ============================================================
+
+## Konverter enheds-kode til dansk label
+get_unit_label <- function(unit_code, unit_list) {
+  if (is.null(unit_code) || unit_code == "") {
+    return("")
+  }
+  
+  # Find dansk navn baseret på værdi
+  unit_names <- names(unit_list)[unit_list == unit_code]
+  if (length(unit_names) > 0) {
+    return(unit_names[1])
+  }
+  
+  # Fallback til koden selv
+  return(unit_code)
+}
+
 # SPC PLOT GENERERING =========================================================
 
 ## Generér SPC plot med tilpasset styling
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, x_axis_unit = "observation", y_axis_unit = "count") {
   
   # Safety checks
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
@@ -83,14 +101,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     
     if (chart_type == "run") {
       y_data <- (taeller / naevner) * 100
-      ylab_text <- paste("Rate (", config$y_col, "/", config$n_col, ") %")
+      ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", config$y_col, "/", config$n_col, ") %")
     } else if (chart_type %in% c("p", "pp", "u", "up")) {
       y_data <- taeller
       n_data <- naevner
-      ylab_text <- if (chart_type %in% c("p", "pp")) "Proportion" else "Rate"
+      ylab_text <- if (y_unit_label != "") y_unit_label else (if (chart_type %in% c("p", "pp")) "Proportion" else "Rate")
     } else {
       y_data <- (taeller / naevner) * 100
-      ylab_text <- paste("Rate (", config$y_col, "/", config$n_col, ") %")
+      ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", config$y_col, "/", config$n_col, ") %")
     }
   } else {
     # Standard numeric data - filter out missing values first
@@ -103,7 +121,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     # Filter data to complete rows only
     data <- data[complete_rows, , drop = FALSE]
     y_data <- parse_danish_number(data[[config$y_col]])
-    ylab_text <- config$y_col
+    ylab_text <- if (y_unit_label != "") y_unit_label else config$y_col
     
     # Check conversion success
     if (all(is.na(y_data))) {
@@ -119,9 +137,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Handle x-axis data (update after data filtering)
   x_data <- if (!is.null(config$x_col) && config$x_col %in% names(data)) data[[config$x_col]] else NULL
   
+  # Get unit labels
+  x_unit_label <- get_unit_label(x_axis_unit, X_AXIS_UNITS_DA)
+  y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+  
   if (is.null(x_data)) {
     x_data <- 1:length(y_data)
-    xlab_text <- "Observation"
+    xlab_text <- if (x_unit_label != "") x_unit_label else "Observation"
   } else {
     if (is.character(x_data) || is.factor(x_data)) {
       x_char <- as.character(x_data)
@@ -129,15 +151,15 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       
       if (!all(is.na(parsed_dates))) {
         x_data <- as.Date(parsed_dates)
-        xlab_text <- "Dato"
+        xlab_text <- if (x_unit_label != "") x_unit_label else "Dato"
       } else {
         x_data <- 1:length(y_data)
-        xlab_text <- "Observation"
+        xlab_text <- if (x_unit_label != "") x_unit_label else "Observation"
       }
     } else if (inherits(x_data, "Date")) {
-      xlab_text <- "Dato"
+      xlab_text <- if (x_unit_label != "") x_unit_label else "Dato"
     } else {
-      xlab_text <- config$x_col %||% "X"
+      xlab_text <- if (x_unit_label != "") x_unit_label else (config$x_col %||% "X")
     }
   }
   

@@ -151,7 +151,9 @@ setup_helper_observers <- function(input, output, session, values) {
         input$skift_column,
         input$kommentar_column,
         input$chart_type,
-        input$target_value
+        input$target_value,
+        input$x_axis_unit,
+        input$y_axis_unit
       )
     }, ignoreInit = TRUE)
 }

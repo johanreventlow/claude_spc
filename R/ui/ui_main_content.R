@@ -116,6 +116,22 @@ create_chart_settings_card <- function() {
               choices = CHART_TYPES_DA,
               selected = "run"
             ),
+            
+            # X-axis unit selection
+            selectizeInput(
+              "x_axis_unit",
+              "X-akse enhed:",
+              choices = X_AXIS_UNITS_DA,
+              selected = "observation"
+            ),
+            
+            # Y-axis unit selection  
+            selectizeInput(
+              "y_axis_unit",
+              "Y-akse enhed:",
+              choices = Y_AXIS_UNITS_DA,
+              selected = "count"
+            )
           )
       )
     ),
@@ -132,7 +148,7 @@ create_chart_settings_card <- function() {
             # X-axis column
             selectizeInput(
               "x_column",
-              "X-akse (tid/observation):",
+              "X-akse (vandret tids-/observationsakse):",
               choices = NULL,
               selected = NULL
             ),
@@ -140,7 +156,7 @@ create_chart_settings_card <- function() {
             # Y-axis column
             selectizeInput(
               "y_column",
-              "Y-akse (værdi):",
+              "Y-akse (lodret værdiakse):",
               choices = NULL,
               selected = NULL
             ),
@@ -160,20 +176,18 @@ create_chart_settings_card <- function() {
             # Skift column
             selectizeInput(
               "skift_column",
-              span("Skift (fase-markering):", icon("info-circle")),
+              span("Opdel proces:", icon("info-circle")),
               choices = NULL,
               selected = NULL
-            ) |>
-              tooltip("Valgfri: Kolonne til markering af processkift eller faser"),
+            ),
             
             # Frys column
             selectizeInput(
               "frys_column",
-              span("Frys (frysning af kontrol):", icon("info-circle")),
+              span("Fastfrys niveau:", icon("info-circle")),
               choices = NULL,
               selected = NULL
-            ) |>
-              tooltip("Valgfri: Kolonne til markering af kontrol-frysning perioder"),
+            ),
             
             # Kommentar column
             div(

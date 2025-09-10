@@ -210,6 +210,33 @@ get_qic_chart_type <- function(danish_selection) {
   return("run")
 }
 
+## Akseenhedsvalg -----
+# X-akse enheder (tid/observation)
+X_AXIS_UNITS_DA <- list(
+  "Dato" = "date",
+  "År" = "year", 
+  "Måned" = "month",
+  "Uge" = "week",
+  "Observation nr." = "observation",
+  "Sekund" = "second",
+  "Minut" = "minute",
+  "Time" = "hour"
+)
+
+# Y-akse enheder (værdier)
+Y_AXIS_UNITS_DA <- list(
+  "Antal" = "count",
+  "Procent (%)" = "percent",
+  "Promille (‰)" = "permille", 
+  "Rate pr. 1000" = "rate_1000",
+  "Rate pr. 100.000" = "rate_100000",
+  "Dage" = "days",
+  "Timer" = "hours",
+  "Gram" = "grams",
+  "Kilogram" = "kg",
+  "Kroner" = "dkk"
+)
+
 # DATABEHANDLING ================================
 
 ## Standardkolonner hjælpefunktion -----
