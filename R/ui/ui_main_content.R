@@ -59,14 +59,15 @@ create_chart_settings_card <- function() {
               placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
             ),
             # Beskrivelse
+            div(
+              id = "textAreaInput-wrapper",
             textAreaInput(
               "indicator_description",
               "Datadefinition:",
               value = "",
-              placeholder = "Beskriv kort hvad indikatoren måler, hvordan data indsamles, og hvad målsætningen er...",
-              height = "240px",
+              placeholder = "Angiv kort, hvad indikatoren udtrykker, og hvordan data opgøres – fx beregning af tæller og nævner.",
               resize = "none"
-            ),
+            )),
           ),
           div(
             # Chart type selection
