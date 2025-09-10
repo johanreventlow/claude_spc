@@ -41,16 +41,18 @@ create_chart_settings_card <- function() {
     height = "calc(50vh - 60px)",
     # Tab 1: Detaljer ----
     nav_panel(
+      
       max_height = "100%",
       min_height = "100%",
       title = "Detaljer",
       icon = icon("pen-to-square"),
-      div(
-        style = "padding: 10px 0;",
+      # div(
+        #style = "padding: 10px 0;",
         #Chart type and target value side by side
         layout_column_wrap(
           width = 1 / 2,
           div(
+            id = "indicator_div",
             # Indikator metadata
             textInput(
               "indicator_title",
@@ -96,7 +98,7 @@ create_chart_settings_card <- function() {
               placeholder = "fx 78%, 0,78 eller 22"
             )
           )
-        )
+        # )
       )
     ),
     
@@ -150,44 +152,7 @@ create_chart_settings_card <- function() {
           z-index: 1050 !important;
         }
         
-        /* Neutraliser bslib spacing omkring textarea wrapper */
-        .bslib-grid:has(#indicator-description-wrapper) {
-          margin-bottom: 0 !important;
-          padding-bottom: 0 !important;
-        }
-        
-        .bslib-mb-spacing:has(#indicator-description-wrapper) {
-          margin-bottom: 0 !important;
-        }
-        
-        /* Parent container skal være fleksibel */
-        #indicator-description-wrapper {
-          display: flex !important;
-          flex-direction: column !important;
-          flex: 1 1 auto !important;
-          min-height: 0 !important;
-          margin-bottom: 0 !important;
-          padding-bottom: 0 !important;
-        }
-        
-        /* Textarea skal fylde tilgængelig højde */
-        #indicator_description {
-          flex: 1 1 auto !important;
-          min-height: 120px !important;
-          height: 100% !important;
-          resize: none !important;
-          overflow: auto !important;
-          margin-bottom: 0 !important;
-        }
-        
-        /* Fjern margin på form-group omkring textarea */
-        #indicator-description-wrapper .form-group {
-          margin-bottom: 0 !important;
-          flex: 1 1 auto !important;
-          display: flex !important;
-          flex-direction: column !important;
-        }
-      ")),
+       ")),
       
       # JavaScript to ensure dropup behavior
       tags$script(HTML("
@@ -298,7 +263,7 @@ create_chart_settings_card <- function() {
       icon = icon("cogs"),
       max_height = "100%",
       min_height = "100%",
-      
+
       div(
         style = "padding: 20px; text-align: center; color: #666;",
         icon("wrench", style = "font-size: 2rem; margin-bottom: 10px;"),

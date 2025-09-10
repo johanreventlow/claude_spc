@@ -138,19 +138,44 @@ create_ui_header <- function() {
     position: unset !important;
   }
        
-    #indicator_description {
-      flex: 1 1 auto;
-      min-height: 0;
-      height: 100%;
-      resize: none;        /* valgfrit: undgå manuel resize */
-      overflow: auto;      /* scroll når teksten bliver lang */
-    }
-       textAreaInput-wrapper {
-             display: flex;
-      flex-direction: column;
-      flex: 1 1 auto;      /* fyld resten under textInput */
-      min-height: 0;
-       }
+/* Neutraliser bslib spacing omkring textarea wrapper */
+        .bslib-grid:has(#indicator-description-wrapper) {
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        
+        .bslib-mb-spacing:has(#indicator-description-wrapper) {
+          margin-bottom: 0 !important;
+        }
+        
+        /* Parent container skal være fleksibel */
+        #indicator-description-wrapper {
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 1 auto !important;
+          min-height: 0 !important;
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        
+        /* Textarea skal fylde tilgængelig højde */
+        #indicator_description {
+          flex: 1 1 auto !important;
+          min-height: 120px !important;
+          height: 100% !important;
+          resize: none !important;
+          overflow: auto !important;
+          margin-bottom: 0 !important;
+        }
+        
+        /* Fjern margin på form-group omkring textarea */
+        #indicator-description-wrapper .form-group,
+        #indicator_div {
+          margin-bottom: 0 !important;
+          flex: 1 1 auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
        
        
        
