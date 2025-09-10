@@ -46,8 +46,6 @@ create_chart_settings_card <- function() {
       min_height = "100%",
       title = "Detaljer",
       icon = icon("pen-to-square"),
-      # div(
-        #style = "padding: 10px 0;",
         #Chart type and target value side by side
         layout_column_wrap(
           width = 1 / 2,
@@ -57,9 +55,43 @@ create_chart_settings_card <- function() {
             textInput(
               "indicator_title",
               "Titel på indikator:",
+              width = "100%",
               value = "",
               placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
             ),
+            
+            
+            
+            
+            layout_column_wrap(
+              width = 1 / 2,
+            
+            # Target value input
+            textInput(
+              "target_value",
+              "Målværdi:",
+              value = "",
+              placeholder = "fx 80%, 0,8 el. 25",
+              width = "100%"
+            ),
+            
+            # Centerline input
+            textInput(
+              "centerline_value",
+              "Evt. baseline:",
+              value = "",
+              placeholder = "fx 68%, 0,7 el. 22",
+              width = "100%"
+            )),
+            
+            
+            
+            
+            
+            
+            
+            
+            
             # Beskrivelse
             div(
               id = "indicator-description-wrapper",
@@ -69,9 +101,12 @@ create_chart_settings_card <- function() {
                 "Datadefinition:",
                 value = "",
                 placeholder = "Angiv kort, hvad indikatoren udtrykker, og hvordan data opgøres – fx beregning af tæller og nævner.",
-                resize = "none"
+                resize = "none",
+                width = "100%",
               )
             ),
+            
+           
           ),
           div(
             # Chart type selection
@@ -81,134 +116,14 @@ create_chart_settings_card <- function() {
               choices = CHART_TYPES_DA,
               selected = "run"
             ),
-            
-            # Target value input
-            textInput(
-              "target_value",
-              "Målværdi:",
-              value = "",
-              placeholder = "fx 85%, 0,85 eller 25"
-            ),
-            
-            # Centerline input
-            textInput(
-              "centerline_value",
-              "Centerlinie (baseline):",
-              value = "",
-              placeholder = "fx 78%, 0,78 eller 22"
-            )
           )
-        # )
       )
     ),
     
-    # Tab 2: Organisatorisk enhed ----
+    # Tab 2: Column mapping -----
     nav_panel(
-      "Organisatorisk",
-      icon = icon("building"),
-      max_height = "100%",
-      min_height = "100%",
-      
-      div(
-        style = "padding: 10px 0;",
-        # Organisatorisk enhed selection
-        create_unit_selection()
-      )
-    ),
-    
-    # Tab 3: Column mapping -----
-    nav_panel(
-      "Kolonner",
+      "Kolonnematch",
       icon = icon("columns"),
-      
-      # Custom CSS and JavaScript for smart selectize dropdown direction
-      tags$style(HTML("
-        /* Target selectize dropdowns within our dropup wrapper class */
-        .selectize-dropup .selectize-control .selectize-dropdown {
-          position: absolute !important;
-          top: auto !important;
-          bottom: 100% !important;
-          border-top: 1px solid #d0d7de !important;
-          border-bottom: none !important;
-          border-radius: 4px 4px 0 0 !important;
-          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1) !important;
-          margin-bottom: 2px !important;
-        }
-        
-        /* Ensure dropup wrapper has proper positioning context */
-        .selectize-dropup {
-          position: relative !important;
-        }
-        
-        /* Specific styling for dropup selectize controls */
-        .selectize-dropup .selectize-control {
-          position: relative !important;
-        }
-        
-        /* Ensure all dropdowns stay within reasonable limits */
-        .selectize-dropdown {
-          max-height: 200px !important;
-          overflow-y: auto !important;
-          z-index: 1050 !important;
-        }
-        
-        /* Neutraliser bslib spacing omkring textarea wrapper */
-        .bslib-grid:has(#indicator-description-wrapper) {
-          margin-bottom: 0 !important;
-          padding-bottom: 0 !important;
-        }
-        
-        .bslib-mb-spacing:has(#indicator-description-wrapper) {
-          margin-bottom: 0 !important;
-        }
-        
-        /* Parent container skal være fleksibel */
-        #indicator-description-wrapper {
-          display: flex !important;
-          flex-direction: column !important;
-          flex: 1 1 auto !important;
-          min-height: 0 !important;
-          margin-bottom: 0 !important;
-          padding-bottom: 0 !important;
-        }
-        
-        /* Textarea skal fylde tilgængelig højde */
-        #indicator_description {
-          flex: 1 1 auto !important;
-          min-height: 130px !important;
-          height: 100% !important;
-          resize: none !important;
-          overflow: auto !important;
-          margin-bottom: 0 !important;
-        }
-        
-        /* Fjern margin på form-group omkring textarea */
-        #indicator-description-wrapper .form-group {
-          margin-bottom: 0 !important;
-          flex: 1 1 auto !important;
-          display: flex !important;
-          flex-direction: column !important;
-        }
-      ")),
-      
-      # JavaScript to ensure dropup behavior
-      tags$script(HTML("
-        $(document).ready(function() {
-          // Force dropup behavior for selectize inputs in .selectize-dropup containers
-          $('.selectize-dropup').find('select').each(function() {
-            if (this.selectize) {
-              // Override the dropdown positioning
-              var selectize = this.selectize;
-              var originalSetup = selectize.setup;
-              selectize.setup = function() {
-                originalSetup.call(this);
-                // Force dropdown to open upward
-                this.$dropdown.addClass('dropup-forced');
-              };
-            }
-          });
-        });
-      ")),
       
         layout_column_wrap(
           width = 1 / 2,
@@ -294,22 +209,37 @@ create_chart_settings_card <- function() {
         # )
       )
     ),
-    # Tab 4: Additional settings (placeholder) ----
+    
+    # Tab 3: Organisatorisk enhed ----
     nav_panel(
-      "Avanceret",
-      icon = icon("cogs"),
+      "Organisatorisk",
+      icon = icon("building"),
       max_height = "100%",
       min_height = "100%",
-
+      
       div(
-        style = "padding: 20px; text-align: center; color: #666;",
-        icon("wrench", style = "font-size: 2rem; margin-bottom: 10px;"),
-        br(),
-        "Yderligere indstillinger kommer her",
-        br(),
-        tags$small("Denne tab er reserveret til fremtidige features")
+        style = "padding: 10px 0;",
+        # Organisatorisk enhed selection
+        create_unit_selection()
       )
-    ) # nav_panel (Avanceret)
+    ),
+    
+    # Tab 4: Additional settings (placeholder) ----
+    # nav_panel(
+    #   "Avanceret",
+    #   icon = icon("cogs"),
+    #   max_height = "100%",
+    #   min_height = "100%",
+    # 
+    #   div(
+    #     style = "padding: 20px; text-align: center; color: #666;",
+    #     icon("wrench", style = "font-size: 2rem; margin-bottom: 10px;"),
+    #     br(),
+    #     "Yderligere indstillinger kommer her",
+    #     br(),
+    #     tags$small("Denne tab er reserveret til fremtidige features")
+    #   )
+    # ) # nav_panel (Avanceret)
   ) # navset_card_tab
 }
 

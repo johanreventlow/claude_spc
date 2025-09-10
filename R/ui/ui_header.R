@@ -64,6 +64,23 @@ create_ui_header <- function() {
           }
         }, 500); // Reduced delay since no waiter
       }
+      
+      // Selectize dropup behavior
+      $(document).ready(function() {
+        // Force dropup behavior for selectize inputs in .selectize-dropup containers
+        $('.selectize-dropup').find('select').each(function() {
+          if (this.selectize) {
+            // Override the dropdown positioning
+            var selectize = this.selectize;
+            var originalSetup = selectize.setup;
+            selectize.setup = function() {
+              originalSetup.call(this);
+              // Force dropdown to open upward
+              this.$dropdown.addClass('dropup-forced');
+            };
+          }
+        });
+      });
     ")),
 
       tags$style(HTML(
@@ -161,7 +178,7 @@ create_ui_header <- function() {
         /* Textarea skal fylde tilgængelig højde */
         #indicator_description {
           flex: 1 1 auto !important;
-          min-height: 120px !important;
+          min-height: 130px !important;
           height: 100% !important;
           resize: none !important;
           overflow: auto !important;
@@ -180,6 +197,32 @@ create_ui_header <- function() {
        
        
        
+        
+        /* Selectize dropup styling */
+        .selectize-dropup .selectize-control .selectize-dropdown {
+          position: absolute !important;
+          top: auto !important;
+          bottom: 100% !important;
+          border-top: 1px solid #d0d7de !important;
+          border-bottom: none !important;
+          border-radius: 4px 4px 0 0 !important;
+          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1) !important;
+          margin-bottom: 2px !important;
+        }
+        
+        .selectize-dropup {
+          position: relative !important;
+        }
+        
+        .selectize-dropup .selectize-control {
+          position: relative !important;
+        }
+        
+        .selectize-dropdown {
+          max-height: 200px !important;
+          overflow-y: auto !important;
+          z-index: 1050 !important;
+        }
       ")))
     )
   )
