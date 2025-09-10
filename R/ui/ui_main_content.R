@@ -60,14 +60,16 @@ create_chart_settings_card <- function() {
             ),
             # Beskrivelse
             div(
-              id = "textAreaInput-wrapper",
-            textAreaInput(
-              "indicator_description",
-              "Datadefinition:",
-              value = "",
-              placeholder = "Angiv kort, hvad indikatoren udtrykker, og hvordan data opgøres – fx beregning af tæller og nævner.",
-              resize = "none"
-            )),
+              id = "indicator-description-wrapper",
+              style = "display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;",
+              textAreaInput(
+                "indicator_description",
+                "Datadefinition:",
+                value = "",
+                placeholder = "Angiv kort, hvad indikatoren udtrykker, og hvordan data opgøres – fx beregning af tæller og nævner.",
+                resize = "none"
+              )
+            ),
           ),
           div(
             # Chart type selection
@@ -146,6 +148,44 @@ create_chart_settings_card <- function() {
           max-height: 200px !important;
           overflow-y: auto !important;
           z-index: 1050 !important;
+        }
+        
+        /* Neutraliser bslib spacing omkring textarea wrapper */
+        .bslib-grid:has(#indicator-description-wrapper) {
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        
+        .bslib-mb-spacing:has(#indicator-description-wrapper) {
+          margin-bottom: 0 !important;
+        }
+        
+        /* Parent container skal være fleksibel */
+        #indicator-description-wrapper {
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 1 auto !important;
+          min-height: 0 !important;
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        
+        /* Textarea skal fylde tilgængelig højde */
+        #indicator_description {
+          flex: 1 1 auto !important;
+          min-height: 120px !important;
+          height: 100% !important;
+          resize: none !important;
+          overflow: auto !important;
+          margin-bottom: 0 !important;
+        }
+        
+        /* Fjern margin på form-group omkring textarea */
+        #indicator-description-wrapper .form-group {
+          margin-bottom: 0 !important;
+          flex: 1 1 auto !important;
+          display: flex !important;
+          flex-direction: column !important;
         }
       ")),
       
