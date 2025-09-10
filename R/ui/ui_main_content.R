@@ -152,7 +152,44 @@ create_chart_settings_card <- function() {
           z-index: 1050 !important;
         }
         
-       ")),
+        /* Neutraliser bslib spacing omkring textarea wrapper */
+        .bslib-grid:has(#indicator-description-wrapper) {
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        
+        .bslib-mb-spacing:has(#indicator-description-wrapper) {
+          margin-bottom: 0 !important;
+        }
+        
+        /* Parent container skal være fleksibel */
+        #indicator-description-wrapper {
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 1 auto !important;
+          min-height: 0 !important;
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        
+        /* Textarea skal fylde tilgængelig højde */
+        #indicator_description {
+          flex: 1 1 auto !important;
+          min-height: 130px !important;
+          height: 100% !important;
+          resize: none !important;
+          overflow: auto !important;
+          margin-bottom: 0 !important;
+        }
+        
+        /* Fjern margin på form-group omkring textarea */
+        #indicator-description-wrapper .form-group {
+          margin-bottom: 0 !important;
+          flex: 1 1 auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+      ")),
       
       # JavaScript to ensure dropup behavior
       tags$script(HTML("
