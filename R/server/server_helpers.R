@@ -174,34 +174,7 @@ create_empty_session_data <- function() {
   )
 }
 
-## Sikr standard kolonner
-# Denne funktion sikrer at uploadede data har vores standard kolonner
-# i den rigtige rækkefølge mens eksisterende data bevares
-ensure_standard_columns <- function(data) {
-  
-  # Standard kolonner med Skift og Frys altid først
-  standard_cols <- c("Skift", "Frys", "Dato", "Tæller", "Nævner", "Kommentar")
-  current_cols <- names(data)
-  
-  # Tilføj manglende standard kolonner
-  for (col in standard_cols) {
-    if (!col %in% current_cols) {
-      if (col == "Skift" || col == "Frys") {
-        data[[col]] <- rep(FALSE, nrow(data))
-      } else {
-        data[[col]] <- rep(NA_character_, nrow(data))
-      }
-    }
-  }
-  
-  # Omorganiser for at sætte standard kolonner først
-  other_cols <- setdiff(current_cols, standard_cols)
-  final_order <- c(standard_cols, other_cols)
-  
-  data <- data[final_order]
-  
-  return(data)
-}
+# ensure_standard_columns funktionen er nu defineret i global.R
 
 ## Aktuel organisatorisk enhed
 # Reaktiv funktion for nuværende organisatoriske enhed

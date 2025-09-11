@@ -56,9 +56,9 @@ validate_x_column_format <- function(data, x_col, x_axis_unit) {
       # Test sample til date detection
       test_sample <- char_data[1:min(5, length(char_data))]
       
-      # Brug lubridate guess_formats
+      # Brug lubridate guess_formats med ymd først
       guessed_formats <- suppressWarnings(
-        lubridate::guess_formats(test_sample, c("dmy", "ymd", "mdy", "dby", "dmY", "Ymd", "mdY"))
+        lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
       )
       
       if (!is.null(guessed_formats) && length(guessed_formats) > 0) {

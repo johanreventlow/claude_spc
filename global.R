@@ -29,7 +29,7 @@ library(later)  # Til forsinket udførelse
 ## Testmodus -----
 # TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
 # Sæt til FALSE for at deaktivere auto-indlæsning og vende tilbage til normal brugerstyret dataindlæsning
-TEST_MODE_AUTO_LOAD <- TRUE
+TEST_MODE_AUTO_LOAD <- FALSE
 
 ## Auto-gendannelse -----
 # AUTO-RESTORE: Gendan automatisk tidligere sessioner
@@ -241,29 +241,21 @@ Y_AXIS_UNITS_DA <- list(
 # DATABEHANDLING ================================
 
 ## Standardkolonner hjælpefunktion -----
-# Sikrer at standardkolonner er til stede og i korrekt rækkefølge
+# Sikrer at kun nødvendige kontrol-kolonner er til stede
 ensure_standard_columns <- function(data) {
-  # Definer standardkolonner i den korrekte rækkefølge - Skift og Frys altid først
-  standard_cols <- c("Skift", "Frys", "Dato", "Tæller", "Nævner", "Kommentar")
+  # Kun Skift og Frys kolonner tilføjes automatisk (nødvendige for SPC kontrol)
+  required_cols <- c("Skift", "Frys")
   
-  # Tilføj manglende standardkolonner
-  for (col in standard_cols) {
+  # Tilføj kun påkrævede kontrol-kolonner
+  for (col in required_cols) {
     if (!col %in% names(data)) {
-      if (col == "Skift" || col == "Frys") {
-        data[[col]] <- FALSE
-      } else if (col %in% c("Tæller", "Nævner")) {
-        data[[col]] <- NA_real_
-      } else {
-        data[[col]] <- NA_character_
-      }
+      data[[col]] <- FALSE
     }
   }
   
-  # Hent ikke-standard kolonner (brugerens ekstra kolonner)
-  extra_cols <- setdiff(names(data), standard_cols)
-  
-  # Omorganiser: standardkolonner først (i korrekt rækkefølge), derefter brugerens kolonner
-  final_order <- c(standard_cols, extra_cols)
+  # Organiser kolonner: Skift og Frys først, derefter brugerens originale data
+  user_cols <- setdiff(names(data), required_cols)
+  final_order <- c(required_cols, user_cols)
   
   # Returner data med korrekt kolonnerækkefølge
   return(data[, final_order, drop = FALSE])
