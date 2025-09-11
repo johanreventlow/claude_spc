@@ -27,7 +27,7 @@ get_unit_label <- function(unit_code, unit_list) {
 # SPC PLOT GENERERING =========================================================
 
 ## Generér SPC plot med tilpasset styling
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, x_axis_unit = "observation", y_axis_unit = "count") {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, x_axis_unit = "observation", y_axis_unit = "count", kommentar_column = NULL) {
   
   # Safety checks
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
@@ -367,6 +367,36 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       stop("Fejl ved qic() kald: ", e$message)
     })
     
+    # Handle comment data for labels
+    comment_data <- NULL
+    if (!is.null(kommentar_column) && kommentar_column %in% names(data)) {
+      # Extract comments and sync with qic_data
+      comments_raw <- data[[kommentar_column]]
+      
+      # Create comment data frame aligned with qic_data
+      comment_data <- data.frame(
+        x = qic_data$x,
+        y = qic_data$y,
+        comment = comments_raw[1:nrow(qic_data)],  # Ensure same length as qic_data
+        stringsAsFactors = FALSE
+      )
+      
+      # Filter to only non-empty comments
+      comment_data <- comment_data[
+        !is.na(comment_data$comment) & 
+        trimws(comment_data$comment) != "", 
+      ]
+      
+      # Truncate very long comments
+      if (nrow(comment_data) > 0) {
+        comment_data$comment <- ifelse(
+          nchar(comment_data$comment) > 40,
+          paste0(substr(comment_data$comment, 1, 37), "..."),
+          comment_data$comment
+        )
+      }
+    }
+    
     # Build custom ggplot using qic calculations
     plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) +
       # Data points
@@ -424,6 +454,26 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
                            color = HOSPITAL_COLORS$darkgrey, linetype="42", linewidth = 1.2,
                            alpha = 0.8)
     }
+    
+    # Add comment labels with ggrepel if comments exist
+    if (!is.null(comment_data) && nrow(comment_data) > 0) {
+      plot <- plot + 
+        ggrepel::geom_text_repel(
+          data = comment_data,
+          ggplot2::aes(x = x, y = y, label = comment),
+          size = 3,
+          color = HOSPITAL_COLORS$darkgrey,
+          bg.color = "white",
+          bg.r = 0.1,
+          box.padding = 0.5,
+          point.padding = 0.5,
+          segment.color = HOSPITAL_COLORS$mediumgrey,
+          segment.size = 0.3,
+          max.overlaps = Inf,
+          inherit.aes = FALSE
+        )
+    }
+    
     return(list(plot = plot, qic_data = qic_data))
     
   }, error = function(e) {

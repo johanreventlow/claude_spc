@@ -165,6 +165,13 @@ setup_visualization <- function(input, output, session, values) {
       } else {
         return(input$y_axis_unit)
       }
+    }),
+    kommentar_column_reactive = reactive({
+      if (is.null(input$kommentar_column) || input$kommentar_column == "") {
+        return(NULL)
+      } else {
+        return(input$kommentar_column)
+      }
     })
   )
   
