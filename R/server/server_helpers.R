@@ -164,12 +164,12 @@ setup_helper_observers <- function(input, output, session, values) {
 # Opretter standarddatastruktur for nye sessioner
 create_empty_session_data <- function() {
   data.frame(
-    Skift = rep(FALSE, 5),
-    Frys = rep(FALSE, 5),
-    Dato = rep(NA_character_, 5),
-    Tæller = rep(NA_real_, 5),
-    Nævner = rep(NA_real_, 5),
-    Kommentar = rep(NA_character_, 5),
+    Skift = rep(FALSE, 20),
+    Frys = rep(FALSE, 20),
+    Dato = rep(NA_character_, 20),
+    Tæller = rep(NA_real_, 20),
+    Nævner = rep(NA_real_, 20),
+    Kommentar = rep(NA_character_, 20),
     stringsAsFactors = FALSE
   )
 }

@@ -181,36 +181,36 @@ setup_data_table <- function(input, output, session, values) {
   })
   
   # Nulstil tabel
-  observeEvent(input$reset_table, {
-    values$updating_table <- TRUE
-    values$table_operation_in_progress <- TRUE
-    
-    values$current_data <- data.frame(
-      Dato = rep(NA_character_, 5),
-      Taeller = rep(NA_real_, 5),
-      Naevner = rep(NA_real_, 5),
-      stringsAsFactors = FALSE
-    )
-    
-    values$file_uploaded <- FALSE
-    values$original_data <- NULL
-    values$auto_detect_done <- FALSE
-    
-    isolate({
-      shinyjs::reset("data_file")
-    })
-    
-    values$updating_table <- FALSE
-    
-    # Ryd vedvarende flag efter forsinkelse
-    later::later(function() {
-      values$table_operation_in_progress <- FALSE
-    }, delay = 1)
-    
-    showNotification(
-      "Tabel og fil-upload tømt - indtast nye data eller upload ny fil. Titel og beskrivelse bevaret.", 
-      type = "message", 
-      duration = 4
-    )
-  })
+  # observeEvent(input$reset_table, {
+  #   values$updating_table <- TRUE
+  #   values$table_operation_in_progress <- TRUE
+  #   
+  #   values$current_data <- data.frame(
+  #     Dato = rep(NA_character_, 5),
+  #     Taeller = rep(NA_real_, 5),
+  #     Naevner = rep(NA_real_, 5),
+  #     stringsAsFactors = FALSE
+  #   )
+  #   
+  #   values$file_uploaded <- FALSE
+  #   values$original_data <- NULL
+  #   values$auto_detect_done <- FALSE
+  #   
+  #   isolate({
+  #     shinyjs::reset("data_file")
+  #   })
+  #   
+  #   values$updating_table <- FALSE
+  #   
+  #   # Ryd vedvarende flag efter forsinkelse
+  #   later::later(function() {
+  #     values$table_operation_in_progress <- FALSE
+  #   }, delay = 1)
+  #   
+  #   showNotification(
+  #     "Tabel og fil-upload tømt - indtast nye data eller upload ny fil. Titel og beskrivelse bevaret.", 
+  #     type = "message", 
+  #     duration = 4
+  #   )
+  # })
 }
