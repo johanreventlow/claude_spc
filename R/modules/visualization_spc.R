@@ -115,6 +115,167 @@ get_x_format_string <- function(x_axis_unit) {
   )
 }
 
+## Intelligent dato-interval detektion
+detect_date_interval <- function(dates, debug = TRUE) {
+  if (length(dates) < 2) {
+    return(list(type = "insufficient_data", consistency = 0, timespan_days = 0))
+  }
+  
+  # Sorter datoer og beregn intervaller
+  sorted_dates <- sort(dates[!is.na(dates)])
+  if (length(sorted_dates) < 2) {
+    return(list(type = "insufficient_data", consistency = 0, timespan_days = 0))
+  }
+  
+  # Beregn forskelle mellem konsekutive datoer (i dage)
+  intervals <- as.numeric(diff(sorted_dates))
+  
+  if (length(intervals) == 0) {
+    return(list(type = "insufficient_data", consistency = 0, timespan_days = 0))
+  }
+  
+  median_interval <- median(intervals, na.rm = TRUE)
+  interval_variance <- var(intervals, na.rm = TRUE)
+  consistency <- 1 - (sqrt(interval_variance) / median_interval)  # Høj værdi = konsistent
+  consistency <- max(0, min(1, consistency))  # Klamp til 0-1
+  
+  timespan_days <- as.numeric(max(sorted_dates) - min(sorted_dates))
+  
+  # Klassificer interval type baseret på median
+  interval_type <- if (median_interval <= 1) {
+    "daily"
+  } else if (median_interval <= 10) {
+    "weekly" 
+  } else if (median_interval <= 40) {
+    "monthly"
+  } else if (median_interval <= 120) {
+    "quarterly"
+  } else if (median_interval <= 400) {
+    "yearly"
+  } else {
+    "irregular"
+  }
+  
+  if (debug) {
+    cat("DATE INTERVAL DEBUG:\n")
+    cat("- Observations:", length(sorted_dates), "\n")
+    cat("- Median interval:", round(median_interval, 1), "days\n")
+    cat("- Consistency:", round(consistency, 2), "\n")
+    cat("- Type:", interval_type, "\n")
+    cat("- Timespan:", round(timespan_days), "days\n")
+  }
+  
+  return(list(
+    type = interval_type,
+    median_days = median_interval,
+    consistency = consistency,
+    timespan_days = timespan_days,
+    n_obs = length(sorted_dates)
+  ))
+}
+
+## Optimal formatering baseret på interval og antal observationer
+get_optimal_formatting <- function(interval_info, debug = TRUE) {
+  interval_type <- interval_info$type
+  n_obs <- interval_info$n_obs
+  timespan_days <- interval_info$timespan_days
+  
+  # Formatering matrix baseret på interval type og antal observationer
+  config <- switch(interval_type,
+    daily = {
+      if (n_obs < 30) {
+        list(labels = "%d %b", breaks = "1 week", n_breaks = 8)
+      } else if (n_obs < 90) {
+        list(labels = "%b %Y", breaks = "2 weeks", n_breaks = 10)
+      } else {
+        list(labels = "%b %Y", breaks = "1 month", n_breaks = 12)
+      }
+    },
+    weekly = {
+      if (n_obs < 52) {
+        # Intelligent uge-formatering med scales::label_date_short()
+        list(
+          use_smart_labels = TRUE,
+          labels = scales::label_date_short(
+            format = c("%Y", "", "Uge\n%U\n"),  # År først, så uger
+            sep = ""
+          ),
+          breaks = "3 week", 
+          n_breaks = min(n_obs, 15)  # Max 15 breaks for læsbarhed
+        )
+      } else {
+        # For mange uger - skift til månedlig visning
+        list(
+          use_smart_labels = FALSE,
+          labels = "%b %Y", 
+          breaks = "1 month", 
+          n_breaks = 12
+        )
+      }
+    },
+    monthly = {
+      if (n_obs < 12) {
+        # Intelligent måneds-formatering med scales::label_date_short()
+        list(
+          use_smart_labels = TRUE,
+          labels = scales::label_date_short(
+            format = c("%Y", "%b"),  # År først, så måneder
+            sep = "\n"
+          ),
+          breaks = "1 month", 
+          n_breaks = n_obs
+        )
+      } else if (n_obs < 40) {
+        # Intelligent måneds-formatering med scales::label_date_short()
+        list(
+          use_smart_labels = TRUE,
+          labels = scales::label_date_short(),
+          breaks = "3 months", 
+          n_breaks = 8
+        )
+      } else {
+        # For mange måneder - skift til årlig visning med smart labels
+        list(
+          use_smart_labels = TRUE,
+          labels = scales::label_date_short(
+            format = c("%Y", "", ""),  # Kun år
+            sep = ""
+          ),
+          breaks = "6 months", 
+          n_breaks = 10
+        )
+      }
+    },
+    quarterly = {
+      list(labels = "Q%q %Y", breaks = "3 months", n_breaks = 8)
+    },
+    yearly = {
+      list(labels = "%Y", breaks = "1 year", n_breaks = min(n_obs, 10))
+    },
+    # Default/irregular
+    {
+      # Tilpas til tidsspan
+      if (timespan_days < 100) {
+        list(labels = "%d %b %Y", breaks = "2 weeks", n_breaks = 8)
+      } else if (timespan_days < 730) {
+        list(labels = "%b %Y", breaks = "2 months", n_breaks = 10)
+      } else {
+        list(labels = "%Y", breaks = "1 year", n_breaks = 12)
+      }
+    }
+  )
+  
+  if (debug) {
+    cat("FORMATTING DEBUG:\n")
+    cat("- Selected labels:", if(is.function(config$labels)) "function (smart labels)" else config$labels, "\n")
+    cat("- Selected breaks:", config$breaks, "\n")
+    cat("- N breaks:", config$n_breaks, "\n")
+    if(!is.null(config$use_smart_labels)) cat("- Smart labels:", config$use_smart_labels, "\n")
+  }
+  
+  return(config)
+}
+
 
 # SPC PLOT GENERERING =========================================================
 
@@ -382,35 +543,24 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     y_col_name <- config$y_col  # Should be "Tæller"
     n_col_name <- config$n_col  # Should be "Nævner"
     
-    # Handle X column: Use Date column if detected, otherwise create sequence
-    if (!is.null(x_col_name) && x_col_name %in% names(data)) {
-      # Check if this is actually a date column (as detected by auto-detect)
-      x_data_sample <- data[[x_col_name]]
-      is_date_column <- inherits(x_data_sample, "Date") || 
-                       (is.character(x_data_sample) && 
-                        !is.null(suppressWarnings(lubridate::parse_date_time(head(x_data_sample, 3), 
-                                                   orders = c("dmy", "ymd", "mdy"), quiet = TRUE))))
+    # Brug data fra x_validation i stedet for duplikeret logik
+    if (!is.null(x_col_name) && x_col_name %in% names(data) && x_validation$is_date) {
+      # Opdater kolonnen med de processerede data fra x_validation
+      data[[x_col_name]] <- x_validation$x_data
+      x_col_for_qic <- x_col_name
       
-      if (is_date_column) {
-        
-        # Convert character dates to actual Date objects (like your working example)
-        if (is.character(data[[x_col_name]])) {
-          data[[x_col_name]] <- lubridate::parse_date_time(
-            data[[x_col_name]], 
-            orders = c("dmy", "ymd", "mdy"), 
-            quiet = TRUE
-          ) |> as.Date()
-        }
-        
-        x_col_for_qic <- x_col_name
-      } else {
-        data$obs_sequence <- 1:nrow(data)
-        x_col_for_qic <- "obs_sequence"
-      }
+      cat("QICDATA DEBUG: Bruger dato-kolonne", x_col_name, "med", length(x_validation$x_data), "datoer\n")
     } else {
-      data$obs_sequence <- 1:nrow(data)
+      # Brug observation sekvens som fallback
+      if (!("obs_sequence" %in% names(data))) {
+        data$obs_sequence <- 1:nrow(data)
+      }
       x_col_for_qic <- "obs_sequence"
+      
+      cat("QICDATA DEBUG: Bruger obs_sequence som fallback\n")
     }
+    
+    # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
     
     # Generate SPC data using qicharts2
     tryCatch({
@@ -541,26 +691,78 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
                           linetype = "dashed", linewidth = 0.8)
     }
     
-    # Anvend x-akse formatering baseret på brugerens valg
+    # Intelligent x-akse formatering baseret på dato-mønstre
     if (!is.null(x_validation$x.format) && x_validation$is_date) {
       # DEBUG: Tjek qic_data$x type
       cat("QIC_DATA X DEBUG: class =", class(qic_data$x)[1], "\n")
       cat("QIC_DATA X DEBUG: inherits Date =", inherits(qic_data$x, "Date"), "\n")
       cat("QIC_DATA X DEBUG: inherits POSIXct =", inherits(qic_data$x, "POSIXct"), "\n")
       
+      # Intelligent interval detektion og formatering
+      interval_info <- detect_date_interval(qic_data$x, debug = TRUE)
+      format_config <- get_optimal_formatting(interval_info, debug = TRUE)
+      
       # qic() konverterer Date objekter til POSIXct, så brug scale_x_datetime
       if (inherits(qic_data$x, c("POSIXct", "POSIXt"))) {
-        plot <- plot + ggplot2::scale_x_datetime(
-          # name = x_unit_label,
-          labels = scales::label_date_short(),
-          breaks = scales::breaks_pretty(n = 12)
-        )
+        # Håndter intelligent formatering separat
+        if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
+          cat("SMART WEEKLY LABELS: Applying intelligent week formatting\n")
+          plot <- plot + ggplot2::scale_x_datetime(
+            name = x_unit_label,
+            labels = format_config$labels,  # Smart scales::label_date_short()
+            breaks = scales::date_breaks(format_config$breaks)
+          )
+        } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
+          cat("SMART MONTHLY LABELS: Applying intelligent month formatting\n")
+          plot <- plot + ggplot2::scale_x_datetime(
+            name = x_unit_label,
+            labels = format_config$labels,  # Smart scales::label_date_short()
+            breaks = scales::date_breaks(format_config$breaks)
+          )
+        } else if (!is.null(format_config$breaks)) {
+          # Standard intelligent formatering
+          plot <- plot + ggplot2::scale_x_datetime(
+            name = x_unit_label,
+            labels = scales::date_format(format_config$labels),
+            breaks = scales::date_breaks(format_config$breaks)
+          )
+        } else {
+          # Fallback til breaks_pretty med intelligent antal
+          plot <- plot + ggplot2::scale_x_datetime(
+            name = x_unit_label,
+            labels = scales::date_format(format_config$labels),
+            breaks = scales::breaks_pretty(n = format_config$n_breaks)
+          )
+        }
       } else if (inherits(qic_data$x, "Date")) {
-        plot <- plot + ggplot2::scale_x_date(
-          name = x_unit_label,
-          labels = scales::label_date_short(),
-          breaks = scales::breaks_pretty(n = 12)
-        )
+        # Date objekter - tilsvarende intelligent håndtering
+        if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
+          cat("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects\n")
+          plot <- plot + ggplot2::scale_x_date(
+            name = x_unit_label,
+            labels = format_config$labels,  # Smart scales::label_date_short()
+            breaks = scales::date_breaks(format_config$breaks)
+          )
+        } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
+          cat("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects\n")
+          plot <- plot + ggplot2::scale_x_date(
+            name = x_unit_label,
+            labels = format_config$labels,  # Smart scales::label_date_short()
+            breaks = scales::date_breaks(format_config$breaks)
+          )
+        } else if (!is.null(format_config$breaks)) {
+          plot <- plot + ggplot2::scale_x_date(
+            name = x_unit_label,
+            labels = scales::date_format(format_config$labels),
+            breaks = scales::date_breaks(format_config$breaks)
+          )
+        } else {
+          plot <- plot + ggplot2::scale_x_date(
+            name = x_unit_label,
+            labels = scales::date_format(format_config$labels),
+            breaks = scales::breaks_pretty(n = format_config$n_breaks)
+          )
+        }
       } else if (is.numeric(qic_data$x)) {
         # Fallback til continuous scale
         plot <- plot + ggplot2::scale_x_continuous(
