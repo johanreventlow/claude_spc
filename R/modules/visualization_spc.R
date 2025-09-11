@@ -24,84 +24,108 @@ get_unit_label <- function(unit_code, unit_list) {
   return(unit_code)
 }
 
-## Smart X-akse formattering baseret på enhedstype
-apply_x_axis_formatting <- function(plot, qic_data, x_axis_unit, x_unit_label) {
-  if (is.null(x_axis_unit) || x_axis_unit == "") {
-    return(plot)
+## Validering og formatering af X-kolonne data
+validate_x_column_format <- function(data, x_col, x_axis_unit) {
+  # Return default hvis ingen x-kolonne
+  if (is.null(x_col) || !x_col %in% names(data)) {
+    return(list(
+      x_data = 1:nrow(data),
+      x.format = NULL,
+      is_date = FALSE
+    ))
   }
   
-  # Tjek om x-data er numerisk (nødvendigt for formatering)
-  if (!is.numeric(qic_data$x)) {
-    # For tekst/kategoriske data, ingen særlig formatering nødvendig
-    if (x_axis_unit == "text") {
-      return(plot + ggplot2::scale_x_discrete())
+  x_data <- data[[x_col]]
+  
+  # Tjek om data allerede er Date/POSIXct
+  if (inherits(x_data, c("Date", "POSIXct", "POSIXt"))) {
+    # Data er allerede formateret som dato/tid
+    x_format <- get_x_format_string(x_axis_unit)
+    return(list(
+      x_data = x_data,
+      x.format = x_format,
+      is_date = TRUE
+    ))
+  }
+  
+  # Forsøg intelligent date detection med lubridate
+  if (is.character(x_data) || is.factor(x_data)) {
+    char_data <- as.character(x_data)[!is.na(x_data)]
+    
+    if (length(char_data) > 0) {
+      # Test sample til date detection
+      test_sample <- char_data[1:min(5, length(char_data))]
+      
+      # Brug lubridate guess_formats
+      guessed_formats <- suppressWarnings(
+        lubridate::guess_formats(test_sample, c("dmy", "ymd", "mdy", "dby", "dmY", "Ymd", "mdY"))
+      )
+      
+      if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+        # Test konvertering
+        parsed_dates <- suppressWarnings(
+          lubridate::parse_date_time(char_data, orders = guessed_formats, quiet = TRUE)
+        )
+        
+        if (!is.null(parsed_dates)) {
+          success_rate <- sum(!is.na(parsed_dates)) / length(parsed_dates)
+          
+          if (success_rate >= 0.7) { # 70% success rate threshold
+            # Konverter til Date objekter
+            x_data_converted <- as.Date(parsed_dates)
+            x_format <- get_x_format_string(x_axis_unit)
+            
+            return(list(
+              x_data = x_data_converted,
+              x.format = x_format,
+              is_date = TRUE
+            ))
+          }
+        }
+      }
     }
-    return(plot)
   }
   
-  # Anvend formattering baseret på enheds-type
+  # Numerisk data eller tekst der ikke kunne parses som datoer
+  if (is.numeric(x_data)) {
+    return(list(
+      x_data = x_data,
+      x.format = NULL,
+      is_date = FALSE
+    ))
+  } else {
+    # Fallback til observation nummer
+    return(list(
+      x_data = 1:length(x_data),
+      x.format = NULL,
+      is_date = FALSE
+    ))
+  }
+}
+
+## Simpel formatering baseret på x_axis_unit
+get_x_format_string <- function(x_axis_unit) {
   switch(x_axis_unit,
-    "date" = {
-      plot + ggplot2::scale_x_continuous(
-        name = x_unit_label,
-        labels = scales::date_format("%Y-%m"),
-        breaks = scales::pretty_breaks(n = 6)
-      )
-    },
-    "year" = {
-      plot + ggplot2::scale_x_continuous(
-        name = x_unit_label,
-        labels = scales::date_format("%Y"),
-        breaks = scales::pretty_breaks(n = 8)
-      )
-    },
-    "month" = {
-      plot + ggplot2::scale_x_continuous(
-        name = x_unit_label,
-        labels = scales::date_format("%m-%Y"),
-        breaks = scales::pretty_breaks(n = 6)
-      )
-    },
-    "week" = {
-      plot + ggplot2::scale_x_continuous(
-        name = x_unit_label,
-        labels = function(x) paste0("Uge ", scales::date_format("%U")(as.Date(x, origin = "1970-01-01"))),
-        breaks = scales::pretty_breaks(n = 10)
-      )
-    },
-    "hour" = {
-      plot + ggplot2::scale_x_continuous(
-        name = x_unit_label,
-        labels = scales::time_format("%H:%M"),
-        breaks = scales::pretty_breaks(n = 8)
-      )
-    },
-    "observation" = {
-      plot + ggplot2::scale_x_continuous(
-        name = x_unit_label,
-        labels = scales::number_format(accuracy = 1),
-        breaks = scales::pretty_breaks(n = 8)
-      )
-    },
-    "text" = {
-      # For tekst data, brug discrete scale
-      plot + ggplot2::scale_x_discrete(name = x_unit_label)
-    },
-    # Default case - standard numerisk formatering med scales
-    {
-      plot + ggplot2::scale_x_continuous(
-        name = x_unit_label,
-        labels = scales::number_format(),
-        breaks = scales::pretty_breaks(n = 8)
-      )
-    }
+    "date" = "%Y-%m-%d",
+    "month" = "%b %Y", 
+    "year" = "%Y",
+    "week" = "Uge %W",
+    "hour" = "%H:%M",
+    "%Y-%m-%d"  # default
   )
 }
+
 
 # SPC PLOT GENERERING =========================================================
 
 ## Generér SPC plot med tilpasset styling
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, x_axis_unit = "observation", y_axis_unit = "count", kommentar_column = NULL) {
+  
+  # DEBUG: Log input parameters
+  cat("=== FUNCTION INPUT DEBUG ===\n")
+  cat("x_axis_unit parameter received:", x_axis_unit, "\n")
+  cat("y_axis_unit parameter received:", y_axis_unit, "\n")
+  cat("============================\n")
   
   # Safety checks
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
@@ -216,32 +240,23 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     stop(paste("For få gyldige datapunkter efter filtrering (", length(y_data), " fundet, minimum 3 påkrævet). Tilføj flere gyldige datapunkter."))
   }
   
-  # Handle x-axis data (update after data filtering)
-  x_data <- if (!is.null(config$x_col) && config$x_col %in% names(data)) data[[config$x_col]] else NULL
+  # Handle x-axis data med intelligent formatering
+  x_validation <- validate_x_column_format(data, config$x_col, x_axis_unit)
+  x_data <- x_validation$x_data
+  # xlab_text <- if (x_unit_label != "") x_unit_label else {
+  #   if (x_validation$is_date) "Dato" else "Observation"
+  # }
   
-  # Unit labels already defined above - no need to redefine
-  
-  if (is.null(x_data)) {
-    x_data <- 1:length(y_data)
-    xlab_text <- if (x_unit_label != "") x_unit_label else "Observation"
-  } else {
-    if (is.character(x_data) || is.factor(x_data)) {
-      x_char <- as.character(x_data)
-      parsed_dates <- lubridate::parse_date_time(x_char, orders = c("dmy", "ymd", "mdy"), quiet = TRUE)
-      
-      if (!all(is.na(parsed_dates))) {
-        x_data <- as.Date(parsed_dates)
-        xlab_text <- if (x_unit_label != "") x_unit_label else "Dato"
-      } else {
-        x_data <- 1:length(y_data)
-        xlab_text <- if (x_unit_label != "") x_unit_label else "Observation"
-      }
-    } else if (inherits(x_data, "Date")) {
-      xlab_text <- if (x_unit_label != "") x_unit_label else "Dato"
-    } else {
-      xlab_text <- if (x_unit_label != "") x_unit_label else (config$x_col %||% "X")
-    }
-  }
+  # DEBUG: Log x-validation results
+  cat("=== X-VALIDATION DEBUG ===\n")
+  cat("x_col:", config$x_col, "\n")
+  cat("x_axis_unit:", x_axis_unit, "\n")
+  cat("x_data class:", class(x_data)[1], "\n")
+  cat("x_data sample:", paste(head(x_data, 3), collapse = ", "), "\n")
+  cat("is_date:", x_validation$is_date, "\n")
+  cat("x.period:", x_validation$x.period, "\n")
+  cat("x.format:", x_validation$x.format, "\n")
+  cat("========================\n")
   
   # Handle phases from selected Skift column
   part_positions <- NULL
@@ -287,9 +302,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     y = y_data,
     chart = chart_type,
     title = title_text,
-    ylab = ylab_text,
-    xlab = xlab_text
+    ylab = ylab_text
   )
+  
+  # NOTE: x.period og x.format parametre bruges ikke længere da vi anvender return.data=TRUE
   
   # Add n for P/U charts
   if (chart_type %in% c("p", "pp", "u", "up") && exists("n_data")) {
@@ -426,8 +442,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       }
       
       # Call qic() with prepared arguments
+      cat("=== QIC CALL DEBUG ===\n")
+      cat("qic_args structure:\n")
+      str(qic_args)
+      cat("Calling qic()...\n")
       
       qic_data <- do.call(qicharts2::qic, qic_args)
+      cat("QIC call successful, returned data dimensions:", nrow(qic_data), "x", ncol(qic_data), "\n")
       
       # Convert proportions to percentages for run charts with rate data
       if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
@@ -478,18 +499,34 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     }
     
     # Build custom ggplot using qic calculations
-    plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) +
-      # Data points
-      ggplot2::geom_line(color = HOSPITAL_COLORS$lightgrey, linewidth = 1) + #, alpha = 0.7) +
-      ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$mediumgrey) +
+    cat("=== GGPLOT BUILD DEBUG ===\n")
+    cat("qic_data dimensions:", nrow(qic_data), "x", ncol(qic_data), "\n")
+    cat("qic_data columns:", names(qic_data), "\n")
+    
+    tryCatch({
+      plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y))
+      cat("Base plot created successfully\n")
       
-      # Center line
-      ggplot2::geom_line(ggplot2::aes(y = cl), color = HOSPITAL_COLORS$hospitalblue, 
-                        linetype = "solid", linewidth = 1) +
+      plot <- plot + ggplot2::geom_line(color = HOSPITAL_COLORS$lightgrey, linewidth = 1)
+      cat("Line geom added successfully\n")
       
-      # Labels and theme
-      ggplot2::labs(title = call_args$title, x = "", y = "") +
-      ggplot2::theme_minimal()
+      plot <- plot + ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$mediumgrey)
+      cat("Point geom added successfully\n")
+      
+      plot <- plot + ggplot2::geom_line(ggplot2::aes(y = cl), color = HOSPITAL_COLORS$hospitalblue, 
+                        linetype = "solid", linewidth = 1)
+      cat("Center line added successfully\n")
+      
+      plot <- plot + ggplot2::labs(title = call_args$title, x = "", y = "")
+      cat("Labels added successfully\n")
+      
+      plot <- plot + ggplot2::theme_minimal()
+      cat("Theme added successfully\n")
+      
+    }, error = function(e) {
+      cat("ERROR in ggplot build:", e$message, "\n")
+      stop(e)
+    })
     
     # Add control limits conditionally
     if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
@@ -504,8 +541,34 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
                           linetype = "dashed", linewidth = 0.8)
     }
     
-    # Apply intelligent x-axis formatting based on unit type
-    plot <- apply_x_axis_formatting(plot, qic_data, x_axis_unit, x_unit_label)
+    # Anvend x-akse formatering baseret på brugerens valg
+    if (!is.null(x_validation$x.format) && x_validation$is_date) {
+      # DEBUG: Tjek qic_data$x type
+      cat("QIC_DATA X DEBUG: class =", class(qic_data$x)[1], "\n")
+      cat("QIC_DATA X DEBUG: inherits Date =", inherits(qic_data$x, "Date"), "\n")
+      cat("QIC_DATA X DEBUG: inherits POSIXct =", inherits(qic_data$x, "POSIXct"), "\n")
+      
+      # qic() konverterer Date objekter til POSIXct, så brug scale_x_datetime
+      if (inherits(qic_data$x, c("POSIXct", "POSIXt"))) {
+        plot <- plot + ggplot2::scale_x_datetime(
+          # name = x_unit_label,
+          labels = scales::label_date_short(),
+          breaks = scales::breaks_pretty(n = 12)
+        )
+      } else if (inherits(qic_data$x, "Date")) {
+        plot <- plot + ggplot2::scale_x_date(
+          name = x_unit_label,
+          labels = scales::label_date_short(),
+          breaks = scales::breaks_pretty(n = 12)
+        )
+      } else if (is.numeric(qic_data$x)) {
+        # Fallback til continuous scale
+        plot <- plot + ggplot2::scale_x_continuous(
+          name = x_unit_label,
+          breaks = scales::pretty_breaks(n = 8)
+        )
+      }
+    }
     
     # Add phase separation lines if parts exist
     if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {

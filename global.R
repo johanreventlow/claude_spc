@@ -9,6 +9,7 @@ library(excelR)  # Til Excel-lignende redigerbare tabeller
 library(dplyr)
 library(ggplot2)
 library(ggrepel)  # Til kommentar labels på plots
+library(stringi)
 library(readr)
 library(readxl)
 library(shinycssloaders)
