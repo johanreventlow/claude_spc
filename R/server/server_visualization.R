@@ -46,12 +46,14 @@ setup_visualization <- function(input, output, session, values) {
     y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL
     n_col <- if (!is.null(input$n_column) && input$n_column != "") input$n_column else NULL
     
-    return(list(
+    config_result <- list(
       x_col = x_col,
       y_col = y_col,
       n_col = n_col,
       chart_type = get_qic_chart_type(if(is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
-    ))
+    )
+    
+    return(config_result)
   })
   
   

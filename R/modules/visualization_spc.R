@@ -24,6 +24,80 @@ get_unit_label <- function(unit_code, unit_list) {
   return(unit_code)
 }
 
+## Smart X-akse formattering baseret på enhedstype
+apply_x_axis_formatting <- function(plot, qic_data, x_axis_unit, x_unit_label) {
+  if (is.null(x_axis_unit) || x_axis_unit == "") {
+    return(plot)
+  }
+  
+  # Tjek om x-data er numerisk (nødvendigt for formatering)
+  if (!is.numeric(qic_data$x)) {
+    # For tekst/kategoriske data, ingen særlig formatering nødvendig
+    if (x_axis_unit == "text") {
+      return(plot + ggplot2::scale_x_discrete())
+    }
+    return(plot)
+  }
+  
+  # Anvend formattering baseret på enheds-type
+  switch(x_axis_unit,
+    "date" = {
+      plot + ggplot2::scale_x_continuous(
+        name = x_unit_label,
+        labels = scales::date_format("%Y-%m"),
+        breaks = scales::pretty_breaks(n = 6)
+      )
+    },
+    "year" = {
+      plot + ggplot2::scale_x_continuous(
+        name = x_unit_label,
+        labels = scales::date_format("%Y"),
+        breaks = scales::pretty_breaks(n = 8)
+      )
+    },
+    "month" = {
+      plot + ggplot2::scale_x_continuous(
+        name = x_unit_label,
+        labels = scales::date_format("%m-%Y"),
+        breaks = scales::pretty_breaks(n = 6)
+      )
+    },
+    "week" = {
+      plot + ggplot2::scale_x_continuous(
+        name = x_unit_label,
+        labels = function(x) paste0("Uge ", scales::date_format("%U")(as.Date(x, origin = "1970-01-01"))),
+        breaks = scales::pretty_breaks(n = 10)
+      )
+    },
+    "hour" = {
+      plot + ggplot2::scale_x_continuous(
+        name = x_unit_label,
+        labels = scales::time_format("%H:%M"),
+        breaks = scales::pretty_breaks(n = 8)
+      )
+    },
+    "observation" = {
+      plot + ggplot2::scale_x_continuous(
+        name = x_unit_label,
+        labels = scales::number_format(accuracy = 1),
+        breaks = scales::pretty_breaks(n = 8)
+      )
+    },
+    "text" = {
+      # For tekst data, brug discrete scale
+      plot + ggplot2::scale_x_discrete(name = x_unit_label)
+    },
+    # Default case - standard numerisk formatering med scales
+    {
+      plot + ggplot2::scale_x_continuous(
+        name = x_unit_label,
+        labels = scales::number_format(),
+        breaks = scales::pretty_breaks(n = 8)
+      )
+    }
+  )
+}
+
 # SPC PLOT GENERERING =========================================================
 
 ## Generér SPC plot med tilpasset styling
@@ -99,6 +173,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     # Update data reference to filtered data
     data <- data_filtered
     
+    # Get unit labels early - before they are used
+    x_unit_label <- get_unit_label(x_axis_unit, X_AXIS_UNITS_DA)
+    y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+    
     if (chart_type == "run") {
       y_data <- (taeller / naevner) * 100
       ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", config$y_col, "/", config$n_col, ") %")
@@ -111,6 +189,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", config$y_col, "/", config$n_col, ") %")
     }
   } else {
+    # Get unit labels early - before they are used
+    x_unit_label <- get_unit_label(x_axis_unit, X_AXIS_UNITS_DA)
+    y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+    
     # Standard numeric data - filter out missing values first
     complete_rows <- !is.na(y_data_raw) & trimws(as.character(y_data_raw)) != ""
     
@@ -137,9 +219,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Handle x-axis data (update after data filtering)
   x_data <- if (!is.null(config$x_col) && config$x_col %in% names(data)) data[[config$x_col]] else NULL
   
-  # Get unit labels
-  x_unit_label <- get_unit_label(x_axis_unit, X_AXIS_UNITS_DA)
-  y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+  # Unit labels already defined above - no need to redefine
   
   if (is.null(x_data)) {
     x_data <- 1:length(y_data)
@@ -424,14 +504,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
                           linetype = "dashed", linewidth = 0.8)
     }
     
-    # Fix x-axis if we converted dates to numeric
-    if (call_args$xlab == "Dato" && is.numeric(qic_data$x)) {
-      plot <- plot + 
-        ggplot2::scale_x_continuous(
-          labels = function(x) format(as.Date(x, origin = "1970-01-01"), "%Y-%m"),
-          breaks = scales::pretty_breaks(n = 6)
-        )
-    }
+    # Apply intelligent x-axis formatting based on unit type
+    plot <- apply_x_axis_formatting(plot, qic_data, x_axis_unit, x_unit_label)
     
     # Add phase separation lines if parts exist
     if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
@@ -469,6 +543,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           point.padding = 0.5,
           segment.color = HOSPITAL_COLORS$mediumgrey,
           segment.size = 0.3,
+          
+          nudge_x = .15,
+          nudge_y = .5,
+          segment.curvature = -1e-20,
+          arrow = arrow(length = unit(0.015, "npc")),
+          
+          
+          
           max.overlaps = Inf,
           inherit.aes = FALSE
         )

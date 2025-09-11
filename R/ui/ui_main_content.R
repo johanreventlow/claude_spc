@@ -84,14 +84,6 @@ create_chart_settings_card <- function() {
               width = "100%"
             )),
             
-            
-            
-            
-            
-            
-            
-            
-            
             # Beskrivelse
             div(
               id = "indicator-description-wrapper",
@@ -105,8 +97,6 @@ create_chart_settings_card <- function() {
                 width = "100%",
               )
             ),
-            
-           
           ),
           div(
             # Chart type selection
@@ -122,7 +112,7 @@ create_chart_settings_card <- function() {
               "x_axis_unit",
               "X-akse enhed:",
               choices = X_AXIS_UNITS_DA,
-              selected = "observation"
+              selected = "date"
             ),
             
             # Y-axis unit selection  
@@ -130,7 +120,7 @@ create_chart_settings_card <- function() {
               "y_axis_unit",
               "Y-akse enhed:",
               choices = Y_AXIS_UNITS_DA,
-              selected = "count"
+              selected = "percent"
             )
           )
       )

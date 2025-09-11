@@ -28,7 +28,7 @@ library(later)  # Til forsinket udførelse
 ## Testmodus -----
 # TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
 # Sæt til FALSE for at deaktivere auto-indlæsning og vende tilbage til normal brugerstyret dataindlæsning
-TEST_MODE_AUTO_LOAD <- FALSE
+TEST_MODE_AUTO_LOAD <- TRUE
 
 ## Auto-gendannelse -----
 # AUTO-RESTORE: Gendan automatisk tidligere sessioner
@@ -157,7 +157,7 @@ create_plot_footer <- function(afdeling = "", data_kilde = "", dato = Sys.Date()
 
 ## Dansk oversættelse af chart typer -----
 CHART_TYPES_DA <- list(
-  "Seriediagram (Run Chart)" = "run",
+  "Seriediagram med SPC (Run Chart)" = "run",
   "I-kort (Individuelle værdier)" = "i", 
   "MR-kort (Moving Range)" = "mr",
   "P-kort (Andele)" = "p",
@@ -200,7 +200,7 @@ get_qic_chart_type <- function(danish_selection) {
   }
   
   # Særlig håndtering for eksakte match
-  if (danish_selection == "Seriediagram (Run Chart)") {
+  if (danish_selection == "Seriediagram med SPC (Run Chart)") {
     return("run")
   }
   if (danish_selection == "P-kort (Andele)") {
@@ -219,9 +219,8 @@ X_AXIS_UNITS_DA <- list(
   "Måned" = "month",
   "Uge" = "week",
   "Observation nr." = "observation",
-  "Sekund" = "second",
-  "Minut" = "minute",
-  "Time" = "hour"
+  "Time" = "hour",
+  "Tekst" = "text"
 )
 
 # Y-akse enheder (værdier)
