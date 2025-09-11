@@ -29,7 +29,16 @@ library(later)  # Til forsinket udførelse
 ## Testmodus -----
 # TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
 # Sæt til FALSE for at deaktivere auto-indlæsning og vende tilbage til normal brugerstyret dataindlæsning
-TEST_MODE_AUTO_LOAD <- FALSE
+TEST_MODE_AUTO_LOAD <- TRUE
+
+# Specificer hvilken fil der skal indlæses automatisk i test mode
+# Filsti skal være relativ til app root-mappen
+# TEST_MODE_FILE_PATH <- "R/data/spc_exampledata1.csv"
+
+# Alternative test filer (udkommenterede):
+# TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"
+# TEST_MODE_FILE_PATH <- "R/data/test_infection.csv"
+TEST_MODE_FILE_PATH <- "R/data/SPC_test_data_forskellige.xlsx"
 
 ## Auto-gendannelse -----
 # AUTO-RESTORE: Gendan automatisk tidligere sessioner

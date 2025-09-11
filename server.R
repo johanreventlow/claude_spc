@@ -28,20 +28,32 @@ server <- function(input, output, session) {
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
   if (TEST_MODE_AUTO_LOAD) {
-    test_file_path <- "R/data/spc_exampledata.csv"
+    test_file_path <- TEST_MODE_FILE_PATH
     
     if (file.exists(test_file_path)) {
       tryCatch({
-        # Load test data using readr::read_csv2 (same as working file upload)
-        test_data <- readr::read_csv2(
-          test_file_path,
-          locale = readr::locale(
-            decimal_mark = ",",
-            grouping_mark = ".",
-            encoding = "ISO-8859-1"
-          ),
-          show_col_types = FALSE
-        )
+        # Bestem hvilken loader der skal bruges baseret på fil-extension
+        file_extension <- tools::file_ext(test_file_path)
+        
+        if (file_extension %in% c("xlsx", "xls")) {
+          # Load Excel file
+          test_data <- readxl::read_excel(
+            test_file_path,
+            sheet = 1,  # Læs første sheet
+            .name_repair = "minimal"
+          )
+        } else {
+          # Load CSV file using readr::read_csv2 (same as working file upload)
+          test_data <- readr::read_csv2(
+            test_file_path,
+            locale = readr::locale(
+              decimal_mark = ",",
+              grouping_mark = ".",
+              encoding = "ISO-8859-1"
+            ),
+            show_col_types = FALSE
+          )
+        }
         
         # Ensure standard columns are present
         test_data <- ensure_standard_columns(test_data)
@@ -53,9 +65,16 @@ server <- function(input, output, session) {
         values$auto_detect_done <- FALSE  # Will trigger auto-detect
         values$hide_anhoej_rules <- FALSE  # Show Anhøj rules for real data
         
+        # Debug output
+        cat("TEST MODE: Auto-indlæst fil:", test_file_path, "\n")
+        cat("TEST MODE: Data dimensioner:", nrow(test_data), "x", ncol(test_data), "\n")
+        cat("TEST MODE: Kolonner:", paste(names(test_data), collapse = ", "), "\n")
+        
       }, error = function(e) {
-        # Test data loading failed silently
+        cat("TEST MODE: Fejl ved indlæsning af", test_file_path, ":", e$message, "\n")
       })
+    } else {
+      cat("TEST MODE: Fil ikke fundet:", test_file_path, "\n")
     }
   }
   
