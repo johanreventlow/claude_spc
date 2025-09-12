@@ -38,25 +38,35 @@ detectChartConfiguration <- function(data, chart_type) {
       if (length(char_data) > 0) {
         test_sample <- char_data[1:min(3, length(char_data))]
         
-        # Use guess_formats for more intelligent date detection
-        guessed_formats <- suppressWarnings(
-          lubridate::guess_formats(test_sample, c("dmy", "ymd", "mdy", "dby", "dmY", "Ymd", "mdY"))
-        )
-        
-        if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
-          # Test the guessed formats
-          date_test <- suppressWarnings(
-            lubridate::parse_date_time(test_sample, orders = guessed_formats, quiet = TRUE)
+        # Use guess_formats for more intelligent date detection (with error handling)
+        tryCatch({
+          guessed_formats <- suppressWarnings(
+            lubridate::guess_formats(test_sample, c("dmy", "ymd", "mdy", "dby", "dmY", "Ymd", "mdY"))
           )
           
-          if (!is.null(date_test) && length(date_test) > 0) {
-            success_rate <- sum(!is.na(date_test)) / length(date_test)
-            if (success_rate >= 0.5) {
-              x_col <- col_name
-              break
+          if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+            # Filter out invalid formats
+            valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
+            
+            if (length(valid_formats) > 0) {
+              # Test the valid formats
+              date_test <- suppressWarnings(
+                lubridate::parse_date_time(test_sample, orders = valid_formats, quiet = TRUE)
+              )
+              
+              if (!is.null(date_test) && length(date_test) > 0) {
+                success_rate <- sum(!is.na(date_test)) / length(date_test)
+                if (success_rate >= 0.5) {
+                  x_col <- col_name
+                  break
+                }
+              }
             }
           }
-        }
+        }, error = function(e) {
+          # Skip this column if parsing fails
+          cat("WARNING: Date parsing failed for column", col_name, ":", e$message, "\n")
+        })
       }
     }, error = function(e) {
       # Ignore errors in date detection

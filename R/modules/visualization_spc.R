@@ -61,9 +61,11 @@ validate_x_column_format <- function(data, x_col, x_axis_unit) {
       danish_success_rate <- sum(!is.na(danish_parsed)) / length(danish_parsed)
       
       if (danish_success_rate >= 0.7) {
-        # Danske datoer fungerer - brug dem direkte
-        x_data_converted <- as.Date(danish_parsed)
+        # Danske datoer fungerer - konverter til POSIXct for konsistens med qicharts2
+        x_data_converted <- as.POSIXct(danish_parsed)
         x_format <- get_x_format_string(x_axis_unit)
+        
+        cat("ON-THE-FLY: Konverterede", x_col, "danske datoer til POSIXct (success rate:", round(danish_success_rate, 2), ")\n")
         
         return(list(
           x_data = x_data_converted,
@@ -72,33 +74,43 @@ validate_x_column_format <- function(data, x_col, x_axis_unit) {
         ))
       }
       
-      # FALLBACK: Brug lubridate guess_formats for andre formater
-      guessed_formats <- suppressWarnings(
-        lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
-      )
-      
-      if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
-        # Test konvertering med guessed formats
-        parsed_dates <- suppressWarnings(
-          lubridate::parse_date_time(char_data, orders = guessed_formats, quiet = TRUE)
+      # FALLBACK: Brug lubridate guess_formats for andre formater (med error handling)
+      tryCatch({
+        guessed_formats <- suppressWarnings(
+          lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
         )
         
-        if (!is.null(parsed_dates)) {
-          success_rate <- sum(!is.na(parsed_dates)) / length(parsed_dates)
+        if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+          # Filtrer ugyldige formater (undgå "n" format problem)
+          valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
           
-          if (success_rate >= 0.7) { # 70% success rate threshold
-            # Konverter til Date objekter
-            x_data_converted <- as.Date(parsed_dates)
-            x_format <- get_x_format_string(x_axis_unit)
+          if (length(valid_formats) > 0) {
+            # Test konvertering med guessed formats
+            parsed_dates <- suppressWarnings(
+              lubridate::parse_date_time(char_data, orders = valid_formats, quiet = TRUE)
+            )
             
-            return(list(
-              x_data = x_data_converted,
-              x.format = x_format,
-              is_date = TRUE
-            ))
+            if (!is.null(parsed_dates)) {
+              success_rate <- sum(!is.na(parsed_dates)) / length(parsed_dates)
+              
+              if (success_rate >= 0.7) { # 70% success rate threshold
+                # Konverter til Date objekter
+                x_data_converted <- as.Date(parsed_dates)
+                x_format <- get_x_format_string(x_axis_unit)
+                
+                return(list(
+                  x_data = x_data_converted,
+                  x.format = x_format,
+                  is_date = TRUE
+                ))
+              }
+            }
           }
         }
-      }
+      }, error = function(e) {
+        # Skip denne parsing metode hvis den fejler
+        cat("WARNING: guess_formats parsing fejlede:", e$message, "\n")
+      })
     }
   }
   
