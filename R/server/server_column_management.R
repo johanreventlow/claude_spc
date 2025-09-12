@@ -300,23 +300,29 @@ auto_detect_and_update_columns <- function(input, session, values) {
     cat("FALLBACK: Bruger første kolonne", x_col, "\n")
   }
   
-  # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter
+  # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter  
   # NOTE: values$original_data bevares uændret, kun values$current_data modificeres
+  cat("POST-PROCESSING: Konverterer", length(date_candidates), "dato-kandidater\n")
+  
   for (candidate_name in names(date_candidates)) {
     candidate <- date_candidates[[candidate_name]]
+    cat("EVALUERER konvertering for:", candidate_name, "type:", candidate$type, "success:", candidate$success_rate, "\n")
     
     # Konverter character kolonner der blev detekteret som datoer
     if (candidate$type %in% c("danish_date", "guessed_date") && candidate$success_rate >= 0.7) {
-      col_data <- data[[candidate_name]]
+      col_data <- values$current_data[[candidate_name]]  # FIX: Brug values$current_data
       
       if (is.character(col_data) || is.factor(col_data)) {
         cat("KONVERTERER:", candidate_name, "fra", class(col_data)[1], "til Date\n")
         
         tryCatch({
+          converted_dates <- NULL  # Initialize variable
+          
           if (candidate$type == "danish_date") {
-            # Brug dmy() for danske formater
-            converted_dates <- suppressWarnings(lubridate::dmy(col_data))
-          } else {
+            # Brug dmy() for danske formater og konverter til POSIXct for konsistens med qicharts2
+            parsed_dates <- suppressWarnings(lubridate::dmy(col_data))
+            converted_dates <- as.POSIXct(parsed_dates)
+          } else if (candidate$type == "guessed_date") {
             # Brug parse_date_time for andre formater
             char_data <- as.character(col_data)
             test_sample <- char_data[!is.na(char_data)][1:min(3, length(char_data[!is.na(char_data)]))]
@@ -327,18 +333,19 @@ auto_detect_and_update_columns <- function(input, session, values) {
             
             if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
               valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
-              converted_dates <- suppressWarnings(
-                lubridate::parse_date_time(col_data, orders = valid_formats, quiet = TRUE)
-              )
-              # Konverter POSIXct til Date for konsistens
-              converted_dates <- as.Date(converted_dates)
+              if (length(valid_formats) > 0) {
+                converted_dates <- suppressWarnings(
+                  lubridate::parse_date_time(col_data, orders = valid_formats, quiet = TRUE)
+                )
+                # Behold som POSIXct for konsistens med qicharts2
+              }
             }
           }
           
           # Opdater data hvis konvertering var succesrig
           if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
             values$current_data[[candidate_name]] <- converted_dates
-            cat("✓ SUCCESS: Konverterede", candidate_name, "til Date format\n")
+            cat("✓ SUCCESS: Konverterede", candidate_name, "til POSIXct format\n")
           } else {
             cat("✗ FAILED: Konvertering af", candidate_name, "ikke succesrig nok\n")
           }
