@@ -662,11 +662,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           cat("QICDATA DEBUG: Bruger obs_sequence som fallback\n")
         }
       } else {
-        # CHARACTER COLUMN: Use directly without modification
+        # CHARACTER COLUMN: Convert to factor with original row order to prevent alphabetical sorting
+        original_labels <- data[[x_col_name]]
+        unique_labels <- unique(original_labels)  # Preserves original order from dataset
+        
+        # Convert to factor with levels in dataset order (not alphabetical)
+        data[[x_col_name]] <- factor(original_labels, levels = unique_labels)
         x_col_for_qic <- x_col_name
-        cat("✓ SUCCESS: Bruger tekstkolonne", x_col_name, "direkte\n")
-        cat("QICDATA DEBUG: Bruger tekst-kolonne", x_col_name, "med", length(data[[x_col_name]]), "tekstlabels\n")
-        cat("- Sample labels:", paste(head(data[[x_col_name]], 3), collapse = ", "), "\n")
+        
+        cat("✓ SUCCESS: Konverterede tekstkolonne", x_col_name, "til factor med original rækkefølge\n")
+        cat("QICDATA DEBUG: Bruger tekst-kolonne", x_col_name, "med", length(data[[x_col_name]]), "tekstlabels som factor\n")
+        cat("- Sample labels:", paste(head(unique_labels, 3), collapse = ", "), "\n")
+        cat("- Levels i korrekt rækkefølge:", paste(head(unique_labels, 5), collapse = ", "), "\n")
       }
     } else {
       # Brug observation sekvens som fallback
