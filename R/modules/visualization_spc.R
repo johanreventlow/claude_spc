@@ -362,6 +362,34 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     
     # Filter data to complete rows only
     data_filtered <- data[complete_rows, , drop = FALSE]
+    
+    # PRESERVE POSIXct/Date formats: If x_col was POSIXct/Date, ensure it remains so after filtering
+    if (!is.null(config$x_col) && config$x_col %in% names(data)) {
+      original_x_class <- class(data[[config$x_col]])
+      filtered_x_class <- class(data_filtered[[config$x_col]])
+      
+      cat("DATA FILTERING DEBUG:\n")
+      cat("- Original", config$x_col, "class:", original_x_class[1], "\n")
+      cat("- Filtered", config$x_col, "class:", filtered_x_class[1], "\n")
+      
+      # If original was POSIXct/Date but filtered lost the class, restore it
+      if (inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date")) && 
+          !inherits(data_filtered[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
+        
+        cat("- RESTORING: Filtered data lost", original_x_class[1], "format, restoring...\n")
+        
+        # Restore the original class attributes
+        data_filtered[[config$x_col]] <- data[[config$x_col]][complete_rows]
+        class(data_filtered[[config$x_col]]) <- original_x_class
+        attributes(data_filtered[[config$x_col]]) <- attributes(data[[config$x_col]])
+        
+        cat("- ✓ RESTORED:", config$x_col, "to", class(data_filtered[[config$x_col]])[1], "\n")
+      }
+      
+      cat("- Original sample:", paste(head(data[[config$x_col]], 3), collapse = ", "), "\n")
+      cat("- Filtered sample:", paste(head(data_filtered[[config$x_col]], 3), collapse = ", "), "\n")
+    }
+    
     taeller <- parse_danish_number(data_filtered[[config$y_col]])
     naevner <- parse_danish_number(data_filtered[[config$n_col]])
     
@@ -410,7 +438,35 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     }
     
     # Filter data to complete rows only
+    # PRESERVE POSIXct/Date formats in non-ratio case too
+    if (!is.null(config$x_col) && config$x_col %in% names(data)) {
+      original_x_class <- class(data[[config$x_col]])
+      cat("DATA FILTERING DEBUG (non-ratio):\n")
+      cat("- Original", config$x_col, "class:", original_x_class[1], "\n")
+    }
+    
+    data_backup <- data  # Keep reference to original data
     data <- data[complete_rows, , drop = FALSE]
+    
+    # Restore POSIXct/Date format if lost during filtering
+    if (!is.null(config$x_col) && config$x_col %in% names(data)) {
+      filtered_x_class <- class(data[[config$x_col]])
+      cat("- Filtered", config$x_col, "class:", filtered_x_class[1], "\n")
+      
+      if (inherits(data_backup[[config$x_col]], c("POSIXct", "POSIXt", "Date")) && 
+          !inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
+        
+        cat("- RESTORING (non-ratio): Lost", original_x_class[1], "format, restoring...\n")
+        
+        # Restore the original class and attributes
+        data[[config$x_col]] <- data_backup[[config$x_col]][complete_rows]
+        class(data[[config$x_col]]) <- original_x_class
+        attributes(data[[config$x_col]]) <- attributes(data_backup[[config$x_col]])
+        
+        cat("- ✓ RESTORED (non-ratio):", config$x_col, "to", class(data[[config$x_col]])[1], "\n")
+      }
+    }
+    
     y_data <- parse_danish_number(data[[config$y_col]])
     ylab_text <- if (y_unit_label != "") y_unit_label else config$y_col
     
@@ -568,6 +624,11 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     n_col_name <- config$n_col  # Should be "Nævner"
     
     # Brug data fra x_validation i stedet for duplikeret logik
+    cat("UPDATE CONDITION DEBUG:\n")
+    cat("- x_col_name is not NULL:", !is.null(x_col_name), "\n")
+    cat("- x_col_name in names(data):", if(!is.null(x_col_name)) x_col_name %in% names(data) else "N/A", "\n") 
+    cat("- x_validation$is_date:", x_validation$is_date, "\n")
+    
     if (!is.null(x_col_name) && x_col_name %in% names(data) && x_validation$is_date) {
       # Debug logging før opdatering
       cat("DATAFRAME UPDATE DEBUG:\n")
@@ -590,7 +651,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           data$obs_sequence <- 1:nrow(data)
         }
         x_col_for_qic <- "obs_sequence"
-        cat("FALLBACK: Bruger obs_sequence i stedet\n")
+        cat("QICDATA DEBUG: Bruger obs_sequence som fallback\n")
       }
     } else {
       # Brug observation sekvens som fallback
