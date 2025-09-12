@@ -425,7 +425,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     stop(paste("For få gyldige datapunkter efter filtrering (", length(y_data), " fundet, minimum 3 påkrævet). Tilføj flere gyldige datapunkter."))
   }
   
-  # Handle x-axis data med intelligent formatering
+  # Handle x-axis data med intelligent formatering - EFTER data filtrering
   x_validation <- validate_x_column_format(data, config$x_col, x_axis_unit)
   x_data <- x_validation$x_data
   # xlab_text <- if (x_unit_label != "") x_unit_label else {
@@ -569,11 +569,29 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     
     # Brug data fra x_validation i stedet for duplikeret logik
     if (!is.null(x_col_name) && x_col_name %in% names(data) && x_validation$is_date) {
-      # Opdater kolonnen med de processerede data fra x_validation
-      data[[x_col_name]] <- x_validation$x_data
-      x_col_for_qic <- x_col_name
+      # Debug logging før opdatering
+      cat("DATAFRAME UPDATE DEBUG:\n")
+      cat("- data nrows:", nrow(data), "\n")
+      cat("- x_validation$x_data length:", length(x_validation$x_data), "\n")
+      cat("- x_validation$x_data class:", class(x_validation$x_data)[1], "\n")
+      cat("- Original", x_col_name, "class:", class(data[[x_col_name]])[1], "\n")
       
-      cat("QICDATA DEBUG: Bruger dato-kolonne", x_col_name, "med", length(x_validation$x_data), "datoer\n")
+      # Opdater kolonnen med de processerede data fra x_validation
+      if (length(x_validation$x_data) == nrow(data)) {
+        data[[x_col_name]] <- x_validation$x_data
+        x_col_for_qic <- x_col_name
+        
+        cat("✓ SUCCESS: Opdaterede", x_col_name, "til", class(x_validation$x_data)[1], "\n")
+        cat("QICDATA DEBUG: Bruger dato-kolonne", x_col_name, "med", length(x_validation$x_data), "datoer\n")
+      } else {
+        cat("✗ ERROR: Længde mismatch - x_validation$x_data:", length(x_validation$x_data), "vs data rows:", nrow(data), "\n")
+        # Fallback til observation sekvens
+        if (!("obs_sequence" %in% names(data))) {
+          data$obs_sequence <- 1:nrow(data)
+        }
+        x_col_for_qic <- "obs_sequence"
+        cat("FALLBACK: Bruger obs_sequence i stedet\n")
+      }
     } else {
       # Brug observation sekvens som fallback
       if (!("obs_sequence" %in% names(data))) {
