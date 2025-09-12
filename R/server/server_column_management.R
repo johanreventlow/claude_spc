@@ -166,43 +166,120 @@ auto_detect_and_update_columns <- function(input, session, values) {
   data <- values$current_data
   col_names <- names(data)
   
-  # Detekter potentielle dato-kolonner
-  x_col <- NULL
+  # Forbedret detektering af potentielle dato-kolonner
+  # Evaluer ALLE kolonner og find den bedste dato-kandidat
+  
+  date_candidates <- list()
+  
   for (col_name in col_names) {
     col_data <- data[[col_name]]
     
-    # Enhanced name-based detection including time units
-    if (grepl("dato|date|tid|time|år|year|måned|month|uge|week|dag|day", col_name, ignore.case = TRUE)) {
-      x_col <- col_name
-      break
+    # Skip ikke-dato kolonner baseret på navn
+    if (grepl("^(nr|id|count|antal|total|sum)$", col_name, ignore.case = TRUE)) {
+      next
     }
     
-    char_data <- as.character(col_data)[!is.na(col_data)]
-    if (length(char_data) > 0) {
-      test_sample <- char_data[1:min(3, length(char_data))]
+    candidate <- list(
+      name = col_name,
+      score = 0,
+      type = "unknown",
+      success_rate = 0,
+      reason = ""
+    )
+    
+    # HØJESTE PRIORITET: Allerede parsede dato-objekter
+    if (inherits(col_data, c("Date", "POSIXct", "POSIXt"))) {
+      candidate$score <- 100
+      candidate$type <- "parsed_date"
+      candidate$success_rate <- 1.0
+      candidate$reason <- paste("Allerede", class(col_data)[1], "format")
+      date_candidates[[col_name]] <- candidate
+      next
+    }
+    
+    # MELLEMPRIORITY: Navn-baseret detektion
+    if (grepl("dato|date|tid|time|år|year|måned|month|uge|week|dag|day", col_name, ignore.case = TRUE)) {
+      candidate$score <- candidate$score + 50
+      candidate$reason <- paste(candidate$reason, "Navn-match")
+    }
+    
+    # TEST: Parsing kvalitet for character/factor data
+    if (is.character(col_data) || is.factor(col_data)) {
+      char_data <- as.character(col_data)[!is.na(col_data)]
       
-      # Use guess_formats for more intelligent date detection
-      guessed_formats <- suppressWarnings(
-        lubridate::guess_formats(test_sample, c("dmy", "ymd", "mdy", "dby", "dmY", "Ymd", "mdY"))
-      )
-      
-      if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
-        # Test the guessed formats
-        date_test <- suppressWarnings(
-          lubridate::parse_date_time(test_sample, orders = guessed_formats, quiet = TRUE)
+      if (length(char_data) > 0) {
+        test_sample <- char_data[1:min(5, length(char_data))]
+        
+        # Test danske formater først (som i visualization_spc.R)
+        danish_parsed <- suppressWarnings(lubridate::dmy(test_sample))
+        danish_success_rate <- sum(!is.na(danish_parsed)) / length(danish_parsed)
+        
+        if (danish_success_rate >= 0.7) {
+          candidate$score <- candidate$score + (danish_success_rate * 40)
+          candidate$success_rate <- danish_success_rate
+          candidate$type <- "danish_date"
+          candidate$reason <- paste(candidate$reason, "dansk dmy() format")
+          date_candidates[[col_name]] <- candidate
+          next
+        }
+        
+        # Fallback til guess_formats
+        guessed_formats <- suppressWarnings(
+          lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
         )
         
-        success_rate <- sum(!is.na(date_test)) / length(date_test)
-        if (success_rate >= 0.5) {
-          x_col <- col_name
-          break
+        if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+          date_test <- suppressWarnings(
+            lubridate::parse_date_time(test_sample, orders = guessed_formats, quiet = TRUE)
+          )
+          
+          success_rate <- sum(!is.na(date_test)) / length(date_test)
+          if (success_rate >= 0.5) {
+            candidate$score <- candidate$score + (success_rate * 30)
+            candidate$success_rate <- success_rate
+            candidate$type <- "guessed_date"
+            candidate$reason <- paste(candidate$reason, "lubridate guess")
+            date_candidates[[col_name]] <- candidate
+          }
         }
       }
     }
+    
+    # Gem kandidat hvis den har nogen score
+    if (candidate$score > 0) {
+      date_candidates[[col_name]] <- candidate
+    }
   }
   
+  # Vælg bedste kandidat baseret på score
+  x_col <- NULL
+  best_score <- 0
+  
+  if (length(date_candidates) > 0) {
+    # Log kandidater for debugging
+    cat("DATO-KANDIDATER FUNDET:\n")
+    for (name in names(date_candidates)) {
+      cand <- date_candidates[[name]]
+      cat(sprintf("- %s: score=%.1f (%s, success=%.2f) - %s\n", 
+                  name, cand$score, cand$type, cand$success_rate, cand$reason))
+    }
+    
+    # Find bedste kandidat
+    for (name in names(date_candidates)) {
+      cand <- date_candidates[[name]]
+      if (cand$score > best_score) {
+        best_score <- cand$score
+        x_col <- name
+      }
+    }
+    
+    cat("VALGT X-KOLONNE:", x_col, "med score", best_score, "\n")
+  }
+  
+  # Fallback til første kolonne hvis ingen dato-kandidater
   if (is.null(x_col) && length(col_names) > 0) {
     x_col <- col_names[1]
+    cat("FALLBACK: Bruger første kolonne", x_col, "\n")
   }
   
   # Detekter numeriske kolonner
