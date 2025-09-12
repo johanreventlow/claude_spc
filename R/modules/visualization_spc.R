@@ -56,13 +56,29 @@ validate_x_column_format <- function(data, x_col, x_axis_unit) {
       # Test sample til date detection
       test_sample <- char_data[1:min(5, length(char_data))]
       
-      # Brug lubridate guess_formats med ymd først
+      # FØRST: Test danske dato-formater direkte (mest almindelige)
+      danish_parsed <- suppressWarnings(lubridate::dmy(char_data))
+      danish_success_rate <- sum(!is.na(danish_parsed)) / length(danish_parsed)
+      
+      if (danish_success_rate >= 0.7) {
+        # Danske datoer fungerer - brug dem direkte
+        x_data_converted <- as.Date(danish_parsed)
+        x_format <- get_x_format_string(x_axis_unit)
+        
+        return(list(
+          x_data = x_data_converted,
+          x.format = x_format,
+          is_date = TRUE
+        ))
+      }
+      
+      # FALLBACK: Brug lubridate guess_formats for andre formater
       guessed_formats <- suppressWarnings(
         lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
       )
       
       if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
-        # Test konvertering
+        # Test konvertering med guessed formats
         parsed_dates <- suppressWarnings(
           lubridate::parse_date_time(char_data, orders = guessed_formats, quiet = TRUE)
         )
@@ -192,16 +208,12 @@ get_optimal_formatting <- function(interval_info, debug = TRUE) {
       }
     },
     weekly = {
-      if (n_obs < 52) {
+      if (n_obs <=36) {
         # Intelligent uge-formatering med scales::label_date_short()
         list(
           use_smart_labels = TRUE,
-          labels = scales::label_date_short(
-            format = c("%Y", "", "Uge\n%U\n"),  # År først, så uger
-            sep = ""
-          ),
-          breaks = "3 week", 
-          n_breaks = min(n_obs, 15)  # Max 15 breaks for læsbarhed
+          labels = scales::label_date_short(),
+          n_breaks = min(n_obs, 24)  # Max 15 breaks for læsbarhed
         )
       } else {
         # For mange uger - skift til månedlig visning
@@ -710,7 +722,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           plot <- plot + ggplot2::scale_x_datetime(
             name = x_unit_label,
             labels = format_config$labels,  # Smart scales::label_date_short()
-            breaks = scales::date_breaks(format_config$breaks)
+            # breaks = scales::date_breaks(format_config$breaks)
+            breaks = scales::breaks_pretty(n = format_config$n_breaks)
           )
         } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
           cat("SMART MONTHLY LABELS: Applying intelligent month formatting\n")

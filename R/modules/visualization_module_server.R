@@ -121,7 +121,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         return(NULL)
       }
       
-      # Valider at kolonner eksisterer i data
+      # Valider at kolonner eksisterer i data - hvis ikke, fallback til NULL
       if (!is.null(config$x_col) && !(config$x_col %in% names(data))) {
         config$x_col <- NULL
       }
@@ -132,12 +132,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         config$n_col <- NULL
       }
       
-      # Auto-detect hvis nødvendigt
-      if (is.null(config$x_col) || is.null(config$y_col)) {
-        auto_config <- detectChartConfiguration(data, chart_type)
-        if (is.null(config$x_col)) config$x_col <- auto_config$x_col
-        if (is.null(config$y_col)) config$y_col <- auto_config$y_col
-        if (is.null(config$n_col)) config$n_col <- auto_config$n_col
+      # INGEN AUTO-DETECTION her - dropdown values respekteres altid
+      # Auto-detection sker kun ved data upload i server_column_management.R
+      
+      # Hvis stadig ingen y_col (påkrævet for plotting), returner NULL config
+      if (is.null(config$y_col)) {
+        return(NULL)
       }
       
       return(list(
