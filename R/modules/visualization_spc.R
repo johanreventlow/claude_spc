@@ -628,30 +628,45 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     cat("- x_col_name is not NULL:", !is.null(x_col_name), "\n")
     cat("- x_col_name in names(data):", if(!is.null(x_col_name)) x_col_name %in% names(data) else "N/A", "\n") 
     cat("- x_validation$is_date:", x_validation$is_date, "\n")
+    if (!is.null(x_col_name) && x_col_name %in% names(data)) {
+      cat("- data[[x_col_name]] is character:", is.character(data[[x_col_name]]), "\n")
+    }
     
-    if (!is.null(x_col_name) && x_col_name %in% names(data) && x_validation$is_date) {
+    # UPDATED CONDITION: Accept both date columns AND character columns (like "Uge tekst")
+    if (!is.null(x_col_name) && x_col_name %in% names(data) && 
+        (x_validation$is_date || is.character(data[[x_col_name]]))) {
       # Debug logging før opdatering
       cat("DATAFRAME UPDATE DEBUG:\n")
       cat("- data nrows:", nrow(data), "\n")
-      cat("- x_validation$x_data length:", length(x_validation$x_data), "\n")
-      cat("- x_validation$x_data class:", class(x_validation$x_data)[1], "\n")
       cat("- Original", x_col_name, "class:", class(data[[x_col_name]])[1], "\n")
       
-      # Opdater kolonnen med de processerede data fra x_validation
-      if (length(x_validation$x_data) == nrow(data)) {
-        data[[x_col_name]] <- x_validation$x_data
-        x_col_for_qic <- x_col_name
+      if (x_validation$is_date) {
+        # DATE COLUMN: Use processed data from x_validation
+        cat("- x_validation$x_data length:", length(x_validation$x_data), "\n")
+        cat("- x_validation$x_data class:", class(x_validation$x_data)[1], "\n")
         
-        cat("✓ SUCCESS: Opdaterede", x_col_name, "til", class(x_validation$x_data)[1], "\n")
-        cat("QICDATA DEBUG: Bruger dato-kolonne", x_col_name, "med", length(x_validation$x_data), "datoer\n")
-      } else {
-        cat("✗ ERROR: Længde mismatch - x_validation$x_data:", length(x_validation$x_data), "vs data rows:", nrow(data), "\n")
-        # Fallback til observation sekvens
-        if (!("obs_sequence" %in% names(data))) {
-          data$obs_sequence <- 1:nrow(data)
+        # Opdater kolonnen med de processerede data fra x_validation
+        if (length(x_validation$x_data) == nrow(data)) {
+          data[[x_col_name]] <- x_validation$x_data
+          x_col_for_qic <- x_col_name
+          
+          cat("✓ SUCCESS: Opdaterede", x_col_name, "til", class(x_validation$x_data)[1], "\n")
+          cat("QICDATA DEBUG: Bruger dato-kolonne", x_col_name, "med", length(x_validation$x_data), "datoer\n")
+        } else {
+          cat("✗ ERROR: Længde mismatch - x_validation$x_data:", length(x_validation$x_data), "vs data rows:", nrow(data), "\n")
+          # Fallback til observation sekvens
+          if (!("obs_sequence" %in% names(data))) {
+            data$obs_sequence <- 1:nrow(data)
+          }
+          x_col_for_qic <- "obs_sequence"
+          cat("QICDATA DEBUG: Bruger obs_sequence som fallback\n")
         }
-        x_col_for_qic <- "obs_sequence"
-        cat("QICDATA DEBUG: Bruger obs_sequence som fallback\n")
+      } else {
+        # CHARACTER COLUMN: Use directly without modification
+        x_col_for_qic <- x_col_name
+        cat("✓ SUCCESS: Bruger tekstkolonne", x_col_name, "direkte\n")
+        cat("QICDATA DEBUG: Bruger tekst-kolonne", x_col_name, "med", length(data[[x_col_name]]), "tekstlabels\n")
+        cat("- Sample labels:", paste(head(data[[x_col_name]], 3), collapse = ", "), "\n")
       }
     } else {
       # Brug observation sekvens som fallback
