@@ -179,6 +179,12 @@ auto_detect_and_update_columns <- function(input, session, values) {
       next
     }
     
+    # Skip kolonner der kun indeholder NA værdier
+    if (all(is.na(col_data)) || length(col_data) == 0) {
+      cat("SKIP: Kolonne", col_name, "er tom eller kun NA værdier\n")
+      next
+    }
+    
     candidate <- list(
       name = col_name,
       score = 0,
@@ -223,25 +229,37 @@ auto_detect_and_update_columns <- function(input, session, values) {
           next
         }
         
-        # Fallback til guess_formats
-        guessed_formats <- suppressWarnings(
-          lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
-        )
-        
-        if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
-          date_test <- suppressWarnings(
-            lubridate::parse_date_time(test_sample, orders = guessed_formats, quiet = TRUE)
+        # Fallback til guess_formats med error handling
+        tryCatch({
+          guessed_formats <- suppressWarnings(
+            lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
           )
           
-          success_rate <- sum(!is.na(date_test)) / length(date_test)
-          if (success_rate >= 0.5) {
-            candidate$score <- candidate$score + (success_rate * 30)
-            candidate$success_rate <- success_rate
-            candidate$type <- "guessed_date"
-            candidate$reason <- paste(candidate$reason, "lubridate guess")
-            date_candidates[[col_name]] <- candidate
+          if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+            # Filtrer ugyldige formater (undgå "n" format problem)
+            valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
+            
+            if (length(valid_formats) > 0) {
+              date_test <- suppressWarnings(
+                lubridate::parse_date_time(test_sample, orders = valid_formats, quiet = TRUE)
+              )
+              
+              if (!is.null(date_test)) {
+                success_rate <- sum(!is.na(date_test)) / length(date_test)
+                if (success_rate >= 0.5) {
+                  candidate$score <- candidate$score + (success_rate * 30)
+                  candidate$success_rate <- success_rate
+                  candidate$type <- "guessed_date"
+                  candidate$reason <- paste(candidate$reason, "lubridate guess")
+                  date_candidates[[col_name]] <- candidate
+                }
+              }
+            }
           }
-        }
+        }, error = function(e) {
+          # Skip denne kolonne hvis parsing fejler
+          cat("WARNING: Parsing fejl for kolonne", col_name, ":", e$message, "\n")
+        })
       }
     }
     
