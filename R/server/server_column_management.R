@@ -300,6 +300,56 @@ auto_detect_and_update_columns <- function(input, session, values) {
     cat("FALLBACK: Bruger første kolonne", x_col, "\n")
   }
   
+  # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter
+  # NOTE: values$original_data bevares uændret, kun values$current_data modificeres
+  for (candidate_name in names(date_candidates)) {
+    candidate <- date_candidates[[candidate_name]]
+    
+    # Konverter character kolonner der blev detekteret som datoer
+    if (candidate$type %in% c("danish_date", "guessed_date") && candidate$success_rate >= 0.7) {
+      col_data <- data[[candidate_name]]
+      
+      if (is.character(col_data) || is.factor(col_data)) {
+        cat("KONVERTERER:", candidate_name, "fra", class(col_data)[1], "til Date\n")
+        
+        tryCatch({
+          if (candidate$type == "danish_date") {
+            # Brug dmy() for danske formater
+            converted_dates <- suppressWarnings(lubridate::dmy(col_data))
+          } else {
+            # Brug parse_date_time for andre formater
+            char_data <- as.character(col_data)
+            test_sample <- char_data[!is.na(char_data)][1:min(3, length(char_data[!is.na(char_data)]))]
+            
+            guessed_formats <- suppressWarnings(
+              lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
+            )
+            
+            if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+              valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
+              converted_dates <- suppressWarnings(
+                lubridate::parse_date_time(col_data, orders = valid_formats, quiet = TRUE)
+              )
+              # Konverter POSIXct til Date for konsistens
+              converted_dates <- as.Date(converted_dates)
+            }
+          }
+          
+          # Opdater data hvis konvertering var succesrig
+          if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
+            values$current_data[[candidate_name]] <- converted_dates
+            cat("✓ SUCCESS: Konverterede", candidate_name, "til Date format\n")
+          } else {
+            cat("✗ FAILED: Konvertering af", candidate_name, "ikke succesrig nok\n")
+          }
+          
+        }, error = function(e) {
+          cat("✗ ERROR: Konvertering af", candidate_name, "fejlede:", e$message, "\n")
+        })
+      }
+    }
+  }
+  
   # Detekter numeriske kolonner
   numeric_cols <- character(0)
   for (col_name in col_names) {
