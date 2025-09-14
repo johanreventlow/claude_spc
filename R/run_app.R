@@ -17,6 +17,9 @@ run_app <- function(port = 3838, launch_browser = TRUE, ...) {
   # Load server function
   source("R/app_server.R", local = FALSE)
   
+  # Setup static resource paths for Golem structure
+  shiny::addResourcePath("www", "www")
+  
   # Create the Shiny app
   app <- shinyApp(
     ui = app_ui(),
@@ -41,7 +44,7 @@ app_ui <- function() {
   page_navbar(
     title = tagList(
       img(
-        src = basename(HOSPITAL_LOGO_PATH),
+        src = utils::URLencode(basename(HOSPITAL_LOGO_PATH)),
         height = "40px",
         style = "margin-right: 10px;",
         onerror = "this.style.display='none'"
