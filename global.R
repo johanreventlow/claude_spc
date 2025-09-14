@@ -273,6 +273,74 @@ validate_numeric_column <- function(data, column_name) {
   return(NULL)
 }
 
+# FEJLHÅNDTERING HJÆLPEFUNKTIONER ================================
+
+## Centraliseret error logging med konsistent format
+log_error <- function(message, level = "warning", show_user = FALSE, session = NULL) {
+  timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  log_msg <- paste0("[", timestamp, "] ", toupper(level), ": ", message)
+  
+  # Log til console (altid)
+  cat(log_msg, "\n")
+  
+  # Vis til bruger hvis ønsket og session er tilgængelig
+  if (show_user && !is.null(session)) {
+    notification_type <- switch(level,
+      "error" = "error",
+      "warning" = "warning", 
+      "info" = "message",
+      "warning" # default
+    )
+    
+    showNotification(
+      message, 
+      type = notification_type,
+      duration = if(level == "error") 8 else 5,
+      session = session
+    )
+  }
+}
+
+## Robust date parsing med standardiseret fejlhåndtering
+safe_date_parse <- function(data, locale = "da_DK.UTF-8", operation_name = "date parsing") {
+  tryCatch({
+    result <- suppressWarnings(lubridate::dmy(data, locale = locale))
+    success_rate <- sum(!is.na(result)) / length(result)
+    
+    list(
+      data = result,
+      success_rate = success_rate,
+      success = success_rate > 0.7,
+      parsed_count = sum(!is.na(result)),
+      total_count = length(result)
+    )
+  }, error = function(e) {
+    log_error(paste(operation_name, "fejlede:", e$message), level = "warning")
+    list(
+      data = rep(as.POSIXct(NA), length(data)), 
+      success_rate = 0, 
+      success = FALSE,
+      parsed_count = 0,
+      total_count = length(data)
+    )
+  })
+}
+
+## Standard fejlhåndteringsmønster for kritiske operationer
+safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE) {
+  tryCatch({
+    code
+  }, error = function(e) {
+    log_error(
+      paste(operation_name, "fejlede:", e$message), 
+      level = "error", 
+      show_user = show_user,
+      session = session
+    )
+    return(fallback)
+  })
+}
+
 ## Dato kolonnevalidering -----
 validate_date_column <- function(data, column_name) {
   if (!column_name %in% names(data)) {

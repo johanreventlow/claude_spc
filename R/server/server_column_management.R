@@ -232,50 +232,63 @@ auto_detect_and_update_columns <- function(input, session, values) {
       if (length(char_data) > 0) {
         test_sample <- char_data[1:min(5, length(char_data))]
         
-        # Test danske formater først (som i visualization_spc.R)
-        danish_parsed <- suppressWarnings(lubridate::dmy(test_sample, locale = "da_DK.UTF-8"))
-        danish_success_rate <- sum(!is.na(danish_parsed)) / length(danish_parsed)
+        # Test danske formater først med ny safe parsing
+        danish_result <- safe_date_parse(test_sample, locale = "da_DK.UTF-8", 
+                                       operation_name = paste("dansk parsing for", col_name))
         
-        if (danish_success_rate >= 0.7) {
-          candidate$score <- candidate$score + (danish_success_rate * 40)
-          candidate$success_rate <- danish_success_rate
+        if (danish_result$success) {
+          candidate$score <- candidate$score + (danish_result$success_rate * 40)
+          candidate$success_rate <- danish_result$success_rate
           candidate$type <- "danish_date"
           candidate$reason <- paste(candidate$reason, "dansk dmy() format")
           date_candidates[[col_name]] <- candidate
           next
         }
         
-        # Fallback til guess_formats med error handling
-        suppressWarnings({
-          tryCatch({
-            guessed_formats <- lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
-          
-          if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
-            # Filtrer ugyldige formater (undgå "n" format problem)
-            valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
+        # Fallback til guess_formats med standardiseret fejlhåndtering
+        guess_result <- safe_operation(
+          operation_name = paste("guess_formats for", col_name),
+          code = {
+            guessed_formats <- suppressWarnings(
+              lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
+            )
             
-            if (length(valid_formats) > 0) {
-              date_test <- suppressWarnings(
-                lubridate::parse_date_time(test_sample, orders = valid_formats, quiet = TRUE)
-              )
+            if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+              # Filtrer ugyldige formater
+              valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
               
-              if (!is.null(date_test)) {
-                success_rate <- sum(!is.na(date_test)) / length(date_test)
-                if (success_rate >= 0.5) {
-                  candidate$score <- candidate$score + (success_rate * 30)
-                  candidate$success_rate <- success_rate
-                  candidate$type <- "guessed_date"
-                  candidate$reason <- paste(candidate$reason, "lubridate guess")
-                  date_candidates[[col_name]] <- candidate
+              if (length(valid_formats) > 0) {
+                date_test <- suppressWarnings(
+                  lubridate::parse_date_time(test_sample, orders = valid_formats, quiet = TRUE)
+                )
+                
+                if (!is.null(date_test)) {
+                  success_rate <- sum(!is.na(date_test)) / length(date_test)
+                  if (success_rate >= 0.5) {
+                    list(success_rate = success_rate, success = TRUE)
+                  } else {
+                    list(success_rate = success_rate, success = FALSE)
+                  }
+                } else {
+                  list(success_rate = 0, success = FALSE)
                 }
+              } else {
+                list(success_rate = 0, success = FALSE)
               }
+            } else {
+              list(success_rate = 0, success = FALSE)
             }
-          }
-          }, error = function(e) {
-            # Skip denne kolonne hvis parsing fejler
-            cat("WARNING: Parsing fejl for kolonne", col_name, ":", e$message, "\n")
-          })
-        })
+          },
+          fallback = list(success_rate = 0, success = FALSE)
+        )
+        
+        if (!is.null(guess_result) && guess_result$success) {
+          candidate$score <- candidate$score + (guess_result$success_rate * 30)
+          candidate$success_rate <- guess_result$success_rate
+          candidate$type <- "guessed_date"
+          candidate$reason <- paste(candidate$reason, "lubridate guess")
+          date_candidates[[col_name]] <- candidate
+        }
       }
     }
     
@@ -326,41 +339,49 @@ auto_detect_and_update_columns <- function(input, session, values) {
       
       if (is.character(col_data) || is.factor(col_data)) {
         
-        tryCatch({
-          converted_dates <- NULL  # Initialize variable
-          
-          if (candidate$type == "danish_date") {
-            # Brug dmy() for danske formater og konverter til POSIXct for konsistens med qicharts2
-            parsed_dates <- suppressWarnings(lubridate::dmy(col_data, locale = "da_DK.UTF-8"))
-            converted_dates <- as.POSIXct(parsed_dates)
-          } else if (candidate$type == "guessed_date") {
-            # Brug parse_date_time for andre formater
-            char_data <- as.character(col_data)
-            test_sample <- char_data[!is.na(char_data)][1:min(3, length(char_data[!is.na(char_data)]))]
-            
-            guessed_formats <- suppressWarnings(
-              lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
-            )
-            
-            if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
-              valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
-              if (length(valid_formats) > 0) {
-                converted_dates <- suppressWarnings(
-                  lubridate::parse_date_time(col_data, orders = valid_formats, quiet = TRUE)
-                )
-                # Behold som POSIXct for konsistens med qicharts2
+        # Brug safe date parsing til konvertering
+        converted_dates <- safe_operation(
+          operation_name = paste("konvertering af", candidate_name, "til", candidate$type),
+          code = {
+            if (candidate$type == "danish_date") {
+              # Brug safe_date_parse for danske formater
+              result <- safe_date_parse(col_data, locale = "da_DK.UTF-8", 
+                                      operation_name = paste("dansk konvertering for", candidate_name))
+              as.POSIXct(result$data)
+            } else if (candidate$type == "guessed_date") {
+              # Brug parse_date_time for andre formater
+              char_data <- as.character(col_data)
+              test_sample <- char_data[!is.na(char_data)][1:min(3, length(char_data[!is.na(char_data)]))]
+              
+              guessed_formats <- suppressWarnings(
+                lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
+              )
+              
+              if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+                valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
+                if (length(valid_formats) > 0) {
+                  result <- suppressWarnings(
+                    lubridate::parse_date_time(col_data, orders = valid_formats, quiet = TRUE)
+                  )
+                  # Returner som POSIXct for konsistens med qicharts2
+                  result
+                } else {
+                  NULL
+                }
+              } else {
+                NULL
               }
+            } else {
+              NULL
             }
-          }
-          
-          # Opdater data hvis konvertering var succesrig
-          if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
-            values$current_data[[candidate_name]] <- converted_dates
-          }
-          
-        }, error = function(e) {
-          # Konvertering fejlede - fortsæt med næste
-        })
+          },
+          fallback = NULL
+        )
+        
+        # Opdater data hvis konvertering var succesrig
+        if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
+          values$current_data[[candidate_name]] <- converted_dates
+        }
       }
     }
   }
