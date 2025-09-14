@@ -44,7 +44,7 @@ app_ui <- function() {
   page_navbar(
     title = tagList(
       img(
-        src = "hospital_logo.png",
+        src = "www/hospital_logo.png",
         height = "40px",
         style = "margin-right: 10px;",
         onerror = "this.style.display='none'"
