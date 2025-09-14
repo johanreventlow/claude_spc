@@ -168,10 +168,8 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     }
 
     if (!is.null(values$current_data)) {
-      # Cancel existing timer
-      if (!is.null(settings_save_timer())) {
-        later::later_cancel(settings_save_timer())
-      }
+      # Note: later package no longer supports timer cancellation in version 1.4+
+      # We rely on simple debouncing with overwrite protection instead
 
       # Capture current data and metadata for async callback
       current_data_snapshot <- values$current_data
