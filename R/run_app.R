@@ -44,7 +44,7 @@ app_ui <- function() {
   page_navbar(
     title = tagList(
       img(
-        src = utils::URLencode(basename(HOSPITAL_LOGO_PATH)),
+        src = "hospital_logo.png",
         height = "40px",
         style = "margin-right: 10px;",
         onerror = "this.style.display='none'"
