@@ -7,10 +7,10 @@
 # MODULKOMPONENTER ============================================================
 
 ## Kilde alle visualization modul komponenter
-source("R/modules/visualization_module_ui.R")
-source("R/modules/visualization_module_server.R")
+source("R/visualization_module_ui.R")
+source("R/visualization_module_server.R")
 source("R/fct_chart_helpers.R")
-source("R/modules/visualization_spc.R")
+source("R/fct_spc_calculations.R")
 # source("R/modules/visualization_anhoej.R")  # Ikke længere nødvendig - bruger qic indbygget Anhøj analyse
 
 # BAGUDKOMPATIBILITET =========================================================

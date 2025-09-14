@@ -7,21 +7,17 @@ library(openxlsx)
 
 # SERVER KOMPONENTER ==========================================================
 # Indlæs moduler først
-source("R/modules/visualization_module_server.R")
+source("R/visualization_module_server.R")
 source("R/fct_chart_helpers.R")
-source("R/modules/visualization_spc.R")
-source("R/modules/local_storage_functions.R")
+source("R/fct_spc_calculations.R")
+source("R/utils_local_storage.R")
 
 # Indlæs alle server-komponenter
-source("R/server/server_reactive_values.R")
-source("R/server/server_session_management.R")
-source("R/server/server_file_upload.R")
-source("R/server/server_data_table.R")
-source("R/server/server_column_management.R")
-source("R/server/server_visualization.R")
-source("R/server/server_download.R")
+source("R/utils_reactive_state.R")
 source("R/utils_session_helpers.R")
-source("R/server/server_welcome_page.R")
+source("R/fct_file_operations.R")
+source("R/fct_data_processing.R")
+source("R/fct_visualization_server.R")
 
 # HOVEDSERVER FUNKTION =======================================================
 # Hovedserver funktion der koordinerer alle server-komponenter

@@ -8,8 +8,8 @@ library(bslib)
 # MODULER --------------------------------
 
 ## Funktionalitetsmoduler (kun UI-komponenter) -----
-source("R/modules/visualization_module_ui.R")
-source("R/modules/local_storage_js.R")
+source("R/visualization_module_ui.R")
+source("R/utils_local_storage_js.R")
 
 ## UI-komponenter -----
 source("R/ui/ui_header.R")
