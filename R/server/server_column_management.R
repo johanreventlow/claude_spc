@@ -358,9 +358,8 @@ auto_detect_and_update_columns <- function(input, session, values) {
             values$current_data[[candidate_name]] <- converted_dates
           }
           
-          }, error = function(e) {
-            # guess_formats fejlede - skip denne kolonne
-          })
+        }, error = function(e) {
+          # Konvertering fejlede - fortsæt med næste
         })
       }
     }
