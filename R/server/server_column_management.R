@@ -245,6 +245,19 @@ auto_detect_and_update_columns <- function(input, session, values) {
           next
         }
         
+        # Test engelske/standard formater
+        english_parsed <- suppressWarnings(lubridate::dmy(test_sample))  # Standard locale
+        english_success_rate <- sum(!is.na(english_parsed)) / length(english_parsed)
+        
+        if (english_success_rate >= 0.7) {
+          candidate$score <- candidate$score + (english_success_rate * 40)
+          candidate$success_rate <- english_success_rate
+          candidate$type <- "english_date"
+          candidate$reason <- paste(candidate$reason, "engelsk dmy() format")
+          date_candidates[[col_name]] <- candidate
+          next
+        }
+        
         # Fallback til guess_formats med error handling
         suppressWarnings({
           tryCatch({
@@ -321,7 +334,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
     candidate <- date_candidates[[candidate_name]]
     
     # Konverter character kolonner der blev detekteret som datoer
-    if (candidate$type %in% c("danish_date", "guessed_date") && candidate$success_rate >= 0.7) {
+    if (candidate$type %in% c("danish_date", "english_date", "guessed_date") && candidate$success_rate >= 0.7) {
       col_data <- values$current_data[[candidate_name]]  # FIX: Brug values$current_data
       
       if (is.character(col_data) || is.factor(col_data)) {
@@ -332,6 +345,10 @@ auto_detect_and_update_columns <- function(input, session, values) {
           if (candidate$type == "danish_date") {
             # Brug dmy() for danske formater og konverter til POSIXct for konsistens med qicharts2
             parsed_dates <- suppressWarnings(lubridate::dmy(col_data, locale = "da_DK.UTF-8"))
+            converted_dates <- as.POSIXct(parsed_dates)
+          } else if (candidate$type == "english_date") {
+            # Brug dmy() for engelske formater med standard locale
+            parsed_dates <- suppressWarnings(lubridate::dmy(col_data))
             converted_dates <- as.POSIXct(parsed_dates)
           } else if (candidate$type == "guessed_date") {
             # Brug parse_date_time for andre formater
