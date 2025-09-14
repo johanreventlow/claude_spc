@@ -1,7 +1,9 @@
-# ui_header.R
-# UI header komponenter inklusive scripts og styles
+# app_ui.R  
+# Consolidated UI components for SPC app
 
 # Dependencies ----------------------------------------------------------------
+source("R/mod_spc_chart.R")
+source("R/mod_session_storage.R")
 
 # UI HEADER KOMPONENTER =======================================================
 

@@ -14,6 +14,7 @@ app_server <- function(input, output, session) {
   source("R/fct_data_processing.R", local = TRUE)
   source("R/fct_file_operations.R", local = TRUE)
   source("R/fct_visualization_server.R", local = TRUE)
+  source("R/mod_spc_chart.R", local = TRUE)
   
   # Reaktive Værdier --------------------------------------------------------
   # Initialiser reaktive værdier

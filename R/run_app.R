@@ -14,6 +14,9 @@ run_app <- function(port = 3838, launch_browser = TRUE, ...) {
     source("global.R", local = FALSE)
   }
   
+  # Load server function
+  source("R/app_server.R", local = FALSE)
+  
   # Create the Shiny app
   app <- shinyApp(
     ui = app_ui(),
