@@ -50,7 +50,7 @@ AUTO_RESTORE_ENABLED <- FALSE
 
 # HJÆLPEFUNKTIONER --------------------------------
 
-source("R/utils/danish_numbers.R")
+source("R/utils_danish_locale.R")
 
 # HOSPITAL BRANDING ================================
 

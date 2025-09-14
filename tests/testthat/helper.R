@@ -19,8 +19,8 @@ if (file.exists("global.R")) {
 }
 
 # Load server helper functions specifically for tests
-if (file.exists("R/server/server_helpers.R")) {
-  source("R/server/server_helpers.R", local = FALSE)
+if (file.exists("R/utils_session_helpers.R")) {
+  source("R/utils_session_helpers.R", local = FALSE)
 }
 
 # Test data setup

@@ -9,8 +9,8 @@ library(shinyjs)
 # MODULKOMPONENTER ============================================================
 
 ## Kilde alle data modul komponenter
-source("R/modules/data_file_readers.R")
-source("R/modules/data_validation.R")
+source("R/fct_file_io.R")
+source("R/fct_data_validation.R")
 
 # BAGUDKOMPATIBILITET =========================================================
 
