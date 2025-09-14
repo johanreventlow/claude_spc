@@ -36,9 +36,9 @@ TEST_MODE_AUTO_LOAD <- TRUE
 # TEST_MODE_FILE_PATH <- "R/data/spc_exampledata1.csv"
 
 # Alternative test filer (udkommenterede):
-# TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"
+TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"
 # TEST_MODE_FILE_PATH <- "R/data/test_infection.csv"
-TEST_MODE_FILE_PATH <- "R/data/SPC_test_data_forskellige.xlsx"
+# TEST_MODE_FILE_PATH <- "R/data/SPC_test_data_forskellige.xlsx"
 
 ## Auto-gendannelse -----
 # AUTO-RESTORE: Gendan automatisk tidligere sessioner
@@ -222,16 +222,6 @@ get_qic_chart_type <- function(danish_selection) {
 }
 
 ## Akseenhedsvalg -----
-# X-akse enheder (tid/observation)
-X_AXIS_UNITS_DA <- list(
-  "Dato" = "date",
-  "År" = "year", 
-  "Måned" = "month",
-  "Uge" = "week",
-  "Observation nr." = "observation",
-  "Time" = "hour",
-  "Tekst" = "text"
-)
 
 # Y-akse enheder (værdier)
 Y_AXIS_UNITS_DA <- list(

@@ -211,9 +211,6 @@ restore_metadata <- function(session, metadata) {
     if (!is.null(metadata$centerline_value)) {
       updateTextInput(session, "centerline_value", value = metadata$centerline_value)
     }
-    if (!is.null(metadata$x_axis_unit)) {
-      updateSelectizeInput(session, "x_axis_unit", selected = metadata$x_axis_unit)
-    }
     if (!is.null(metadata$y_axis_unit)) {
       updateSelectizeInput(session, "y_axis_unit", selected = metadata$y_axis_unit)
     }
@@ -235,7 +232,7 @@ collect_metadata <- function(input) {
     chart_type = input$chart_type,
     target_value = input$target_value,
     centerline_value = input$centerline_value,
-    x_axis_unit = if(is.null(input$x_axis_unit) || input$x_axis_unit == "") "observation" else input$x_axis_unit,
+    x_axis_unit = "observation",
     y_axis_unit = if(is.null(input$y_axis_unit) || input$y_axis_unit == "") "count" else input$y_axis_unit
   )
 }
@@ -299,7 +296,6 @@ reset_to_empty_session <- function(session, values) {
     updateSelectizeInput(session, "n_column", selected = "")
     updateTextInput(session, "target_value", value = "")
     updateTextInput(session, "centerline_value", value = "")
-    updateSelectizeInput(session, "x_axis_unit", selected = "observation")
     updateSelectizeInput(session, "y_axis_unit", selected = "count")
     shinyjs::reset("data_file")
   })

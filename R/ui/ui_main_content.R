@@ -107,13 +107,6 @@ create_chart_settings_card <- function() {
               selected = "run"
             ),
             
-            # X-axis unit selection
-            selectizeInput(
-              "x_axis_unit",
-              "X-akse enhed:",
-              choices = X_AXIS_UNITS_DA,
-              selected = "date"
-            ),
             
             # Y-axis unit selection  
             selectizeInput(

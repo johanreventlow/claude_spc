@@ -411,7 +411,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     data <- data_filtered
     
     # Get unit labels early - before they are used
-    x_unit_label <- get_unit_label(x_axis_unit, X_AXIS_UNITS_DA)
+    x_unit_label <- ""
     y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
     
     if (chart_type == "run") {
@@ -427,7 +427,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     }
   } else {
     # Get unit labels early - before they are used
-    x_unit_label <- get_unit_label(x_axis_unit, X_AXIS_UNITS_DA)
+    x_unit_label <- ""
     y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
     
     # Standard numeric data - filter out missing values first
