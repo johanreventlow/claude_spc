@@ -246,10 +246,9 @@ auto_detect_and_update_columns <- function(input, session, values) {
         }
         
         # Fallback til guess_formats med error handling
-        tryCatch({
-          guessed_formats <- suppressWarnings(
-            lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
-          )
+        suppressWarnings({
+          tryCatch({
+            guessed_formats <- lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
           
           if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
             # Filtrer ugyldige formater (undgå "n" format problem)
@@ -358,8 +357,9 @@ auto_detect_and_update_columns <- function(input, session, values) {
             values$current_data[[candidate_name]] <- converted_dates
           }
           
-        }, error = function(e) {
-          # Konvertering fejlede - fortsæt med næste
+          }, error = function(e) {
+            # guess_formats fejlede - skip denne kolonne
+          })
         })
       }
     }
