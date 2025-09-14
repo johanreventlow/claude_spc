@@ -282,6 +282,7 @@ reset_to_empty_session <- function(session, values) {
   values$user_started_session <- TRUE  # NEW: Set flag that user has started
   values$original_data <- NULL
   values$auto_detect_done <- FALSE
+  values$initial_auto_detect_completed <- FALSE  # Reset for new session
   
   # Reset UI inputs
   isolate({

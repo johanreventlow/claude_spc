@@ -63,6 +63,12 @@ server <- function(input, output, session) {
         values$original_data <- test_data
         values$file_uploaded <- TRUE
         values$auto_detect_done <- FALSE  # Will trigger auto-detect
+        values$initial_auto_detect_completed <- FALSE  # Reset for new data
+        
+        # Trigger auto-detect explicitly after a longer delay to ensure UI is ready
+        later::later(function() {
+          values$auto_detect_trigger <- Sys.time()
+        }, delay = 0.5)
         values$hide_anhoej_rules <- FALSE  # Show Anhøj rules for real data
         
         # Debug output

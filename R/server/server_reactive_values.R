@@ -18,6 +18,8 @@ initialize_reactive_values <- function() {
     updating_table = FALSE,
     table_operation_in_progress = FALSE,  # Persistent flag for table operations
     auto_detect_done = FALSE,
+    initial_auto_detect_completed = FALSE,
+    auto_detect_in_progress = FALSE,
     # Auto-save related values with restore guard
     auto_save_enabled = TRUE,
     last_save_time = NULL,

@@ -15,6 +15,11 @@ setup_column_management <- function(input, output, session, values) {
       return()
     }
     
+    # Skip hvis auto-detect er i gang for at undgå at overskrive auto-detect resultater
+    if (values$auto_detect_in_progress) {
+      return()
+    }
+    
     req(values$current_data)
     
     data <- values$current_data
@@ -47,9 +52,10 @@ setup_column_management <- function(input, output, session, values) {
     }
   })
   
-  # Auto-detekterings trigger flag
+  # Auto-detekterings trigger flag - kun hvis initial auto-detect ikke er færdig
   observeEvent(values$current_data, {
     if (!is.null(values$current_data) && 
+        !values$initial_auto_detect_completed &&
         (is.null(input$x_column) || input$x_column == "") &&
         (is.null(input$y_column) || input$y_column == "")) {
       
@@ -59,12 +65,22 @@ setup_column_management <- function(input, output, session, values) {
   
   # Forsinket auto-detekterings udførelse
   observeEvent(values$auto_detect_trigger, {
+    values$auto_detect_in_progress <- TRUE  # Set flag før auto-detect starter
     auto_detect_and_update_columns(input, session, values)
+    values$initial_auto_detect_completed <- TRUE  # Marker som færdig efter første kørsel
+    
+    # Clear flag efter en kort delay for at sikre choices observer ikke kører
+    later::later(function() {
+      values$auto_detect_in_progress <- FALSE
+    }, delay = 0.1)
   }, ignoreInit = TRUE)
   
-  # Auto-detekterings knap handler
+  # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
+    values$auto_detect_in_progress <- TRUE  # Set flag før auto-detect starter
     auto_detect_and_update_columns(input, session, values)
+    values$initial_auto_detect_completed <- TRUE  # Marker som færdig
+    values$auto_detect_in_progress <- FALSE  # Clear flag efter auto-detect er færdig
   })
   
   # Kolonnevaliderings output
@@ -275,8 +291,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
   
   if (length(date_candidates) > 0) {
     # Log kandidater for debugging
-    cat("DATO-KANDIDATER FUNDET:\n")
-    for (name in names(date_candidates)) {
+      for (name in names(date_candidates)) {
       cand <- date_candidates[[name]]
       cat(sprintf("- %s: score=%.1f (%s, success=%.2f) - %s\n", 
                   name, cand$score, cand$type, cand$success_rate, cand$reason))
@@ -291,7 +306,6 @@ auto_detect_and_update_columns <- function(input, session, values) {
       }
     }
     
-    cat("VALGT X-KOLONNE:", x_col, "med score", best_score, "\n")
   }
   
   # Fallback til første kolonne hvis ingen dato-kandidater
@@ -302,18 +316,15 @@ auto_detect_and_update_columns <- function(input, session, values) {
   
   # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter  
   # NOTE: values$original_data bevares uændret, kun values$current_data modificeres
-  cat("POST-PROCESSING: Konverterer", length(date_candidates), "dato-kandidater\n")
   
   for (candidate_name in names(date_candidates)) {
     candidate <- date_candidates[[candidate_name]]
-    cat("EVALUERER konvertering for:", candidate_name, "type:", candidate$type, "success:", candidate$success_rate, "\n")
     
     # Konverter character kolonner der blev detekteret som datoer
     if (candidate$type %in% c("danish_date", "guessed_date") && candidate$success_rate >= 0.7) {
       col_data <- values$current_data[[candidate_name]]  # FIX: Brug values$current_data
       
       if (is.character(col_data) || is.factor(col_data)) {
-        cat("KONVERTERER:", candidate_name, "fra", class(col_data)[1], "til Date\n")
         
         tryCatch({
           converted_dates <- NULL  # Initialize variable
@@ -345,13 +356,10 @@ auto_detect_and_update_columns <- function(input, session, values) {
           # Opdater data hvis konvertering var succesrig
           if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
             values$current_data[[candidate_name]] <- converted_dates
-            cat("✓ SUCCESS: Konverterede", candidate_name, "til POSIXct format\n")
-          } else {
-            cat("✗ FAILED: Konvertering af", candidate_name, "ikke succesrig nok\n")
           }
           
         }, error = function(e) {
-          cat("✗ ERROR: Konvertering af", candidate_name, "fejlede:", e$message, "\n")
+          # Konvertering fejlede - fortsæt med næste
         })
       }
     }

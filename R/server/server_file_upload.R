@@ -100,6 +100,7 @@ handle_excel_upload <- function(file_path, session, values) {
     values$original_data <- as.data.frame(data)
     values$file_uploaded <- TRUE
     values$auto_detect_done <- FALSE
+    values$initial_auto_detect_completed <- FALSE  # Reset for new data
     values$hide_anhoej_rules <- FALSE  # Re-enable Anhøj rules when real data is uploaded
     
     showNotification(

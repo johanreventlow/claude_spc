@@ -83,6 +83,7 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
         values$original_data <- demo_data
         values$file_uploaded <- TRUE
         values$auto_detect_done <- FALSE  # Vil udløse auto-detekt
+        values$initial_auto_detect_completed <- FALSE  # Reset for new data
         values$hide_anhoej_rules <- FALSE  # Vis Anhøj regler for rigtige data
         values$session_file_name <- "Eksempel data (SPC demo)"
         
