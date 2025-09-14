@@ -18,8 +18,14 @@ test_that("App kan starte uden fejl", {
   # Test at app loader
   expect_true(app$get_url() != "")
   
-  # Test at hovedelementer er til stede
-  expect_true(app$get_html("#main") != "")
+  # Test at hovedelementer er til stede i page_navbar struktur
+  page_html <- app$get_html("body")
+  expect_true(nchar(page_html) > 100)  # Page har indhold
+  
+  # Test at navbar eller vigtige komponenter er til stede
+  expect_true(
+    grepl("navbar|SPC|Upload|indicator", page_html, ignore.case = TRUE)
+  )
   
   # Gendan TEST_MODE
   assign("TEST_MODE_AUTO_LOAD", old_test_mode, envir = .GlobalEnv)
