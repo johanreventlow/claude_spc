@@ -233,7 +233,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
         test_sample <- char_data[1:min(5, length(char_data))]
         
         # Test danske formater først (som i visualization_spc.R)
-        danish_parsed <- suppressWarnings(lubridate::dmy(test_sample))
+        danish_parsed <- suppressWarnings(lubridate::dmy(test_sample, locale = "da_DK.UTF-8"))
         danish_success_rate <- sum(!is.na(danish_parsed)) / length(danish_parsed)
         
         if (danish_success_rate >= 0.7) {
@@ -331,7 +331,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
           
           if (candidate$type == "danish_date") {
             # Brug dmy() for danske formater og konverter til POSIXct for konsistens med qicharts2
-            parsed_dates <- suppressWarnings(lubridate::dmy(col_data))
+            parsed_dates <- suppressWarnings(lubridate::dmy(col_data, locale = "da_DK.UTF-8"))
             converted_dates <- as.POSIXct(parsed_dates)
           } else if (candidate$type == "guessed_date") {
             # Brug parse_date_time for andre formater
