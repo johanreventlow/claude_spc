@@ -1,20 +1,13 @@
 # app.R
-# Hovedapplikationsfil der indlæser alle komponenter
+# Modernized Golem-style entry point for SPC App
 
 # KONFIGURATION ===============================================================
 # Indlæs globale indstillinger og hjælpefunktioner
 source("global.R")
 
-# MODULER =====================================================================
-# Indlæs data og local storage moduler (visualization indlæses i server.R)
-source("R/mod_data_upload.R")
-source("R/modules/local_storage_functions.R")
+# GOLEM LAUNCHER ==============================================================
+# Load Golem components
+source("R/run_app.R")
 
-# UI/SERVER KOMPONENTER =======================================================
-# Indlæs UI og server komponenter
-source("ui.R")
-source("server.R")
-
-# SHINY APPLIKATION ===========================================================
-# Opret og start Shiny applikationen
-shinyApp(ui = ui, server = server)
+# Run the application using Golem pattern
+run_app()
