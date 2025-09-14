@@ -6,11 +6,8 @@
 source("global.R")
 
 # MODULER =====================================================================
-# Indlæs server-moduler (UI indlæses i ui.R)
+# Indlæs data og local storage moduler (visualization indlæses i server.R)
 source("R/modules/data_module.R")
-source("R/modules/visualization_module_server.R")
-source("R/modules/visualization_helpers.R")
-source("R/modules/visualization_spc.R")
 source("R/modules/local_storage_functions.R")
 
 # UI/SERVER KOMPONENTER =======================================================

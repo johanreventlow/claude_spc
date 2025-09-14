@@ -6,6 +6,11 @@ library(shiny)
 library(openxlsx)
 
 # SERVER KOMPONENTER ==========================================================
+# Indlæs moduler først
+source("R/modules/visualization_module_server.R")
+source("R/modules/visualization_helpers.R")
+source("R/modules/visualization_spc.R")
+
 # Indlæs alle server-komponenter
 source("R/server/server_reactive_values.R")
 source("R/server/server_session_management.R")
