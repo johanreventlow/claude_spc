@@ -10,6 +10,7 @@ library(openxlsx)
 source("R/modules/visualization_module_server.R")
 source("R/modules/visualization_helpers.R")
 source("R/modules/visualization_spc.R")
+source("R/modules/local_storage_functions.R")
 
 # Indlæs alle server-komponenter
 source("R/server/server_reactive_values.R")
