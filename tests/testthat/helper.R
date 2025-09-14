@@ -8,10 +8,19 @@ library(testthat)
 # Source app komponenter for test
 # Naviger til projekt rod og load global.R
 project_root <- here::here()
-if (file.exists(file.path(project_root, "global.R"))) {
-  source(file.path(project_root, "global.R"), local = FALSE)
-} else if (file.exists("../../global.R")) {
-  source("../../global.R", local = FALSE)
+
+# Skift working directory midlertidigt til project root for at loade global.R korrekt
+old_wd <- getwd()
+on.exit(setwd(old_wd))
+setwd(project_root)
+
+if (file.exists("global.R")) {
+  source("global.R", local = FALSE)
+}
+
+# Load server helper functions specifically for tests
+if (file.exists("R/server/server_helpers.R")) {
+  source("R/server/server_helpers.R", local = FALSE)
 }
 
 # Test data setup

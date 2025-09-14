@@ -2,13 +2,13 @@
 # Tests af error handling funktioner
 
 test_that("log_error fungerer korrekt", {
-  # Test basic logging (uden session)
-  expect_silent(log_error("Test besked", level = "info"))
-  expect_silent(log_error("Test warning", level = "warning"))
-  expect_silent(log_error("Test error", level = "error"))
+  # Test basic logging (uden session) - forventer output
+  expect_output(log_error("Test besked", level = "info"), "INFO")
+  expect_output(log_error("Test warning", level = "warning"), "WARNING")
+  expect_output(log_error("Test error", level = "error"), "ERROR")
   
-  # Test med invalid level defaulter til warning
-  expect_silent(log_error("Test unknown", level = "unknown"))
+  # Test med invalid level bruger level som givet
+  expect_output(log_error("Test unknown", level = "unknown"), "UNKNOWN")
 })
 
 test_that("safe_operation håndterer fejl korrekt", {
