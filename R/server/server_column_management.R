@@ -271,9 +271,10 @@ auto_detect_and_update_columns <- function(input, session, values) {
               }
             }
           }
-        }, error = function(e) {
-          # Skip denne kolonne hvis parsing fejler
-          cat("WARNING: Parsing fejl for kolonne", col_name, ":", e$message, "\n")
+          }, error = function(e) {
+            # Skip denne kolonne hvis parsing fejler
+            cat("WARNING: Parsing fejl for kolonne", col_name, ":", e$message, "\n")
+          })
         })
       }
     }
