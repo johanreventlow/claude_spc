@@ -154,9 +154,6 @@ setup_visualization <- function(input, output, session, values) {
       return(frys_col)
     }),
     chart_title_reactive = chart_title(input),
-    x_axis_unit_reactive = reactive({
-      return("observation")
-    }),
     y_axis_unit_reactive = reactive({
       if (is.null(input$y_axis_unit) || input$y_axis_unit == "") {
         return("count")

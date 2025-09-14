@@ -86,7 +86,7 @@ spc_out_of_control_icon <- HTML('
 #' @param chart_title_reactive Reaktiv chart titel (optional)
 #' 
 #' @return Liste med reactive values for plot, status og resultater
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, x_axis_unit_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -200,7 +200,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         frys_column <- frys_config_reactive()
         
         # Get axis units with fallbacks
-        x_unit <- if (!is.null(x_axis_unit_reactive)) x_axis_unit_reactive() else "observation"
+        x_unit <- "observation"
         y_unit <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
         
         # Get kommentar column
@@ -216,7 +216,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           skift_column = skift_config$skift_column,
           frys_column = frys_column,
           chart_title_reactive = chart_title_reactive,
-          x_axis_unit = x_unit,
           y_axis_unit = y_unit,
           kommentar_column = kommentar_col
         )

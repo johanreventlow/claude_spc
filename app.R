@@ -6,9 +6,11 @@
 source("global.R")
 
 # MODULER =====================================================================
-# Indlæs alle Shiny-moduler
+# Indlæs server-moduler (UI indlæses i ui.R)
 source("R/modules/data_module.R")
-source("R/modules/visualization_module.R")
+source("R/modules/visualization_module_server.R")
+source("R/modules/visualization_helpers.R")
+source("R/modules/visualization_spc.R")
 source("R/modules/local_storage_module.R")
 
 # UI/SERVER KOMPONENTER =======================================================

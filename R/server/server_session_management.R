@@ -232,7 +232,6 @@ collect_metadata <- function(input) {
     chart_type = input$chart_type,
     target_value = input$target_value,
     centerline_value = input$centerline_value,
-    x_axis_unit = "observation",
     y_axis_unit = if(is.null(input$y_axis_unit) || input$y_axis_unit == "") "count" else input$y_axis_unit
   )
 }

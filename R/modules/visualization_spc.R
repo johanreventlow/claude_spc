@@ -25,7 +25,7 @@ get_unit_label <- function(unit_code, unit_list) {
 }
 
 ## Validering og formatering af X-kolonne data
-validate_x_column_format <- function(data, x_col, x_axis_unit) {
+validate_x_column_format <- function(data, x_col, x_axis_unit = "observation") {
   # Return default hvis ingen x-kolonne
   if (is.null(x_col) || !x_col %in% names(data)) {
     return(list(
@@ -304,11 +304,10 @@ get_optimal_formatting <- function(interval_info, debug = TRUE) {
 # SPC PLOT GENERERING =========================================================
 
 ## Generér SPC plot med tilpasset styling
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, x_axis_unit = "observation", y_axis_unit = "count", kommentar_column = NULL) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
   
   # DEBUG: Log input parameters
   cat("=== FUNCTION INPUT DEBUG ===\n")
-  cat("x_axis_unit parameter received:", x_axis_unit, "\n")
   cat("y_axis_unit parameter received:", y_axis_unit, "\n")
   cat("============================\n")
   
@@ -482,7 +481,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   }
   
   # Handle x-axis data med intelligent formatering - EFTER data filtrering
-  x_validation <- validate_x_column_format(data, config$x_col, x_axis_unit)
+  x_validation <- validate_x_column_format(data, config$x_col, "observation")
   x_data <- x_validation$x_data
   # xlab_text <- if (x_unit_label != "") x_unit_label else {
   #   if (x_validation$is_date) "Dato" else "Observation"
@@ -491,7 +490,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # DEBUG: Log x-validation results
   cat("=== X-VALIDATION DEBUG ===\n")
   cat("x_col:", config$x_col, "\n")
-  cat("x_axis_unit:", x_axis_unit, "\n")
   cat("x_data class:", class(x_data)[1], "\n")
   cat("x_data sample:", paste(head(x_data, 3), collapse = ", "), "\n")
   cat("is_date:", x_validation$is_date, "\n")
