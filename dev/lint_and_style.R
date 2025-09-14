@@ -7,8 +7,6 @@ library(styler)
 # Paths til at analysere
 paths_to_check <- c(
   "global.R",
-  "server.R", 
-  "ui.R",
   "app.R",
   "R/"
 )

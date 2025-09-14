@@ -34,13 +34,30 @@ run_app <- function(port = 3838, launch_browser = TRUE, ...) {
 app_ui <- function() {
   source("R/app_ui.R", local = TRUE)
   
-  # Extract the UI definition from the sourced file
-  # The app_ui.R contains all UI components concatenated
-  # We need to return a proper UI structure
-  
-  # Since app_ui.R is a concatenated file, we need to source it and 
-  # extract the main UI function that should be defined there
-  # For now, we'll use the existing ui.R structure
-  source("ui.R", local = TRUE)
-  return(ui)
+  # Return the UI structure using consolidated functions
+  page_navbar(
+    title = tagList(
+      img(
+        src = basename(HOSPITAL_LOGO_PATH),
+        height = "40px",
+        style = "margin-right: 10px;",
+        onerror = "this.style.display='none'"
+      ),
+      div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
+    ),
+    theme = my_theme,
+    navbar_options = navbar_options(theme = "light", underline = FALSE),
+
+    # Header-komponenter
+    header = create_ui_header(),
+
+    # Sidebar
+    sidebar = create_ui_sidebar(),
+
+    # Hovedindhold
+    nav_panel(
+      title = NULL,
+      create_ui_main_content()
+    )
+  )
 }
