@@ -3,7 +3,7 @@
 
 required_packages <- c(
   "shiny",
-  "bslib", 
+  "bslib",
   "qicharts2",
   "dplyr",
   "ggplot2",
@@ -21,7 +21,7 @@ required_packages <- c(
 )
 
 # Check which packages are missing
-missing_packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
+missing_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
 
 if (length(missing_packages) > 0) {
   cat("Installing missing packages:", paste(missing_packages, collapse = ", "), "\n")
@@ -32,10 +32,13 @@ if (length(missing_packages) > 0) {
 
 # Load all required packages and report any errors
 for (pkg in required_packages) {
-  tryCatch({
-    library(pkg, character.only = TRUE)
-    cat("✓ Loaded", pkg, "\n")
-  }, error = function(e) {
-    # Silent error - package failed to load
-  })
+  tryCatch(
+    {
+      library(pkg, character.only = TRUE)
+      cat("✓ Loaded", pkg, "\n")
+    },
+    error = function(e) {
+      # Silent error - package failed to load
+    }
+  )
 }

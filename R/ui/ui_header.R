@@ -64,7 +64,7 @@ create_ui_header <- function() {
           }
         }, 500); // Reduced delay since no waiter
       }
-      
+
       // Selectize dropup behavior
       $(document).ready(function() {
         // Force dropup behavior for selectize inputs in .selectize-dropup containers
@@ -82,16 +82,15 @@ create_ui_header <- function() {
         });
       });
     ")),
-
       tags$style(HTML(
         paste0("
        .nav-link {padding: .5rem 1rem !important}
-       
+
        /* Tab styling - ikke-aktive tabs */
        .nav-tabs .nav-link:not(.active) {
          color: #009ce8 !important;
        }
-       
+
        /* Tab styling - aktive tabs (behold standard) */
        .nav-tabs .nav-link.active {
          color: inherit;
@@ -102,7 +101,7 @@ create_ui_header <- function() {
        .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
        .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
 
-       
+
         /* --- Excel-lignende tema til excelR --- */
   .jexcel_container {
     /*font-family: Calibri, 'Segoe UI', Arial, sans-serif;
@@ -113,7 +112,7 @@ create_ui_header <- function() {
     position: none !important;
     border: none !important;
   }
-  
+
   .jexcel thead td {
     background: #f3f3f3;
     border-bottom: 2px solid #bfbfbf;
@@ -125,46 +124,46 @@ create_ui_header <- function() {
   .jexcel tbody tr:nth-child(odd) {
     background-color: #f9f9f9;
   }
-  
+
   .jexcel tbody tr:nth-child(even) {
     background-color: #ffffff;
   }
-  
+
   .jexcel tbody tr:hover {
     background-color: #f0f8ff !important;
   }
-  
+
   .jexcel td {
     border: 1px solid #d9d9d9;
     padding: 4px 8px;
   }
-  
+
   /* Aktiv celle styling */
   .jexcel .highlight {
     background-color: #cce7ff !important;
     border: 2px solid #0066cc !important;
   }
-  
+
   .jexcel_content {
-  overflow-y: unset !important; 
+  overflow-y: unset !important;
   max-height: none !important;
-  margin-bottom: 25px !important; 
+  margin-bottom: 25px !important;
   }
-  
+
   .jexcel > thead > tr > td {
     position: unset !important;
   }
-       
+
 /* Neutraliser bslib spacing omkring textarea wrapper */
         .bslib-grid:has(#indicator-description-wrapper) {
           margin-bottom: 0 !important;
           padding-bottom: 0 !important;
         }
-        
+
         .bslib-mb-spacing:has(#indicator-description-wrapper) {
           margin-bottom: 0 !important;
         }
-        
+
         /* Parent container skal være fleksibel */
         #indicator-description-wrapper {
           display: flex !important;
@@ -174,7 +173,7 @@ create_ui_header <- function() {
           margin-bottom: 0 !important;
           padding-bottom: 0 !important;
         }
-        
+
         /* Textarea skal fylde tilgængelig højde */
         #indicator_description {
           flex: 1 1 auto !important;
@@ -184,7 +183,7 @@ create_ui_header <- function() {
           overflow: auto !important;
           margin-bottom: 0 !important;
         }
-        
+
         /* Fjern margin på form-group omkring textarea */
         #indicator-description-wrapper .form-group,
         #indicator_div {
@@ -193,11 +192,11 @@ create_ui_header <- function() {
           display: flex !important;
           flex-direction: column !important;
         }
-       
-       
-       
-       
-        
+
+
+
+
+
         /* Selectize dropup styling */
         .selectize-dropup .selectize-control .selectize-dropdown {
           position: absolute !important;
@@ -209,21 +208,22 @@ create_ui_header <- function() {
           box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1) !important;
           margin-bottom: 2px !important;
         }
-        
+
         .selectize-dropup {
           position: relative !important;
         }
-        
+
         .selectize-dropup .selectize-control {
           position: relative !important;
         }
-        
+
         .selectize-dropdown {
           max-height: 200px !important;
           overflow-y: auto !important;
           z-index: 1050 !important;
         }
-      ")))
+      ")
+      ))
     )
   )
 }

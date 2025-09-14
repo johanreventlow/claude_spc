@@ -8,156 +8,161 @@
 ## Hovedfunktion for session management
 # Opsætter al server logik relateret til session håndtering
 setup_session_management <- function(input, output, session, values, waiter_file) {
-  
   # Auto-gendan session data når tilgængelig (hvis aktiveret)
-  observeEvent(input$auto_restore_data, {
-    req(input$auto_restore_data)
-    
-    # Tjek om auto-gendannelse er aktiveret
-    if (!AUTO_RESTORE_ENABLED) {
-      return()
-    }
-    
-    tryCatch({
-      saved_state <- input$auto_restore_data
-      
-      if (!is.null(saved_state$data)) {
-        
-        # Sæt gendannelses guards for at forhindre interferens
-        values$restoring_session <- TRUE
-        values$updating_table <- TRUE
-        values$table_operation_in_progress <- TRUE
-        values$auto_save_enabled <- FALSE
-        
-        # Oprydningsfunktion til at nulstille guards
-        on.exit({
+  observeEvent(input$auto_restore_data,
+    {
+      req(input$auto_restore_data)
+
+      # Tjek om auto-gendannelse er aktiveret
+      if (!AUTO_RESTORE_ENABLED) {
+        return()
+      }
+
+      tryCatch(
+        {
+          saved_state <- input$auto_restore_data
+
+          if (!is.null(saved_state$data)) {
+            # Sæt gendannelses guards for at forhindre interferens
+            values$restoring_session <- TRUE
+            values$updating_table <- TRUE
+            values$table_operation_in_progress <- TRUE
+            values$auto_save_enabled <- FALSE
+
+            # Oprydningsfunktion til at nulstille guards
+            on.exit(
+              {
+                values$updating_table <- FALSE
+                values$restoring_session <- FALSE
+                values$auto_save_enabled <- TRUE
+                # Behold table_operation_in_progress længere for at forhindre auto-gem
+                later::later(function() {
+                  values$table_operation_in_progress <- FALSE
+                }, delay = 2)
+              },
+              add = TRUE
+            )
+
+            # Rekonstruer data.frame fra gemt struktur
+            saved_data <- saved_state$data
+
+            if (!is.null(saved_data$values) && !is.null(saved_data$nrows) && !is.null(saved_data$ncols)) {
+              # Reconstruct data.frame manually
+              reconstructed_data <- data.frame(
+                matrix(nrow = saved_data$nrows, ncol = saved_data$ncols),
+                stringsAsFactors = FALSE
+              )
+
+              # Set column names first if available
+              if (!is.null(saved_data$col_names)) {
+                names(reconstructed_data) <- saved_data$col_names
+              }
+
+              # Populate columns one by one
+              for (i in seq_along(saved_data$values)) {
+                reconstructed_data[[i]] <- saved_data$values[[i]]
+              }
+
+              # Restore column classes if available
+              if (!is.null(saved_data$class_info)) {
+                for (col_name in names(saved_data$class_info)) {
+                  if (col_name %in% names(reconstructed_data)) {
+                    target_class <- saved_data$class_info[[col_name]]
+                    if (target_class == "numeric") {
+                      reconstructed_data[[col_name]] <- as.numeric(reconstructed_data[[col_name]])
+                    } else if (target_class == "character") {
+                      reconstructed_data[[col_name]] <- as.character(reconstructed_data[[col_name]])
+                    } else if (target_class == "logical") {
+                      reconstructed_data[[col_name]] <- as.logical(reconstructed_data[[col_name]])
+                    }
+                  }
+                }
+              }
+
+              values$current_data <- reconstructed_data
+              values$original_data <- reconstructed_data
+            } else {
+              # Fallback for older save format
+              values$current_data <- as.data.frame(saved_state$data)
+              values$original_data <- as.data.frame(saved_state$data)
+            }
+
+            values$file_uploaded <- TRUE
+            values$auto_detect_done <- TRUE
+
+            # Restore metadata if available
+            if (!is.null(saved_state$metadata)) {
+              restore_metadata(session, saved_state$metadata)
+            }
+
+            # Show notification about auto restore
+            data_rows <- if (!is.null(saved_state$data$nrows)) {
+              saved_state$data$nrows
+            } else {
+              nrow(saved_state$data)
+            }
+
+            showNotification(
+              paste(
+                "Tidligere session automatisk genindlæst:", data_rows, "datapunkter fra",
+                format(as.POSIXct(saved_state$timestamp), "%d-%m-%Y %H:%M")
+              ),
+              type = "message",
+              duration = 5
+            )
+          }
+        },
+        error = function(e) {
+          showNotification(paste("Fejl ved automatisk genindlæsning:", e$message), type = "error")
+
+          # Reset guards even on error
           values$updating_table <- FALSE
           values$restoring_session <- FALSE
           values$auto_save_enabled <- TRUE
-          # Behold table_operation_in_progress længere for at forhindre auto-gem
-          later::later(function() {
-            values$table_operation_in_progress <- FALSE
-          }, delay = 2)
-        }, add = TRUE)
-        
-        # Rekonstruer data.frame fra gemt struktur
-        saved_data <- saved_state$data
-        
-        if (!is.null(saved_data$values) && !is.null(saved_data$nrows) && !is.null(saved_data$ncols)) {
-          
-          # Reconstruct data.frame manually
-          reconstructed_data <- data.frame(
-            matrix(nrow = saved_data$nrows, ncol = saved_data$ncols),
-            stringsAsFactors = FALSE
-          )
-          
-          # Set column names first if available
-          if (!is.null(saved_data$col_names)) {
-            names(reconstructed_data) <- saved_data$col_names
-          }
-          
-          # Populate columns one by one
-          for (i in seq_along(saved_data$values)) {
-            reconstructed_data[[i]] <- saved_data$values[[i]]
-          }
-          
-          # Restore column classes if available
-          if (!is.null(saved_data$class_info)) {
-            for (col_name in names(saved_data$class_info)) {
-              if (col_name %in% names(reconstructed_data)) {
-                target_class <- saved_data$class_info[[col_name]]
-                if (target_class == "numeric") {
-                  reconstructed_data[[col_name]] <- as.numeric(reconstructed_data[[col_name]])
-                } else if (target_class == "character") {
-                  reconstructed_data[[col_name]] <- as.character(reconstructed_data[[col_name]])
-                } else if (target_class == "logical") {
-                  reconstructed_data[[col_name]] <- as.logical(reconstructed_data[[col_name]])
-                }
-              }
-            }
-          }
-          
-          values$current_data <- reconstructed_data
-          values$original_data <- reconstructed_data
-          
-        } else {
-          # Fallback for older save format
-          values$current_data <- as.data.frame(saved_state$data)
-          values$original_data <- as.data.frame(saved_state$data)
+          values$table_operation_in_progress <- FALSE
         }
-        
-        values$file_uploaded <- TRUE
-        values$auto_detect_done <- TRUE
-        
-        # Restore metadata if available
-        if (!is.null(saved_state$metadata)) {
-          restore_metadata(session, saved_state$metadata)
-        }
-        
-        # Show notification about auto restore
-        data_rows <- if (!is.null(saved_state$data$nrows)) {
-          saved_state$data$nrows
-        } else {
-          nrow(saved_state$data)
-        }
-        
-        showNotification(
-          paste("Tidligere session automatisk genindlæst:", data_rows, "datapunkter fra", 
-                format(as.POSIXct(saved_state$timestamp), "%d-%m-%Y %H:%M")),
-          type = "message",
-          duration = 5
-        )
-        
-      }
-      
-    }, error = function(e) {
-      showNotification(paste("Fejl ved automatisk genindlæsning:", e$message), type = "error")
-      
-      # Reset guards even on error
-      values$updating_table <- FALSE
-      values$restoring_session <- FALSE
-      values$auto_save_enabled <- TRUE
-      values$table_operation_in_progress <- FALSE
-    })
-  }, once = TRUE)
-  
+      )
+    },
+    once = TRUE
+  )
+
   # Manual save handler
   observeEvent(input$manual_save, {
     req(values$current_data)
-    
+
     metadata <- collect_metadata(input)
-    
+
     saveDataLocally(session, values$current_data, metadata)
     values$last_save_time <- Sys.time()
     showNotification("Session gemt lokalt!", type = "message", duration = 2)
   })
-  
+
   # Clear saved handler
   observeEvent(input$clear_saved, {
     handle_clear_saved_request(input, session, values)
   })
-  
+
   # Upload modal handler
   observeEvent(input$show_upload_modal, {
     show_upload_modal()
   })
-  
+
   # Confirm clear saved handler
   observeEvent(input$confirm_clear_saved, {
     handle_confirm_clear_saved(session, values)
   })
-  
+
   # Track file selection for modal
   output$fileSelected <- reactive({
     !is.null(input$data_file) && !is.null(input$data_file$datapath)
   })
   outputOptions(output, "fileSelected", suspendWhenHidden = FALSE)
-  
+
   # Confirm upload handler
   observeEvent(input$confirm_upload, {
     removeModal()
   })
-  
+
   # Save status display
   output$save_status_display <- renderUI({
     if (!is.null(values$last_save_time)) {
@@ -171,7 +176,7 @@ setup_session_management <- function(input, output, session, values, waiter_file
       }
     }
   })
-  
+
   # NOTE: output$dataLoaded is now handled in server_helpers.R with smart logic
 }
 
@@ -225,38 +230,38 @@ collect_metadata <- function(input) {
       unit_select = input$unit_select,
       unit_custom = input$unit_custom,
       description = input$indicator_description,
-      x_column = if(is.null(input$x_column) || input$x_column == "") "" else input$x_column,
-      y_column = if(is.null(input$y_column) || input$y_column == "") "" else input$y_column,
-      n_column = if(is.null(input$n_column) || input$n_column == "") "" else input$n_column,
-      skift_column = if(is.null(input$skift_column) || input$skift_column == "") "" else input$skift_column,
-      kommentar_column = if(is.null(input$kommentar_column) || input$kommentar_column == "") "" else input$kommentar_column,
+      x_column = if (is.null(input$x_column) || input$x_column == "") "" else input$x_column,
+      y_column = if (is.null(input$y_column) || input$y_column == "") "" else input$y_column,
+      n_column = if (is.null(input$n_column) || input$n_column == "") "" else input$n_column,
+      skift_column = if (is.null(input$skift_column) || input$skift_column == "") "" else input$skift_column,
+      kommentar_column = if (is.null(input$kommentar_column) || input$kommentar_column == "") "" else input$kommentar_column,
       chart_type = input$chart_type,
       target_value = input$target_value,
       centerline_value = input$centerline_value,
-      y_axis_unit = if(is.null(input$y_axis_unit) || input$y_axis_unit == "") "count" else input$y_axis_unit
+      y_axis_unit = if (is.null(input$y_axis_unit) || input$y_axis_unit == "") "count" else input$y_axis_unit
     )
   })
 }
 
 handle_clear_saved_request <- function(input, session, values) {
   # Check if there's data or settings to lose
-  has_data <- !is.null(values$current_data) && 
-               any(!is.na(values$current_data), na.rm = TRUE) &&
-               nrow(values$current_data) > 0
-  
+  has_data <- !is.null(values$current_data) &&
+    any(!is.na(values$current_data), na.rm = TRUE) &&
+    nrow(values$current_data) > 0
+
   has_settings <- (!is.null(input$indicator_title) && input$indicator_title != "") ||
-                  (!is.null(input$indicator_description) && input$indicator_description != "") ||
-                  (!is.null(input$unit_select) && input$unit_select != "") ||
-                  (!is.null(input$unit_custom) && input$unit_custom != "") ||
-                  (!is.null(values$last_save_time))
-  
+    (!is.null(input$indicator_description) && input$indicator_description != "") ||
+    (!is.null(input$unit_select) && input$unit_select != "") ||
+    (!is.null(input$unit_custom) && input$unit_custom != "") ||
+    (!is.null(values$last_save_time))
+
   # If no data or settings, start new session directly
   if (!has_data && !has_settings) {
     reset_to_empty_session(session, values)
     showNotification("Ny session startet", type = "message", duration = 2)
     return()
   }
-  
+
   # If there IS data or settings, show confirmation dialog
   show_clear_confirmation_modal(has_data, has_settings, values)
 }
@@ -270,21 +275,21 @@ handle_confirm_clear_saved <- function(session, values) {
 reset_to_empty_session <- function(session, values) {
   clearDataLocally(session)
   values$last_save_time <- NULL
-  
+
   values$updating_table <- TRUE
-  
+
   # Force hide Anhøj rules until real data is loaded
   values$hide_anhoej_rules <- TRUE
-  
+
   # Reset to standard column order using helper function
   values$current_data <- create_empty_session_data()
-  
+
   values$file_uploaded <- FALSE
-  values$user_started_session <- TRUE  # NEW: Set flag that user has started
+  values$user_started_session <- TRUE # NEW: Set flag that user has started
   values$original_data <- NULL
   values$auto_detect_done <- FALSE
-  values$initial_auto_detect_completed <- FALSE  # Reset for new session
-  
+  values$initial_auto_detect_completed <- FALSE # Reset for new session
+
   # Reset UI inputs
   isolate({
     updateTextInput(session, "indicator_title", value = "")
@@ -301,7 +306,7 @@ reset_to_empty_session <- function(session, values) {
     updateSelectizeInput(session, "y_axis_unit", selected = "count")
     shinyjs::reset("data_file")
   })
-  
+
   values$updating_table <- FALSE
 }
 
@@ -313,10 +318,9 @@ show_upload_modal <- function() {
       style = paste("color:", HOSPITAL_COLORS$primary)
     ),
     size = "m",
-    
     div(
       style = "margin: 20px 0;",
-      
+
       # File input i modal
       fileInput(
         "data_file",
@@ -325,9 +329,7 @@ show_upload_modal <- function() {
         placeholder = "Ingen fil valgt...",
         width = "100%"
       ),
-      
       hr(),
-      
       div(
         style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.9rem;",
         h6("Understøttede filformater:", style = "font-weight: 500; margin-bottom: 10px;"),
@@ -344,7 +346,6 @@ show_upload_modal <- function() {
         )
       )
     ),
-    
     footer = tagList(
       modalButton("Annuller"),
       conditionalPanel(
@@ -360,22 +361,20 @@ show_clear_confirmation_modal <- function(has_data, has_settings, values) {
   showModal(modalDialog(
     title = "Start ny session?",
     size = "m",
-    
     div(
       icon("refresh"),
       " Er du sikker på at du vil starte en helt ny session?",
       br(), br(),
       p("Dette vil:"),
       tags$ul(
-        if(has_data) tags$li("Slette eksisterende data i tabellen"),
-        if(has_settings) tags$li("Nulstille titel, beskrivelse og andre indstillinger"),
-        if(!is.null(values$last_save_time)) tags$li("Fjerne gemt session fra lokal storage"),
+        if (has_data) tags$li("Slette eksisterende data i tabellen"),
+        if (has_settings) tags$li("Nulstille titel, beskrivelse og andre indstillinger"),
+        if (!is.null(values$last_save_time)) tags$li("Fjerne gemt session fra lokal storage"),
         tags$li("Oprette en tom standardtabel")
       ),
       br(),
       p("Denne handling kan ikke fortrydes.")
     ),
-    
     footer = tagList(
       modalButton("Annuller"),
       actionButton("confirm_clear_saved", "Ja, start ny session", class = "btn-warning")

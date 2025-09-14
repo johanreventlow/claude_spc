@@ -11,7 +11,7 @@ create_welcome_page <- function() {
   div(
     class = "welcome-page",
     style = "min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);",
-    
+
     # Hero Sektion
     div(
       class = "hero-section py-5",
@@ -29,34 +29,34 @@ create_welcome_page <- function() {
             p(
               class = "lead text-muted",
               style = "font-size: 1.25rem; max-width: 800px; margin: 0 auto;",
-              "Transformér dine data til indsigter med Statistical Process Control. ", 
+              "Transformér dine data til indsigter med Statistical Process Control. ",
               "Identificer mønstre, spot trends og træf bedre beslutninger baseret på dine healthcare data."
             )
           )
         )
       )
     ),
-    
+
     # Main Content - Two Column Layout
     div(
       class = "container-fluid px-4",
       div(
         class = "row g-4 mb-5",
-        
+
         # LEFT COLUMN - Getting Started Guide
         div(
           class = "col-lg-6",
           create_getting_started_card()
         ),
-        
+
         # RIGHT COLUMN - Understanding SPC
         div(
-          class = "col-lg-6", 
+          class = "col-lg-6",
           create_understanding_spc_card()
         )
       )
     ),
-    
+
     # Call to Action Section
     div(
       class = "cta-section py-5",
@@ -78,7 +78,7 @@ create_welcome_page <- function() {
                 style = "font-weight: 600; padding: 12px 30px;"
               ),
               actionButton(
-                "upload_data_welcome",  
+                "upload_data_welcome",
                 "📊 Upload data",
                 class = "btn btn-outline-light btn-lg",
                 style = "font-weight: 600; padding: 12px 30px;"
@@ -114,7 +114,7 @@ create_getting_started_card <- function() {
     ),
     card_body(
       class = "px-4 py-4",
-      
+
       # Step 1
       create_step_item(
         number = "1",
@@ -123,16 +123,16 @@ create_getting_started_card <- function() {
         description = "Excel (.xlsx/.xls) eller CSV-fil med kolonneoverskrifter. Vi understøtter danske tal og datoformater.",
         example = "Eksempel: Dato, Tæller, Nævner, Kommentar"
       ),
-      
+
       # Step 2
       create_step_item(
-        number = "2", 
+        number = "2",
         icon = "sliders-h",
         title = "Konfigurer din analyse",
         description = "Automatisk kolonnedetektering eller manuel opsætning. Vælg chart type baseret på dine data.",
         example = "Run chart, P-chart, U-chart, X̄-chart"
       ),
-      
+
       # Step 3
       create_step_item(
         number = "3",
@@ -141,7 +141,7 @@ create_getting_started_card <- function() {
         description = "Interaktiv SPC-graf med centerlinjer, kontrolgrænser og specialle mønstre (Anhøj regler).",
         example = "Eksporter som Excel, PDF eller PNG"
       ),
-      
+
       # Quick Start Button
       div(
         class = "mt-4 pt-3 border-top",
@@ -170,7 +170,7 @@ create_understanding_spc_card <- function() {
     class = "h-100 shadow-sm",
     style = "border: none; border-radius: 15px;",
     card_header(
-      class = "bg-white border-0 pb-0", 
+      class = "bg-white border-0 pb-0",
       style = "border-radius: 15px 15px 0 0;",
       div(
         class = "d-flex align-items-center",
@@ -187,14 +187,14 @@ create_understanding_spc_card <- function() {
     ),
     card_body(
       class = "px-4 py-4",
-      
+
       # What is SPC?
       create_info_section(
         icon = "question-circle",
         title = "Hvad er Statistical Process Control?",
         content = "SPC hjælper dig med at skelne mellem normal variation og særlige årsager i dine processer. I sundhedsvæsenet betyder det bedre patientpleje gennem data-drevet beslutningstagning."
       ),
-      
+
       # Why SPC in Healthcare?
       create_info_section(
         icon = "heartbeat",
@@ -208,7 +208,7 @@ create_understanding_spc_card <- function() {
           </ul>
         ")
       ),
-      
+
       # Healthcare Examples
       create_info_section(
         icon = "hospital",
@@ -266,9 +266,11 @@ create_step_item <- function(number, icon, title, description, example = NULL) {
       ),
       p(class = "text-muted mb-1", description),
       if (!is.null(example)) {
-        p(class = "small text-primary mb-0", 
+        p(
+          class = "small text-primary mb-0",
           style = "font-style: italic;",
-          example)
+          example
+        )
       }
     )
   )

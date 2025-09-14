@@ -8,14 +8,13 @@
 ## Hovedfunktion for hjælper
 # Opsætter alle hjælper observers og status funktioner
 setup_helper_observers <- function(input, output, session, values, obs_manager = NULL) {
-  
   # Initialiser ikke automatisk tom tabel ved opstart - vent på bruger aktion
   # observe({
   #   if (is.null(values$current_data)) {
   #     empty_data <- data.frame(
   #       Skift = rep(FALSE, 5),
   #       Dato = rep(NA_character_, 5),
-  #       Tæller = rep(NA_real_, 5), 
+  #       Tæller = rep(NA_real_, 5),
   #       Nævner = rep(NA_real_, 5),
   #       Kommentar = rep(NA_character_, 5),
   #       stringsAsFactors = FALSE
@@ -23,7 +22,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   #     values$current_data <- empty_data
   #   }
   # })
-  
+
   # Data indlæsnings status flags - følger BFH UTH mønster
   output$dataLoaded <- renderText({
     result <- if (is.null(values$current_data)) {
@@ -32,41 +31,53 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
       # Tjek også om bruger aktivt er startet på at arbejde (fil uploadet eller startet manuelt)
       meaningful_data <- any(sapply(values$current_data, function(x) {
-        if (is.logical(x)) return(any(x, na.rm = TRUE))
-        if (is.numeric(x)) return(any(!is.na(x)))
-        if (is.character(x)) return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
+        if (is.logical(x)) {
+          return(any(x, na.rm = TRUE))
+        }
+        if (is.numeric(x)) {
+          return(any(!is.na(x)))
+        }
+        if (is.character(x)) {
+          return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
+        }
         return(FALSE)
       }))
-      
+
       # Betragt kun data som indlæst hvis:
       # 1. Der er meningsfuldt data, ELLER
-      # 2. Bruger har uploadet en fil, ELLER 
+      # 2. Bruger har uploadet en fil, ELLER
       # 3. Bruger har eksplicit startet en ny session
       user_has_started <- values$file_uploaded || values$user_started_session %||% FALSE
-      
+
       if (meaningful_data || user_has_started) "TRUE" else "FALSE"
     }
     result
   })
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
-  
+
   output$has_data <- renderText({
     if (is.null(values$current_data)) {
       "false"
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
       meaningful_data <- any(sapply(values$current_data, function(x) {
-        if (is.logical(x)) return(any(x, na.rm = TRUE))
-        if (is.numeric(x)) return(any(!is.na(x)))
-        if (is.character(x)) return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
+        if (is.logical(x)) {
+          return(any(x, na.rm = TRUE))
+        }
+        if (is.numeric(x)) {
+          return(any(!is.na(x)))
+        }
+        if (is.character(x)) {
+          return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
+        }
         return(FALSE)
       }))
       if (meaningful_data) "true" else "false"
     }
   })
   outputOptions(output, "has_data", suspendWhenHidden = FALSE)
-  
-  
+
+
   # Data status visning
   output$data_status_display <- renderUI({
     if (is.null(values$current_data)) {
@@ -99,100 +110,104 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       }
     }
   })
-  
-  
+
+
   # Debounced auto-gem for at undgå hyppige I/O operationer
   auto_save_timer <- reactiveVal(NULL)
-  
-  obs_data_save <- observeEvent(values$current_data, {
-    # Starkere guards for at forhindre auto-gem under tabel operationer
-    if (!values$auto_save_enabled || 
-        values$updating_table || 
+
+  obs_data_save <- observeEvent(values$current_data,
+    {
+      # Starkere guards for at forhindre auto-gem under tabel operationer
+      if (!values$auto_save_enabled ||
+        values$updating_table ||
         values$table_operation_in_progress ||
         values$restoring_session) {
-      return()
-    }
-    
-    if (!is.null(values$current_data) && 
-        nrow(values$current_data) > 0 && 
-        any(!is.na(values$current_data))) {
-      
-      # Cancel existing timer
-      if (!is.null(auto_save_timer())) {
-        later::later_cancel(auto_save_timer())
+        return()
       }
-      
-      # Capture current data and metadata for async callback
-      current_data_snapshot <- values$current_data
-      metadata_snapshot <- collect_metadata(input)
-      
-      # Set new debounced timer (2 second delay)
-      timer_id <- later::later(function() {
-        autoSaveAppState(session, current_data_snapshot, metadata_snapshot)
-        isolate(values$last_save_time <- Sys.time())
-        auto_save_timer(NULL)
-      }, delay = 2)
-      
-      auto_save_timer(timer_id)
-    }
-  }, ignoreInit = TRUE)
-  
+
+      if (!is.null(values$current_data) &&
+        nrow(values$current_data) > 0 &&
+        any(!is.na(values$current_data))) {
+        # Cancel existing timer
+        if (!is.null(auto_save_timer())) {
+          later::later_cancel(auto_save_timer())
+        }
+
+        # Capture current data and metadata for async callback
+        current_data_snapshot <- values$current_data
+        metadata_snapshot <- collect_metadata(input)
+
+        # Set new debounced timer (2 second delay)
+        timer_id <- later::later(function() {
+          autoSaveAppState(session, current_data_snapshot, metadata_snapshot)
+          isolate(values$last_save_time <- Sys.time())
+          auto_save_timer(NULL)
+        }, delay = 2)
+
+        auto_save_timer(timer_id)
+      }
+    },
+    ignoreInit = TRUE
+  )
+
   # Register observer with manager
   if (!is.null(obs_manager)) {
     obs_manager$add(obs_data_save, "data_auto_save")
   }
-  
+
   # Debounced auto-gem for settings ændringer
   settings_save_timer <- reactiveVal(NULL)
-  
+
   obs_settings_save <- observe({
-    # Samme starkere guards som data auto-gem  
-    if (!values$auto_save_enabled || 
-        values$updating_table || 
-        values$table_operation_in_progress ||
-        values$restoring_session) {
+    # Samme starkere guards som data auto-gem
+    if (!values$auto_save_enabled ||
+      values$updating_table ||
+      values$table_operation_in_progress ||
+      values$restoring_session) {
       return()
     }
-    
+
     if (!is.null(values$current_data)) {
-      
       # Cancel existing timer
       if (!is.null(settings_save_timer())) {
         later::later_cancel(settings_save_timer())
       }
-      
+
       # Capture current data and metadata for async callback
       current_data_snapshot <- values$current_data
       metadata_snapshot <- collect_metadata(input)
-      
+
       # Set new debounced timer (1 second delay for settings)
       timer_id <- later::later(function() {
         autoSaveAppState(session, current_data_snapshot, metadata_snapshot)
         isolate(values$last_save_time <- Sys.time())
         settings_save_timer(NULL)
       }, delay = 1)
-      
+
       settings_save_timer(timer_id)
     }
-  }) %>% 
-    bindEvent({
-      list(
-        input$indicator_title,
-        input$unit_type,
-        input$unit_select,
-        input$unit_custom,
-        input$indicator_description,
-        input$x_column,
-        input$y_column,
-        input$n_column,
-        input$skift_column,
-        input$kommentar_column,
-        input$chart_type,
-        input$target_value,
-        input$y_axis_unit
-      )
-    }, ignoreInit = TRUE)
-  
+  }) %>%
+    bindEvent(
+      {
+        list(
+          input$indicator_title,
+          input$unit_type,
+          input$unit_select,
+          input$unit_custom,
+          input$indicator_description,
+          input$x_column,
+          input$y_column,
+          input$n_column,
+          input$skift_column,
+          input$kommentar_column,
+          input$chart_type,
+          input$target_value,
+          input$y_axis_unit
+        )
+      },
+      ignoreInit = TRUE
+    )
+
   # Register observer with manager
   if (!is.null(obs_manager)) {
     obs_manager$add(obs_settings_save, "settings_auto_save")
@@ -224,21 +239,21 @@ current_unit <- function(input) {
     if (input$unit_type == "select") {
       unit_names <- list(
         "med" = "Medicinsk Afdeling",
-        "kir" = "Kirurgisk Afdeling", 
+        "kir" = "Kirurgisk Afdeling",
         "icu" = "Intensiv Afdeling",
         "amb" = "Ambulatorie",
         "akut" = "Akutmodtagelse",
         "paed" = "Pædiatrisk Afdeling",
         "gyn" = "Gynækologi/Obstetrik"
       )
-      selected_unit <- if(is.null(input$unit_select)) "" else input$unit_select
+      selected_unit <- if (is.null(input$unit_select)) "" else input$unit_select
       if (selected_unit != "" && selected_unit %in% names(unit_names)) {
         return(unit_names[[selected_unit]])
       } else {
         return("")
       }
     } else {
-      return(if(is.null(input$unit_custom)) "" else input$unit_custom)
+      return(if (is.null(input$unit_custom)) "" else input$unit_custom)
     }
   })
 }
@@ -247,9 +262,9 @@ current_unit <- function(input) {
 # Reaktiv funktion for komplet chart titel
 chart_title <- function(input) {
   reactive({
-    base_title <- if(is.null(input$indicator_title) || input$indicator_title == "") "SPC Analyse" else input$indicator_title
+    base_title <- if (is.null(input$indicator_title) || input$indicator_title == "") "SPC Analyse" else input$indicator_title
     unit_name <- current_unit(input)()
-    
+
     if (base_title != "SPC Analyse" && unit_name != "") {
       return(paste(base_title, "-", unit_name))
     } else if (base_title != "SPC Analyse") {
