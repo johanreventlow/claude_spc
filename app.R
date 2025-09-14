@@ -11,7 +11,7 @@ source("R/modules/data_module.R")
 source("R/modules/visualization_module_server.R")
 source("R/modules/visualization_helpers.R")
 source("R/modules/visualization_spc.R")
-source("R/modules/local_storage_module.R")
+source("R/modules/local_storage_functions.R")
 
 # UI/SERVER KOMPONENTER =======================================================
 # Indlæs UI og server komponenter
