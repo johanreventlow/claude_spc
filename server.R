@@ -90,6 +90,10 @@ server <- function(input, output, session) {
     }
   }
   
+  # Observer Management ------------------------------------------------------
+  # Initialiser observer manager til tracking af alle observers
+  obs_manager <- observer_manager()
+  
   # Waiter Konfiguration -----------------------------------------------------
   # Initialiser fil upload waiter
   waiter_file <- waiter::Waiter$new(
@@ -122,7 +126,7 @@ server <- function(input, output, session) {
   setup_download_handlers(input, output, session, values)
   
   ## Hjælpe observers
-  setup_helper_observers(input, output, session, values)
+  setup_helper_observers(input, output, session, values, obs_manager)
   
   # Initial UI Setup --------------------------------------------------------
   # Sæt standard chart_type når appen starter
@@ -141,4 +145,24 @@ server <- function(input, output, session) {
   #   )
   # }) %>% 
   #   bindEvent(TRUE, once = TRUE)
+  
+  # Session Cleanup ---------------------------------------------------------
+  # Opsæt cleanup af observers og ressourcer når session lukker
+  setup_session_cleanup(session, list(
+    function() {
+      # Cleanup alle observers
+      obs_manager$cleanup_all()
+    },
+    function() {
+      # Cleanup waiter
+      if (exists("waiter_file") && !is.null(waiter_file)) {
+        waiter_file$hide()
+      }
+    },
+    function() {
+      # Log session statistics
+      log_error(paste("Session afsluttet - Observer count:", obs_manager$count()), 
+                level = "info")
+    }
+  ))
 } # End server function

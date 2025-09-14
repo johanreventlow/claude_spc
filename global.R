@@ -341,6 +341,87 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
   })
 }
 
+# REACTIVE PERFORMANCE HJÆLPEFUNKTIONER =============================
+
+## Debounced reactive for expensive operationer
+create_debounced_reactive <- function(reactive_expr, millis = 1000) {
+  # Implementer debouncing ved at bruge later::later
+  debounce_timer <- reactiveVal(NULL)
+  result <- reactiveVal()
+  
+  observe({
+    # Cancel existing timer
+    if (!is.null(debounce_timer())) {
+      later::later_cancel(debounce_timer())
+    }
+    
+    # Set new timer
+    timer_id <- later::later(function() {
+      result(reactive_expr())
+      debounce_timer(NULL)
+    }, delay = millis / 1000)
+    
+    debounce_timer(timer_id)
+  })
+  
+  return(result)
+}
+
+## Session cleanup manager
+setup_session_cleanup <- function(session, cleanup_functions = list()) {
+  session$onSessionEnded(function() {
+    log_error("Session cleanup startet", level = "info")
+    
+    # Kør alle cleanup funktioner
+    for (i in seq_along(cleanup_functions)) {
+      tryCatch({
+        cleanup_functions[[i]]()
+      }, error = function(e) {
+        log_error(paste("Cleanup funktion", i, "fejlede:", e$message), level = "warning")
+      })
+    }
+    
+    log_error("Session cleanup færdig", level = "info")
+  })
+}
+
+## Observer manager til tracking og cleanup
+observer_manager <- function() {
+  observers <- list()
+  
+  list(
+    add = function(observer, name = NULL) {
+      id <- if(is.null(name)) length(observers) + 1 else name
+      observers[[id]] <<- observer
+      return(id)
+    },
+    
+    remove = function(id) {
+      if (id %in% names(observers)) {
+        if (!is.null(observers[[id]]$destroy)) {
+          observers[[id]]$destroy()
+        }
+        observers[[id]] <<- NULL
+      }
+    },
+    
+    cleanup_all = function() {
+      for (id in names(observers)) {
+        if (!is.null(observers[[id]]$destroy)) {
+          tryCatch({
+            observers[[id]]$destroy()
+          }, error = function(e) {
+            log_error(paste("Observer cleanup fejl for", id, ":", e$message))
+          })
+        }
+      }
+      observers <<- list()
+    },
+    
+    count = function() length(observers)
+  )
+}
+
 ## Dato kolonnevalidering -----
 validate_date_column <- function(data, column_name) {
   if (!column_name %in% names(data)) {

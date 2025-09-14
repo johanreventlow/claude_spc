@@ -218,22 +218,24 @@ restore_metadata <- function(session, metadata) {
 }
 
 collect_metadata <- function(input) {
-  list(
-    title = input$indicator_title,
-    unit_type = input$unit_type,
-    unit_select = input$unit_select,
-    unit_custom = input$unit_custom,
-    description = input$indicator_description,
-    x_column = if(is.null(input$x_column) || input$x_column == "") "" else input$x_column,
-    y_column = if(is.null(input$y_column) || input$y_column == "") "" else input$y_column,
-    n_column = if(is.null(input$n_column) || input$n_column == "") "" else input$n_column,
-    skift_column = if(is.null(input$skift_column) || input$skift_column == "") "" else input$skift_column,
-    kommentar_column = if(is.null(input$kommentar_column) || input$kommentar_column == "") "" else input$kommentar_column,
-    chart_type = input$chart_type,
-    target_value = input$target_value,
-    centerline_value = input$centerline_value,
-    y_axis_unit = if(is.null(input$y_axis_unit) || input$y_axis_unit == "") "count" else input$y_axis_unit
-  )
+  isolate({
+    list(
+      title = input$indicator_title,
+      unit_type = input$unit_type,
+      unit_select = input$unit_select,
+      unit_custom = input$unit_custom,
+      description = input$indicator_description,
+      x_column = if(is.null(input$x_column) || input$x_column == "") "" else input$x_column,
+      y_column = if(is.null(input$y_column) || input$y_column == "") "" else input$y_column,
+      n_column = if(is.null(input$n_column) || input$n_column == "") "" else input$n_column,
+      skift_column = if(is.null(input$skift_column) || input$skift_column == "") "" else input$skift_column,
+      kommentar_column = if(is.null(input$kommentar_column) || input$kommentar_column == "") "" else input$kommentar_column,
+      chart_type = input$chart_type,
+      target_value = input$target_value,
+      centerline_value = input$centerline_value,
+      y_axis_unit = if(is.null(input$y_axis_unit) || input$y_axis_unit == "") "count" else input$y_axis_unit
+    )
+  })
 }
 
 handle_clear_saved_request <- function(input, session, values) {

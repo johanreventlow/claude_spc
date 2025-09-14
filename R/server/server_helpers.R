@@ -7,7 +7,7 @@
 
 ## Hovedfunktion for hjælper
 # Opsætter alle hjælper observers og status funktioner
-setup_helper_observers <- function(input, output, session, values) {
+setup_helper_observers <- function(input, output, session, values, obs_manager = NULL) {
   
   # Initialiser ikke automatisk tom tabel ved opstart - vent på bruger aktion
   # observe({
@@ -101,8 +101,10 @@ setup_helper_observers <- function(input, output, session, values) {
   })
   
   
-  # Auto-gem når data ændres (med guards for at forhindre uendelige løkker)
-  observeEvent(values$current_data, {
+  # Debounced auto-gem for at undgå hyppige I/O operationer
+  auto_save_timer <- reactiveVal(NULL)
+  
+  obs_data_save <- observeEvent(values$current_data, {
     # Starkere guards for at forhindre auto-gem under tabel operationer
     if (!values$auto_save_enabled || 
         values$updating_table || 
@@ -115,14 +117,35 @@ setup_helper_observers <- function(input, output, session, values) {
         nrow(values$current_data) > 0 && 
         any(!is.na(values$current_data))) {
       
-      metadata <- collect_metadata(input)
-      autoSaveAppState(session, values$current_data, metadata)
-      values$last_save_time <- Sys.time()
+      # Cancel existing timer
+      if (!is.null(auto_save_timer())) {
+        later::later_cancel(auto_save_timer())
+      }
+      
+      # Capture current data and metadata for async callback
+      current_data_snapshot <- values$current_data
+      metadata_snapshot <- collect_metadata(input)
+      
+      # Set new debounced timer (2 second delay)
+      timer_id <- later::later(function() {
+        autoSaveAppState(session, current_data_snapshot, metadata_snapshot)
+        isolate(values$last_save_time <- Sys.time())
+        auto_save_timer(NULL)
+      }, delay = 2)
+      
+      auto_save_timer(timer_id)
     }
   }, ignoreInit = TRUE)
   
-  # Auto-gem når indstillinger ændres (med guards for at forhindre konflikter)
-  observe({
+  # Register observer with manager
+  if (!is.null(obs_manager)) {
+    obs_manager$add(obs_data_save, "data_auto_save")
+  }
+  
+  # Debounced auto-gem for settings ændringer
+  settings_save_timer <- reactiveVal(NULL)
+  
+  obs_settings_save <- observe({
     # Samme starkere guards som data auto-gem  
     if (!values$auto_save_enabled || 
         values$updating_table || 
@@ -133,9 +156,23 @@ setup_helper_observers <- function(input, output, session, values) {
     
     if (!is.null(values$current_data)) {
       
-      metadata <- collect_metadata(input)
-      autoSaveAppState(session, values$current_data, metadata)
-      values$last_save_time <- Sys.time()
+      # Cancel existing timer
+      if (!is.null(settings_save_timer())) {
+        later::later_cancel(settings_save_timer())
+      }
+      
+      # Capture current data and metadata for async callback
+      current_data_snapshot <- values$current_data
+      metadata_snapshot <- collect_metadata(input)
+      
+      # Set new debounced timer (1 second delay for settings)
+      timer_id <- later::later(function() {
+        autoSaveAppState(session, current_data_snapshot, metadata_snapshot)
+        isolate(values$last_save_time <- Sys.time())
+        settings_save_timer(NULL)
+      }, delay = 1)
+      
+      settings_save_timer(timer_id)
     }
   }) %>% 
     bindEvent({
@@ -155,6 +192,11 @@ setup_helper_observers <- function(input, output, session, values) {
         input$y_axis_unit
       )
     }, ignoreInit = TRUE)
+  
+  # Register observer with manager
+  if (!is.null(obs_manager)) {
+    obs_manager$add(obs_settings_save, "settings_auto_save")
+  }
 }
 
 # HJÆLPEFUNKTIONER ============================================================
