@@ -23,6 +23,7 @@ app_server <- function(input, output, session) {
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
   if (TEST_MODE_AUTO_LOAD) {
+    cat("TEST MODE: Attempting auto-load with TEST_MODE_AUTO_LOAD =", TEST_MODE_AUTO_LOAD, "\n")
     test_file_path <- TEST_MODE_FILE_PATH
 
     if (file.exists(test_file_path)) {
@@ -62,10 +63,9 @@ app_server <- function(input, output, session) {
           values$auto_detect_done <- FALSE # Will trigger auto-detect
           values$initial_auto_detect_completed <- FALSE # Reset for new data
 
-          # Set flag for delayed auto-detect trigger (event-driven instead of timing)
-          cat("TEST MODE: Setting test_mode_auto_detect_ready flag\n")
-          values$test_mode_auto_detect_ready <- Sys.time()
           values$hide_anhoej_rules <- FALSE # Show Anhøj rules for real data
+
+          # NOTE: Flag sættes efter setup_column_management() for at undgå race condition
 
           # Debug output
           cat("TEST MODE: Auto-indlæst fil:", test_file_path, "\n")
@@ -118,6 +118,12 @@ app_server <- function(input, output, session) {
 
   ## Hjælpe observers
   setup_helper_observers(input, output, session, values, obs_manager)
+
+  # TEST MODE: Set auto-detect trigger flag AFTER all observers are set up
+  if (TEST_MODE_AUTO_LOAD && !is.null(values$current_data)) {
+    cat("TEST MODE: Setting test_mode_auto_detect_ready flag after setup\n")
+    values$test_mode_auto_detect_ready <- Sys.time()
+  }
 
   # Initial UI Setup --------------------------------------------------------
   # Sæt standard chart_type når appen starter
