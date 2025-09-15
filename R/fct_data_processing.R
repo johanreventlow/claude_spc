@@ -8,7 +8,6 @@
 ## Hovedfunktion for kolonnehåndtering
 # Opsætter al server logik relateret til kolonne-management
 setup_column_management <- function(input, output, session, values) {
-  cat("DEBUG: setup_column_management() called\n")
   # Opdater kolonnevalg når data ændres
   observe({
     if (values$updating_table) {
@@ -62,27 +61,67 @@ setup_column_management <- function(input, output, session, values) {
       if (!is.null(values$current_data) &&
         (is.null(input$x_column) || input$x_column == "") &&
         (is.null(input$y_column) || input$y_column == "")) {
-        cat("DEBUG: Triggering auto-detect from data change\n")
         values$auto_detect_trigger <- Sys.time() # Brug timestamp for at sikre reaktivitet
       }
     },
     ignoreInit = TRUE
   )
 
+  # Test mode auto-detect trigger (event-driven instead of later::later)
+  observeEvent(values$test_mode_auto_detect_ready,
+    {
+      req(values$test_mode_auto_detect_ready)
+      cat("TEST MODE: Event-driven auto-detect trigger fired!\n")
+      values$auto_detect_trigger <- Sys.time()
+    },
+    ignoreInit = TRUE, ignoreNULL = TRUE
+  )
+
   # Forsinket auto-detekterings udførelse
   observeEvent(values$auto_detect_trigger,
     {
-      cat("DEBUG: Auto-detect trigger fired!\n")
       values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
       auto_detect_and_update_columns(input, session, values)
       values$initial_auto_detect_completed <- TRUE # Marker som færdig efter første kørsel
 
-      # Clear flag efter en kort delay for at sikre choices observer ikke kører
-      later::later(function() {
-        values$auto_detect_in_progress <- FALSE
-      }, delay = 0.1)
+      # Clear flag after auto-detect completion (event-driven instead of timing)
+      values$auto_detect_in_progress <- FALSE
     },
     ignoreInit = TRUE
+  )
+
+  # Event-driven UI sync observer (replaces later::later timing)
+  observeEvent(values$ui_sync_needed,
+    {
+      req(values$ui_sync_needed)
+
+      sync_data <- values$ui_sync_needed
+
+      # Re-trigger UI updates with choices parameter for visual sync
+      if (!is.null(sync_data$x_col)) {
+        updateSelectizeInput(session, "x_column", choices = sync_data$col_choices, selected = sync_data$x_col)
+      }
+      if (!is.null(sync_data$taeller_col)) {
+        updateSelectizeInput(session, "y_column", choices = sync_data$col_choices, selected = sync_data$taeller_col)
+      }
+      if (!is.null(sync_data$naevner_col)) {
+        updateSelectizeInput(session, "n_column", choices = sync_data$col_choices, selected = sync_data$naevner_col)
+      }
+      if (!is.null(sync_data$skift_col)) {
+        updateSelectizeInput(session, "skift_column", choices = sync_data$col_choices, selected = sync_data$skift_col)
+      }
+      if (!is.null(sync_data$frys_col)) {
+        updateSelectizeInput(session, "frys_column", choices = sync_data$col_choices, selected = sync_data$frys_col)
+      }
+      if (!is.null(sync_data$kommentar_col)) {
+        updateSelectizeInput(session, "kommentar_column", choices = sync_data$col_choices, selected = sync_data$kommentar_col)
+      }
+
+
+      # Clear the sync request
+      values$ui_sync_needed <- NULL
+    },
+    ignoreInit = TRUE, ignoreNULL = TRUE, priority = -10  # Lower priority = runs after other observers
   )
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
@@ -187,12 +226,10 @@ setup_column_management <- function(input, output, session, values) {
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
 auto_detect_and_update_columns <- function(input, session, values) {
-  cat("DEBUG: auto_detect_and_update_columns() called\n")
   req(values$current_data)
 
   data <- values$current_data
   col_names <- names(data)
-  cat("DEBUG: Processing", nrow(data), "rows with columns:", paste(col_names, collapse = ", "), "\n")
 
   # Forbedret detektering af potentielle dato-kolonner
   # Evaluer ALLE kolonner og find den bedste dato-kandidat
@@ -209,7 +246,6 @@ auto_detect_and_update_columns <- function(input, session, values) {
 
     # Skip kolonner der kun indeholder NA værdier
     if (all(is.na(col_data)) || length(col_data) == 0) {
-      cat("SKIP: Kolonne", col_name, "er tom eller kun NA værdier\n")
       next
     }
 
@@ -339,7 +375,6 @@ auto_detect_and_update_columns <- function(input, session, values) {
   # Fallback til første kolonne hvis ingen dato-kandidater
   if (is.null(x_col) && length(col_names) > 0) {
     x_col <- col_names[1]
-    cat("FALLBACK: Bruger første kolonne", x_col, "\n")
   }
 
   # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter
@@ -542,37 +577,23 @@ auto_detect_and_update_columns <- function(input, session, values) {
       if (!is.null(kommentar_col)) paste0(", Kommentar=", kommentar_col) else ", Kommentar=ingen"
     )
 
-    cat("DEBUG: Sending notification:", detected_msg, "\n")
     showNotification(
       detected_msg,
       type = "message",
       duration = 4
     )
-    cat("DEBUG: updateSelectizeInput calls completed\n")
 
-    # Forsinket re-trigger af UI opdateringer for at sikre visuel sync
-    # Inkludér choices parameter for at force UI opdatering
-    later::later(function() {
-      if (!is.null(x_col)) {
-        updateSelectizeInput(session, "x_column", choices = col_choices, selected = x_col)
-      }
-      if (!is.null(taeller_col)) {
-        updateSelectizeInput(session, "y_column", choices = col_choices, selected = taeller_col)
-      }
-      if (!is.null(naevner_col)) {
-        updateSelectizeInput(session, "n_column", choices = col_choices, selected = naevner_col)
-      }
-      if (!is.null(skift_col)) {
-        updateSelectizeInput(session, "skift_column", choices = col_choices, selected = skift_col)
-      }
-      if (!is.null(frys_col)) {
-        updateSelectizeInput(session, "frys_column", choices = col_choices, selected = frys_col)
-      }
-      if (!is.null(kommentar_col)) {
-        updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = kommentar_col)
-      }
-      cat("DEBUG: Delayed UI sync with choices parameter completed (all fields)\n")
-    }, delay = 0.3)
+    # Set flag for UI sync instead of using timing
+    values$ui_sync_needed <- list(
+      x_col = x_col,
+      taeller_col = taeller_col,
+      naevner_col = naevner_col,
+      skift_col = skift_col,
+      frys_col = frys_col,
+      kommentar_col = kommentar_col,
+      col_choices = col_choices,
+      timestamp = Sys.time()
+    )
   })
 }
 

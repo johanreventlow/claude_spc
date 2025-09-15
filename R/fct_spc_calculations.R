@@ -888,7 +888,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               labels = format_config$labels, # Smart scales::label_date_short()
               breaks = scales::date_breaks(format_config$breaks)
             )
-            cat("DEBUG: Completed smart monthly labels for Date objects\n")
           } else if (!is.null(format_config$breaks)) {
             plot <- plot + ggplot2::scale_x_date(
               name = x_unit_label,
@@ -910,7 +909,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           )
         }
       }
-      cat("DEBUG: Completed x-axis scaling configuration\n")
 
       # Add phase separation lines if parts exist
       if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
@@ -927,7 +925,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           }
         }
       }
-      cat("DEBUG: Completed phase separation lines\n")
 
       # Add target line if provided
       if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
@@ -938,7 +935,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             alpha = 0.8
           )
       }
-      cat("DEBUG: Completed target line\n")
 
       # Add comment labels with ggrepel if comments exist
       if (!is.null(comment_data) && nrow(comment_data) > 0) {
@@ -962,9 +958,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             inherit.aes = FALSE
           )
       }
-      cat("DEBUG: Completed comment labels\n")
 
-      cat("DEBUG: About to return plot and qic_data\n")
       return(list(plot = plot, qic_data = qic_data))
     },
     error = function(e) {

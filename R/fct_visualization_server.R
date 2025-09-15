@@ -10,8 +10,6 @@
 setup_visualization <- function(input, output, session, values) {
   # Data til visualiserings modul
   active_data <- reactive({
-    cat("DEBUG: active_data reactive triggered\n")
-    cat("DEBUG: values$current_data is null:", is.null(values$current_data), "\n")
     req(values$current_data)
 
     data <- values$current_data
@@ -46,10 +44,6 @@ setup_visualization <- function(input, output, session, values) {
   last_valid_config <- reactiveVal(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run"))
 
   column_config <- reactive({
-    cat("DEBUG: column_config reactive - input values:\n")
-    cat("  x_column:", if(!is.null(input$x_column)) input$x_column else "NULL", "\n")
-    cat("  y_column:", if(!is.null(input$y_column)) input$y_column else "NULL", "\n")
-    cat("  n_column:", if(!is.null(input$n_column)) input$n_column else "NULL", "\n")
 
     x_col <- if (!is.null(input$x_column) && input$x_column != "") input$x_column else NULL
     y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL

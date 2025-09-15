@@ -62,12 +62,9 @@ app_server <- function(input, output, session) {
           values$auto_detect_done <- FALSE # Will trigger auto-detect
           values$initial_auto_detect_completed <- FALSE # Reset for new data
 
-          # Trigger auto-detect explicitly after a longer delay to ensure UI is ready
-          cat("TEST MODE: Scheduling auto-detect trigger in 0.5 seconds\n")
-          later::later(function() {
-            cat("TEST MODE: Setting auto_detect_trigger now\n")
-            values$auto_detect_trigger <- Sys.time()
-          }, delay = 0.5)
+          # Set flag for delayed auto-detect trigger (event-driven instead of timing)
+          cat("TEST MODE: Setting test_mode_auto_detect_ready flag\n")
+          values$test_mode_auto_detect_ready <- Sys.time()
           values$hide_anhoej_rules <- FALSE # Show Anhøj rules for real data
 
           # Debug output
