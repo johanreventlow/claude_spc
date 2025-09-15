@@ -120,9 +120,13 @@ app_server <- function(input, output, session) {
   setup_helper_observers(input, output, session, values, obs_manager)
 
   # TEST MODE: Set auto-detect trigger flag AFTER all observers are set up
-  if (TEST_MODE_AUTO_LOAD && !is.null(values$current_data)) {
-    cat("TEST MODE: Setting test_mode_auto_detect_ready flag after setup\n")
-    values$test_mode_auto_detect_ready <- Sys.time()
+  if (TEST_MODE_AUTO_LOAD) {
+    observe({
+      if (!is.null(values$current_data)) {
+        cat("TEST MODE: Setting test_mode_auto_detect_ready flag after setup\n")
+        values$test_mode_auto_detect_ready <- Sys.time()
+      }
+    }) %>% bindEvent(values$current_data, once = TRUE, ignoreNULL = TRUE)
   }
 
   # Initial UI Setup --------------------------------------------------------
