@@ -35,10 +35,8 @@ setup_session_management <- function(input, output, session, values, waiter_file
                 values$updating_table <- FALSE
                 values$restoring_session <- FALSE
                 values$auto_save_enabled <- TRUE
-                # Behold table_operation_in_progress længere for at forhindre auto-gem
-                later::later(function() {
-                  values$table_operation_in_progress <- FALSE
-                }, delay = 2)
+                # Set flag for delayed cleanup - handled by separate observer
+                values$table_operation_cleanup_needed <- TRUE
               },
               add = TRUE
             )

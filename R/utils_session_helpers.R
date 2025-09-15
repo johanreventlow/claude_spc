@@ -197,6 +197,24 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       ignoreInit = TRUE
     )
 
+  # Event-driven table operation cleanup - replaces later::later() anti-pattern
+  table_cleanup_trigger <- debounce(reactive({
+    if (values$table_operation_cleanup_needed) {
+      Sys.time()  # Return timestamp to trigger cleanup
+    } else {
+      NULL
+    }
+  }), millis = 2000)
+
+  observe({
+    cleanup_time <- table_cleanup_trigger()
+    req(cleanup_time)  # Only proceed if cleanup is needed
+
+    # Clear the table operation flag and reset cleanup request
+    values$table_operation_in_progress <- FALSE
+    values$table_operation_cleanup_needed <- FALSE
+  })
+
   # Register observer with manager
   if (!is.null(obs_manager)) {
     obs_manager$add(obs_settings_save, "settings_auto_save")

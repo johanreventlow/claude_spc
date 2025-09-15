@@ -24,6 +24,7 @@ initialize_reactive_values <- function() {
     auto_save_enabled = TRUE,
     last_save_time = NULL,
     restoring_session = FALSE, # Guard for session restore
-    table_version = 0 # Force table re-render counter
+    table_version = 0, # Force table re-render counter
+    table_operation_cleanup_needed = FALSE # Event-driven cleanup flag
   )
 }
