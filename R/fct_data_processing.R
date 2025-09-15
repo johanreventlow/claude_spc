@@ -379,6 +379,9 @@ auto_detect_and_update_columns <- function(input, session, values) {
 
   # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter
   # NOTE: values$original_data bevares uændret, kun values$current_data modificeres
+  # Set flag to prevent reactive loops during auto-detection data modifications
+  values$updating_table <- TRUE
+  on.exit(values$updating_table <- FALSE, add = TRUE)
 
   for (candidate_name in names(date_candidates)) {
     candidate <- date_candidates[[candidate_name]]
