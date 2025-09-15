@@ -361,7 +361,6 @@ auto_detect_and_update_columns <- function(input, session, values) {
         name, cand$score, cand$type, cand$success_rate, cand$reason
       ))
     }
-
     # Find bedste kandidat
     for (name in names(date_candidates)) {
       cand <- date_candidates[[name]]
@@ -377,68 +376,73 @@ auto_detect_and_update_columns <- function(input, session, values) {
     x_col <- col_names[1]
   }
 
-  # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter
+  # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter (med reaktiv loop beskyttelse)
   # NOTE: values$original_data bevares uændret, kun values$current_data modificeres
-  # Set flag to prevent reactive loops during auto-detection data modifications
-  values$updating_table <- TRUE
-  on.exit(values$updating_table <- FALSE, add = TRUE)
 
-  for (candidate_name in names(date_candidates)) {
-    candidate <- date_candidates[[candidate_name]]
+  # Sikker dato-konvertering uden at trigger reaktive loops
+  tryCatch({
+    # Temporarily disable reactive observers during data modification
+    isolate({
+      for (candidate_name in names(date_candidates)) {
+        candidate <- date_candidates[[candidate_name]]
 
-    # Konverter character kolonner der blev detekteret som datoer
-    if (candidate$type %in% c("danish_date", "guessed_date") && candidate$success_rate >= 0.7) {
-      col_data <- values$current_data[[candidate_name]] # FIX: Brug values$current_data
+        # Konverter character kolonner der blev detekteret som datoer
+        if (candidate$type %in% c("danish_date", "guessed_date") && candidate$success_rate >= 0.7) {
+          col_data <- values$current_data[[candidate_name]]
 
-      if (is.character(col_data) || is.factor(col_data)) {
-        # Brug safe date parsing til konvertering
-        converted_dates <- safe_operation(
-          operation_name = paste("konvertering af", candidate_name, "til", candidate$type),
-          code = {
-            if (candidate$type == "danish_date") {
-              # Brug safe_date_parse for danske formater
-              result <- safe_date_parse(col_data,
-                locale = "da_DK.UTF-8",
-                operation_name = paste("dansk konvertering for", candidate_name)
-              )
-              as.POSIXct(result$data)
-            } else if (candidate$type == "guessed_date") {
-              # Brug parse_date_time for andre formater
-              char_data <- as.character(col_data)
-              test_sample <- char_data[!is.na(char_data)][1:min(3, length(char_data[!is.na(char_data)]))]
+          if (is.character(col_data) || is.factor(col_data)) {
 
-              guessed_formats <- suppressWarnings(
-                lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
-              )
-
-              if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
-                valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
-                if (length(valid_formats) > 0) {
-                  result <- suppressWarnings(
-                    lubridate::parse_date_time(col_data, orders = valid_formats, quiet = TRUE)
+            # Perform safe date conversion
+            converted_dates <- safe_operation(
+              operation_name = paste("konvertering af", candidate_name, "til", candidate$type),
+              code = {
+                if (candidate$type == "danish_date") {
+                  # Use safe_date_parse for Danish formats
+                  result <- safe_date_parse(col_data,
+                    locale = "da_DK.UTF-8",
+                    operation_name = paste("dansk konvertering for", candidate_name)
                   )
-                  # Returner som POSIXct for konsistens med qicharts2
-                  result
+                  as.POSIXct(result$data)
+                } else if (candidate$type == "guessed_date") {
+                  # Use parse_date_time for other formats
+                  char_data <- as.character(col_data)
+                  test_sample <- char_data[!is.na(char_data)][1:min(3, length(char_data[!is.na(char_data)]))]
+
+                  guessed_formats <- suppressWarnings(
+                    lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
+                  )
+
+                  if (!is.null(guessed_formats) && length(guessed_formats) > 0) {
+                    valid_formats <- guessed_formats[!grepl("^n$|Unknown", guessed_formats)]
+                    if (length(valid_formats) > 0) {
+                      result <- suppressWarnings(
+                        lubridate::parse_date_time(col_data, orders = valid_formats, quiet = TRUE)
+                      )
+                      result
+                    } else {
+                      NULL
+                    }
+                  } else {
+                    NULL
+                  }
                 } else {
                   NULL
                 }
-              } else {
-                NULL
-              }
-            } else {
-              NULL
-            }
-          },
-          fallback = NULL
-        )
+              },
+              fallback = NULL
+            )
 
-        # Opdater data hvis konvertering var succesrig
-        if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
-          values$current_data[[candidate_name]] <- converted_dates
+            # Apply conversion if successful (inside isolate to prevent reactive triggers)
+            if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
+              values$current_data[[candidate_name]] <- converted_dates
+            }
+          }
         }
       }
-    }
-  }
+    })
+  }, error = function(e) {
+    log_error(paste("POST-PROCESSING fejlede:", e$message), level = "warning")
+  })
 
   # Detekter numeriske kolonner
   numeric_cols <- character(0)
@@ -598,6 +602,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
       timestamp = Sys.time()
     )
   })
+
 }
 
 # MODAL FUNKTIONER ============================================================
