@@ -167,14 +167,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Reaktiv konfiguration for chart setup
     # Håndterer kolonne-validering og auto-detection
     chart_config <- reactive({
+      # Proper req() guards - stop execution if dependencies not ready
+      req(data_reactive())
+      req(column_config_reactive())
+
       data <- data_reactive()
       config <- column_config_reactive()
-      chart_type <- if (is.null(chart_type_reactive())) "run" else chart_type_reactive()
-
-
-      if (is.null(data) || is.null(config)) {
-        return(NULL)
-      }
+      chart_type <- chart_type_reactive() %||% "run"  # Use %||% for cleaner fallback
 
       # Valider at kolonner eksisterer i data - hvis ikke, fallback til NULL
       if (!is.null(config$x_col) && !(config$x_col %in% names(data))) {
@@ -209,19 +208,16 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Hovedfunktion for SPC plot generering
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- reactive({
+      # Proper req() guards - rely on chart_config() validation
+      req(chart_config())  # This already validates data_reactive() and column_config_reactive()
+
       data <- data_reactive()
       config <- chart_config()
 
-
-      values$is_computing <- FALSE
-
-      # Reset Anhøj resultater når der ikke er data eller ugyldig config
-      if (is.null(data) || is.null(config)) {
-        values$plot_ready <- FALSE
-        values$plot_warnings <- character(0)
-        values$anhoej_results <- NULL
-        return(NULL)
-      }
+      # Clean state management - only set computing when actually needed
+      values$plot_ready <- FALSE
+      values$plot_warnings <- character(0)
+      values$anhoej_results <- NULL
 
       waiter_plot$show()
 
@@ -234,9 +230,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
 
       values$is_computing <- TRUE
-      values$plot_ready <- FALSE
 
-      chart_type <- if (is.null(chart_type_reactive())) "run" else chart_type_reactive()
+      # Get chart type from config (already validated)
+      chart_type <- config$chart_type
 
       # Valider data
       validation <- validateDataForChart(data, config, chart_type)
@@ -346,6 +342,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Unified output der håndterer både beskeder og plots
     # Smart besked logik baseret på app tilstand
     output$plot_or_message <- renderUI({
+      # Safe data access - don't use req() here as we need to handle NULL states
       data <- data_reactive()
       config <- chart_config()
 
@@ -408,12 +405,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Separat renderPlot for det faktiske SPC plot
     output$spc_plot_actual <- renderPlot(
       {
+        # Use req() for clean dependency management
+        req(values$plot_ready)
         plot <- spc_plot()
-        if (inherits(plot, "ggplot")) {
-          return(plot)
-        } else {
-          return(NULL)
-        }
+        req(inherits(plot, "ggplot"))
+
+        return(plot)
       },
       res = 96
     )
@@ -428,20 +425,26 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
 
     ## Plot Information
-    # Plot info og advarsler - ALTID VIS
+    # Plot info og advarsler - event-driven med reactive isolation
     output$plot_info <- renderUI({
-      data <- data_reactive()
+      # Use reactive values for event-driven updates
+      warnings <- values$plot_warnings
+      plot_ready <- values$plot_ready
 
-      if (length(values$plot_warnings) > 0) {
+      if (length(warnings) > 0) {
         div(
           class = "alert alert-warning",
           icon("exclamation-triangle"),
           strong(" Graf-advarsler:"),
           tags$ul(
-            lapply(values$plot_warnings, function(warn) tags$li(warn))
+            lapply(warnings, function(warn) tags$li(warn))
           )
         )
-      } else if (values$plot_ready && !is.null(data_reactive())) {
+      } else if (plot_ready) {
+        # Only access external reactives when needed, with isolation
+        data <- isolate(data_reactive())
+        chart_type <- isolate(chart_type_reactive()) %||% "ukendt"
+
         div(
           class = "alert alert-success",
           style = "font-size: 0.9rem;",
@@ -449,8 +452,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           strong(" Graf genereret succesfuldt! "),
           sprintf(
             "Chart type: %s | Datapunkter: %d",
-            chart_type_reactive() %||% "ukendt",
-            nrow(data_reactive())
+            chart_type,
+            nrow(data)
           )
         )
       }
@@ -459,20 +462,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Value Boxes -------------------------------------------------------------
 
     ## Data Status Box
-    # Data oversigt value box - mere SPC-relevant - ALTID SYNLIG
+    # Data oversigt value box - event-driven med isolation
     output$plot_status_boxes <- renderUI({
-      data <- data_reactive()
+      # Event-driven approach - react to plot_ready changes
+      plot_ready <- values$plot_ready
 
-      if (values$plot_ready && !is.null(data)) {
-        config <- chart_config()
+      if (plot_ready) {
+        # Only access external reactives when needed, with isolation
+        data <- isolate(data_reactive())
+        config <- isolate(chart_config())
+        chart_type <- isolate(chart_type_reactive()) %||% "run"
+
         data_count <- nrow(data)
-        chart_name <- switch(chart_type_reactive() %||% "run",
+        chart_name <- switch(chart_type,
           "run" = "Run Chart",
           "p" = "P-kort",
           "u" = "U-kort",
           "i" = "I-kort",
           "mr" = "MR-kort",
-          chart_type_reactive() %||% "Ukendt"
+          "Ukendt"
         )
 
         value_box(
