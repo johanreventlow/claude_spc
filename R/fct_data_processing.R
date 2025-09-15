@@ -90,38 +90,52 @@ setup_column_management <- function(input, output, session, values) {
     ignoreInit = TRUE
   )
 
-  # Event-driven UI sync observer (replaces later::later timing)
+  # Reaktiv UI sync observer for auto-detect kolonnematch
   observeEvent(values$ui_sync_needed,
     {
       req(values$ui_sync_needed)
 
       sync_data <- values$ui_sync_needed
 
-      # Re-trigger UI updates with choices parameter for visual sync
-      if (!is.null(sync_data$x_col)) {
-        updateSelectizeInput(session, "x_column", choices = sync_data$col_choices, selected = sync_data$x_col)
-      }
-      if (!is.null(sync_data$taeller_col)) {
-        updateSelectizeInput(session, "y_column", choices = sync_data$col_choices, selected = sync_data$taeller_col)
-      }
-      if (!is.null(sync_data$naevner_col)) {
-        updateSelectizeInput(session, "n_column", choices = sync_data$col_choices, selected = sync_data$naevner_col)
-      }
-      if (!is.null(sync_data$skift_col)) {
-        updateSelectizeInput(session, "skift_column", choices = sync_data$col_choices, selected = sync_data$skift_col)
-      }
-      if (!is.null(sync_data$frys_col)) {
-        updateSelectizeInput(session, "frys_column", choices = sync_data$col_choices, selected = sync_data$frys_col)
-      }
-      if (!is.null(sync_data$kommentar_col)) {
-        updateSelectizeInput(session, "kommentar_column", choices = sync_data$col_choices, selected = sync_data$kommentar_col)
+      cat("UI SYNC: Auto-detect triggered selectize opdateringer\n")
+
+      # Opdater alle selectize inputs med de detekterede kolonner
+      if (!is.null(sync_data$col_choices)) {
+        # X-kolonne (dato/tid)
+        updateSelectizeInput(session, "x_column",
+                           choices = sync_data$col_choices,
+                           selected = sync_data$x_col %||% "")
+
+        # Y-kolonne (tæller/værdi)
+        updateSelectizeInput(session, "y_column",
+                           choices = sync_data$col_choices,
+                           selected = sync_data$taeller_col %||% "")
+
+        # N-kolonne (nævner)
+        updateSelectizeInput(session, "n_column",
+                           choices = sync_data$col_choices,
+                           selected = sync_data$naevner_col %||% "")
+
+        # Skift kolonne
+        updateSelectizeInput(session, "skift_column",
+                           choices = sync_data$col_choices,
+                           selected = sync_data$skift_col %||% "")
+
+        # Frys kolonne
+        updateSelectizeInput(session, "frys_column",
+                           choices = sync_data$col_choices,
+                           selected = sync_data$frys_col %||% "")
+
+        # Kommentar kolonne
+        updateSelectizeInput(session, "kommentar_column",
+                           choices = sync_data$col_choices,
+                           selected = sync_data$kommentar_col %||% "")
       }
 
-
-      # Clear the sync request
+      # Ryd sync request
       values$ui_sync_needed <- NULL
     },
-    ignoreInit = TRUE, ignoreNULL = TRUE, priority = -10  # Lower priority = runs after other observers
+    ignoreInit = TRUE, ignoreNULL = TRUE
   )
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
@@ -537,43 +551,8 @@ auto_detect_and_update_columns <- function(input, session, values) {
     c("Vælg kolonne...", all_cols)
   )
 
+  # UI opdateringer håndteres nu af reaktiv observer - fjern duplikeret logik
   isolate({
-    if (!is.null(x_col) && x_col %in% col_names) {
-      updateSelectizeInput(session, "x_column", choices = col_choices, selected = x_col)
-    } else {
-      updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
-    }
-
-    if (!is.null(taeller_col) && taeller_col %in% col_names) {
-      updateSelectizeInput(session, "y_column", choices = col_choices, selected = taeller_col)
-    } else {
-      updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
-    }
-
-    if (!is.null(naevner_col) && naevner_col %in% col_names) {
-      updateSelectizeInput(session, "n_column", choices = col_choices, selected = naevner_col)
-    } else {
-      updateSelectizeInput(session, "n_column", choices = col_choices, selected = "")
-    }
-
-    if (!is.null(skift_col) && skift_col %in% col_names) {
-      updateSelectizeInput(session, "skift_column", choices = col_choices, selected = skift_col)
-    } else {
-      updateSelectizeInput(session, "skift_column", choices = col_choices, selected = "")
-    }
-
-    if (!is.null(frys_col) && frys_col %in% col_names) {
-      updateSelectizeInput(session, "frys_column", choices = col_choices, selected = frys_col)
-    } else {
-      updateSelectizeInput(session, "frys_column", choices = col_choices, selected = "")
-    }
-
-    if (!is.null(kommentar_col) && kommentar_col %in% col_names) {
-      updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = kommentar_col)
-    } else {
-      updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = "")
-    }
-
     detected_msg <- paste0(
       "Auto-detekteret og opdateret dropdowns: ",
       "X=", if (is.null(x_col)) "ingen" else x_col, ", ",
@@ -600,6 +579,24 @@ auto_detect_and_update_columns <- function(input, session, values) {
       frys_col = frys_col,
       kommentar_col = kommentar_col,
       timestamp = Sys.time()  # Force reactivity even if values are same
+    )
+
+    # Trigger UI sync for visual feedback on Kolonnematch tab using reactive trigger
+    cat("AUTO-DETECT DEBUG: Setting ui_sync_needed with:\n")
+    cat("  x_col:", x_col %||% "NULL", "\n")
+    cat("  taeller_col:", taeller_col %||% "NULL", "\n")
+    cat("  naevner_col:", naevner_col %||% "NULL", "\n")
+
+    # Use reactive trigger with timestamp to force reactivity
+    values$ui_sync_needed <- list(
+      x_col = x_col,
+      taeller_col = taeller_col,
+      naevner_col = naevner_col,
+      skift_col = skift_col,
+      frys_col = frys_col,
+      kommentar_col = kommentar_col,
+      col_choices = col_choices,
+      timestamp = as.numeric(Sys.time())  # Force reactivity trigger
     )
   })
 
