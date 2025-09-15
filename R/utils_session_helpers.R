@@ -112,78 +112,69 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   })
 
 
-  # Debounced auto-gem for at undgå hyppige I/O operationer
-  auto_save_timer <- reactiveVal(NULL)
+  # Reaktiv debounced auto-save - følger Shiny best practices
+  auto_save_trigger <- debounce(reactive({
+    # Guards for at forhindre auto-gem under tabel operationer
+    if (!values$auto_save_enabled ||
+      values$updating_table ||
+      values$table_operation_in_progress ||
+      values$restoring_session) {
+      return(NULL)
+    }
 
-  obs_data_save <- observeEvent(values$current_data,
-    {
-      # Starkere guards for at forhindre auto-gem under tabel operationer
-      if (!values$auto_save_enabled ||
-        values$updating_table ||
-        values$table_operation_in_progress ||
-        values$restoring_session) {
-        return()
-      }
+    if (!is.null(values$current_data) &&
+      nrow(values$current_data) > 0 &&
+      any(!is.na(values$current_data))) {
+      list(
+        data = values$current_data,
+        metadata = collect_metadata(input),
+        timestamp = Sys.time()
+      )
+    } else {
+      NULL
+    }
+  }), millis = 2000)
 
-      if (!is.null(values$current_data) &&
-        nrow(values$current_data) > 0 &&
-        any(!is.na(values$current_data))) {
-        # Cancel existing timer
-        if (!is.null(auto_save_timer())) {
-          later::later_cancel(auto_save_timer())
-        }
+  obs_data_save <- observe({
+    save_data <- auto_save_trigger()
+    req(save_data)  # Only proceed if we have valid save data
 
-        # Capture current data and metadata for async callback
-        current_data_snapshot <- values$current_data
-        metadata_snapshot <- collect_metadata(input)
-
-        # Set new debounced timer (2 second delay)
-        timer_id <- later::later(function() {
-          autoSaveAppState(session, current_data_snapshot, metadata_snapshot)
-          isolate(values$last_save_time <- Sys.time())
-          auto_save_timer(NULL)
-        }, delay = 2)
-
-        auto_save_timer(timer_id)
-      }
-    },
-    ignoreInit = TRUE
-  )
+    autoSaveAppState(session, save_data$data, save_data$metadata)
+    values$last_save_time <- save_data$timestamp
+  })
 
   # Register observer with manager
   if (!is.null(obs_manager)) {
     obs_manager$add(obs_data_save, "data_auto_save")
   }
 
-  # Debounced auto-gem for settings ændringer
-  settings_save_timer <- reactiveVal(NULL)
-
-  obs_settings_save <- observe({
-    # Samme starkere guards som data auto-gem
+  # Reaktiv debounced settings save - følger Shiny best practices
+  settings_save_trigger <- debounce(reactive({
+    # Samme guards som data auto-gem
     if (!values$auto_save_enabled ||
       values$updating_table ||
       values$table_operation_in_progress ||
       values$restoring_session) {
-      return()
+      return(NULL)
     }
 
     if (!is.null(values$current_data)) {
-      # Note: later package no longer supports timer cancellation in version 1.4+
-      # We rely on simple debouncing with overwrite protection instead
-
-      # Capture current data and metadata for async callback
-      current_data_snapshot <- values$current_data
-      metadata_snapshot <- collect_metadata(input)
-
-      # Set new debounced timer (1 second delay for settings)
-      timer_id <- later::later(function() {
-        autoSaveAppState(session, current_data_snapshot, metadata_snapshot)
-        isolate(values$last_save_time <- Sys.time())
-        settings_save_timer(NULL)
-      }, delay = 1)
-
-      settings_save_timer(timer_id)
+      list(
+        data = values$current_data,
+        metadata = collect_metadata(input),
+        timestamp = Sys.time()
+      )
+    } else {
+      NULL
     }
+  }), millis = 1000)  # Faster debounce for settings
+
+  obs_settings_save <- observe({
+    save_data <- settings_save_trigger()
+    req(save_data)  # Only proceed if we have valid save data
+
+    autoSaveAppState(session, save_data$data, save_data$metadata)
+    values$last_save_time <- save_data$timestamp
   }) %>%
     bindEvent(
       {
