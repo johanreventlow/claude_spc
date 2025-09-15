@@ -43,26 +43,47 @@ setup_visualization <- function(input, output, session, values) {
   # Store last valid config to avoid NULL during input updates
   last_valid_config <- reactiveVal(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run"))
 
-  column_config <- reactive({
+  # Separate reactives for auto-detected and manual column selection
+  auto_detected_config <- reactive({
+    req(values$auto_detected_columns)
+    list(
+      x_col = values$auto_detected_columns$x_col,
+      y_col = values$auto_detected_columns$y_col,
+      n_col = values$auto_detected_columns$n_col,
+      chart_type = get_qic_chart_type(if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
+    )
+  })
 
+  manual_config <- reactive({
     x_col <- if (!is.null(input$x_column) && input$x_column != "") input$x_column else NULL
     y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL
     n_col <- if (!is.null(input$n_column) && input$n_column != "") input$n_column else NULL
 
-    config_result <- list(
+    list(
       x_col = x_col,
       y_col = y_col,
       n_col = n_col,
       chart_type = get_qic_chart_type(if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
     )
+  })
 
-    # If we have a valid y_col, store this config as the last valid one
-    if (!is.null(config_result$y_col)) {
-      last_valid_config(config_result)
-      return(config_result)
-    } else {
-      # Return last valid config to avoid breaking the plot during input updates
-      return(last_valid_config())
+  # Clear column config selection - prioritize auto-detection when available
+  column_config <- reactive({
+    # Use auto-detected config if available and has valid y_col
+    auto_config <- auto_detected_config()
+    if (!is.null(auto_config) && !is.null(auto_config$y_col)) {
+      return(auto_config)
+    }
+
+    # Fall back to manual config
+    manual_config()
+  })
+
+  # Observer to update last_valid_config (side effects outside reactives)
+  observe({
+    config <- column_config()
+    if (!is.null(config$y_col)) {
+      last_valid_config(config)
     }
   })
 

@@ -590,16 +590,16 @@ auto_detect_and_update_columns <- function(input, session, values) {
       duration = 4
     )
 
-    # Set flag for UI sync instead of using timing
-    values$ui_sync_needed <- list(
+    # SOLUTION: Use reactive values to force column config updates bypassing input propagation delay
+    # This ensures visualization gets the correct column selections immediately
+    values$auto_detected_columns <- list(
       x_col = x_col,
-      taeller_col = taeller_col,
-      naevner_col = naevner_col,
+      y_col = taeller_col,
+      n_col = naevner_col,
       skift_col = skift_col,
       frys_col = frys_col,
       kommentar_col = kommentar_col,
-      col_choices = col_choices,
-      timestamp = Sys.time()
+      timestamp = Sys.time()  # Force reactivity even if values are same
     )
   })
 
