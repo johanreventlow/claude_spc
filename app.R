@@ -10,4 +10,4 @@ source("global.R")
 source("R/run_app.R")
 
 # Run the application using Golem pattern
-run_app()
+run_app(launch_browser = TRUE)
