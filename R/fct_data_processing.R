@@ -8,6 +8,7 @@
 ## Hovedfunktion for kolonnehåndtering
 # Opsætter al server logik relateret til kolonne-management
 setup_column_management <- function(input, output, session, values) {
+  cat("DEBUG: setup_column_management() called\n")
   # Opdater kolonnevalg når data ændres
   observe({
     if (values$updating_table) {
@@ -40,23 +41,28 @@ setup_column_management <- function(input, output, session, values) {
         current_frys <- input$frys_column
         current_kommentar <- input$kommentar_column
 
-        updateSelectInput(session, "x_column", choices = col_choices, selected = current_x)
-        updateSelectInput(session, "y_column", choices = col_choices, selected = current_y)
-        updateSelectInput(session, "n_column", choices = col_choices, selected = current_n)
-        updateSelectInput(session, "skift_column", choices = col_choices, selected = current_skift)
-        updateSelectInput(session, "frys_column", choices = col_choices, selected = current_frys)
-        updateSelectInput(session, "kommentar_column", choices = col_choices, selected = current_kommentar)
+        updateSelectizeInput(session, "x_column", choices = col_choices, selected = current_x)
+        updateSelectizeInput(session, "y_column", choices = col_choices, selected = current_y)
+        updateSelectizeInput(session, "n_column", choices = col_choices, selected = current_n)
+        updateSelectizeInput(session, "skift_column", choices = col_choices, selected = current_skift)
+        updateSelectizeInput(session, "frys_column", choices = col_choices, selected = current_frys)
+        updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = current_kommentar)
       })
     }
   })
 
-  # Auto-detekterings trigger flag - kun hvis initial auto-detect ikke er færdig
+  # Auto-detekterings trigger flag - bruges kun til manuel triggering (ikke test mode)
   observeEvent(values$current_data,
     {
+      # Skip automatisk auto-detect hvis vi allerede har været igennem det i test mode
+      if (values$initial_auto_detect_completed %||% FALSE) {
+        return()
+      }
+
       if (!is.null(values$current_data) &&
-        !values$initial_auto_detect_completed &&
         (is.null(input$x_column) || input$x_column == "") &&
         (is.null(input$y_column) || input$y_column == "")) {
+        cat("DEBUG: Triggering auto-detect from data change\n")
         values$auto_detect_trigger <- Sys.time() # Brug timestamp for at sikre reaktivitet
       }
     },
@@ -66,6 +72,7 @@ setup_column_management <- function(input, output, session, values) {
   # Forsinket auto-detekterings udførelse
   observeEvent(values$auto_detect_trigger,
     {
+      cat("DEBUG: Auto-detect trigger fired!\n")
       values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
       auto_detect_and_update_columns(input, session, values)
       values$initial_auto_detect_completed <- TRUE # Marker som færdig efter første kørsel
@@ -180,10 +187,12 @@ setup_column_management <- function(input, output, session, values) {
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
 auto_detect_and_update_columns <- function(input, session, values) {
+  cat("DEBUG: auto_detect_and_update_columns() called\n")
   req(values$current_data)
 
   data <- values$current_data
   col_names <- names(data)
+  cat("DEBUG: Processing", nrow(data), "rows with columns:", paste(col_names, collapse = ", "), "\n")
 
   # Forbedret detektering af potentielle dato-kolonner
   # Evaluer ALLE kolonner og find den bedste dato-kandidat
@@ -488,39 +497,39 @@ auto_detect_and_update_columns <- function(input, session, values) {
 
   isolate({
     if (!is.null(x_col) && x_col %in% col_names) {
-      updateSelectInput(session, "x_column", choices = col_choices, selected = x_col)
+      updateSelectizeInput(session, "x_column", choices = col_choices, selected = x_col)
     } else {
-      updateSelectInput(session, "x_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
     }
 
     if (!is.null(taeller_col) && taeller_col %in% col_names) {
-      updateSelectInput(session, "y_column", choices = col_choices, selected = taeller_col)
+      updateSelectizeInput(session, "y_column", choices = col_choices, selected = taeller_col)
     } else {
-      updateSelectInput(session, "y_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
     }
 
     if (!is.null(naevner_col) && naevner_col %in% col_names) {
-      updateSelectInput(session, "n_column", choices = col_choices, selected = naevner_col)
+      updateSelectizeInput(session, "n_column", choices = col_choices, selected = naevner_col)
     } else {
-      updateSelectInput(session, "n_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "n_column", choices = col_choices, selected = "")
     }
 
     if (!is.null(skift_col) && skift_col %in% col_names) {
-      updateSelectInput(session, "skift_column", choices = col_choices, selected = skift_col)
+      updateSelectizeInput(session, "skift_column", choices = col_choices, selected = skift_col)
     } else {
-      updateSelectInput(session, "skift_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "skift_column", choices = col_choices, selected = "")
     }
 
     if (!is.null(frys_col) && frys_col %in% col_names) {
-      updateSelectInput(session, "frys_column", choices = col_choices, selected = frys_col)
+      updateSelectizeInput(session, "frys_column", choices = col_choices, selected = frys_col)
     } else {
-      updateSelectInput(session, "frys_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "frys_column", choices = col_choices, selected = "")
     }
 
     if (!is.null(kommentar_col) && kommentar_col %in% col_names) {
-      updateSelectInput(session, "kommentar_column", choices = col_choices, selected = kommentar_col)
+      updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = kommentar_col)
     } else {
-      updateSelectInput(session, "kommentar_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = "")
     }
 
     detected_msg <- paste0(
@@ -533,11 +542,37 @@ auto_detect_and_update_columns <- function(input, session, values) {
       if (!is.null(kommentar_col)) paste0(", Kommentar=", kommentar_col) else ", Kommentar=ingen"
     )
 
+    cat("DEBUG: Sending notification:", detected_msg, "\n")
     showNotification(
       detected_msg,
       type = "message",
       duration = 4
     )
+    cat("DEBUG: updateSelectizeInput calls completed\n")
+
+    # Forsinket re-trigger af UI opdateringer for at sikre visuel sync
+    # Inkludér choices parameter for at force UI opdatering
+    later::later(function() {
+      if (!is.null(x_col)) {
+        updateSelectizeInput(session, "x_column", choices = col_choices, selected = x_col)
+      }
+      if (!is.null(taeller_col)) {
+        updateSelectizeInput(session, "y_column", choices = col_choices, selected = taeller_col)
+      }
+      if (!is.null(naevner_col)) {
+        updateSelectizeInput(session, "n_column", choices = col_choices, selected = naevner_col)
+      }
+      if (!is.null(skift_col)) {
+        updateSelectizeInput(session, "skift_column", choices = col_choices, selected = skift_col)
+      }
+      if (!is.null(frys_col)) {
+        updateSelectizeInput(session, "frys_column", choices = col_choices, selected = frys_col)
+      }
+      if (!is.null(kommentar_col)) {
+        updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = kommentar_col)
+      }
+      cat("DEBUG: Delayed UI sync with choices parameter completed (all fields)\n")
+    }, delay = 0.3)
   })
 }
 

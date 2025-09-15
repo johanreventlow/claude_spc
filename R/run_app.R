@@ -4,11 +4,11 @@
 #' Run the SPC Shiny Application
 #' 
 #' @param port Port number for the application (default: 3838)
-#' @param launch_browser Whether to launch browser (default: TRUE)
+#' @param launch_browser TRUE for browser, FALSE for no launch, or leave default for RStudio Viewer
 #' @param ... Additional arguments to pass to shinyApp()
 #'
 #' @export
-run_app <- function(port = 3838, launch_browser = TRUE, ...) {
+run_app <- function(port = 3838, launch_browser = NULL, ...) {
   # Ensure global configuration is loaded
   if (!exists("HOSPITAL_NAME", envir = .GlobalEnv)) {
     source("global.R", local = FALSE)
@@ -26,12 +26,24 @@ run_app <- function(port = 3838, launch_browser = TRUE, ...) {
     server = app_server,
     ...
   )
-  
+
+  # Determine launch behavior
+  browser_option <- if (is.null(launch_browser)) {
+    # Default: RStudio window if available, otherwise browser
+    if (rstudioapi::isAvailable()) {
+      .rs.invokeShinyWindowViewer
+    } else {
+      TRUE
+    }
+  } else {
+    launch_browser
+  }
+
   # Run the app
   runApp(
     app,
     port = port,
-    launch.browser = launch_browser
+    launch.browser = browser_option
   )
 }
 
@@ -44,7 +56,7 @@ app_ui <- function() {
   page_navbar(
     title = tagList(
       img(
-        src = "www/hospital_logo.png",
+        src = HOSPITAL_LOGO_PATH,
         height = "40px",
         style = "margin-right: 10px;",
         onerror = "this.style.display='none'"

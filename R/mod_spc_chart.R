@@ -167,11 +167,21 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Reaktiv konfiguration for chart setup
     # Håndterer kolonne-validering og auto-detection
     chart_config <- reactive({
+      cat("DEBUG: chart_config reactive triggered\n")
       data <- data_reactive()
       config <- column_config_reactive()
       chart_type <- if (is.null(chart_type_reactive())) "run" else chart_type_reactive()
 
+      cat("DEBUG: chart_config - data null:", is.null(data), "\n")
+      cat("DEBUG: chart_config - config null:", is.null(config), "\n")
+      if (!is.null(config)) {
+        cat("DEBUG: chart_config - y_col:", config$y_col, "\n")
+        cat("DEBUG: chart_config - x_col:", config$x_col, "\n")
+        cat("DEBUG: chart_config - n_col:", config$n_col, "\n")
+      }
+
       if (is.null(data) || is.null(config)) {
+        cat("DEBUG: chart_config returning NULL - data or config is null\n")
         return(NULL)
       }
 
@@ -191,6 +201,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       # Hvis stadig ingen y_col (påkrævet for plotting), returner NULL config
       if (is.null(config$y_col)) {
+        cat("DEBUG: chart_config returning NULL - y_col is null\n")
         return(NULL)
       }
 
@@ -208,8 +219,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Hovedfunktion for SPC plot generering
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- reactive({
+      cat("DEBUG: spc_plot reactive triggered\n")
       data <- data_reactive()
       config <- chart_config()
+
+      cat("DEBUG: data is null:", is.null(data), "\n")
+      cat("DEBUG: config is null:", is.null(config), "\n")
+      if (!is.null(data)) cat("DEBUG: data dimensions:", nrow(data), "x", ncol(data), "\n")
 
       values$is_computing <- FALSE
 
