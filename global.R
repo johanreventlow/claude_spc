@@ -351,28 +351,11 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
 
 # REACTIVE PERFORMANCE HJÆLPEFUNKTIONER =============================
 
-## Debounced reactive for expensive operationer
+## Debounced reactive for expensive operationer - bruger Shiny native debounce
 create_debounced_reactive <- function(reactive_expr, millis = 1000) {
-  # Implementer debouncing ved at bruge later::later
-  debounce_timer <- reactiveVal(NULL)
-  result <- reactiveVal()
-
-  observe({
-    # Cancel existing timer
-    if (!is.null(debounce_timer())) {
-      later::later_cancel(debounce_timer())
-    }
-
-    # Set new timer
-    timer_id <- later::later(function() {
-      result(reactive_expr())
-      debounce_timer(NULL)
-    }, delay = millis / 1000)
-
-    debounce_timer(timer_id)
-  })
-
-  return(result)
+  # Brug Shiny's built-in debounce() som følger best practices
+  # Dette eliminerer behovet for manual timer management
+  return(debounce(reactive_expr, millis = millis))
 }
 
 ## Session cleanup manager
