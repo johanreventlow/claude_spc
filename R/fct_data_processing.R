@@ -791,10 +791,8 @@ setup_data_table <- function(input, output, session, values) {
         add = TRUE
       )
 
-      # Clear persistent flag after delay
-      later::later(function() {
-        values$table_operation_in_progress <- FALSE
-      }, delay = 2)
+      # Trigger event-driven cleanup instead of timing-based
+      values$table_operation_cleanup_needed <- TRUE
 
       tryCatch(
         {
@@ -902,10 +900,8 @@ setup_data_table <- function(input, output, session, values) {
 
     showNotification("Ny række tilføjet", type = "message")
 
-    # Ryd vedvarende flag efter forsinkelse
-    later::later(function() {
-      values$table_operation_in_progress <- FALSE
-    }, delay = 1)
+    # Trigger event-driven cleanup instead of timing-based
+    values$table_operation_cleanup_needed <- TRUE
   })
 
   # Nulstil tabel
