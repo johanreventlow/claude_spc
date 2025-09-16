@@ -485,7 +485,8 @@ create_app_state <- function() {
     session = list(
       auto_save_enabled = TRUE,
       restoring_session = FALSE,
-      file_uploaded = FALSE
+      file_uploaded = FALSE,
+      user_started_session = FALSE
     )
   )
 }

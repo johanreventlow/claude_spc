@@ -349,7 +349,11 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   if (use_centralized_state) {
     app_state$session$file_uploaded <- FALSE
   }
+  # PHASE 4: Sync to both old and new state management
   values$user_started_session <- TRUE # NEW: Set flag that user has started
+  if (use_centralized_state) {
+    app_state$session$user_started_session <- TRUE
+  }
   values$original_data <- NULL
   values$auto_detect_done <- FALSE
   values$initial_auto_detect_completed <- FALSE # Reset for new session

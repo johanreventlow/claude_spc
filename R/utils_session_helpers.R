@@ -56,7 +56,14 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
         values$file_uploaded
       }
 
-      user_has_started <- file_uploaded_check || values$user_started_session %||% FALSE
+      # PHASE 4: Check both old and new state management for user_started_session
+      user_started_session_check <- if (use_centralized_state) {
+        app_state$session$user_started_session
+      } else {
+        values$user_started_session
+      }
+
+      user_has_started <- file_uploaded_check || user_started_session_check %||% FALSE
 
       if (meaningful_data || user_has_started) "TRUE" else "FALSE"
     }

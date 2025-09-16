@@ -79,7 +79,9 @@ app_server <- function(input, output, session) {
           # PHASE 4: Sync to both old and new state management
           values$file_uploaded <- TRUE
           app_state$session$file_uploaded <- TRUE
+          # PHASE 4: Sync to both old and new state management
           values$user_started_session <- TRUE # Ensure dataLoaded triggers correctly
+          app_state$session$user_started_session <- TRUE
           values$auto_detect_done <- FALSE # Will trigger auto-detect
           values$initial_auto_detect_completed <- FALSE # Reset for new data
 
