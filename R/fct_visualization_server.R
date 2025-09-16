@@ -14,10 +14,18 @@ setup_visualization <- function(input, output, session, values) {
   # Data til visualiserings modul
   active_data <- reactive({
     cat("DEBUG: [PLOT_DATA] Active data reactive triggered\n")
-    req(values$current_data)
+
+    # Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+
+    req(current_data_check)
     cat("DEBUG: [PLOT_DATA] Current data available, processing...\n")
 
-    data <- values$current_data
+    data <- current_data_check
     cat("DEBUG: [PLOT_DATA] Data dimensions:", nrow(data), "x", ncol(data), "\n")
     cat("DEBUG: [PLOT_DATA] Column names:", paste(names(data), collapse = ", "), "\n")
 
