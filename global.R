@@ -394,26 +394,7 @@ create_debounced_reactive <- function(reactive_expr, millis = 1000) {
   return(debounce(reactive_expr, millis = millis))
 }
 
-## Session cleanup manager
-setup_session_cleanup <- function(session, cleanup_functions = list()) {
-  session$onSessionEnded(function() {
-    log_info("Session cleanup startet", "CLEANUP")
-
-    # Kør alle cleanup funktioner
-    for (i in seq_along(cleanup_functions)) {
-      tryCatch(
-        {
-          cleanup_functions[[i]]()
-        },
-        error = function(e) {
-          log_error(paste("Cleanup funktion", i, "fejlede:", e$message), "CLEANUP")
-        }
-      )
-    }
-
-    log_info("Session cleanup færdig", "CLEANUP")
-  })
-}
+# NOTE: setup_session_cleanup moved to R/utils_memory_management.R for Fase 5
 
 ## Observer manager til tracking og cleanup
 observer_manager <- function() {
