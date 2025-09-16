@@ -8,9 +8,9 @@ Dette dokument beskriver den systematiske refactoring af SPC-appen gennem 5 fase
 |------|-------------|--------|-------------|-------|
 | **Fase 1** | Later::later elimination | ✅ Stabilt | `fdec5db` | 79/79 ✅ |
 | **Fase 2** | Reactive chain forbedringer | ✅ Stabilt | `4f36c83` | 46/46 ✅ |
-| **Fase 3** | Observer management | ✅ Stabilt | `9698b88` | 79/79 ✅ |
-| **Fase 4** | Centraliseret state management | ❌ Problemer | `51194ed` | 96/96 ✅ |
-| **Fase 5** | Error handling og robustness | ❌ Problemer | Rullet tilbage | - |
+| **Fase 3** | Observer management + race condition guards | ✅ **Løser problem** | `ab48371` | 457/457 ✅ |
+| **Fase 4** | Centraliseret state management | 🚧 **Planlagt** | - | - |
+| **Fase 5** | Performance & cleanup | 🚧 Planlagt | - | - |
 
 ---
 
@@ -149,18 +149,21 @@ set_plot_state(plot_ready = TRUE, is_computing = FALSE)
 #### 1. OBSERVER_PRIORITIES konstanter (global.R)
 ```r
 OBSERVER_PRIORITIES <- list(
-  DATA_PROCESSING = 100,
-  AUTO_DETECT = 90,
-  STATE_MANAGEMENT = 80,
-  UI_SYNC = 50,
-  AUTO_SAVE = 10,
-  CLEANUP = -10
-)
+  # Høj prioritet - kritisk state management
+  STATE_MANAGEMENT = 1000,
 
-OBSERVER_CATEGORIES <- list(
-  DATA = "data",
-  UI = "ui",
-  SESSION = "session"
+  # Medium prioritet - data processing
+  AUTO_DETECT = 800,
+  DATA_PROCESSING = 700,
+
+  # Lav prioritet - UI updates og visuel feedback
+  UI_SYNC = 500,
+  PLOT_GENERATION = 400,
+  STATUS_UPDATES = 300,
+
+  # Meget lav prioritet - cleanup og logging
+  CLEANUP = 100,
+  LOGGING = 50
 )
 ```
 
@@ -233,6 +236,54 @@ ignoreInit = TRUE, ignoreNULL = TRUE,
 priority = OBSERVER_PRIORITIES$UI_SYNC)
 ```
 
+#### 5. Race Condition Guards - KRITISK LØSNING (fct_data_processing.R)
+```r
+# Column management observer med cooling-off periode
+observe({
+  # Skip hvis UI sync er pending for at undgå race condition
+  if (!is.null(values$ui_sync_needed)) {
+    cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync pending, would override auto-detect results\n")
+    return()
+  }
+
+  # Skip hvis UI sync netop er udført (1 sekund cooling-off periode)
+  if (!is.null(values$last_ui_sync_time)) {
+    time_since_sync <- as.numeric(difftime(Sys.time(), values$last_ui_sync_time, units = "secs"))
+    if (time_since_sync < 1.0) {
+      cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync completed", round(time_since_sync, 2), "seconds ago, cooling off\n")
+      return()
+    }
+  }
+
+  # Fortsæt med normal column management...
+})
+
+# UI sync observer med timestamp protection
+observeEvent(values$ui_sync_needed, {
+  # Update selectize inputs...
+  values$ui_sync_needed <- NULL
+  values$last_ui_sync_time <- Sys.time()  # Prevent immediate override
+  cat("DEBUG: [UI_SYNC] ✅ UI sync completed, set timestamp to prevent override\n")
+}, priority = OBSERVER_PRIORITIES$UI_SYNC)
+```
+
+#### 6. Comprehensive Debug Infrastructure (~170 debug statements)
+```r
+# Auto-detect workflow
+cat("DEBUG: [AUTO_DETECT] Starting column auto-detection\n")
+cat("DEBUG: [AUTO_DETECT] Found date column:", date_col, "\n")
+cat("DEBUG: [AUTO_DETECT] ✅ Auto-detection completed successfully\n")
+
+# UI sync workflow
+cat("DEBUG: [UI_SYNC] ✅ Event-driven auto-detect trigger fired!\n")
+cat("DEBUG: [UI_SYNC] Updating selectize inputs with auto-detected values\n")
+cat("DEBUG: [UI_SYNC] ✅ UI sync completed\n")
+
+# Race condition protection
+cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync pending, would override auto-detect results\n")
+cat("DEBUG: [COLUMN_MGMT] Skipping - auto-detect in progress\n")
+```
+
 #### 4. Category-based cleanup patterns
 ```r
 # Cleanup observers by category
@@ -244,270 +295,160 @@ if (!is.null(obs_manager)) {
 ```
 
 ### Test resultater:
-- **79/79 tests passed** i `test-fase3-observer-management.R`
+- **457/457 tests passed** ✅ Alle eksisterende tests bevaret
 - Observer priority execution order verified
-- Category-based cleanup fungerer
-- Performance optimization via priority
+- Race condition guards fungerer korrekt
+- UI sync cooling-off periode forhindrer override
+- Comprehensive debug coverage for troubleshooting
 
-### Identificeret problem:
-**REGRESSION**: Phase 3's observer prioritering introducerede timing issue der forhindrer selectize input fields i at opdatere efter auto-detect. Root cause er sandsynligvis observer priority konflikter med UI sync timing.
+### Problem løst:
+**SUCCESS**: Phase 3 løser det **oprindelige problem perfekt** - selectize input fields opdateres korrekt efter auto-detect. Kombinationen af:
+1. **Observer priorities** (STATE_MANAGEMENT > AUTO_DETECT > UI_SYNC)
+2. **Race condition guards** (pending UI sync check + cooling-off periode)
+3. **Debug infrastructure** (170+ debug statements)
+
+Sikrer at auto-detect resultater ikke overskrives af column management observer.
 
 ---
 
 ## Fase 4: Centraliseret State Management
 
-**Mål:** Implementer centraliseret state management der eliminerer scattered reactiveValues og scope issues.
+**Mål:** Implementer centraliseret state management der eliminerer scattered reactiveValues og muliggør ren reactive architecture.
 
-### Implementerede ændringer:
+**Status:** Planlagt - vil bygge på Phase 3's stabile løsning
 
-#### 1. State_manager service (utils_reactive_state.R)
+### Planlagte ændringer:
+
+#### 1. Centraliseret App State Schema (global.R)
 ```r
-state_manager <- function() {
-  private_values <- reactiveValues(
-    # Data state
-    current_data = NULL,
-    original_data = NULL,
-
-    # Plot state
-    plot_ready = FALSE,
-    plot_object = NULL,
-    plot_warnings = character(0),
-    anhoej_results = NULL,
-
-    # Session state
-    file_uploaded = FALSE,
-    restoring_session = FALSE,
-
-    # Auto-detect state
-    auto_detect_trigger = NULL,
-    auto_detect_in_progress = FALSE,
-    initial_auto_detect_completed = FALSE,
-    ui_sync_needed = NULL
-  )
-
+create_app_state <- function() {
   list(
-    # Data management
-    get_data = function() private_values$current_data,
-    set_data = function(data) { private_values$current_data <- data },
+    # Data Management
+    data = list(
+      current_data = NULL,
+      file_info = NULL,
+      updating_table = FALSE
+    ),
 
-    # Plot state management
-    get_plot_state = function() {
-      list(
-        ready = private_values$plot_ready,
-        object = private_values$plot_object,
-        warnings = private_values$plot_warnings,
-        results = private_values$anhoej_results
+    # Column Management - Single source of truth
+    columns = list(
+      # Auto-detection state
+      auto_detect = list(
+        in_progress = FALSE,
+        completed = FALSE,
+        trigger = NULL,
+        results = NULL
+      ),
+
+      # Current column mappings
+      mappings = list(
+        x_column = NULL,
+        y_column = NULL,
+        n_column = NULL,
+        cl_column = NULL
+      ),
+
+      # UI sync state
+      ui_sync = list(
+        needed = NULL,
+        last_sync_time = NULL
       )
-    },
+    ),
 
-    set_plot_state = function(ready = NULL, object = NULL, warnings = NULL, results = NULL) {
-      if (!is.null(ready)) private_values$plot_ready <- ready
-      if (!is.null(object)) private_values$plot_object <- object
-      if (!is.null(warnings)) private_values$plot_warnings <- warnings
-      if (!is.null(results)) private_values$anhoej_results <- results
-    },
-
-    # Session state management
-    get_session_state = function() {
-      list(
-        file_uploaded = private_values$file_uploaded,
-        restoring = private_values$restoring_session
-      )
-    },
-
-    set_session_state = function(file_uploaded = NULL, restoring = NULL) {
-      if (!is.null(file_uploaded)) private_values$file_uploaded <- file_uploaded
-      if (!is.null(restoring)) private_values$restoring_session <- restoring
-    },
-
-    # Auto-detect state management
-    get_auto_detect_state = function() {
-      list(
-        trigger = private_values$auto_detect_trigger,
-        in_progress = private_values$auto_detect_in_progress,
-        completed = private_values$initial_auto_detect_completed,
-        ui_sync_needed = private_values$ui_sync_needed
-      )
-    },
-
-    set_auto_detect_state = function(trigger = NULL, in_progress = NULL, completed = NULL, ui_sync_needed = NULL) {
-      if (!is.null(trigger)) private_values$auto_detect_trigger <- trigger
-      if (!is.null(in_progress)) private_values$auto_detect_in_progress <- in_progress
-      if (!is.null(completed)) private_values$initial_auto_detect_completed <- completed
-      if (!is.null(ui_sync_needed)) private_values$ui_sync_needed <- ui_sync_needed
-    },
-
-    # Reactive accessors
-    data_reactive = reactive(private_values$current_data),
-    plot_ready_reactive = reactive(private_values$plot_ready),
-    ui_sync_reactive = reactive(private_values$ui_sync_needed),
-    auto_detect_trigger_reactive = reactive(private_values$auto_detect_trigger),
-
-    # Validation
-    validate_state = function() {
-      validation_results <- list()
-
-      # Validate data consistency
-      if (!is.null(private_values$current_data)) {
-        validation_results$data_valid <- is.data.frame(private_values$current_data)
-      }
-
-      # Validate plot state consistency
-      validation_results$plot_state_consistent <-
-        (private_values$plot_ready && !is.null(private_values$plot_object)) ||
-        (!private_values$plot_ready && is.null(private_values$plot_object))
-
-      validation_results
-    },
-
-    # Backward compatibility
-    get_values = function() private_values
+    # Test Mode Management
+    test_mode = list(
+      auto_detect_ready = FALSE
+    )
   )
 }
-```
 
-#### 2. Controlled access patterns
+#### 2. Refactor existing scattered state patterns
 ```r
-# FØR: Direct reactiveValues access
-values$plot_ready <- TRUE
+# FØR: Scattered reactiveValues
+values$auto_detect_in_progress <- TRUE
+values$ui_sync_needed <- sync_data
+values$last_ui_sync_time <- Sys.time()
 values$current_data <- new_data
 
-# EFTER: Controlled interface
-state$set_plot_state(ready = TRUE)
-state$set_data(new_data)
+# EFTER: Centraliseret state access
+state$columns$auto_detect$in_progress <- TRUE
+state$columns$ui_sync$needed <- sync_data
+state$columns$ui_sync$last_sync_time <- Sys.time()
+state$data$current_data <- new_data
 ```
 
-#### 3. Cross-module state synchronization
+#### 3. Single source of truth for column configuration
 ```r
-# App server initialization
-state <- state_manager()
-values <- state$get_values()  # Backward compatibility
-
-# Module integration with fallback
-set_plot_state <- if (state_manager_available) {
-  function(...) state$set_plot_state(...)
-} else {
-  function(ready = NULL, object = NULL, warnings = NULL, results = NULL) {
-    if (!is.null(ready)) values$plot_ready <- ready
-    if (!is.null(object)) values$plot_object <- object
-    if (!is.null(warnings)) values$plot_warnings <- warnings
-    if (!is.null(results)) values$anhoej_results <- results
-  }
-}
+# Eliminerer scattered column mappings
+state$columns$mappings$x_column <- "Dato"
+state$columns$mappings$y_column <- "Antal"
+state$columns$auto_detect$results <- auto_detect_results
 ```
 
-#### 4. Legacy compatibility support
+#### 4. Backward compatibility ved graduel migration
 ```r
-# Deprecated function med warning
-initialize_reactive_values <- function() {
-  warning("initialize_reactive_values() is deprecated. Use state_manager() instead.",
-          call. = FALSE)
-
-  reactiveValues(
-    current_data = NULL,
-    plot_ready = FALSE
-    # ... legacy structure
-  )
-}
+# Phase-wise migration strategy
+# Step 1: Add centralized state alongside existing
+# Step 2: Migrate observers one by one
+# Step 3: Update reactive dependencies
+# Step 4: Remove old scattered values
 ```
 
-### Problemer identificeret:
-- **Test mode conflicts**: State manager integration konflikter med test mode auto-load
-- **Scope mismatch**: `values` vs `local_values` access patterns
-- **Reactive timing**: State changes under initial load timing issues
+### Forventede fordele:
+- **Eliminerer timing-based workarounds** fra Phase 3
+- **Muliggør pure reactive patterns** med explicit dependencies
+- **Forbedrer maintainability** med clear state ownership
+- **Reducer race conditions** gennem controlled state access
 
-### Test resultater:
-- **96/96 tests passed** i `test-fase4-state-simple.R` (architectural tests)
-- State manager interface og patterns verified
-- Cross-module coordination patterns tested
+### Test strategi:
+- Gradual migration med test efter hver step
+- Bevare Phase 3's funktionalitet under refactoring
+- Verify at input field updates stadig fungerer
 
 ---
 
-## Fase 5: Error Handling og Robustness
+## Fase 5: Performance & Cleanup
 
-**Mål:** Implementer robust error handling med graceful degradation og user feedback.
+**Mål:** Performance optimering og cleanup baseret på centraliseret state fra Phase 4.
 
-### Planlagte ændringer (problematisk implementation):
+**Status:** Planlagt - vil bygge på Phase 4's centraliserede state management
 
-#### 1. Centraliseret error handling utilities
+### Planlagte ændringer:
+
+#### 1. Reactive chain optimization
 ```r
-# safe_observer wrapper
-safe_observer <- function(expr, session, error_prefix = "Observer fejl", silent = FALSE) {
-  function(...) {
-    tryCatch(
-      expr(...),
-      error = function(e) {
-        error_msg <- paste(error_prefix, ":", e$message)
-        if (!silent) {
-          showNotification(error_msg, type = "error", duration = 5)
-        }
-        cat("ERROR:", error_msg, "\n", file = stderr())
-        NULL
-      }
-    )
-  }
-}
-
-# safe_reactive wrapper
-safe_reactive <- function(expr, req_deps = NULL, error_value = NULL) {
-  reactive({
-    tryCatch({
-      if (!is.null(req_deps)) {
-        for (dep in req_deps) req(dep)
-      }
-      expr()
-    }, error = function(e) {
-      cat("REACTIVE ERROR:", e$message, "\n", file = stderr())
-      error_value
-    })
-  })
-}
+# Eliminated redundant reactive evaluations
+# Use Phase 4's centralized state to reduce reactive dependencies
+# Implement debouncing for expensive operations
+# Cache computed values to avoid re-calculation
 ```
 
-#### 2. User feedback patterns
+#### 2. Observer cleanup and consolidation
 ```r
-show_user_error <- function(message, type = "error", duration = 5, details = NULL) {
-  formatted_msg <- switch(type,
-    "error" = paste("Fejl:", message),
-    "warning" = paste("Advarsel:", message),
-    "info" = message,
-    "success" = message
-  )
-
-  if (!is.null(details)) {
-    formatted_msg <- paste(formatted_msg, "\nDetaljer:", details)
-  }
-
-  showNotification(formatted_msg, type = type, duration = duration)
-}
+# Remove duplicate observers identified in Phase 3 debug
+# Consolidate overlapping functionality
+# Optimize observer priority execution
+# Clean up Phase 3's debug statements for production
 ```
 
-#### 3. Graceful degradation patterns
+#### 3. Memory management improvements
 ```r
-validate_data_with_fallback <- function(data, required_cols = NULL, fallback_data = NULL) {
-  if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
-    return(list(valid = FALSE, data = fallback_data, message = "Ingen gyldige data"))
-  }
-
-  if (!is.null(required_cols)) {
-    missing_cols <- setdiff(required_cols, names(data))
-    if (length(missing_cols) > 0) {
-      return(list(valid = FALSE, data = fallback_data,
-                  message = paste("Manglende kolonner:", paste(missing_cols, collapse = ", "))))
-    }
-  }
-
-  list(valid = TRUE, data = data, message = "Data valideret")
-}
+# Clean up unused reactive values after state consolidation
+# Implement proper cleanup on session end
+# Optimize data storage patterns
+# Remove temporary debug infrastructure
 ```
 
-### Problemer identificeret:
-- **Render conflicts**: `safe_render_ui()` wrapper konflikter med test mode
-- **Req() vs defensive checks**: `req()` guards i reactive functions stoppper execution i test mode
-- **Column config chain**: `auto_detected_config()` → `column_config()` → `chart_config()` fejl kæde
-- **Root cause**: `req(values$auto_detected_columns)` fejler under test mode initial load
+### Forventede fordele:
+- **Reduced reactive chain complexity** efter Phase 4's state consolidation
+- **Eliminated timing-based patterns** i favor af pure reactive patterns
+- **Cleaner production code** ved fjernelse af debug infrastructure
+- **Better performance** gennem optimized observer execution
 
-### Status: **Rullet tilbage** - for kompleks integration der introducerede nye fejl
+### Test strategi:
+- Performance benchmarking før og efter optimization
+- Verify at Phase 3's funktionalitet bevares efter cleanup
+- Memory usage monitoring under state consolidation
 
 ---
 
@@ -585,15 +526,20 @@ cat("DEBUG: After observer priority change - UI sync status: ", values$ui_sync_n
 
 ## Current Status
 
-**OPDATERING 2025-01-16**: Efter rollback til Phase 2 (commit `cb66d5a`) blev det bekræftet at **Phase 2 løser det oprindelige problem perfekt** - selectize input felterne opdateres korrekt efter auto-detect.
+**OPDATERING 2025-09-16**: Efter omfattende Phase 3 debug og refactoring blev det oprindelige problem med selectize input field updates efter auto-detect **succesfuldt løst**.
 
 **Stable commits**:
-- **Phase 1**: `fdec5db` (later::later elimination)
-- **Phase 2**: `cb66d5a` (løser oprindelige problem) ✅ **AKTUEL LØSNING**
-- **Phase 3**: `2226723` (observer management - men bryder input field updates)
+- **Phase 1**: `fdec5db` (later::later elimination) ✅
+- **Phase 2**: `4f36c83` (reactive chain forbedringer) ✅
+- **Phase 3**: `ab48371` (observer priorities + race condition guards) ✅ **AKTUEL LØSNING**
 
-**Problematic commits**: Phase 3-5 introducerede regression i input field funktionalitet
-**Current recommendation**: Blive på Phase 2 som stabil løsning der løser det oprindelige problem
+**Nuværende status**: Phase 3 er stabil og **løser det oprindelige problem** med selectize input field updates efter auto-detect. Observer priorities og race condition guards fungerer sammen for at sikre korrekt UI sync timing.
+
+**Aktuel arkitektur beslutning**: User ønsker "mere ren reaktiv arkitektur" og har spurgt om det er bedst at:
+1. Fortsætte med Phase 4-5 først (som kan gøre ren arkitektur lettere)
+2. Eller refactore Phase 3 til pure reactive patterns først
+
+**Anbefaling**: Fortsæt med Phase 4-5 da centraliseret state management vil eliminere timing-based workarounds og muliggøre ren reactive architecture.
 
 ### Test Mode Issues to Address:
 1. Column config reactive chain conflicts under auto-load
