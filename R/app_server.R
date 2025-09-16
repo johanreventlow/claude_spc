@@ -76,7 +76,9 @@ app_server <- function(input, output, session) {
           # Set reactive values
           values$current_data <- test_data
           values$original_data <- test_data
+          # PHASE 4: Sync to both old and new state management
           values$file_uploaded <- TRUE
+          app_state$session$file_uploaded <- TRUE
           values$user_started_session <- TRUE # Ensure dataLoaded triggers correctly
           values$auto_detect_done <- FALSE # Will trigger auto-detect
           values$initial_auto_detect_completed <- FALSE # Reset for new data

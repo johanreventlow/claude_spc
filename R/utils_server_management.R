@@ -111,7 +111,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
               values$original_data <- as.data.frame(saved_state$data)
             }
 
+            # PHASE 4: Sync to both old and new state management
             values$file_uploaded <- TRUE
+            if (use_centralized_state) {
+              app_state$session$file_uploaded <- TRUE
+            }
             values$auto_detect_done <- TRUE
 
             # Restore metadata if available
@@ -340,7 +344,11 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   # Reset to standard column order using helper function
   values$current_data <- create_empty_session_data()
 
+  # PHASE 4: Sync to both old and new state management
   values$file_uploaded <- FALSE
+  if (use_centralized_state) {
+    app_state$session$file_uploaded <- FALSE
+  }
   values$user_started_session <- TRUE # NEW: Set flag that user has started
   values$original_data <- NULL
   values$auto_detect_done <- FALSE

@@ -49,7 +49,14 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       # 1. Der er meningsfuldt data, ELLER
       # 2. Bruger har uploadet en fil, ELLER
       # 3. Bruger har eksplicit startet en ny session
-      user_has_started <- values$file_uploaded || values$user_started_session %||% FALSE
+      # PHASE 4: Check both old and new state management for file_uploaded
+      file_uploaded_check <- if (use_centralized_state) {
+        app_state$session$file_uploaded
+      } else {
+        values$file_uploaded
+      }
+
+      user_has_started <- file_uploaded_check || values$user_started_session %||% FALSE
 
       if (meaningful_data || user_has_started) "TRUE" else "FALSE"
     }
@@ -82,13 +89,20 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
 
   # Data status visning
   output$data_status_display <- renderUI({
+    # PHASE 4: Check both old and new state management for file_uploaded
+    file_uploaded_check <- if (use_centralized_state) {
+      app_state$session$file_uploaded
+    } else {
+      values$file_uploaded
+    }
+
     if (is.null(values$current_data)) {
       div(
         span(class = "status-indicator status-warning"),
         "Ingen data",
         style = "font-size: 0.9rem;"
       )
-    } else if (values$file_uploaded) {
+    } else if (file_uploaded_check) {
       data_rows <- sum(!is.na(values$current_data[[1]]))
       div(
         span(class = "status-indicator status-ready"),

@@ -8,7 +8,9 @@
 #' @param ... Additional arguments to pass to shinyApp()
 #'
 #' @export
-run_app <- function(port = 3838, launch_browser = NULL, ...) {
+run_app <- function(#port = 3838,
+                    port = NULL, 
+                    launch_browser = NULL, ...) {
   # Ensure global configuration is loaded
   if (!exists("HOSPITAL_NAME", envir = .GlobalEnv)) {
     source("global.R", local = FALSE)

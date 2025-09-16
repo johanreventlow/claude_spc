@@ -139,7 +139,11 @@ handle_excel_upload <- function(file_path, session, values) {
     # Load data
     values$current_data <- as.data.frame(data)
     values$original_data <- as.data.frame(data)
+    # PHASE 4: Sync to both old and new state management
     values$file_uploaded <- TRUE
+    if (use_centralized_state) {
+      app_state$session$file_uploaded <- TRUE
+    }
     values$auto_detect_done <- TRUE # Skip auto-detect since we have session info
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
 
@@ -163,7 +167,11 @@ handle_excel_upload <- function(file_path, session, values) {
 
     values$current_data <- as.data.frame(data)
     values$original_data <- as.data.frame(data)
+    # PHASE 4: Sync to both old and new state management
     values$file_uploaded <- TRUE
+    if (use_centralized_state) {
+      app_state$session$file_uploaded <- TRUE
+    }
     values$auto_detect_done <- FALSE
     values$initial_auto_detect_completed <- FALSE # Reset for new data
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
@@ -502,7 +510,8 @@ create_session_info_lines <- function(input, active_data_for_export, values) {
     paste("• Rækker:", nrow(active_data_for_export)),
     paste("• Kolonner:", ncol(active_data_for_export)),
     paste("• Kolonnenavne:", paste(names(active_data_for_export), collapse = ", ")),
-    paste("• Data kilde:", if (values$file_uploaded) "File Upload" else "Manuel indtastning"),
+    # PHASE 4: Check both old and new state management for file_uploaded
+    paste("• Data kilde:", if (if (use_centralized_state) app_state$session$file_uploaded else values$file_uploaded) "File Upload" else "Manuel indtastning"),
     paste("• Eksporteret:", format(Sys.time(), "%d-%m-%Y %H:%M")),
     "",
     "TEKNISK INFORMATION:",
