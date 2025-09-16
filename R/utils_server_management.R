@@ -335,11 +335,15 @@ handle_clear_saved_request <- function(input, session, values) {
     (!is.null(input$unit_select) && input$unit_select != "") ||
     (!is.null(input$unit_custom) && input$unit_custom != "") ||
     # PHASE 4: Check both old and new state management for last_save_time
-    (!is.null(if (use_centralized_state) app_state$session$last_save_time else values$last_save_time))
+    (!is.null(if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$session$last_save_time
+    } else {
+      values$last_save_time
+    }))
 
   # If no data or settings, start new session directly
   if (!has_data && !has_settings) {
-    reset_to_empty_session(session, values, if (use_centralized_state) app_state else NULL)
+    reset_to_empty_session(session, values, if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) app_state else NULL)
     showNotification("Ny session startet", type = "message", duration = 2)
     return()
   }
@@ -482,7 +486,11 @@ show_clear_confirmation_modal <- function(has_data, has_settings, values) {
         if (has_data) tags$li("Slette eksisterende data i tabellen"),
         if (has_settings) tags$li("Nulstille titel, beskrivelse og andre indstillinger"),
         # PHASE 4: Check both old and new state management for last_save_time
-        if (!is.null(if (use_centralized_state) app_state$session$last_save_time else values$last_save_time)) tags$li("Fjerne gemt session fra lokal storage"),
+        if (!is.null(if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+          app_state$session$last_save_time
+        } else {
+          values$last_save_time
+        })) tags$li("Fjerne gemt session fra lokal storage"),
         tags$li("Oprette en tom standardtabel")
       ),
       br(),
