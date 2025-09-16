@@ -7,26 +7,39 @@
 #' 
 #' @noRd
 app_server <- function(input, output, session) {
+  cat("DEBUG: [APP_SERVER] ===========================================\n")
+  cat("DEBUG: [APP_SERVER] Starting main server function\n")
+  cat("DEBUG: [APP_SERVER] Session ID:", session$token, "\n")
+
   # Source all required server components
+  cat("DEBUG: [APP_SERVER] Sourcing server components...\n")
   source("R/utils_reactive_state.R", local = TRUE)
-  source("R/utils_session_helpers.R", local = TRUE) 
+  source("R/utils_session_helpers.R", local = TRUE)
   source("R/utils_server_management.R", local = TRUE)
   source("R/fct_data_processing.R", local = TRUE)
   source("R/fct_file_operations.R", local = TRUE)
   source("R/fct_visualization_server.R", local = TRUE)
   source("R/mod_spc_chart.R", local = TRUE)
-  
+  cat("DEBUG: [APP_SERVER] ✅ All server components sourced\n")
+
   # Reaktive Værdier --------------------------------------------------------
   # Initialiser reaktive værdier
+  cat("DEBUG: [APP_SERVER] Initializing reactive values...\n")
   values <- initialize_reactive_values()
+  cat("DEBUG: [APP_SERVER] ✅ Reactive values initialized\n")
 
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
-  if (TEST_MODE_AUTO_LOAD) {
-    cat("TEST MODE: Attempting auto-load with TEST_MODE_AUTO_LOAD =", TEST_MODE_AUTO_LOAD, "\n")
-    test_file_path <- TEST_MODE_FILE_PATH
+  cat("DEBUG: [APP_SERVER] Checking TEST_MODE configuration...\n")
+  cat("DEBUG: [APP_SERVER] TEST_MODE_AUTO_LOAD:", if(exists("TEST_MODE_AUTO_LOAD")) TEST_MODE_AUTO_LOAD else "UNDEFINED", "\n")
 
-    if (file.exists(test_file_path)) {
+  if (exists("TEST_MODE_AUTO_LOAD") && TEST_MODE_AUTO_LOAD) {
+    cat("DEBUG: [TEST_MODE] 🔄 Attempting auto-load with TEST_MODE_AUTO_LOAD =", TEST_MODE_AUTO_LOAD, "\n")
+    test_file_path <- if(exists("TEST_MODE_FILE_PATH")) TEST_MODE_FILE_PATH else "UNDEFINED"
+    cat("DEBUG: [TEST_MODE] Test file path:", test_file_path, "\n")
+
+    if (exists("TEST_MODE_FILE_PATH") && file.exists(test_file_path)) {
+      cat("DEBUG: [TEST_MODE] ✅ Test file found, starting auto-load...\n")
       tryCatch(
         {
           # Bestem hvilken loader der skal bruges baseret på fil-extension

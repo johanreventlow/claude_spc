@@ -8,23 +8,33 @@
 ## Hovedfunktion for kolonnehåndtering
 # Opsætter al server logik relateret til kolonne-management
 setup_column_management <- function(input, output, session, values) {
+  cat("DEBUG: [COLUMN_MGMT] Setting up column management\n")
+
   # Opdater kolonnevalg når data ændres
   observe({
+    cat("DEBUG: [COLUMN_MGMT] Column update observer triggered\n")
+
     if (values$updating_table) {
+      cat("DEBUG: [COLUMN_MGMT] Skipping - table update in progress\n")
       return()
     }
 
     # Skip hvis auto-detect er i gang for at undgå at overskrive auto-detect resultater
     if (values$auto_detect_in_progress) {
+      cat("DEBUG: [COLUMN_MGMT] Skipping - auto-detect in progress\n")
       return()
     }
 
     req(values$current_data)
+    cat("DEBUG: [COLUMN_MGMT] Data available - processing column choices\n")
 
     data <- values$current_data
     all_cols <- names(data)
+    cat("DEBUG: [COLUMN_MGMT] Available columns:", paste(all_cols, collapse = ", "), "\n")
 
     if (length(all_cols) > 0) {
+      cat("DEBUG: [COLUMN_MGMT] Creating column choices for", length(all_cols), "columns\n")
+
       # Kun "Vælg kolonne..." som første option - selectizeInput kan rydde selv
       col_choices <- setNames(
         c("", all_cols),
@@ -40,28 +50,50 @@ setup_column_management <- function(input, output, session, values) {
         current_frys <- input$frys_column
         current_kommentar <- input$kommentar_column
 
+        cat("DEBUG: [COLUMN_MGMT] Current selections before update:\n")
+        cat("DEBUG: [COLUMN_MGMT] - X column:", if(is.null(current_x)) "NULL" else current_x, "\n")
+        cat("DEBUG: [COLUMN_MGMT] - Y column:", if(is.null(current_y)) "NULL" else current_y, "\n")
+        cat("DEBUG: [COLUMN_MGMT] - N column:", if(is.null(current_n)) "NULL" else current_n, "\n")
+
         updateSelectizeInput(session, "x_column", choices = col_choices, selected = current_x)
         updateSelectizeInput(session, "y_column", choices = col_choices, selected = current_y)
         updateSelectizeInput(session, "n_column", choices = col_choices, selected = current_n)
         updateSelectizeInput(session, "skift_column", choices = col_choices, selected = current_skift)
         updateSelectizeInput(session, "frys_column", choices = col_choices, selected = current_frys)
         updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = current_kommentar)
+
+        cat("DEBUG: [COLUMN_MGMT] ✅ All selectize inputs updated with current selections\n")
       })
+    } else {
+      cat("DEBUG: [COLUMN_MGMT] ⚠️ No columns available\n")
     }
   })
 
   # Auto-detekterings trigger flag - bruges kun til manuel triggering (ikke test mode)
   observeEvent(values$current_data,
     {
+      cat("DEBUG: [AUTO_DETECT] Manual auto-detect observer triggered\n")
+
       # Skip automatisk auto-detect hvis vi allerede har været igennem det i test mode
       if (values$initial_auto_detect_completed %||% FALSE) {
+        cat("DEBUG: [AUTO_DETECT] Skipping - initial auto-detect already completed\n")
         return()
       }
 
-      if (!is.null(values$current_data) &&
-        (is.null(input$x_column) || input$x_column == "") &&
-        (is.null(input$y_column) || input$y_column == "")) {
+      data_available <- !is.null(values$current_data)
+      x_empty <- is.null(input$x_column) || input$x_column == ""
+      y_empty <- is.null(input$y_column) || input$y_column == ""
+
+      cat("DEBUG: [AUTO_DETECT] Conditions check:\n")
+      cat("DEBUG: [AUTO_DETECT] - Data available:", data_available, "\n")
+      cat("DEBUG: [AUTO_DETECT] - X column empty:", x_empty, "\n")
+      cat("DEBUG: [AUTO_DETECT] - Y column empty:", y_empty, "\n")
+
+      if (data_available && x_empty && y_empty) {
+        cat("DEBUG: [AUTO_DETECT] ✅ Triggering manual auto-detect\n")
         values$auto_detect_trigger <- Sys.time() # Brug timestamp for at sikre reaktivitet
+      } else {
+        cat("DEBUG: [AUTO_DETECT] ❌ Conditions not met for auto-detect\n")
       }
     },
     ignoreInit = TRUE
@@ -70,8 +102,9 @@ setup_column_management <- function(input, output, session, values) {
   # Test mode auto-detect trigger (event-driven instead of later::later)
   observeEvent(values$test_mode_auto_detect_ready,
     {
+      cat("DEBUG: [TEST_MODE] Test mode auto-detect observer triggered\n")
       req(values$test_mode_auto_detect_ready)
-      cat("TEST MODE: Event-driven auto-detect trigger fired!\n")
+      cat("DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n")
       values$auto_detect_trigger <- Sys.time()
     },
     ignoreInit = TRUE, ignoreNULL = TRUE
@@ -80,12 +113,22 @@ setup_column_management <- function(input, output, session, values) {
   # Forsinket auto-detekterings udførelse
   observeEvent(values$auto_detect_trigger,
     {
+      cat("DEBUG: [AUTO_DETECT_EXEC] Auto-detect execution started\n")
+      cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = TRUE\n")
+
       values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
+
+      cat("DEBUG: [AUTO_DETECT_EXEC] Calling auto_detect_and_update_columns...\n")
       auto_detect_and_update_columns(input, session, values)
+
+      cat("DEBUG: [AUTO_DETECT_EXEC] Setting initial_auto_detect_completed = TRUE\n")
       values$initial_auto_detect_completed <- TRUE # Marker som færdig efter første kørsel
 
       # Clear flag after auto-detect completion (event-driven instead of timing)
+      cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = FALSE\n")
       values$auto_detect_in_progress <- FALSE
+
+      cat("DEBUG: [AUTO_DETECT_EXEC] ✅ Auto-detect execution completed\n")
     },
     ignoreInit = TRUE
   )
@@ -93,28 +136,42 @@ setup_column_management <- function(input, output, session, values) {
   # Reaktiv UI sync observer for auto-detect kolonnematch
   observeEvent(values$ui_sync_needed,
     {
+      cat("DEBUG: [UI_SYNC] UI sync observer triggered - CRITICAL for input field updates\n")
       req(values$ui_sync_needed)
 
       sync_data <- values$ui_sync_needed
+      cat("DEBUG: [UI_SYNC] Sync data received:\n")
+      cat("DEBUG: [UI_SYNC] - X column suggestion:", if(is.null(sync_data$x_column)) "NULL" else sync_data$x_column, "\n")
+      cat("DEBUG: [UI_SYNC] - Y column suggestion:", if(is.null(sync_data$y_column)) "NULL" else sync_data$y_column, "\n")
+      cat("DEBUG: [UI_SYNC] - N column suggestion:", if(is.null(sync_data$n_column)) "NULL" else sync_data$n_column, "\n")
 
-      cat("UI SYNC: Auto-detect triggered selectize opdateringer\n")
+      cat("DEBUG: [UI_SYNC] 🔄 Auto-detect triggered selectize opdateringer\n")
 
       # Opdater alle selectize inputs med de detekterede kolonner
       if (!is.null(sync_data$col_choices)) {
+        cat("DEBUG: [UI_SYNC] Column choices available - updating selectize inputs\n")
+        cat("DEBUG: [UI_SYNC] Col choices length:", length(sync_data$col_choices), "\n")
+
         # X-kolonne (dato/tid)
+        x_selection <- sync_data$x_col %||% ""
+        cat("DEBUG: [UI_SYNC] Updating X column to:", x_selection, "\n")
         updateSelectizeInput(session, "x_column",
                            choices = sync_data$col_choices,
-                           selected = sync_data$x_col %||% "")
+                           selected = x_selection)
 
         # Y-kolonne (tæller/værdi)
+        y_selection <- sync_data$taeller_col %||% ""
+        cat("DEBUG: [UI_SYNC] Updating Y column to:", y_selection, "\n")
         updateSelectizeInput(session, "y_column",
                            choices = sync_data$col_choices,
-                           selected = sync_data$taeller_col %||% "")
+                           selected = y_selection)
 
         # N-kolonne (nævner)
+        n_selection <- sync_data$naevner_col %||% ""
+        cat("DEBUG: [UI_SYNC] Updating N column to:", n_selection, "\n")
         updateSelectizeInput(session, "n_column",
                            choices = sync_data$col_choices,
-                           selected = sync_data$naevner_col %||% "")
+                           selected = n_selection)
 
         # Skift kolonne
         updateSelectizeInput(session, "skift_column",

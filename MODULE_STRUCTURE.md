@@ -1,53 +1,62 @@
 # MODULE_STRUCTURE.md
 # SPC App - Modulær Struktur
 
-## 📁 Oversigt over filstruktur
+**OPDATERET: 2025-01-16** - Afspejler aktuelle filer efter Phase 1-2 refactoring
+
+## 📁 Aktuel filstruktur
 
 ```
 claude_spc/
 ├── app.R                           # Hovedfil der starter appen
-├── ui.R                            # UI sammensætning
-├── server.R                        # Server sammensætning
-├── global.R                        # Globale konfigurationer
+├── global.R                        # Globale konfigurationer, hospital branding
+├── CLAUDE.md                       # Udviklingsinstruktioner og regler
+├── SHINY_BEST_PRACTICES_FASER.md   # Dokumentation af refactoring faser
 │
 ├── R/
-│   ├── ui/                         # UI komponenter
-│   │   ├── ui_header.R            # JavaScript, CSS, header
-│   │   ├── ui_sidebar.R           # Sidebar med upload/config
-│   │   └── ui_main_content.R      # Hovedindhold (tabel + graf)
+│   ├── run_app.R                   # App launcher funktionalitet
+│   ├── app_ui.R                    # Hovedfil for UI sammensætning
+│   ├── app_server.R                # Hovedfil for server sammensætning
 │   │
-│   ├── server/                     # Server komponenter
-│   │   ├── server_reactive_values.R      # Reaktive værdier
-│   │   ├── server_session_management.R   # Session save/load/clear
-│   │   ├── server_file_upload.R          # Fil upload håndtering
-│   │   ├── server_data_table.R           # Tabel rendering/editing
-│   │   ├── server_column_management.R    # Kolonne auto-detect/validation
-│   │   ├── server_visualization.R        # Graf setup og data prep
-│   │   ├── server_download.R             # Download handlers
-│   │   └── server_helpers.R              # Hjælpe funktioner
+│   ├── modules/                    # Shiny moduler
+│   │   ├── mod_data_upload.R       # Data upload og fil håndtering modul
+│   │   ├── mod_session_storage.R   # Session storage og auto-save modul
+│   │   └── mod_spc_chart.R         # SPC chart visualisering modul
 │   │
-│   └── modules/                    # Genbrugelige moduler
-│       ├── data_*/                 # Data håndtering moduler
-│       │   ├── data_file_readers.R        # CSV/Excel læsning
-│       │   ├── data_validation.R          # Data struktur validering
-│       │   ├── data_editable_table_ui.R   # Redigerbar tabel UI
-│       │   ├── data_editable_table_server.R  # Tabel server logik
-│       │   └── data_module.R              # Main data modul
-│       │
-│       ├── visualization_*/        # Visualisering moduler
-│       │   ├── visualization_module_ui.R      # Visualisering UI
-│       │   ├── visualization_module_server.R  # Server logik
-│       │   ├── visualization_helpers.R        # Helper funktioner
-│       │   ├── visualization_spc.R            # SPC plot generering
-# │       │   ├── visualization_anhoej.R         # Removed: Now using qic() built-in Anhøj analysis
-│       │   └── visualization_module.R         # Main viz modul
-│       │
-│       └── local_storage_*/        # Browser storage moduler
-│           ├── local_storage_js.R             # JavaScript funktioner
-│           ├── local_storage_functions.R      # R funktioner
-│           └── local_storage_module.R         # Main storage modul
+│   ├── fct_*.R                     # Funktionsfiler (funktionalitet)
+│   │   ├── fct_chart_helpers.R     # SPC chart hjælpefunktioner
+│   │   ├── fct_data_processing.R   # Auto-detect og databehandling
+│   │   ├── fct_data_validation.R   # Data validering funktioner
+│   │   ├── fct_file_io.R           # Fil input/output operationer
+│   │   ├── fct_file_operations.R   # Upload/download handlers
+│   │   ├── fct_spc_calculations.R  # SPC beregninger og qic integration
+│   │   └── fct_visualization_server.R # Visualisering server logik
+│   │
+│   ├── utils_*.R                   # Utility filer (hjælpefunktioner)
+│   │   ├── utils_app_setup.R       # App initialisering og setup
+│   │   ├── utils_danish_locale.R   # Dansk lokalisering
+│   │   ├── utils_local_storage.R   # Browser localStorage funktioner
+│   │   ├── utils_local_storage_js.R # JavaScript localStorage interface
+│   │   ├── utils_reactive_state.R  # Centraliseret state management (Phase 4)
+│   │   ├── utils_server_management.R # Server management og cleanup
+│   │   └── utils_session_helpers.R # Session hjælpefunktioner
+│   │
+│   └── data/                       # Test- og eksempeldata
+│       ├── spc_exampledata.csv     # Primær testdata (auto-load i TEST_MODE)
+│       ├── spc_exampledata1.csv    # Alternativ testdata
+│       ├── test_infection.csv      # Infektionsdata eksempel
+│       └── *.xlsx                  # Excel eksempler med session metadata
 │
-└── www/                            # Statiske filer (logos, etc.)
+├── tests/                          # testthat test suite
+│   └── testthat/                   # Test filer fra Phase 1-2
+│       ├── test-fase1-refactoring.R    # Phase 1 tests (later::later elimination)
+│       ├── test-fase2-reactive-chains.R # Phase 2 tests (reactive improvements)
+│       └── test-*.R                    # Øvrige test filer
+│
+├── www/                            # Statiske filer
+│   ├── logo.png                    # Hospital logo
+│   └── custom.css                  # Custom CSS styling
+│
+└── _brand.yml                      # Hospital branding konfiguration
 ```
 
 ## 🎯 Designprincipper
@@ -73,62 +82,102 @@ Hver fil har ét specifikt ansvar:
 - Klare navnekonventioner
 - Dokumentation i hver fil
 
-## 🔄 Dataflow
+## 🔄 Aktuel Dataflow
 
 ```
-1. app.R → Starter applikationen
-2. ui.R → Sammensætter UI fra komponenter
-3. server.R → Sammensætter server fra komponenter
-4. global.R → Leverer konfiguration til alle
+1. app.R → Starter applikationen via run_app.R
+2. app_ui.R → Sammensætter UI fra moduler og komponenter
+3. app_server.R → Sammensætter server logik og moduler
+4. global.R → Leverer konfiguration, branding og hjælpefunktioner
 ```
 
 ### UI Flow:
 ```
-ui_header.R → JavaScript og CSS
-ui_sidebar.R → Upload og konfiguration
-ui_main_content.R → Data tabel og visualisering
+app_ui.R → Hovedlayout med navbar, sidebar og main content
+├── mod_data_upload.R (UI) → File upload interface
+├── mod_session_storage.R (UI) → Session management controls
+└── mod_spc_chart.R (UI) → Chart visualization og controls
 ```
 
 ### Server Flow:
 ```
-server_reactive_values.R → Initialiserer state
-server_session_management.R → Auto-restore, save, clear
-server_file_upload.R → Excel/CSV håndtering  
-server_data_table.R → Tabel rendering og editing
-server_column_management.R → Auto-detect og validering
-server_visualization.R → Graf setup
-server_download.R → Export handlers
-server_helpers.R → Utilities og auto-save
+app_server.R → Server koordination og module calls
+├── Setup: utils_app_setup.R → App initialisering
+├── Data:
+│   ├── fct_file_operations.R → File upload/download handlers
+│   ├── fct_data_processing.R → Auto-detect og data transformation
+│   └── fct_data_validation.R → Input validation
+├── Visualization:
+│   ├── fct_visualization_server.R → Plot generation coordination
+│   ├── fct_spc_calculations.R → qicharts2 integration
+│   └── mod_spc_chart.R (Server) → Chart rendering og interaction
+├── Session:
+│   ├── mod_session_storage.R (Server) → Auto-save og localStorage
+│   └── utils_session_helpers.R → Session utilities
+└── Management: utils_server_management.R → Cleanup og lifecycle
 ```
 
-### Moduler:
+### Shiny Moduler (med namespace isolation):
 ```
-data_module → Fil læsning, validering, redigerbar tabel
-visualization_module → SPC plots, Anhøj regler
-local_storage_module → Browser localStorage
+mod_data_upload → File upload, Excel/CSV processing, data preview
+mod_session_storage → Auto-save, localStorage, session restore
+mod_spc_chart → Chart generation, column mapping, visualization controls
 ```
 
-## 🚀 Fordele
+### Reactive State Management (Phase 2):
+```
+app_server.R → Hovedcoordination med reactive values
+├── Event-driven patterns → Observer prioritering og cleanup
+├── Debounced operations → Native Shiny debounce() patterns
+├── Req() guards → Proper reactive chain management
+└── Isolation patterns → Performance optimering
+```
 
-1. **Færre bugs**: Mindre filer er nemmere at debugge
-2. **Hurtigere udvikling**: Parallelt arbejde på komponenter
-3. **Bedre tests**: Isolerede komponenter kan unit testes
-4. **Nem udvidelse**: Nye features tilføjes som moduler
-5. **Bedre performance**: Kun nødvendige filer indlæses
-6. **Teamwork**: Flere udviklere kan arbejde samtidigt
+## 🚀 Fordele af aktuel struktur
 
-## 📝 Konventioner
+1. **Færre bugs**: Funktionalitet opdelt i små, testbare filer
+2. **Hurtigere udvikling**: Klar adskillelse mellem fct_, utils_ og mod_ filer
+3. **Bedre tests**: Comprehensive testthat suite (Phase 1-2 med 125+ tests)
+4. **Nem udvidelse**: Modulær struktur tillader nye features som isolerede komponenter
+5. **Bedre performance**: Event-driven patterns og reactive optimering (Phase 2)
+6. **Vedligeholdelse**: Klare navnekonventioner og dokumenterede phases
 
-### Filnavne:
-- `ui_*.R` - UI komponenter
-- `server_*.R` - Server komponenter  
-- `*_module.R` - Genbrugelige moduler
-- `*_ui.R` / `*_server.R` - Modul UI/server par
+## 📝 Aktuelle konventioner
+
+### Filnavne efter refactoring:
+- `mod_*.R` - Shiny moduler med UI og Server funktioner
+- `fct_*.R` - Funktionalitetsfiler (business logik)
+- `utils_*.R` - Hjælpefunktioner og utilities
+- `app_*.R` - Hovedapplikation sammensætning
 
 ### Funktionsnavne:
-- `create_*()` - UI konstruktører
-- `setup_*()` - Server setup funktioner
-- `handle_*()` - Event handlers
-- `*Module()` - Shiny moduler
+- `setup_*()` - Initialisering og setup funktioner
+- `handle_*()` - Event handlers og file processing
+- `create_*()` - UI konstruktører og objektoprettelse
+- `*Module()` - Shiny modul funktioner (UI/Server)
+- `auto_*()` - Auto-detect og automatiserede processer
+- `safe_*()` - Error-safe wrappers (planlagt i Phase 5)
 
-Dette design gør SPC appen meget mere maintainable og skalerbar!
+### Test patterns:
+- `test-fase[N]-*.R` - Tests for hver refactoring phase
+- Minimum 80% coverage for kritiske funktioner
+- Event-driven test patterns for reactive flows
+
+## 🔄 Phase 1-2 forbedringer
+
+### Phase 1: Later::Later Elimination
+- ✅ **Elimineret**: 12+ `later::later()` anti-patterns
+- ✅ **Implementeret**: Event-driven cleanup patterns
+- ✅ **Resultat**: Stabil timing og færre race conditions
+
+### Phase 2: Reactive Chain Improvements ⭐ **AKTUEL LØSNING**
+- ✅ **Forbedret**: req() guards og reactive dependencies
+- ✅ **Løst**: Oprindelige problem med input field updates
+- ✅ **Implementeret**: Event-driven renderUI patterns
+- ✅ **Resultat**: Selectize fields opdateres korrekt efter auto-detect
+
+### Næste phases (dokumenteret i SHINY_BEST_PRACTICES_FASER.md):
+- **Phase 3**: Observer management (identificeret regression)
+- **Phase 4-5**: State management og error handling (planlagt)
+
+Dette design gør SPC appen robust, maintainable og klar til videre udvikling!
