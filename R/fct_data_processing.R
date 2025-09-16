@@ -31,6 +31,15 @@ setup_column_management <- function(input, output, session, values) {
       return()
     }
 
+    # Skip hvis UI sync netop er udført (1 sekund cooling-off periode)
+    if (!is.null(values$last_ui_sync_time)) {
+      time_since_sync <- as.numeric(difftime(Sys.time(), values$last_ui_sync_time, units = "secs"))
+      if (time_since_sync < 1.0) {
+        cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync completed", round(time_since_sync, 2), "seconds ago, cooling off\n")
+        return()
+      }
+    }
+
     req(values$current_data)
     cat("DEBUG: [COLUMN_MGMT] Data available - processing column choices\n")
 
@@ -197,8 +206,10 @@ setup_column_management <- function(input, output, session, values) {
                            selected = sync_data$kommentar_col %||% "")
       }
 
-      # Ryd sync request
+      # Ryd sync request og sæt timestamp for at forhindre immediate column mgmt override
       values$ui_sync_needed <- NULL
+      values$last_ui_sync_time <- Sys.time()
+      cat("DEBUG: [UI_SYNC] ✅ UI sync completed, set timestamp to prevent override\n")
     },
     ignoreInit = TRUE, ignoreNULL = TRUE,
     priority = OBSERVER_PRIORITIES$UI_SYNC
