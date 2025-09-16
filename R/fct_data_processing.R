@@ -619,6 +619,7 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
 auto_detect_and_update_columns <- function(input, session, values, app_state = NULL) {
   cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
   cat("DEBUG: [AUTO_DETECT_FUNC] Starting auto_detect_and_update_columns\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] app_state hash:", if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL", "\n")
 
   # PHASE 4: Centralized state availability check
   use_centralized_state <- !is.null(app_state)

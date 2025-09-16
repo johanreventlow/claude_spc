@@ -384,6 +384,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   # PHASE 4: Check if centralized state is available
   use_centralized_state <- !is.null(app_state)
   cat("DEBUG: [SESSION_RESET] Session reset started, centralized state available:", use_centralized_state, "\n")
+  cat("DEBUG: [SESSION_RESET] app_state hash before:", if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL", "\n")
   clearDataLocally(session)
   # PHASE 4: Sync to both old and new state management
   values$last_save_time <- NULL
@@ -413,6 +414,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   if (use_centralized_state) {
     app_state$data$current_data <- standard_data
     cat("DEBUG: [SESSION_RESET] Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), "\n")
+    cat("DEBUG: [SESSION_RESET] app_state hash after:", digest::digest(app_state$data$current_data), "\n")
   }
 
   # PHASE 4: Sync to both old and new state management
