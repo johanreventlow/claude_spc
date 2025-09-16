@@ -438,6 +438,51 @@ observer_manager <- function() {
   )
 }
 
+# CENTRALISERET STATE MANAGEMENT - FASE 4 ================================
+
+## App State Schema -----
+# Single source of truth for app state
+create_app_state <- function() {
+  list(
+    # Data Management
+    data = list(
+      current_data = NULL,
+      file_info = NULL,
+      updating_table = FALSE
+    ),
+
+    # Column Management - centraliseret
+    columns = list(
+      # Auto-detection state
+      auto_detect = list(
+        in_progress = FALSE,
+        completed = FALSE,
+        trigger = NULL,
+        results = NULL
+      ),
+
+      # Column mappings
+      mappings = list(
+        x_column = NULL,
+        y_column = NULL,
+        n_column = NULL,
+        cl_column = NULL
+      ),
+
+      # UI sync state
+      ui_sync = list(
+        needed = NULL,
+        last_sync_time = NULL
+      )
+    ),
+
+    # Test Mode
+    test_mode = list(
+      auto_detect_ready = FALSE
+    )
+  )
+}
+
 ## Dato kolonnevalidering -----
 validate_date_column <- function(data, column_name) {
   if (!column_name %in% names(data)) {
