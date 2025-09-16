@@ -267,6 +267,9 @@ handle_csv_upload <- function(file_path, values) {
   }
   values$file_uploaded <- TRUE
   # PHASE 4: Sync to both old and new state management
+  if (use_centralized_state) {
+    app_state$session$file_uploaded <- TRUE
+  }
   values$auto_detect_done <- FALSE
   if (use_centralized_state) {
     app_state$columns$auto_detect$completed <- FALSE

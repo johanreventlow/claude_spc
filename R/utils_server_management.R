@@ -538,6 +538,9 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     }
     values$file_uploaded <- TRUE
     # PHASE 4: Sync to both old and new state management
+    if (use_centralized_state) {
+      app_state$session$file_uploaded <- TRUE
+    }
     values$hide_anhoej_rules <- TRUE
     if (use_centralized_state) {
       app_state$ui$hide_anhoej_rules <- TRUE
@@ -616,6 +619,9 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
           }
           values$file_uploaded <- TRUE
           # PHASE 4: Sync to both old and new state management
+          if (use_centralized_state) {
+            app_state$session$file_uploaded <- TRUE
+          }
           values$auto_detect_done <- FALSE # Vil udløse auto-detekt
           if (use_centralized_state) {
             app_state$columns$auto_detect$completed <- FALSE
