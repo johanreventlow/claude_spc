@@ -8,11 +8,11 @@ library(readxl)
 # CSV LÆSNING =================================================================
 
 ## Læs CSV fil med fejlhåndtering - dansk-optimeret
-readCSVFile <- function(file_path, sep = ";", decimal = ",", encoding = "UTF-8", header = TRUE) {
+readCSVFile <- function(file_path, sep = CSV_SEPARATORS$semicolon, decimal = DECIMAL_SEPARATORS$comma, encoding = UTF8_ENCODING, header = TRUE) {
   tryCatch(
     {
       # Til danske CSV filer, brug read_csv2 når sep=";" og decimal=","
-      if (sep == ";" && decimal == ",") {
+      if (sep == CSV_SEPARATORS$semicolon && decimal == DECIMAL_SEPARATORS$comma) {
         data <- readr::read_csv2(
           file_path,
           locale = readr::locale(

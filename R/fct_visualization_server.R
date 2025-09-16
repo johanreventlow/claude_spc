@@ -102,16 +102,22 @@ setup_visualization <- function(input, output, session, values) {
     )
   })
 
-  # Clear column config selection - prioritize auto-detection when available
+  # Clear column config selection - prioritize manual input when available
   column_config <- reactive({
-    # Use auto-detected config if available and has valid y_col
+    # Prioritize manual config when user has made selections
+    manual_config_check <- manual_config()
+    if (!is.null(manual_config_check) && !is.null(manual_config_check$y_col)) {
+      return(manual_config_check)
+    }
+
+    # Fall back to auto-detected config
     auto_config <- auto_detected_config()
     if (!is.null(auto_config) && !is.null(auto_config$y_col)) {
       return(auto_config)
     }
 
-    # Fall back to manual config
-    manual_config()
+    # Final fallback - return NULL if neither available
+    return(NULL)
   })
 
   # Observer to update last_valid_config (side effects outside reactives)

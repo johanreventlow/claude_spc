@@ -26,6 +26,7 @@ library(later) # Til forsinket udførelse
 
 # SOURCE UTILITIES --------------------------------
 source("R/utils_logging.R")
+source("R/constants.R")
 
 # UDVIKLINGSINDSTILLINGER --------------------------------
 
@@ -39,9 +40,9 @@ TEST_MODE_AUTO_LOAD <- TRUE
 # TEST_MODE_FILE_PATH <- "R/data/spc_exampledata1.csv"
 
 # Alternative test filer (udkommenterede):
-TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"
+# TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"
 # TEST_MODE_FILE_PATH <- "R/data/test_infection.csv"
-# TEST_MODE_FILE_PATH <- "R/data/SPC_test_data_forskellige.xlsx"
+TEST_MODE_FILE_PATH <- "R/data/SPC_test_data_forskellige.xlsx"
 
 ## Auto-gendannelse -----
 # AUTO-RESTORE: Gendan automatisk tidligere sessioner
@@ -54,6 +55,7 @@ AUTO_RESTORE_ENABLED <- FALSE
 # HJÆLPEFUNKTIONER --------------------------------
 
 source("R/utils_danish_locale.R")
+source("R/utils_ui_helpers.R")
 
 # HOSPITAL BRANDING ================================
 
@@ -204,7 +206,7 @@ get_qic_chart_type <- function(danish_selection) {
   }
 
   # Hvis det allerede er en engelsk kode, returner som-den-er
-  if (danish_selection %in% names(CHART_TYPES_EN)) {
+  if (danish_selection %in% unlist(CHART_TYPES_EN)) {
     return(danish_selection)
   }
 

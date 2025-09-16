@@ -64,7 +64,7 @@ app_server <- function(input, output, session) {
               locale = readr::locale(
                 decimal_mark = ",",
                 grouping_mark = ".",
-                encoding = "ISO-8859-1"
+                encoding = DEFAULT_ENCODING
               ),
               show_col_types = FALSE
             )

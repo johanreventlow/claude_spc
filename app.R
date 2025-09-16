@@ -11,3 +11,4 @@ source("R/run_app.R")
 
 # Run the application using Golem pattern
 run_app()
+

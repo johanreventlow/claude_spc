@@ -84,7 +84,7 @@ validateDataStructure <- function(data) {
 
     # Check for numeric columns (handle Danish decimal separator)
     if (is.numeric(col_data) ||
-      sum(!is.na(parse_danish_number(col_data))) > length(col_data) * 0.8) {
+      sum(!is.na(parse_danish_number(col_data))) > length(col_data) * MIN_NUMERIC_PERCENT) {
       potential_numeric_cols <- c(potential_numeric_cols, col_name)
     }
   }
@@ -99,13 +99,13 @@ validateDataStructure <- function(data) {
   }
 
   # Check data size
-  if (nrow(data) < 10) {
-    warnings <- c(warnings, paste("Kun", nrow(data), "datapunkter fundet - SPC analyse er mest pålidelig med mindst 15-20 punkter"))
+  if (nrow(data) < MIN_SPC_ROWS) {
+    warnings <- c(warnings, paste("Kun", nrow(data), "datapunkter fundet - SPC analyse er mest pålidelig med mindst", RECOMMENDED_SPC_POINTS, "punkter"))
   }
 
   # Check for missing values
   missing_pct <- round(sum(is.na(data)) / (nrow(data) * ncol(data)) * 100, 1)
-  if (missing_pct > 20) {
+  if (missing_pct > MAX_MISSING_PERCENT) {
     warnings <- c(warnings, paste("Høj andel manglende værdier:", missing_pct, "% - dette kan påvirke analyse-kvaliteten"))
   }
 
