@@ -77,6 +77,26 @@ UI_STYLES <- list(
   position_absolute_right = "position: absolute; right: 20px; top: 20px; font-weight: bold;"
 )
 
+#' Standard UI input widths
+#' @export
+UI_INPUT_WIDTHS <- list(
+  full = "100%",
+  half = "50%",
+  quarter = "25%",
+  three_quarter = "75%",
+  auto = "auto"
+)
+
+#' Layout proportions for consistent UI
+#' @export
+UI_LAYOUT_PROPORTIONS <- list(
+  half = 1/2,
+  third = 1/3,
+  quarter = 1/4,
+  two_thirds = 2/3,
+  three_quarters = 3/4
+)
+
 # DATA VALIDATION CONSTANTS ====================================================
 
 #' Minimum antal rækker for SPC analyse
@@ -177,6 +197,58 @@ LOG_COMPONENTS <- list(
   STATE_MGMT = "STATE_MGMT"
 )
 
+# SPC VISUALIZATION CONSTANTS ===================================================
+
+#' Farve palette for SPC charts
+#' @export
+SPC_COLORS <- list(
+  # Target linjer
+  target_line = "#2E8B57",        # SeaGreen for målværdi linjer
+  control_line = "#FF6B6B",       # Coral for kontrolgrænser
+
+  # Data punkter
+  normal_point = "#4A90E2",       # Blå for normale datapunkter
+  special_cause = "#FF4444",      # Rød for special cause punkter
+
+  # Chart baggrund
+  chart_bg = "#FFFFFF",           # Hvid baggrund
+  grid_line = "#E8E8E8",          # Lys grå for grid
+
+  # UI elementer
+  success = "#28A745",            # Grøn for success states
+  warning = "#FFC107",            # Gul for warnings
+  error = "#DC3545",              # Rød for errors
+  info = "#17A2B8"                # Blå for info
+)
+
+#' Alpha værdier for gennemsigtighed
+#' @export
+SPC_ALPHA_VALUES <- list(
+  target_line = 0.8,
+  control_line = 0.7,
+  data_point = 0.9,
+  background = 0.1,
+  highlight = 1.0
+)
+
+#' Linje typer for SPC charts
+#' @export
+SPC_LINE_TYPES <- list(
+  solid = "solid",
+  dashed = "dashed",
+  dotted = "dotted",
+  dot_dash = "dotdash"
+)
+
+#' Standard linje bredder
+#' @export
+SPC_LINE_WIDTHS <- list(
+  thin = 0.8,
+  normal = 1.0,
+  thick = 1.2,
+  extra_thick = 1.5
+)
+
 # PERFORMANCE CONSTANTS =========================================================
 
 #' Timeout værdier for forskellige operationer (millisekunder)
@@ -194,4 +266,14 @@ DEBOUNCE_DELAYS <- list(
   input_change = 300,     # 300ms
   file_select = 500,      # 500ms
   chart_update = 800      # 800ms
+)
+
+#' Performance monitoring thresholds
+#' @export
+PERFORMANCE_THRESHOLDS <- list(
+  reactive_warning = 0.5,    # 500ms for reactive expressions
+  debounce_warning = 1.0,    # 1 second for debounced operations
+  memory_warning = 10,       # 10MB memory change warning
+  cache_timeout_default = 300, # 5 minutes default cache
+  max_cache_entries = 50     # Maximum cached reactive results
 )

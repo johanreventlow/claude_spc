@@ -24,7 +24,57 @@ get_unit_label <- function(unit_code, unit_list) {
   return(unit_code)
 }
 
-## Validering og formatering af X-kolonne data
+#' Valider og formater X-akse data til SPC charts
+#'
+#' Intelligent validering og formatering af X-akse data, med automatisk
+#' detektion af dato formater og optimeret visning baseret på data interval.
+#' Håndterer både numeriske observationer og tidsserie data.
+#'
+#' @param data Data frame med SPC data
+#' @param x_col Character string med X-akse kolonne navn
+#' @param x_axis_unit Character string med X-akse enhed ("observation", "day", "week", "month", "quarter", "year")
+#'
+#' @details
+#' Validering proces:
+#' \enumerate{
+#'   \item Tjek om x_col eksisterer i data
+#'   \item Forsøg dato parsing for forskellige formater
+#'   \item Beregn optimal date interval hvis dato
+#'   \item Generer formaterings string for qicharts2
+#'   \item Fallback til numerisk sekvensnummerering
+#' }
+#'
+#' Understøttede dato formater:
+#' \itemize{
+#'   \item "dd-mm-yyyy" (dansk standard)
+#'   \item "yyyy-mm-dd" (ISO)
+#'   \item "mm/dd/yyyy" (amerikansk)
+#'   \item Automatisk locale detection
+#' }
+#'
+#' @return List med formateret X-akse data:
+#' \describe{
+#'   \item{x_data}{Formateret X-akse værdier}
+#'   \item{x.format}{qicharts2 formaterings string eller NULL}
+#'   \item{is_date}{Logical - om data er datoer}
+#'   \item{interval_info}{Liste med interval statistik (kun datoer)}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Dato data
+#' data <- data.frame(
+#'   Dato = c("01-01-2024", "01-02-2024", "01-03-2024"),
+#'   Værdi = c(95, 92, 98)
+#' )
+#' result <- validate_x_column_format(data, "Dato", "day")
+#'
+#' # Numerisk data
+#' data_num <- data.frame(Obs = 1:10, Værdi = rnorm(10))
+#' result <- validate_x_column_format(data_num, "Obs", "observation")
+#' }
+#'
+#' @seealso \code{\link{detect_date_interval}}, \code{\link{get_optimal_formatting}}
 validate_x_column_format <- function(data, x_col, x_axis_unit = "observation") {
   # Return default hvis ingen x-kolonne
   if (is.null(x_col) || !x_col %in% names(data)) {
@@ -471,7 +521,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   }
 
   # Handle x-axis data med intelligent formatering - EFTER data filtrering
-  x_validation <- validate_x_column_format(data, config$x_col, "observation")
+  # FASE 5: Performance optimization - cache expensive x-column validation
+  data_hash <- paste0(nrow(data), "_", ncol(data), "_", paste(names(data), collapse = "_"))
+  cache_key <- paste0("x_validation_", config$x_col, "_", substr(data_hash, 1, 20))
+
+  x_validation <- create_cached_reactive({
+    validate_x_column_format(data, config$x_col, "observation")
+  }, cache_key, cache_timeout = PERFORMANCE_THRESHOLDS$cache_timeout_default)()
   x_data <- x_validation$x_data
   # xlab_text <- if (x_unit_label != "") x_unit_label else {
   #   if (x_validation$is_date) "Dato" else "Observation"
@@ -941,8 +997,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         plot <- plot +
           ggplot2::geom_hline(
             yintercept = target_value,
-            color = "#2E8B57", linetype = "solid", linewidth = 1.2,
-            alpha = 0.8
+            color = SPC_COLORS$target_line,
+            linetype = SPC_LINE_TYPES$solid,
+            linewidth = SPC_LINE_WIDTHS$thick,
+            alpha = SPC_ALPHA_VALUES$target_line
           )
       }
 
