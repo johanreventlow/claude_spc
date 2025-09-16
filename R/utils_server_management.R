@@ -221,7 +221,7 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
   # Clear saved handler
   observeEvent(input$clear_saved, {
-    handle_clear_saved_request(input, session, values)
+    handle_clear_saved_request(input, session, values, app_state)
   })
 
   # Upload modal handler
@@ -231,7 +231,7 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
   # Confirm clear saved handler
   observeEvent(input$confirm_clear_saved, {
-    handle_confirm_clear_saved(session, values)
+    handle_confirm_clear_saved(session, values, app_state)
   })
 
   # Track file selection for modal
@@ -346,7 +346,7 @@ collect_metadata <- function(input) {
   })
 }
 
-handle_clear_saved_request <- function(input, session, values) {
+handle_clear_saved_request <- function(input, session, values, app_state = NULL) {
   # Check if there's data or settings to lose
   has_data <- !is.null(values$current_data) &&
     any(!is.na(values$current_data), na.rm = TRUE) &&
@@ -365,7 +365,7 @@ handle_clear_saved_request <- function(input, session, values) {
 
   # If no data or settings, start new session directly
   if (!has_data && !has_settings) {
-    reset_to_empty_session(session, values, if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) app_state else NULL)
+    reset_to_empty_session(session, values, app_state)
     showNotification("Ny session startet", type = "message", duration = 2)
     return()
   }
@@ -374,8 +374,8 @@ handle_clear_saved_request <- function(input, session, values) {
   show_clear_confirmation_modal(has_data, has_settings, values)
 }
 
-handle_confirm_clear_saved <- function(session, values) {
-  reset_to_empty_session(session, values, if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) app_state else NULL)
+handle_confirm_clear_saved <- function(session, values, app_state = NULL) {
+  reset_to_empty_session(session, values, app_state)
   removeModal()
   showNotification("Ny session startet - alt data og indstillinger nulstillet", type = "message", duration = 4)
 }
@@ -383,54 +383,66 @@ handle_confirm_clear_saved <- function(session, values) {
 reset_to_empty_session <- function(session, values, app_state = NULL) {
   # PHASE 4: Check if centralized state is available
   use_centralized_state <- !is.null(app_state)
+  log_debug(paste("Session reset started, centralized state available:", use_centralized_state), "SESSION_RESET")
   clearDataLocally(session)
   # PHASE 4: Sync to both old and new state management
   values$last_save_time <- NULL
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (use_centralized_state) {
     app_state$session$last_save_time <- NULL
   }
 
   # PHASE 4: Sync to both old and new state management
   values$updating_table <- TRUE
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (use_centralized_state) {
     app_state$data$updating_table <- TRUE
   }
 
   # Force hide Anhøj rules until real data is loaded
   # PHASE 4: Sync to both old and new state management
   values$hide_anhoej_rules <- TRUE
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (use_centralized_state) {
     app_state$ui$hide_anhoej_rules <- TRUE
   }
 
   # Reset to standard column order using helper function
   # PHASE 4: Sync current_data to both old and new state management
-  values$current_data <- create_empty_session_data()
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-    app_state$data$current_data <- create_empty_session_data()
+  # Brug synlige standarddata (så tabel er synlig) men force name-only detection
+  standard_data <- create_empty_session_data()
+
+  values$current_data <- standard_data
+  if (use_centralized_state) {
+    app_state$data$current_data <- standard_data
+    log_debug(paste("Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x")), "SESSION_RESET")
   }
 
   # PHASE 4: Sync to both old and new state management
   values$file_uploaded <- FALSE
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (use_centralized_state) {
     app_state$session$file_uploaded <- FALSE
   }
   # PHASE 4: Sync to both old and new state management
   values$user_started_session <- TRUE # NEW: Set flag that user has started
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (use_centralized_state) {
     app_state$session$user_started_session <- TRUE
   }
   # PHASE 4: Sync original_data to both old and new state management
   values$original_data <- NULL
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (use_centralized_state) {
     app_state$data$original_data <- NULL
   }
   # PHASE 4: Sync to both old and new state management
   values$auto_detect_done <- FALSE
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (use_centralized_state) {
     app_state$columns$auto_detect$completed <- FALSE
   }
   values$initial_auto_detect_completed <- FALSE # Reset for new session
+
+  # Hent den nye standard session data
+  new_data <- if (use_centralized_state) {
+    app_state$data$current_data
+  } else {
+    values$current_data
+  }
 
   # Reset UI inputs
   isolate({
@@ -440,14 +452,53 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
     updateTextInput(session, "unit_custom", value = "")
     updateTextAreaInput(session, "indicator_description", value = "")
     updateSelectizeInput(session, "chart_type", selected = "run")
-    updateSelectizeInput(session, "x_column", selected = "")
-    updateSelectizeInput(session, "y_column", selected = "")
-    updateSelectizeInput(session, "n_column", selected = "")
+
+    # Opdater kolonnevalg med nye standardkolonner fra empty session data
+
+    if (!is.null(new_data) && ncol(new_data) > 0) {
+      new_col_names <- names(new_data)
+      col_choices <- setNames(new_col_names, new_col_names)
+      col_choices <- c("Vælg kolonne" = "", col_choices)
+
+      cat("DEBUG: [SESSION_RESET] Opdaterer selectizeInput med nye kolonner:", paste(new_col_names, collapse = ", "), "\n")
+
+      updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "n_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "skift_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "frys_column", choices = col_choices, selected = "")
+      updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = "")
+    } else {
+      # Fallback til tomme choices
+      updateSelectizeInput(session, "x_column", choices = c("Vælg kolonne" = ""), selected = "")
+      updateSelectizeInput(session, "y_column", choices = c("Vælg kolonne" = ""), selected = "")
+      updateSelectizeInput(session, "n_column", choices = c("Vælg kolonne" = ""), selected = "")
+      updateSelectizeInput(session, "skift_column", choices = c("Vælg kolonne" = ""), selected = "")
+      updateSelectizeInput(session, "frys_column", choices = c("Vælg kolonne" = ""), selected = "")
+      updateSelectizeInput(session, "kommentar_column", choices = c("Vælg kolonne" = ""), selected = "")
+    }
+
     updateTextInput(session, "target_value", value = "")
     updateTextInput(session, "centerline_value", value = "")
     updateSelectizeInput(session, "y_axis_unit", selected = "count")
     shinyjs::reset("data_file")
   })
+
+  # Force name-only detection på de nye standardkolonner efter UI opdatering
+  if (!is.null(new_data) && ncol(new_data) > 0) {
+    cat("DEBUG: [SESSION_RESET] Force name-only detection:\n")
+    cat("DEBUG: [SESSION_RESET] - New data dimensions:", dim(new_data), "\n")
+    cat("DEBUG: [SESSION_RESET] - New data columns:", paste(names(new_data), collapse = ", "), "\n")
+
+    # Kør name-only detection direkte i stedet for normal auto-detection
+    cat("DEBUG: [SESSION_RESET] Running name-only detection directly...\n")
+
+    # Kald name-only detection direkte med de nye kolonnenavne
+    name_only_result <- detect_columns_name_only(names(new_data), NULL, session, values,
+      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) app_state else NULL)
+
+    cat("DEBUG: [SESSION_RESET] ✅ Name-only detection completed for session reset\n")
+  }
 
   # PHASE 4: Sync to both old and new state management
   values$updating_table <- FALSE
