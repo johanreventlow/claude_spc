@@ -155,7 +155,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
       values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
 
       cat("DEBUG: [AUTO_DETECT_EXEC] Calling auto_detect_and_update_columns...\n")
-      auto_detect_and_update_columns(input, session, values)
+      # PHASE 4: Pass centralized state to auto-detect function
+      auto_detect_and_update_columns(input, session, values, app_state)
 
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting initial_auto_detect_completed = TRUE\n")
       values$initial_auto_detect_completed <- TRUE # Marker som færdig efter første kørsel
@@ -227,8 +228,14 @@ setup_column_management <- function(input, output, session, values, app_state = 
       }
 
       # Ryd sync request og sæt timestamp for at forhindre immediate column mgmt override
+      # PHASE 4: Sync to both old and new state management
       values$ui_sync_needed <- NULL
       values$last_ui_sync_time <- Sys.time()
+      if (use_centralized_state) {
+        app_state$columns$ui_sync$needed <- NULL
+        app_state$columns$ui_sync$last_sync_time <- Sys.time()
+        cat("DEBUG: [PHASE4] Synced UI sync clear to centralized state\n")
+      }
       cat("DEBUG: [UI_SYNC] ✅ UI sync completed, set timestamp to prevent override\n")
     },
     ignoreInit = TRUE, ignoreNULL = TRUE,
@@ -238,7 +245,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
   # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
     values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
-    auto_detect_and_update_columns(input, session, values)
+    # PHASE 4: Pass centralized state to auto-detect function
+    auto_detect_and_update_columns(input, session, values, app_state)
     values$initial_auto_detect_completed <- TRUE # Marker som færdig
     values$auto_detect_in_progress <- FALSE # Clear flag efter auto-detect er færdig
   })
@@ -336,9 +344,15 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
-auto_detect_and_update_columns <- function(input, session, values) {
+auto_detect_and_update_columns <- function(input, session, values, app_state = NULL) {
   cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
   cat("DEBUG: [AUTO_DETECT_FUNC] Starting auto_detect_and_update_columns\n")
+
+  # PHASE 4: Centralized state availability check
+  use_centralized_state <- !is.null(app_state)
+  if (use_centralized_state) {
+    cat("DEBUG: [PHASE4] Centralized state available for auto-detect function\n")
+  }
 
   req(values$current_data)
 
@@ -729,7 +743,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
 
     # Use reactive trigger with timestamp to force reactivity
     cat("DEBUG: [AUTO_DETECT_FUNC] 🔄 Triggering UI sync - should update input fields!\n")
-    values$ui_sync_needed <- list(
+    sync_data <- list(
       x_col = x_col,
       taeller_col = taeller_col,
       naevner_col = naevner_col,
@@ -739,6 +753,13 @@ auto_detect_and_update_columns <- function(input, session, values) {
       col_choices = col_choices,
       timestamp = as.numeric(Sys.time())  # Force reactivity trigger
     )
+
+    # PHASE 4: Sync to both old and new state management
+    values$ui_sync_needed <- sync_data
+    if (use_centralized_state) {
+      app_state$columns$ui_sync$needed <- sync_data
+      cat("DEBUG: [PHASE4] Synced UI sync data to centralized state\n")
+    }
 
     cat("DEBUG: [AUTO_DETECT_FUNC] ✅ Auto-detect completed successfully\n")
     cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
