@@ -28,22 +28,22 @@ setup_session_management <- function(input, output, session, values, waiter_file
             # Sæt gendannelses guards for at forhindre interferens
             # PHASE 4: Sync to both old and new state management
             values$restoring_session <- TRUE
-            if (use_centralized_state) {
+            if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
               app_state$session$restoring_session <- TRUE
             }
             # PHASE 4: Sync to both old and new state management
             values$updating_table <- TRUE
-            if (use_centralized_state) {
+            if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
               app_state$data$updating_table <- TRUE
             }
             # PHASE 4: Sync to both old and new state management
             values$table_operation_in_progress <- TRUE
-            if (use_centralized_state) {
+            if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
               app_state$data$table_operation_in_progress <- TRUE
             }
             # PHASE 4: Sync to both old and new state management
             values$auto_save_enabled <- FALSE
-            if (use_centralized_state) {
+            if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
               app_state$session$auto_save_enabled <- FALSE
             }
 
@@ -52,23 +52,23 @@ setup_session_management <- function(input, output, session, values, waiter_file
               {
                 # PHASE 4: Sync to both old and new state management
                 values$updating_table <- FALSE
-                if (use_centralized_state) {
+                if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
                   app_state$data$updating_table <- FALSE
                 }
                 # PHASE 4: Sync to both old and new state management
                 values$restoring_session <- FALSE
-                if (use_centralized_state) {
+                if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
                   app_state$session$restoring_session <- FALSE
                 }
                 # PHASE 4: Sync to both old and new state management
                 values$auto_save_enabled <- TRUE
-                if (use_centralized_state) {
+                if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
                   app_state$session$auto_save_enabled <- TRUE
                 }
                 # Set flag for delayed cleanup - handled by separate observer
                 # PHASE 4: Sync to both old and new state management
                 values$table_operation_cleanup_needed <- TRUE
-                if (use_centralized_state) {
+                if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
                   app_state$data$table_operation_cleanup_needed <- TRUE
                 }
               },
@@ -111,7 +111,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
                 }
               }
 
+              # PHASE 4: Sync current_data to both old and new state management
               values$current_data <- reconstructed_data
+              if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+                app_state$data$current_data <- reconstructed_data
+              }
               # PHASE 4: Sync original_data to both old and new state management
               values$original_data <- reconstructed_data
               if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
@@ -119,7 +123,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
               }
             } else {
               # Fallback for older save format
+              # PHASE 4: Sync current_data to both old and new state management
               values$current_data <- as.data.frame(saved_state$data)
+              if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+                app_state$data$current_data <- as.data.frame(saved_state$data)
+              }
               # PHASE 4: Sync original_data to both old and new state management
               values$original_data <- as.data.frame(saved_state$data)
               if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
@@ -129,12 +137,12 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
             # PHASE 4: Sync to both old and new state management
             values$file_uploaded <- TRUE
-            if (use_centralized_state) {
+            if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
               app_state$session$file_uploaded <- TRUE
             }
             # PHASE 4: Sync to both old and new state management
             values$auto_detect_done <- TRUE
-            if (use_centralized_state) {
+            if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
               app_state$columns$auto_detect$completed <- TRUE
             }
 
@@ -166,22 +174,22 @@ setup_session_management <- function(input, output, session, values, waiter_file
           # Reset guards even on error
           # PHASE 4: Sync to both old and new state management
           values$updating_table <- FALSE
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$data$updating_table <- FALSE
           }
           # PHASE 4: Sync to both old and new state management
           values$restoring_session <- FALSE
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$session$restoring_session <- FALSE
           }
           # PHASE 4: Sync to both old and new state management
           values$auto_save_enabled <- TRUE
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$session$auto_save_enabled <- TRUE
           }
           # PHASE 4: Sync to both old and new state management
           values$table_operation_in_progress <- FALSE
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$data$table_operation_in_progress <- FALSE
           }
         }
@@ -192,14 +200,20 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
   # Manual save handler
   observeEvent(input$manual_save, {
-    req(values$current_data)
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+    req(current_data_check)
 
     metadata <- collect_metadata(input)
 
-    saveDataLocally(session, values$current_data, metadata)
+    saveDataLocally(session, current_data_check, metadata)
     # PHASE 4: Sync to both old and new state management
     values$last_save_time <- Sys.time()
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$last_save_time <- Sys.time()
     }
     showNotification("Session gemt lokalt!", type = "message", duration = 2)
@@ -234,7 +248,7 @@ setup_session_management <- function(input, output, session, values, waiter_file
   # Save status display
   output$save_status_display <- renderUI({
     # PHASE 4: Check both old and new state management for last_save_time
-    last_save_time_check <- if (use_centralized_state) {
+    last_save_time_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$last_save_time
     } else {
       values$last_save_time
@@ -372,20 +386,20 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   clearDataLocally(session)
   # PHASE 4: Sync to both old and new state management
   values$last_save_time <- NULL
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$session$last_save_time <- NULL
   }
 
   # PHASE 4: Sync to both old and new state management
   values$updating_table <- TRUE
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$data$updating_table <- TRUE
   }
 
   # Force hide Anhøj rules until real data is loaded
   # PHASE 4: Sync to both old and new state management
   values$hide_anhoej_rules <- TRUE
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$ui$hide_anhoej_rules <- TRUE
   }
 
@@ -394,12 +408,12 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
 
   # PHASE 4: Sync to both old and new state management
   values$file_uploaded <- FALSE
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$session$file_uploaded <- FALSE
   }
   # PHASE 4: Sync to both old and new state management
   values$user_started_session <- TRUE # NEW: Set flag that user has started
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$session$user_started_session <- TRUE
   }
   # PHASE 4: Sync original_data to both old and new state management
@@ -409,7 +423,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   }
   # PHASE 4: Sync to both old and new state management
   values$auto_detect_done <- FALSE
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$columns$auto_detect$completed <- FALSE
   }
   values$initial_auto_detect_completed <- FALSE # Reset for new session
@@ -433,7 +447,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
 
   # PHASE 4: Sync to both old and new state management
   values$updating_table <- FALSE
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$data$updating_table <- FALSE
   }
 }
@@ -538,23 +552,23 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     }
     values$file_uploaded <- TRUE
     # PHASE 4: Sync to both old and new state management
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$file_uploaded <- TRUE
     }
     values$hide_anhoej_rules <- TRUE
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$ui$hide_anhoej_rules <- TRUE
     }
     values$session_file_name <- NULL
     # PHASE 4: Sync to both old and new state management
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$file_name <- NULL
     }
 
     # Nulstil konfigurationer
     # PHASE 4: Sync to both old and new state management
     values$auto_detect_done <- FALSE
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$columns$auto_detect$completed <- FALSE
     }
     updateSelectInput(session, "x_column", selected = "")
@@ -623,22 +637,22 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
           }
           values$file_uploaded <- TRUE
           # PHASE 4: Sync to both old and new state management
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$session$file_uploaded <- TRUE
           }
           values$auto_detect_done <- FALSE # Vil udløse auto-detekt
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$columns$auto_detect$completed <- FALSE
           }
           values$initial_auto_detect_completed <- FALSE # Reset for new data
           # PHASE 4: Sync to both old and new state management
           values$hide_anhoej_rules <- FALSE # Vis Anhøj regler for rigtige data
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$ui$hide_anhoej_rules <- FALSE
           }
           values$session_file_name <- "Eksempel data (SPC demo)"
           # PHASE 4: Sync to both old and new state management
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$session$file_name <- "Eksempel data (SPC demo)"
           }
 

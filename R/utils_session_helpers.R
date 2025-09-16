@@ -57,14 +57,14 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       # 2. Bruger har uploadet en fil, ELLER
       # 3. Bruger har eksplicit startet en ny session
       # PHASE 4: Check both old and new state management for file_uploaded
-      file_uploaded_check <- if (use_centralized_state) {
+      file_uploaded_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
         app_state$session$file_uploaded
       } else {
         values$file_uploaded
       }
 
       # PHASE 4: Check both old and new state management for user_started_session
-      user_started_session_check <- if (use_centralized_state) {
+      user_started_session_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
         app_state$session$user_started_session
       } else {
         values$user_started_session
@@ -111,7 +111,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   # Data status visning
   output$data_status_display <- renderUI({
     # PHASE 4: Check both old and new state management for file_uploaded
-    file_uploaded_check <- if (use_centralized_state) {
+    file_uploaded_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$file_uploaded
     } else {
       values$file_uploaded
@@ -160,28 +160,28 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   auto_save_trigger <- debounce(reactive({
     # Guards for at forhindre auto-gem under tabel operationer
     # PHASE 4: Check both old and new state management for updating_table
-    updating_table_check <- if (use_centralized_state) {
+    updating_table_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$updating_table
     } else {
       values$updating_table
     }
 
     # PHASE 4: Check both old and new state management for auto_save_enabled
-    auto_save_enabled_check <- if (use_centralized_state) {
+    auto_save_enabled_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$auto_save_enabled
     } else {
       values$auto_save_enabled
     }
 
     # PHASE 4: Check both old and new state management for restoring_session
-    restoring_session_check <- if (use_centralized_state) {
+    restoring_session_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$restoring_session
     } else {
       values$restoring_session
     }
 
     # PHASE 4: Check both old and new state management for table_operation_in_progress
-    table_operation_check <- if (use_centralized_state) {
+    table_operation_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$table_operation_in_progress
     } else {
       values$table_operation_in_progress
@@ -221,7 +221,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     autoSaveAppState(session, save_data$data, save_data$metadata)
     # PHASE 4: Sync to both old and new state management
     values$last_save_time <- save_data$timestamp
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$last_save_time <- save_data$timestamp
     }
   })
@@ -235,28 +235,28 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   settings_save_trigger <- debounce(reactive({
     # Samme guards som data auto-gem
     # PHASE 4: Check both old and new state management for updating_table
-    updating_table_check <- if (use_centralized_state) {
+    updating_table_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$updating_table
     } else {
       values$updating_table
     }
 
     # PHASE 4: Check both old and new state management for auto_save_enabled
-    auto_save_enabled_check <- if (use_centralized_state) {
+    auto_save_enabled_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$auto_save_enabled
     } else {
       values$auto_save_enabled
     }
 
     # PHASE 4: Check both old and new state management for restoring_session
-    restoring_session_check <- if (use_centralized_state) {
+    restoring_session_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$restoring_session
     } else {
       values$restoring_session
     }
 
     # PHASE 4: Check both old and new state management for table_operation_in_progress
-    table_operation_check_settings <- if (use_centralized_state) {
+    table_operation_check_settings <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$table_operation_in_progress
     } else {
       values$table_operation_in_progress
@@ -294,7 +294,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     autoSaveAppState(session, save_data$data, save_data$metadata)
     # PHASE 4: Sync to both old and new state management
     values$last_save_time <- save_data$timestamp
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$last_save_time <- save_data$timestamp
     }
   }) %>%
@@ -322,7 +322,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   # Event-driven table operation cleanup - replaces later::later() anti-pattern
   table_cleanup_trigger <- debounce(reactive({
     # PHASE 4: Check both old and new state management for table_operation_cleanup_needed
-    table_operation_cleanup_needed_check <- if (use_centralized_state) {
+    table_operation_cleanup_needed_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$table_operation_cleanup_needed
     } else {
       values$table_operation_cleanup_needed
@@ -342,12 +342,12 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     # Clear the table operation flag and reset cleanup request
     # PHASE 4: Sync to both old and new state management
     values$table_operation_in_progress <- FALSE
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$table_operation_in_progress <- FALSE
     }
     # PHASE 4: Sync to both old and new state management
     values$table_operation_cleanup_needed <- FALSE
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$table_operation_cleanup_needed <- FALSE
     }
   })

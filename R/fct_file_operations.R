@@ -49,7 +49,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     cat("DEBUG: [FILE_UPLOAD] Setting updating_table flag...\n")
     # PHASE 4: Sync to both old and new state management
     values$updating_table <- TRUE
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$updating_table <- TRUE
     }
     on.exit(
@@ -57,7 +57,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
         cat("DEBUG: [FILE_UPLOAD] Clearing updating_table flag on exit...\n")
         # PHASE 4: Sync to both old and new state management
         values$updating_table <- FALSE
-        if (use_centralized_state) {
+        if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
           app_state$data$updating_table <- FALSE
         }
         cat("DEBUG: [FILE_UPLOAD] ✅ updating_table flag cleared\n")
@@ -153,17 +153,17 @@ handle_excel_upload <- function(file_path, session, values) {
     }
     # PHASE 4: Sync to both old and new state management
     values$file_uploaded <- TRUE
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$file_uploaded <- TRUE
     }
     # PHASE 4: Sync to both old and new state management
     values$auto_detect_done <- TRUE # Skip auto-detect since we have session info
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$columns$auto_detect$completed <- TRUE
     }
     # PHASE 4: Sync to both old and new state management
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$ui$hide_anhoej_rules <- FALSE
     }
 
@@ -201,18 +201,19 @@ handle_excel_upload <- function(file_path, session, values) {
     }
     # PHASE 4: Sync to both old and new state management
     values$file_uploaded <- TRUE
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$session$file_uploaded <- TRUE
     }
     # PHASE 4: Sync to both old and new state management
     values$auto_detect_done <- FALSE
-    if (use_centralized_state) {
+    # PHASE 4: Sync auto_detect_done to centralized state
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$columns$auto_detect$completed <- FALSE
     }
     values$initial_auto_detect_completed <- FALSE # Reset for new data
     # PHASE 4: Sync to both old and new state management
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
-    if (use_centralized_state) {
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$ui$hide_anhoej_rules <- FALSE
     }
 
@@ -267,16 +268,17 @@ handle_csv_upload <- function(file_path, values) {
   }
   values$file_uploaded <- TRUE
   # PHASE 4: Sync to both old and new state management
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$session$file_uploaded <- TRUE
   }
   values$auto_detect_done <- FALSE
-  if (use_centralized_state) {
+  # PHASE 4: Sync auto_detect_done to centralized state
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$columns$auto_detect$completed <- FALSE
   }
   # PHASE 4: Sync to both old and new state management
   values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
-  if (use_centralized_state) {
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$ui$hide_anhoej_rules <- FALSE
   }
   cat("DEBUG: [CSV_UPLOAD] ✅ Reactive values set successfully\n")
@@ -575,7 +577,7 @@ create_session_info_lines <- function(input, active_data_for_export, values) {
     paste("• Kolonner:", ncol(active_data_for_export)),
     paste("• Kolonnenavne:", paste(names(active_data_for_export), collapse = ", ")),
     # PHASE 4: Check both old and new state management for file_uploaded
-    paste("• Data kilde:", if (if (use_centralized_state) app_state$session$file_uploaded else values$file_uploaded) "File Upload" else "Manuel indtastning"),
+    paste("• Data kilde:", if (if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) app_state$session$file_uploaded else values$file_uploaded) "File Upload" else "Manuel indtastning"),
     paste("• Eksporteret:", format(Sys.time(), "%d-%m-%Y %H:%M")),
     "",
     "TEKNISK INFORMATION:",
