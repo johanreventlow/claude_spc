@@ -896,9 +896,15 @@ show_column_edit_modal <- function(session, values) {
 ## Håndtér kolonnenavn ændringer
 # Behandler ændringer af kolonnenavne fra modal dialog
 handle_column_name_changes <- function(input, session, values) {
-  req(values$current_data)
+  # PHASE 4: Check both old and new state management for current_data
+  current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$current_data
+  } else {
+    values$current_data
+  }
+  req(current_data_check)
 
-  current_names <- names(values$current_data)
+  current_names <- names(current_data_check)
   new_names <- character(length(current_names))
 
   for (i in 1:length(current_names)) {
@@ -919,7 +925,11 @@ handle_column_name_changes <- function(input, session, values) {
     return()
   }
 
+  # PHASE 4: Sync assignment to both old and new state management
   names(values$current_data) <- new_names
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    names(app_state$data$current_data) <- new_names
+  }
 
   removeModal()
 
@@ -959,17 +969,35 @@ show_add_column_modal <- function() {
 ## Håndtér tilføjelse af kolonne
 # Behandler tilføjelse af nye kolonner til data
 handle_add_column <- function(input, session, values) {
-  req(input$new_col_name, values$current_data)
+  # PHASE 4: Check both old and new state management for current_data
+  current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$current_data
+  } else {
+    values$current_data
+  }
+  req(input$new_col_name, current_data_check)
 
   new_col_name <- input$new_col_name
   new_col_type <- input$new_col_type
 
   if (new_col_type == "numeric") {
-    values$current_data[[new_col_name]] <- rep(NA_real_, nrow(values$current_data))
+    # PHASE 4: Sync assignment to both old and new state management
+    values$current_data[[new_col_name]] <- rep(NA_real_, nrow(current_data_check))
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data[[new_col_name]] <- rep(NA_real_, nrow(current_data_check))
+    }
   } else if (new_col_type == "date") {
-    values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
+    # PHASE 4: Sync assignment to both old and new state management
+    values$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
+    }
   } else {
-    values$current_data[[new_col_name]] <- rep(NA_character_, nrow(values$current_data))
+    # PHASE 4: Sync assignment to both old and new state management
+    values$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
+    }
   }
 
   removeModal()
@@ -987,7 +1015,13 @@ handle_add_column <- function(input, session, values) {
 setup_data_table <- function(input, output, session, values) {
   # Hovedtabel rendering med excelR
   output$main_data_table <- excelR::renderExcel({
-    req(values$current_data)
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+    req(current_data_check)
 
     # Inkluder table_version for at tvinge re-render efter gendannelse
     # PHASE 4: Check both old and new state management for table_version
@@ -997,7 +1031,7 @@ setup_data_table <- function(input, output, session, values) {
       values$table_version
     }
 
-    data <- values$current_data
+    data <- current_data_check
 
     # Behold logiske kolonner som logiske for excelR checkbox
     # excelR håndterer logiske værdier direkte for checkbox type
