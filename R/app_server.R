@@ -77,6 +77,8 @@ app_server <- function(input, output, session) {
           values$current_data <- test_data
           values$original_data <- test_data
           # PHASE 4: Sync to both old and new state management
+          app_state$data$current_data <- test_data
+          # Note: original_data ikke i centralized state schema endnu
           values$file_uploaded <- TRUE
           app_state$session$file_uploaded <- TRUE
           # PHASE 4: Sync to both old and new state management
@@ -149,7 +151,14 @@ app_server <- function(input, output, session) {
   # TEST MODE: Set auto-detect trigger flag AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {
     observe({
-      if (!is.null(values$current_data)) {
+      # PHASE 4: Check both old and new state management for current_data
+      current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+        app_state$data$current_data
+      } else {
+        values$current_data
+      }
+
+      if (!is.null(current_data_check)) {
         cat("TEST MODE: Setting test_mode_auto_detect_ready flag after setup\n")
         timestamp <- Sys.time()
 
@@ -158,7 +167,14 @@ app_server <- function(input, output, session) {
         app_state$test_mode$auto_detect_ready <- timestamp
         cat("DEBUG: [PHASE4] Synced test_mode_auto_detect_ready to both systems\n")
       }
-    }) %>% bindEvent(values$current_data, once = TRUE, ignoreNULL = TRUE)
+    }) %>% bindEvent({
+      # PHASE 4: Check both old and new state management for current_data
+      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+        app_state$data$current_data
+      } else {
+        values$current_data
+      }
+    }, once = TRUE, ignoreNULL = TRUE)
   }
 
   # Initial UI Setup --------------------------------------------------------
