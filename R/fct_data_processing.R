@@ -1194,7 +1194,11 @@ setup_data_table <- function(input, output, session, values) {
             return()
           }
 
+          # PHASE 4: Sync assignment to both old and new state management
           values$current_data <- new_df
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+            app_state$data$current_data <- new_df
+          }
 
           showNotification("Tabel opdateret", type = "message", duration = 2)
         },
@@ -1213,7 +1217,13 @@ setup_data_table <- function(input, output, session, values) {
 
   # Tilføj række
   observeEvent(input$add_row, {
-    req(values$current_data)
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+    req(current_data_check)
 
     # Sæt vedvarende flag for at forhindre auto-save interferens
     # PHASE 4: Sync to both old and new state management
@@ -1222,10 +1232,14 @@ setup_data_table <- function(input, output, session, values) {
       app_state$data$table_operation_in_progress <- TRUE
     }
 
-    new_row <- values$current_data[1, ]
+    new_row <- current_data_check[1, ]
     new_row[1, ] <- NA
 
+    # PHASE 4: Sync assignment to both old and new state management
     values$current_data <- rbind(values$current_data, new_row)
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data <- rbind(app_state$data$current_data, new_row)
+    }
 
     showNotification("Ny række tilføjet", type = "message")
 
