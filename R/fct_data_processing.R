@@ -25,6 +25,12 @@ setup_column_management <- function(input, output, session, values) {
       return()
     }
 
+    # Skip hvis UI sync er pending for at undgå race condition
+    if (!is.null(values$ui_sync_needed)) {
+      cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync pending, would override auto-detect results\n")
+      return()
+    }
+
     req(values$current_data)
     cat("DEBUG: [COLUMN_MGMT] Data available - processing column choices\n")
 
@@ -67,7 +73,7 @@ setup_column_management <- function(input, output, session, values) {
     } else {
       cat("DEBUG: [COLUMN_MGMT] ⚠️ No columns available\n")
     }
-  })
+  }, priority = OBSERVER_PRIORITIES$DATA_PROCESSING)
 
   # Auto-detekterings trigger flag - bruges kun til manuel triggering (ikke test mode)
   observeEvent(values$current_data,
