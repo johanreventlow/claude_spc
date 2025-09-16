@@ -997,7 +997,14 @@ setup_data_table <- function(input, output, session, values) {
         values$updating_table
       }
 
-      if (updating_table_check || values$restoring_session) {
+      # PHASE 4: Check both old and new state management for restoring_session
+      restoring_session_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+        app_state$session$restoring_session
+      } else {
+        values$restoring_session
+      }
+
+      if (updating_table_check || restoring_session_check) {
         return()
       }
 

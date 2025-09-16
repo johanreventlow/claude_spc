@@ -26,7 +26,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
           if (!is.null(saved_state$data)) {
             # Sæt gendannelses guards for at forhindre interferens
+            # PHASE 4: Sync to both old and new state management
             values$restoring_session <- TRUE
+            if (use_centralized_state) {
+              app_state$session$restoring_session <- TRUE
+            }
             # PHASE 4: Sync to both old and new state management
             values$updating_table <- TRUE
             if (use_centralized_state) {
@@ -47,7 +51,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
                 if (use_centralized_state) {
                   app_state$data$updating_table <- FALSE
                 }
+                # PHASE 4: Sync to both old and new state management
                 values$restoring_session <- FALSE
+                if (use_centralized_state) {
+                  app_state$session$restoring_session <- FALSE
+                }
                 # PHASE 4: Sync to both old and new state management
                 values$auto_save_enabled <- TRUE
                 if (use_centralized_state) {
@@ -137,7 +145,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
           if (use_centralized_state) {
             app_state$data$updating_table <- FALSE
           }
+          # PHASE 4: Sync to both old and new state management
           values$restoring_session <- FALSE
+          if (use_centralized_state) {
+            app_state$session$restoring_session <- FALSE
+          }
           # PHASE 4: Sync to both old and new state management
           values$auto_save_enabled <- TRUE
           if (use_centralized_state) {
