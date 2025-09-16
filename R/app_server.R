@@ -196,21 +196,17 @@ app_server <- function(input, output, session) {
     bindEvent(TRUE, once = TRUE)
 
   # Session Cleanup ---------------------------------------------------------
-  # Opsæt cleanup af observers og ressourcer når session lukker
-  setup_session_cleanup(session, list(
-    function() {
-      # Cleanup alle observers
-      obs_manager$cleanup_all()
-    },
-    function() {
-      # Cleanup waiter
-      if (exists("waiter_file") && !is.null(waiter_file)) {
-        waiter_file$hide()
-      }
-    },
-    function() {
-      # Log session statistics
-      log_info(paste("Session afsluttet - Observer count:", obs_manager$count()))
+  # Additional cleanup når session lukker
+  session$onSessionEnded(function() {
+    # Cleanup alle observers
+    obs_manager$cleanup_all()
+
+    # Cleanup waiter
+    if (exists("waiter_file") && !is.null(waiter_file)) {
+      waiter_file$hide()
     }
-  ))
+
+    # Log session statistics
+    log_info(paste("Session afsluttet - Observer count:", obs_manager$count()), "APP_SERVER")
+  })
 }
