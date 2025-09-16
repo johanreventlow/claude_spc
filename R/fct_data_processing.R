@@ -816,6 +816,19 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
       kommentar_col = kommentar_col,
       timestamp = Sys.time()  # Force reactivity even if values are same
     )
+    # PHASE 4: Sync auto_detected_columns to centralized state
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$columns$auto_detect$results <- list(
+        x_col = x_col,
+        y_col = taeller_col,
+        n_col = naevner_col,
+        skift_col = skift_col,
+        frys_col = frys_col,
+        kommentar_col = kommentar_col,
+        timestamp = Sys.time()
+      )
+      cat("DEBUG: [PHASE4] Synced auto_detected_columns to centralized state\n")
+    }
 
     # Trigger UI sync for visual feedback on Kolonnematch tab using reactive trigger
     cat("DEBUG: [AUTO_DETECT_FUNC] 🎯 CRITICAL: Setting ui_sync_needed with:\n")

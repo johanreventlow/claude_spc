@@ -73,11 +73,18 @@ setup_visualization <- function(input, output, session, values) {
 
   # Separate reactives for auto-detected and manual column selection
   auto_detected_config <- reactive({
-    req(values$auto_detected_columns)
+    # PHASE 4: Check both old and new state management for auto_detected_columns
+    auto_columns <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$columns$auto_detect$results
+    } else {
+      values$auto_detected_columns
+    }
+
+    req(auto_columns)
     list(
-      x_col = values$auto_detected_columns$x_col,
-      y_col = values$auto_detected_columns$y_col,
-      n_col = values$auto_detected_columns$n_col,
+      x_col = auto_columns$x_col,
+      y_col = auto_columns$y_col,
+      n_col = auto_columns$n_col,
       chart_type = get_qic_chart_type(if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
     )
   })
