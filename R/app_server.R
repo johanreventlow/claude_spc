@@ -126,7 +126,8 @@ app_server <- function(input, output, session) {
   setup_data_table(input, output, session, values)
 
   ## Kolonne management logik
-  setup_column_management(input, output, session, values)
+  # PHASE 4: Pass centralized state to column management
+  setup_column_management(input, output, session, values, app_state)
 
   ## Visualiserings logik
   visualization <- setup_visualization(input, output, session, values)

@@ -7,8 +7,14 @@
 
 ## Hovedfunktion for kolonnehåndtering
 # Opsætter al server logik relateret til kolonne-management
-setup_column_management <- function(input, output, session, values) {
+setup_column_management <- function(input, output, session, values, app_state = NULL) {
   cat("DEBUG: [COLUMN_MGMT] Setting up column management\n")
+
+  # PHASE 4: Centralized state availability check
+  use_centralized_state <- !is.null(app_state)
+  if (use_centralized_state) {
+    cat("DEBUG: [PHASE4] Centralized state available for column management\n")
+  }
 
   # Opdater kolonnevalg når data ændres
   observe({
@@ -106,7 +112,14 @@ setup_column_management <- function(input, output, session, values) {
 
       if (data_available && x_empty && y_empty) {
         cat("DEBUG: [AUTO_DETECT] ✅ Triggering manual auto-detect\n")
-        values$auto_detect_trigger <- Sys.time() # Brug timestamp for at sikre reaktivitet
+        timestamp <- Sys.time()
+
+        # PHASE 4: Sync to both old and new state management
+        values$auto_detect_trigger <- timestamp # Brug timestamp for at sikre reaktivitet
+        if (use_centralized_state) {
+          app_state$columns$auto_detect$trigger <- timestamp
+          cat("DEBUG: [PHASE4] Synced auto_detect_trigger to centralized state\n")
+        }
       } else {
         cat("DEBUG: [AUTO_DETECT] ❌ Conditions not met for auto-detect\n")
       }
@@ -120,7 +133,14 @@ setup_column_management <- function(input, output, session, values) {
       cat("DEBUG: [TEST_MODE] Test mode auto-detect observer triggered\n")
       req(values$test_mode_auto_detect_ready)
       cat("DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n")
-      values$auto_detect_trigger <- Sys.time()
+      timestamp <- Sys.time()
+
+      # PHASE 4: Sync to both old and new state management
+      values$auto_detect_trigger <- timestamp
+      if (use_centralized_state) {
+        app_state$columns$auto_detect$trigger <- timestamp
+        cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state\n")
+      }
     },
     ignoreInit = TRUE, ignoreNULL = TRUE,
     priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT
