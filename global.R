@@ -24,6 +24,9 @@ library(waiter)
 library(yaml) # Til læsning af brand.yml
 library(later) # Til forsinket udførelse
 
+# SOURCE UTILITIES --------------------------------
+source("R/utils_logging.R")
+
 # UDVIKLINGSINDSTILLINGER --------------------------------
 
 ## Testmodus -----

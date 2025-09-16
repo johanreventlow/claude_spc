@@ -7,12 +7,12 @@
 #' 
 #' @noRd
 app_server <- function(input, output, session) {
-  cat("DEBUG: [APP_SERVER] ===========================================\n")
-  cat("DEBUG: [APP_SERVER] Starting main server function\n")
-  cat("DEBUG: [APP_SERVER] Session ID:", session$token, "\n")
+  log_debug("===========================================", "APP_SERVER")
+  log_debug("Starting main server function", "APP_SERVER")
+  log_debug(paste("Session ID:", session$token), "APP_SERVER")
 
   # Source all required server components
-  cat("DEBUG: [APP_SERVER] Sourcing server components...\n")
+  log_debug("Sourcing server components...", "APP_SERVER")
   source("R/utils_reactive_state.R", local = TRUE)
   source("R/utils_session_helpers.R", local = TRUE)
   source("R/utils_server_management.R", local = TRUE)
@@ -20,31 +20,31 @@ app_server <- function(input, output, session) {
   source("R/fct_file_operations.R", local = TRUE)
   source("R/fct_visualization_server.R", local = TRUE)
   source("R/mod_spc_chart.R", local = TRUE)
-  cat("DEBUG: [APP_SERVER] ✅ All server components sourced\n")
+  log_debug("✅ All server components sourced", "APP_SERVER")
 
   # Reaktive Værdier --------------------------------------------------------
   # Initialiser reaktive værdier
-  cat("DEBUG: [APP_SERVER] Initializing reactive values...\n")
+  log_debug("Initializing reactive values...", "APP_SERVER")
   values <- initialize_reactive_values()
-  cat("DEBUG: [APP_SERVER] ✅ Reactive values initialized\n")
+  log_debug("✅ Reactive values initialized", "APP_SERVER")
 
   # PHASE 4: Centraliseret state management (parallel til existing values)
-  cat("DEBUG: [APP_SERVER] Initializing centralized app state...\n")
+  log_debug("Initializing centralized app state...", "APP_SERVER")
   app_state <- create_app_state()
-  cat("DEBUG: [APP_SERVER] ✅ Centralized state initialized\n")
+  log_debug("✅ Centralized state initialized", "APP_SERVER")
 
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
-  cat("DEBUG: [APP_SERVER] Checking TEST_MODE configuration...\n")
-  cat("DEBUG: [APP_SERVER] TEST_MODE_AUTO_LOAD:", if(exists("TEST_MODE_AUTO_LOAD")) TEST_MODE_AUTO_LOAD else "UNDEFINED", "\n")
+  log_debug("Checking TEST_MODE configuration...", "APP_SERVER")
+  log_debug(paste("TEST_MODE_AUTO_LOAD:", if(exists("TEST_MODE_AUTO_LOAD")) TEST_MODE_AUTO_LOAD else "UNDEFINED"), "APP_SERVER")
 
   if (exists("TEST_MODE_AUTO_LOAD") && TEST_MODE_AUTO_LOAD) {
-    cat("DEBUG: [TEST_MODE] 🔄 Attempting auto-load with TEST_MODE_AUTO_LOAD =", TEST_MODE_AUTO_LOAD, "\n")
+    log_debug(paste("🔄 Attempting auto-load with TEST_MODE_AUTO_LOAD =", TEST_MODE_AUTO_LOAD), "TEST_MODE")
     test_file_path <- if(exists("TEST_MODE_FILE_PATH")) TEST_MODE_FILE_PATH else "UNDEFINED"
-    cat("DEBUG: [TEST_MODE] Test file path:", test_file_path, "\n")
+    log_debug(paste("Test file path:", test_file_path), "TEST_MODE")
 
     if (exists("TEST_MODE_FILE_PATH") && file.exists(test_file_path)) {
-      cat("DEBUG: [TEST_MODE] ✅ Test file found, starting auto-load...\n")
+      log_debug("✅ Test file found, starting auto-load...", "TEST_MODE")
       tryCatch(
         {
           # Bestem hvilken loader der skal bruges baseret på fil-extension
@@ -100,16 +100,16 @@ app_server <- function(input, output, session) {
           # NOTE: Flag sættes efter setup_column_management() for at undgå race condition
 
           # Debug output
-          cat("TEST MODE: Auto-indlæst fil:", test_file_path, "\n")
-          cat("TEST MODE: Data dimensioner:", nrow(test_data), "x", ncol(test_data), "\n")
-          cat("TEST MODE: Kolonner:", paste(names(test_data), collapse = ", "), "\n")
+          log_info(paste("Auto-indlæst fil:", test_file_path), "TEST_MODE")
+          log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), "TEST_MODE")
+          log_info(paste("Kolonner:", paste(names(test_data), collapse = ", ")), "TEST_MODE")
         },
         error = function(e) {
-          cat("TEST MODE: Fejl ved indlæsning af", test_file_path, ":", e$message, "\n")
+          log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), "TEST_MODE")
         }
       )
     } else {
-      cat("TEST MODE: Fil ikke fundet:", test_file_path, "\n")
+      log_warn(paste("Fil ikke fundet:", test_file_path), "TEST_MODE")
     }
   }
 
@@ -163,13 +163,13 @@ app_server <- function(input, output, session) {
       }
 
       if (!is.null(current_data_check)) {
-        cat("TEST MODE: Setting test_mode_auto_detect_ready flag after setup\n")
+        log_debug("Setting test_mode_auto_detect_ready flag after setup", "TEST_MODE")
         timestamp <- Sys.time()
 
         # PHASE 4: Gradual migration - sync to both old and new state
         values$test_mode_auto_detect_ready <- timestamp
         app_state$test_mode$auto_detect_ready <- timestamp
-        cat("DEBUG: [PHASE4] Synced test_mode_auto_detect_ready to both systems\n")
+        log_debug("Synced test_mode_auto_detect_ready to both systems", "PHASE4")
       }
     }) %>% bindEvent({
       # PHASE 4: Check both old and new state management for current_data
@@ -184,9 +184,9 @@ app_server <- function(input, output, session) {
   # Initial UI Setup --------------------------------------------------------
   # Sæt standard chart_type når appen starter
   observe({
-    cat("DEBUG: [APP_SERVER] Setting initial chart_type to 'run'\n")
+    log_debug("Setting initial chart_type to 'run'", "APP_SERVER")
     updateSelectizeInput(session, "chart_type", selected = "run")
-    cat("DEBUG: [APP_SERVER] ✅ Initial chart_type set\n")
+    log_debug("✅ Initial chart_type set", "APP_SERVER")
   }) %>%
     bindEvent(TRUE, once = TRUE)
 
