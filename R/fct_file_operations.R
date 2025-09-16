@@ -137,7 +137,11 @@ handle_excel_upload <- function(file_path, session, values) {
     metadata <- parse_session_metadata(session_lines, names(data))
 
     # Load data
+    # PHASE 4: Sync assignment to both old and new state management
     values$current_data <- as.data.frame(data)
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data <- as.data.frame(data)
+    }
     values$original_data <- as.data.frame(data)
     # PHASE 4: Sync to both old and new state management
     values$file_uploaded <- TRUE
@@ -173,7 +177,11 @@ handle_excel_upload <- function(file_path, session, values) {
     # Ensure standard columns are present and in correct order
     data <- ensure_standard_columns(data)
 
+    # PHASE 4: Sync assignment to both old and new state management
     values$current_data <- as.data.frame(data)
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data <- as.data.frame(data)
+    }
     values$original_data <- as.data.frame(data)
     # PHASE 4: Sync to both old and new state management
     values$file_uploaded <- TRUE
@@ -231,7 +239,11 @@ handle_csv_upload <- function(file_path, values) {
   cat("DEBUG: [CSV_UPLOAD] Standard columns applied - dimensions:", nrow(data), "x", ncol(data), "\n")
 
   cat("DEBUG: [CSV_UPLOAD] Setting reactive values...\n")
+  # PHASE 4: Sync assignment to both old and new state management
   values$current_data <- as.data.frame(data)
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$current_data <- as.data.frame(data)
+  }
   values$original_data <- as.data.frame(data)
   values$file_uploaded <- TRUE
   # PHASE 4: Sync to both old and new state management
@@ -398,7 +410,12 @@ setup_download_handlers <- function(input, output, session, values) {
 # Opretter omfattende Excel eksport med data og metadata
 create_complete_excel_export <- function(file, input, values) {
   # Hent aktive data til eksport
-  active_data_for_export <- values$current_data
+  # PHASE 4: Check both old and new state management for current_data
+  active_data_for_export <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$current_data
+  } else {
+    values$current_data
+  }
 
   # Filtrer tomme rækker fra
   if (!is.null(active_data_for_export)) {
