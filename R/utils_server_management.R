@@ -404,7 +404,11 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   }
 
   # Reset to standard column order using helper function
+  # PHASE 4: Sync current_data to both old and new state management
   values$current_data <- create_empty_session_data()
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$current_data <- create_empty_session_data()
+  }
 
   # PHASE 4: Sync to both old and new state management
   values$file_uploaded <- FALSE
@@ -544,7 +548,11 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     cat("Welcome page: Start new session clicked\n")
 
     # Samme logik som eksisterende start_new_session
+    # PHASE 4: Sync current_data to both old and new state management
     values$current_data <- create_empty_session_data()
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data <- create_empty_session_data()
+    }
     # PHASE 4: Sync original_data to both old and new state management
     values$original_data <- values$current_data
     if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
@@ -629,7 +637,11 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
           cat("Final data dimensions:", paste(dim(demo_data), collapse = "x"), "\n")
 
           # Sæt reaktive værdier
+          # PHASE 4: Sync current_data to both old and new state management
           values$current_data <- demo_data
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+            app_state$data$current_data <- demo_data
+          }
           # PHASE 4: Sync original_data to both old and new state management
           values$original_data <- demo_data
           if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
