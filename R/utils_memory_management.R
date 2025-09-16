@@ -53,16 +53,21 @@ cleanup_reactive_values <- function(values) {
 
   log_debug("Cleaning reactive values", "MEMORY_MGMT")
 
-  # Clear data objects (with reactive context safety)
+  # Clear data objects (graceful failure during session shutdown)
   safe_nullify <- function(value_name) {
     tryCatch({
+      # Try to check if value exists and clear it
+      # This might fail during session shutdown when no reactive context exists
       if (value_name %in% names(values)) {
-        shiny::isolate({
-          values[[value_name]] <- NULL
-        })
+        values[[value_name]] <- NULL
       }
     }, error = function(e) {
-      log_warn(paste("Failed to clear", value_name, ":", e$message), "MEMORY_MGMT")
+      # During session shutdown, reactive context errors are expected
+      if (grepl("reactive context", e$message, ignore.case = TRUE)) {
+        log_debug(paste("Skipping", value_name, "- no reactive context (session shutdown)"), "MEMORY_MGMT")
+      } else {
+        log_warn(paste("Failed to clear", value_name, ":", e$message), "MEMORY_MGMT")
+      }
     })
   }
 
