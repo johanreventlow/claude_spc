@@ -26,7 +26,11 @@ setup_column_management <- function(input, output, session, values, app_state = 
     }
 
     # Skip hvis auto-detect er i gang for at undgå at overskrive auto-detect resultater
-    if (values$auto_detect_in_progress) {
+    # PHASE 4: Check both old and new state management
+    auto_detect_active <- values$auto_detect_in_progress ||
+                         (use_centralized_state && app_state$columns$auto_detect$in_progress)
+
+    if (auto_detect_active) {
       cat("DEBUG: [COLUMN_MGMT] Skipping - auto-detect in progress\n")
       return()
     }
@@ -152,7 +156,12 @@ setup_column_management <- function(input, output, session, values, app_state = 
       cat("DEBUG: [AUTO_DETECT_EXEC] Auto-detect execution started\n")
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = TRUE\n")
 
+      # PHASE 4: Sync to both old and new state management
       values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
+      if (use_centralized_state) {
+        app_state$columns$auto_detect$in_progress <- TRUE
+        cat("DEBUG: [PHASE4] Synced auto_detect_in_progress TRUE to centralized state\n")
+      }
 
       cat("DEBUG: [AUTO_DETECT_EXEC] Calling auto_detect_and_update_columns...\n")
       # PHASE 4: Pass centralized state to auto-detect function
@@ -163,7 +172,12 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
       # Clear flag after auto-detect completion (event-driven instead of timing)
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = FALSE\n")
+      # PHASE 4: Sync to both old and new state management
       values$auto_detect_in_progress <- FALSE
+      if (use_centralized_state) {
+        app_state$columns$auto_detect$in_progress <- FALSE
+        cat("DEBUG: [PHASE4] Synced auto_detect_in_progress FALSE to centralized state\n")
+      }
 
       cat("DEBUG: [AUTO_DETECT_EXEC] ✅ Auto-detect execution completed\n")
     },
@@ -244,11 +258,23 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
+    # PHASE 4: Sync to both old and new state management
     values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
+    if (use_centralized_state) {
+      app_state$columns$auto_detect$in_progress <- TRUE
+      cat("DEBUG: [PHASE4] Manual auto-detect: synced in_progress TRUE to centralized state\n")
+    }
+
     # PHASE 4: Pass centralized state to auto-detect function
     auto_detect_and_update_columns(input, session, values, app_state)
     values$initial_auto_detect_completed <- TRUE # Marker som færdig
+
+    # PHASE 4: Clear flag in both systems
     values$auto_detect_in_progress <- FALSE # Clear flag efter auto-detect er færdig
+    if (use_centralized_state) {
+      app_state$columns$auto_detect$in_progress <- FALSE
+      cat("DEBUG: [PHASE4] Manual auto-detect: synced in_progress FALSE to centralized state\n")
+    }
   })
 
   # Kolonnevaliderings output
