@@ -23,7 +23,7 @@ setup_visualization <- function(input, output, session, values) {
 
     # Tilføj hide_anhoej_rules flag som attribut til data
     # PHASE 4: Check both old and new state management for hide_anhoej_rules
-    hide_anhoej_rules_check <- if (use_centralized_state) {
+    hide_anhoej_rules_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$ui$hide_anhoej_rules
     } else {
       values$hide_anhoej_rules
