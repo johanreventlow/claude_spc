@@ -1014,7 +1014,11 @@ setup_data_table <- function(input, output, session, values) {
         app_state$data$updating_table <- TRUE
         cat("DEBUG: [PHASE4] Set updating_table=TRUE in centralized state\n")
       }
+      # PHASE 4: Sync to both old and new state management
       values$table_operation_in_progress <- TRUE
+      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+        app_state$data$table_operation_in_progress <- TRUE
+      }
 
       on.exit(
         {
@@ -1128,7 +1132,11 @@ setup_data_table <- function(input, output, session, values) {
     req(values$current_data)
 
     # Sæt vedvarende flag for at forhindre auto-save interferens
+    # PHASE 4: Sync to both old and new state management
     values$table_operation_in_progress <- TRUE
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$table_operation_in_progress <- TRUE
+    }
 
     new_row <- values$current_data[1, ]
     new_row[1, ] <- NA

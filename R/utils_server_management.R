@@ -36,7 +36,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
             if (use_centralized_state) {
               app_state$data$updating_table <- TRUE
             }
+            # PHASE 4: Sync to both old and new state management
             values$table_operation_in_progress <- TRUE
+            if (use_centralized_state) {
+              app_state$data$table_operation_in_progress <- TRUE
+            }
             # PHASE 4: Sync to both old and new state management
             values$auto_save_enabled <- FALSE
             if (use_centralized_state) {
@@ -163,7 +167,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
           if (use_centralized_state) {
             app_state$session$auto_save_enabled <- TRUE
           }
+          # PHASE 4: Sync to both old and new state management
           values$table_operation_in_progress <- FALSE
+          if (use_centralized_state) {
+            app_state$data$table_operation_in_progress <- FALSE
+          }
         }
       )
     },

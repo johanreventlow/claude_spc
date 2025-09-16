@@ -448,7 +448,8 @@ create_app_state <- function() {
     data = list(
       current_data = NULL,
       file_info = NULL,
-      updating_table = FALSE
+      updating_table = FALSE,
+      table_operation_in_progress = FALSE
     ),
 
     # Column Management - centraliseret

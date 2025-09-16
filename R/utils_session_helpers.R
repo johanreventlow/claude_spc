@@ -159,9 +159,16 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       values$restoring_session
     }
 
+    # PHASE 4: Check both old and new state management for table_operation_in_progress
+    table_operation_check <- if (use_centralized_state) {
+      app_state$data$table_operation_in_progress
+    } else {
+      values$table_operation_in_progress
+    }
+
     if (!auto_save_enabled_check ||
       updating_table_check ||
-      values$table_operation_in_progress ||
+      table_operation_check ||
       restoring_session_check) {
       return(NULL)
     }
@@ -216,9 +223,16 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       values$restoring_session
     }
 
+    # PHASE 4: Check both old and new state management for table_operation_in_progress
+    table_operation_check_settings <- if (use_centralized_state) {
+      app_state$data$table_operation_in_progress
+    } else {
+      values$table_operation_in_progress
+    }
+
     if (!auto_save_enabled_check ||
       updating_table_check ||
-      values$table_operation_in_progress ||
+      table_operation_check_settings ||
       restoring_session_check) {
       return(NULL)
     }
@@ -276,7 +290,11 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     req(cleanup_time)  # Only proceed if cleanup is needed
 
     # Clear the table operation flag and reset cleanup request
+    # PHASE 4: Sync to both old and new state management
     values$table_operation_in_progress <- FALSE
+    if (use_centralized_state) {
+      app_state$data$table_operation_in_progress <- FALSE
+    }
     values$table_operation_cleanup_needed <- FALSE
   })
 
