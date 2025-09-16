@@ -479,6 +479,13 @@ create_app_state <- function() {
     # Test Mode
     test_mode = list(
       auto_detect_ready = FALSE
+    ),
+
+    # Session Management
+    session = list(
+      auto_save_enabled = TRUE,
+      restoring_session = FALSE,
+      file_uploaded = FALSE
     )
   )
 }

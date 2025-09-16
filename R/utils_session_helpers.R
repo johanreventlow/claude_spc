@@ -124,7 +124,14 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       values$updating_table
     }
 
-    if (!values$auto_save_enabled ||
+    # PHASE 4: Check both old and new state management for auto_save_enabled
+    auto_save_enabled_check <- if (use_centralized_state) {
+      app_state$session$auto_save_enabled
+    } else {
+      values$auto_save_enabled
+    }
+
+    if (!auto_save_enabled_check ||
       updating_table_check ||
       values$table_operation_in_progress ||
       values$restoring_session) {
@@ -167,7 +174,14 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       values$updating_table
     }
 
-    if (!values$auto_save_enabled ||
+    # PHASE 4: Check both old and new state management for auto_save_enabled
+    auto_save_enabled_check <- if (use_centralized_state) {
+      app_state$session$auto_save_enabled
+    } else {
+      values$auto_save_enabled
+    }
+
+    if (!auto_save_enabled_check ||
       updating_table_check ||
       values$table_operation_in_progress ||
       values$restoring_session) {

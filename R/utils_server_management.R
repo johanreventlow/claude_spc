@@ -33,7 +33,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
               app_state$data$updating_table <- TRUE
             }
             values$table_operation_in_progress <- TRUE
+            # PHASE 4: Sync to both old and new state management
             values$auto_save_enabled <- FALSE
+            if (use_centralized_state) {
+              app_state$session$auto_save_enabled <- FALSE
+            }
 
             # Oprydningsfunktion til at nulstille guards
             on.exit(
@@ -44,7 +48,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
                   app_state$data$updating_table <- FALSE
                 }
                 values$restoring_session <- FALSE
+                # PHASE 4: Sync to both old and new state management
                 values$auto_save_enabled <- TRUE
+                if (use_centralized_state) {
+                  app_state$session$auto_save_enabled <- TRUE
+                }
                 # Set flag for delayed cleanup - handled by separate observer
                 values$table_operation_cleanup_needed <- TRUE
               },
@@ -130,7 +138,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
             app_state$data$updating_table <- FALSE
           }
           values$restoring_session <- FALSE
+          # PHASE 4: Sync to both old and new state management
           values$auto_save_enabled <- TRUE
+          if (use_centralized_state) {
+            app_state$session$auto_save_enabled <- TRUE
+          }
           values$table_operation_in_progress <- FALSE
         }
       )
