@@ -297,26 +297,36 @@ setup_column_management <- function(input, output, session, values) {
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
 auto_detect_and_update_columns <- function(input, session, values) {
+  cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] Starting auto_detect_and_update_columns\n")
+
   req(values$current_data)
 
   data <- values$current_data
   col_names <- names(data)
 
+  cat("DEBUG: [AUTO_DETECT_FUNC] Data dimensions:", dim(data), "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] Column names:", paste(col_names, collapse = ", "), "\n")
+
   # Forbedret detektering af potentielle dato-kolonner
   # Evaluer ALLE kolonner og find den bedste dato-kandidat
 
+  cat("DEBUG: [AUTO_DETECT_FUNC] Starting date candidate analysis...\n")
   date_candidates <- list()
 
   for (col_name in col_names) {
+    cat("DEBUG: [AUTO_DETECT_FUNC] Analyzing column:", col_name, "\n")
     col_data <- data[[col_name]]
 
     # Skip ikke-dato kolonner baseret på navn
     if (grepl("^(nr|id|count|antal|total|sum)$", col_name, ignore.case = TRUE)) {
+      cat("DEBUG: [AUTO_DETECT_FUNC] Skipping", col_name, "- excluded by name pattern\n")
       next
     }
 
     # Skip kolonner der kun indeholder NA værdier
     if (all(is.na(col_data)) || length(col_data) == 0) {
+      cat("DEBUG: [AUTO_DETECT_FUNC] Skipping", col_name, "- all NA or empty\n")
       next
     }
 
@@ -330,6 +340,7 @@ auto_detect_and_update_columns <- function(input, session, values) {
 
     # HØJESTE PRIORITET: Allerede parsede dato-objekter
     if (inherits(col_data, c("Date", "POSIXct", "POSIXt"))) {
+      cat("DEBUG: [AUTO_DETECT_FUNC] ⭐", col_name, "- Already parsed date object (score: 100)\n")
       candidate$score <- 100
       candidate$type <- "parsed_date"
       candidate$success_rate <- 1.0
@@ -420,14 +431,16 @@ auto_detect_and_update_columns <- function(input, session, values) {
   }
 
   # Vælg bedste kandidat baseret på score
+  cat("DEBUG: [AUTO_DETECT_FUNC] 📊 Date candidate selection results:\n")
   x_col <- NULL
   best_score <- 0
 
   if (length(date_candidates) > 0) {
+    cat("DEBUG: [AUTO_DETECT_FUNC] Found", length(date_candidates), "date candidates:\n")
     # Log kandidater for debugging
     for (name in names(date_candidates)) {
       cand <- date_candidates[[name]]
-      cat(sprintf(
+      cat("DEBUG: [AUTO_DETECT_FUNC] ", sprintf(
         "- %s: score=%.1f (%s, success=%.2f) - %s\n",
         name, cand$score, cand$type, cand$success_rate, cand$reason
       ))
@@ -440,11 +453,15 @@ auto_detect_and_update_columns <- function(input, session, values) {
         x_col <- name
       }
     }
+    cat("DEBUG: [AUTO_DETECT_FUNC] 🎯 Best date candidate:", x_col, "(score:", best_score, ")\n")
+  } else {
+    cat("DEBUG: [AUTO_DETECT_FUNC] ⚠️ No date candidates found\n")
   }
 
   # Fallback til første kolonne hvis ingen dato-kandidater
   if (is.null(x_col) && length(col_names) > 0) {
     x_col <- col_names[1]
+    cat("DEBUG: [AUTO_DETECT_FUNC] 📝 Fallback X column:", x_col, "\n")
   }
 
   # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter (med reaktiv loop beskyttelse)
@@ -516,18 +533,28 @@ auto_detect_and_update_columns <- function(input, session, values) {
   })
 
   # Detekter numeriske kolonner
+  cat("DEBUG: [AUTO_DETECT_FUNC] 🔢 Detecting numeric columns...\n")
   numeric_cols <- character(0)
   for (col_name in col_names) {
     if (col_name != x_col) {
       col_data <- data[[col_name]]
-      if (is.numeric(col_data) ||
-        sum(!is.na(parse_danish_number(col_data))) > length(col_data) * 0.8) {
+      is_numeric <- is.numeric(col_data)
+      danish_parse_success <- sum(!is.na(parse_danish_number(col_data))) > length(col_data) * 0.8
+
+      if (is_numeric || danish_parse_success) {
         numeric_cols <- c(numeric_cols, col_name)
+        cat("DEBUG: [AUTO_DETECT_FUNC]   ✅", col_name, "- numeric (native:", is_numeric, ", danish:", danish_parse_success, ")\n")
+      } else {
+        cat("DEBUG: [AUTO_DETECT_FUNC]   ❌", col_name, "- not numeric\n")
       }
+    } else {
+      cat("DEBUG: [AUTO_DETECT_FUNC]   ⏭️", col_name, "- skipped (X column)\n")
     }
   }
+  cat("DEBUG: [AUTO_DETECT_FUNC] Found", length(numeric_cols), "numeric columns:", paste(numeric_cols, collapse = ", "), "\n")
 
   # Smart detektion af tæller/nævner
+  cat("DEBUG: [AUTO_DETECT_FUNC] 🎯 Smart detection for Y/N columns...\n")
   col_names_lower <- tolower(col_names)
   taeller_col <- NULL
   naevner_col <- NULL
@@ -535,14 +562,21 @@ auto_detect_and_update_columns <- function(input, session, values) {
   taeller_idx <- which(grepl("t.ller|tael|num|count", col_names_lower, ignore.case = TRUE))
   naevner_idx <- which(grepl("n.vner|naev|denom|total", col_names_lower, ignore.case = TRUE))
 
+  cat("DEBUG: [AUTO_DETECT_FUNC] Pattern matches - tæller:", length(taeller_idx), ", nævner:", length(naevner_idx), "\n")
+
   if (length(taeller_idx) > 0 && length(naevner_idx) > 0) {
     taeller_col <- col_names[taeller_idx[1]]
     naevner_col <- col_names[naevner_idx[1]]
+    cat("DEBUG: [AUTO_DETECT_FUNC] 📝 Name-based assignment - Y:", taeller_col, ", N:", naevner_col, "\n")
   } else if (length(numeric_cols) >= 2) {
     taeller_col <- numeric_cols[1]
     naevner_col <- numeric_cols[2]
+    cat("DEBUG: [AUTO_DETECT_FUNC] 📊 Fallback assignment (first two numerics) - Y:", taeller_col, ", N:", naevner_col, "\n")
   } else if (length(numeric_cols) >= 1) {
     taeller_col <- numeric_cols[1]
+    cat("DEBUG: [AUTO_DETECT_FUNC] 📊 Single numeric assignment - Y:", taeller_col, ", N: NULL\n")
+  } else {
+    cat("DEBUG: [AUTO_DETECT_FUNC] ⚠️ No numeric columns found for Y/N assignment\n")
   }
 
   # Detekter skift/fase kolonne (boolean eller tekst med skift-relaterede termer)
@@ -601,6 +635,14 @@ auto_detect_and_update_columns <- function(input, session, values) {
   }
 
   # Opdater dropdowns til at VISE de detekterede værdier
+  cat("DEBUG: [AUTO_DETECT_FUNC] 📋 Final column assignments:\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC]   X (date/time):", x_col %||% "NULL", "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC]   Y (tæller):", taeller_col %||% "NULL", "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC]   N (nævner):", naevner_col %||% "NULL", "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC]   Skift:", skift_col %||% "NULL", "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC]   Frys:", frys_col %||% "NULL", "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC]   Kommentar:", kommentar_col %||% "NULL", "\n")
+
   # Først sikr at choices er opdateret med nuværende kolonnenavne
   all_cols <- col_names
   col_choices <- setNames(
@@ -639,12 +681,14 @@ auto_detect_and_update_columns <- function(input, session, values) {
     )
 
     # Trigger UI sync for visual feedback on Kolonnematch tab using reactive trigger
-    cat("AUTO-DETECT DEBUG: Setting ui_sync_needed with:\n")
-    cat("  x_col:", x_col %||% "NULL", "\n")
-    cat("  taeller_col:", taeller_col %||% "NULL", "\n")
-    cat("  naevner_col:", naevner_col %||% "NULL", "\n")
+    cat("DEBUG: [AUTO_DETECT_FUNC] 🎯 CRITICAL: Setting ui_sync_needed with:\n")
+    cat("DEBUG: [AUTO_DETECT_FUNC]   x_col:", x_col %||% "NULL", "\n")
+    cat("DEBUG: [AUTO_DETECT_FUNC]   taeller_col:", taeller_col %||% "NULL", "\n")
+    cat("DEBUG: [AUTO_DETECT_FUNC]   naevner_col:", naevner_col %||% "NULL", "\n")
+    cat("DEBUG: [AUTO_DETECT_FUNC]   col_choices length:", length(col_choices), "\n")
 
     # Use reactive trigger with timestamp to force reactivity
+    cat("DEBUG: [AUTO_DETECT_FUNC] 🔄 Triggering UI sync - should update input fields!\n")
     values$ui_sync_needed <- list(
       x_col = x_col,
       taeller_col = taeller_col,
@@ -655,6 +699,9 @@ auto_detect_and_update_columns <- function(input, session, values) {
       col_choices = col_choices,
       timestamp = as.numeric(Sys.time())  # Force reactivity trigger
     )
+
+    cat("DEBUG: [AUTO_DETECT_FUNC] ✅ Auto-detect completed successfully\n")
+    cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
   })
 
 }
