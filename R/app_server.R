@@ -33,6 +33,11 @@ app_server <- function(input, output, session) {
   app_state <- create_app_state()
   log_debug("✅ Centralized state initialized", "APP_SERVER")
 
+  # FASE 5: Memory management setup
+  log_debug("Setting up memory management...", "APP_SERVER")
+  setup_session_cleanup(session, values, app_state)
+  log_debug("✅ Memory management configured", "APP_SERVER")
+
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
   log_debug("Checking TEST_MODE configuration...", "APP_SERVER")
@@ -205,9 +210,7 @@ app_server <- function(input, output, session) {
     },
     function() {
       # Log session statistics
-      log_error(paste("Session afsluttet - Observer count:", obs_manager$count()),
-        level = "info"
-      )
+      log_info(paste("Session afsluttet - Observer count:", obs_manager$count()))
     }
   ))
 }

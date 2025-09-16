@@ -5,8 +5,39 @@
 
 # KOLONNEHÅNDTERING SETUP ====================================================
 
-## Hovedfunktion for kolonnehåndtering
-# Opsætter al server logik relateret til kolonne-management
+#' Opsæt kolonnehåndtering for SPC app
+#'
+#' Hovedfunktion der opsætter al server-side logik relateret til kolonne-management,
+#' inklusive auto-detektion, validering og reactive observers for kolonnevalg.
+#' Understøtter både legacy values-baseret og ny centraliseret state management.
+#'
+#' @param input Shiny input object med brugerinteraktioner
+#' @param output Shiny output object for rendering
+#' @param session Shiny session object for server kommunikation
+#' @param values Reactive values list med app state (legacy system)
+#' @param app_state List med centraliseret app state (Phase 4 system), optional
+#'
+#' @details
+#' Funktionen opsætter følgende observers:
+#' \itemize{
+#'   \item Kolonneopdatering ved data ændringer
+#'   \item Auto-detektion trigger ved file upload
+#'   \item UI synkronisering efter auto-detektion
+#'   \item Fejlhåndtering og user feedback
+#' }
+#'
+#' PHASE 4 compatibility: Funktionen detekterer automatisk om centraliseret
+#' state management er tilgængeligt og tilpasser sig entsprechend.
+#'
+#' @return NULL (side effects via observers)
+#'
+#' @examples
+#' \dontrun{
+#' # I Shiny server function:
+#' setup_column_management(input, output, session, values, app_state)
+#' }
+#'
+#' @seealso \code{\link{detect_columns_name_only}}, \code{\link{ensure_standard_columns}}
 setup_column_management <- function(input, output, session, values, app_state = NULL) {
   cat("DEBUG: [COLUMN_MGMT] Setting up column management\n")
 
@@ -18,7 +49,7 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
   # Opdater kolonnevalg når data ændres
   observe({
-    cat("DEBUG: [COLUMN_MGMT] Column update observer triggered\n")
+    log_debug("Column update observer triggered", "COLUMN_MGMT")
 
     # PHASE 4: Check both old and new state management for updating_table
     updating_table_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
@@ -28,7 +59,7 @@ setup_column_management <- function(input, output, session, values, app_state = 
     }
 
     if (updating_table_check) {
-      cat("DEBUG: [COLUMN_MGMT] Skipping - table update in progress\n")
+      log_debug("Skipping - table update in progress", "COLUMN_MGMT")
       return()
     }
 
@@ -38,13 +69,13 @@ setup_column_management <- function(input, output, session, values, app_state = 
                          (use_centralized_state && app_state$columns$auto_detect$in_progress)
 
     if (auto_detect_active) {
-      cat("DEBUG: [COLUMN_MGMT] Skipping - auto-detect in progress\n")
+      log_debug("Skipping - auto-detect in progress", "COLUMN_MGMT")
       return()
     }
 
     # Skip hvis UI sync er pending for at undgå race condition
     if (!is.null(values$ui_sync_needed)) {
-      cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync pending, would override auto-detect results\n")
+      log_debug("Skipping - UI sync pending, would override auto-detect results", "COLUMN_MGMT")
       return()
     }
 
@@ -415,6 +446,174 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
 # AUTO-DETEKTION FUNKTIONER ==================================================
 
+#' Auto-detekter SPC kolonner baseret på kolonnenavne
+#'
+#' Intelligent matching af kolonnenavne til standard SPC kolonner, designet
+#' til tomme datasæt hvor data-baseret auto-detektion ikke er mulig.
+#' Bruger case-insensitive pattern matching og fallback strategier.
+#'
+#' @param col_names Character vector med tilgængelige kolonnenavne
+#' @param input Shiny input object (kan være NULL for pure name matching)
+#' @param session Shiny session object for UI opdateringer
+#' @param values Reactive values list med app state (legacy system)
+#' @param app_state List med centraliseret app state (Phase 4 system), optional
+#'
+#' @details
+#' Matching prioriteter:
+#' \enumerate{
+#'   \item Eksakte matches (case-insensitive)
+#'   \item Substring matches med høj specificitet
+#'   \item Fuzzy matching for almindelige navne
+#'   \item Fallback til første tilgængelige kolonne
+#' }
+#'
+#' Standard SPC kolonner der matches:
+#' \itemize{
+#'   \item X-akse: "Dato", "Date", "Time", "Periode"
+#'   \item Tæller: "Tæller", "Count", "Events", "Numerator"
+#'   \item Nævner: "Nævner", "Total", "Denominator", "N"
+#'   \item Skift: "Skift", "Shift", "Phase"
+#'   \item Frys: "Frys", "Freeze", "Frost"
+#'   \item Kommentar: "Kommentar", "Comment", "Note"
+#' }
+#'
+#' @return List med detekterede kolonner:
+#' \describe{
+#'   \item{x_col}{X-akse kolonne navn}
+#'   \item{taeller_col}{Tæller kolonne navn}
+#'   \item{naevner_col}{Nævner kolonne navn}
+#'   \item{skift_col}{Skift kolonne navn}
+#'   \item{frys_col}{Frys kolonne navn}
+#'   \item{kommentar_col}{Kommentar kolonne navn}
+#'   \item{ui_sync_data}{Data til UI synkronisering}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Standard SPC kolonner
+#' cols <- c("Dato", "Tæller", "Nævner", "Skift", "Frys", "Kommentar")
+#' result <- detect_columns_name_only(cols, NULL, session, values)
+#'
+#' # Engelske kolonner
+#' cols_en <- c("Date", "Count", "Total", "Phase", "Comment")
+#' result <- detect_columns_name_only(cols_en, NULL, session, values)
+#' }
+#'
+#' @seealso \code{\link{setup_column_management}}, \code{\link{ensure_standard_columns}}
+detect_columns_name_only <- function(col_names, input, session, values, app_state = NULL) {
+  cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] Starting name-only detection\n")
+
+  # Initialiser resultater
+  x_col <- NULL
+  taeller_col <- NULL
+  naevner_col <- NULL
+  skift_col <- NULL
+  frys_col <- NULL
+  kommentar_col <- NULL
+
+  col_names_lower <- tolower(col_names)
+
+  # X-kolonne (dato/tid detection)
+  dato_idx <- which(grepl("dato|date|tid|time|år|year|måned|month|uge|week|dag|day", col_names_lower, ignore.case = TRUE))
+  if (length(dato_idx) > 0) {
+    x_col <- col_names[dato_idx[1]]
+    cat("DEBUG: [AUTO_DETECT_FUNC] Name-only X column:", x_col, "\n")
+  } else if (length(col_names) > 0) {
+    x_col <- col_names[1]
+    cat("DEBUG: [AUTO_DETECT_FUNC] Name-only X column (fallback):", x_col, "\n")
+  }
+
+  # Y-kolonne (taeller detection)
+  taeller_idx <- which(grepl("t.ller|tael|num|count", col_names_lower, ignore.case = TRUE))
+  if (length(taeller_idx) > 0) {
+    taeller_col <- col_names[taeller_idx[1]]
+    cat("DEBUG: [AUTO_DETECT_FUNC] Name-only Y column:", taeller_col, "\n")
+  }
+
+  # N-kolonne (naevner detection)
+  naevner_idx <- which(grepl("n.vner|naev|denom|total", col_names_lower, ignore.case = TRUE))
+  if (length(naevner_idx) > 0) {
+    naevner_col <- col_names[naevner_idx[1]]
+    cat("DEBUG: [AUTO_DETECT_FUNC] Name-only N column:", naevner_col, "\n")
+  }
+
+  # Skift-kolonne (eksakt match)
+  skift_idx <- which(grepl("^skift$", col_names_lower, ignore.case = TRUE))
+  if (length(skift_idx) > 0) {
+    skift_col <- col_names[skift_idx[1]]
+    cat("DEBUG: [AUTO_DETECT_FUNC] Name-only Skift column:", skift_col, "\n")
+  }
+
+  # Frys-kolonne (eksakt match)
+  frys_idx <- which(grepl("^frys$", col_names_lower, ignore.case = TRUE))
+  if (length(frys_idx) > 0) {
+    frys_col <- col_names[frys_idx[1]]
+    cat("DEBUG: [AUTO_DETECT_FUNC] Name-only Frys column:", frys_col, "\n")
+  }
+
+  # Kommentar-kolonne
+  kommentar_idx <- which(grepl("kommentar|comment|note|bemærk", col_names_lower, ignore.case = TRUE))
+  if (length(kommentar_idx) > 0) {
+    kommentar_col <- col_names[kommentar_idx[1]]
+    cat("DEBUG: [AUTO_DETECT_FUNC] Name-only Comment column:", kommentar_col, "\n")
+  }
+
+  cat("DEBUG: [AUTO_DETECT_FUNC] Name-only mode results:\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] - X=", ifelse(is.null(x_col), "NULL", x_col), "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] - Y=", ifelse(is.null(taeller_col), "NULL", taeller_col), "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] - N=", ifelse(is.null(naevner_col), "NULL", naevner_col), "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] - Skift=", ifelse(is.null(skift_col), "NULL", skift_col), "\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] - Frys=", ifelse(is.null(frys_col), "NULL", frys_col), "\n")
+
+  # Opdater UI ligesom normal auto-detection
+  use_centralized_state <- !is.null(app_state)
+
+  # Gem resultater
+  auto_detected_columns <- list(
+    x_col = x_col,
+    taeller_col = taeller_col,
+    naevner_col = naevner_col,
+    skift_col = skift_col,
+    frys_col = frys_col,
+    kommentar_col = kommentar_col
+  )
+
+  if (use_centralized_state && !is.null(app_state)) {
+    app_state$auto_detected_columns <- auto_detected_columns
+    cat("DEBUG: [PHASE4] Synced name-only auto_detected_columns to centralized state\n")
+  } else {
+    values$auto_detected_columns <- auto_detected_columns
+  }
+
+  # Trigger UI sync
+  col_choices <- setNames(col_names, col_names)
+  col_choices <- c("Vælg kolonne" = "", col_choices)
+
+  ui_sync_data <- list(
+    x_col = x_col,
+    taeller_col = taeller_col,
+    naevner_col = naevner_col,
+    skift_col = skift_col,
+    frys_col = frys_col,
+    kommentar_col = kommentar_col,
+    col_choices = col_choices,
+    timestamp = Sys.time()
+  )
+
+  if (use_centralized_state && !is.null(app_state)) {
+    app_state$ui_sync_needed <- ui_sync_data
+    cat("DEBUG: [PHASE4] Synced name-only UI sync data to centralized state\n")
+  } else {
+    values$ui_sync_needed <- ui_sync_data
+  }
+
+  cat("DEBUG: [AUTO_DETECT_FUNC] ✅ Name-only detection completed\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
+
+  return(auto_detected_columns)
+}
+
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
 auto_detect_and_update_columns <- function(input, session, values, app_state = NULL) {
@@ -436,10 +635,45 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
   req(current_data_check)
 
   data <- current_data_check
+
+  # DEBUGGING: Verificer hvilke data auto-detection faktisk læser
+  cat("DEBUG: [AUTO_DETECT_FUNC] DATA SOURCE VERIFICATION:\n")
+  cat("DEBUG: [AUTO_DETECT_FUNC] - use_centralized_state:", exists("use_centralized_state") && use_centralized_state, "\n")
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    cat("DEBUG: [AUTO_DETECT_FUNC] - Reading from app_state$data$current_data\n")
+    if (!is.null(app_state$data$current_data)) {
+      cat("DEBUG: [AUTO_DETECT_FUNC] - app_state data dims:", dim(app_state$data$current_data), "\n")
+      cat("DEBUG: [AUTO_DETECT_FUNC] - app_state data cols:", paste(names(app_state$data$current_data), collapse = ", "), "\n")
+    }
+  } else {
+    cat("DEBUG: [AUTO_DETECT_FUNC] - Reading from values$current_data\n")
+    if (!is.null(values$current_data)) {
+      cat("DEBUG: [AUTO_DETECT_FUNC] - values data dims:", dim(values$current_data), "\n")
+      cat("DEBUG: [AUTO_DETECT_FUNC] - values data cols:", paste(names(values$current_data), collapse = ", "), "\n")
+    }
+  }
+
+  # Tjek for tomme datasæt - skift til name-only mode
+  if (is.null(data) || ncol(data) == 0) {
+    cat("DEBUG: [AUTO_DETECT_FUNC] ⚠️ Tomt datasæt (NULL eller ingen kolonner) - afbryder auto-detection\n")
+    return(NULL)
+  }
+
+  # Name-only mode for datasæt med 0 rækker men med kolonneoverskrifter
+  name_only_mode <- nrow(data) == 0
+  if (name_only_mode) {
+    cat("DEBUG: [AUTO_DETECT_FUNC] Tomt datasæt (0 rækker) - skifter til name-only detection\n")
+  }
+
   col_names <- names(data)
 
   cat("DEBUG: [AUTO_DETECT_FUNC] Data dimensions:", dim(data), "\n")
   cat("DEBUG: [AUTO_DETECT_FUNC] Column names:", paste(col_names, collapse = ", "), "\n")
+
+  # NAME-ONLY DETECTION for tomme datasaet
+  if (name_only_mode) {
+    return(detect_columns_name_only(col_names, input, session, values, app_state))
+  }
 
   # Forbedret detektering af potentielle dato-kolonner
   # Evaluer ALLE kolonner og find den bedste dato-kandidat
@@ -597,6 +831,12 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
     cat("DEBUG: [AUTO_DETECT_FUNC] 📝 Fallback X column:", x_col, "\n")
   }
 
+  # Tjek om vi har en gyldig X kolonne
+  if (is.null(x_col)) {
+    cat("DEBUG: [AUTO_DETECT_FUNC] ⚠️ Ingen gyldig X kolonne fundet - afbryder auto-detection\n")
+    return(NULL)
+  }
+
   # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter (med reaktiv loop beskyttelse)
   # NOTE: values$original_data bevares uændret, kun values$current_data modificeres
 
@@ -666,7 +906,7 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
       }
     })
   }, error = function(e) {
-    log_error(paste("POST-PROCESSING fejlede:", e$message), level = "warning")
+    log_error(paste("POST-PROCESSING fejlede:", e$message))
   })
 
   # Detekter numeriske kolonner
