@@ -4,7 +4,7 @@
 
 Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** med **qicharts2**. Appen anvendes i klinisk kvalitetsarbejde og skal forblive stabil, forståelig og på dansk.
 
-**Udviklingsstatus:** Projektet har gennemgået systematisk best practice refactoring gennem 5 faser og følger nu industristandard mønstre for Shiny-udvikling.
+**Udviklingsstatus:** Projektet følger industristandard mønstre for Shiny-udvikling med test-driven development, centraliseret state management og robust error handling.
 
 ---
 
@@ -76,19 +76,23 @@ cat("DEBUG: [COMPONENT] ✅ Success message\n")
 
 ### 3.1 Shiny Best Practices
 
-**Phase-Based Architecture** (Implementeret gennem 5 faser):
+**Event-Driven Architecture:**
+* **Reactive events over timing** - Use observeEvent() and reactive triggers instead of setTimeout/later()
+* **Debounced operations** - Use `debounce()` for expensive operations that shouldn't run on every input change
+* **Observer priorities** - Implement priority-based execution: `OBSERVER_PRIORITIES$HIGH/MEDIUM/LOW`
+* **Race condition prevention** - Guard against conflicting state updates through proper sequencing
 
-1. **Phase 1** - Later::later() elimination (Event-driven patterns)
-2. **Phase 2** - Reactive chain improvements (Performance & clarity)
-3. **Phase 3** - Observer management (Race condition guards)
-4. **Phase 4** - Centralized state management (Single source of truth)
-5. **Phase 5** - Performance & cleanup (Memory & resource management)
+**State Management Patterns:**
+* **Centralized state** - Single source of truth through structured state schemas
+* **Immutable updates** - Avoid direct mutation, create new state objects
+* **Migration-safe patterns** - Dual-state synchronization during architecture changes
+* **Scope-safe access** - Use `exists()` guards for robust variable access
 
 **Reactive Programming Patterns:**
-* Brug `debounce()` i stedet for manual timers
-* Observer priorities: `OBSERVER_PRIORITIES$HIGH/MEDIUM/LOW`
-* Explicit `req()` guards for conditional execution
-* `isolate()` for breaking reactive dependencies når nødvendigt
+* **Explicit dependencies** - Use `req()` guards for conditional execution
+* **Dependency isolation** - Use `isolate()` for breaking reactive dependencies when needed
+* **Lazy evaluation** - Only compute what's actually needed
+* **Error boundaries** - Wrap reactive expressions in error handling
 
 ### 3.2 R Code Quality
 
@@ -122,11 +126,11 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
   })
 }
 
-# Scope-safe variable access
-variable_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-  app_state$section$variable
+# Scope-safe variable access during transitions
+variable_check <- if (exists("feature_flag") && feature_flag && exists("new_system")) {
+  new_system$section$variable
 } else {
-  values$variable
+  legacy_system$variable
 }
 ```
 
@@ -363,19 +367,19 @@ app_state <- list(
 )
 ```
 
-**Dual-State Migration Pattern:**
+**Migration-Safe State Access Pattern:**
 ```r
-# PHASE 4: Check both old and new state management
-variable_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-  app_state$section$variable
+# Safe state access during architecture transitions
+variable_check <- if (exists("use_new_system") && use_new_system && exists("centralized_state")) {
+  centralized_state$section$variable
 } else {
-  values$variable  # Fallback to old system
+  legacy_values$variable  # Fallback to old system
 }
 
-# PHASE 4: Sync to both old and new state management
-values$variable <- new_value
-if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-  app_state$section$variable <- new_value
+# Dual-state synchronization for backwards compatibility
+legacy_values$variable <- new_value
+if (exists("use_new_system") && use_new_system && exists("centralized_state")) {
+  centralized_state$section$variable <- new_value
 }
 ```
 
