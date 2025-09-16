@@ -28,6 +28,11 @@ app_server <- function(input, output, session) {
   values <- initialize_reactive_values()
   cat("DEBUG: [APP_SERVER] ✅ Reactive values initialized\n")
 
+  # PHASE 4: Centraliseret state management (parallel til existing values)
+  cat("DEBUG: [APP_SERVER] Initializing centralized app state...\n")
+  app_state <- create_app_state()
+  cat("DEBUG: [APP_SERVER] ✅ Centralized state initialized\n")
+
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
   cat("DEBUG: [APP_SERVER] Checking TEST_MODE configuration...\n")
@@ -137,7 +142,12 @@ app_server <- function(input, output, session) {
     observe({
       if (!is.null(values$current_data)) {
         cat("TEST MODE: Setting test_mode_auto_detect_ready flag after setup\n")
-        values$test_mode_auto_detect_ready <- Sys.time()
+        timestamp <- Sys.time()
+
+        # PHASE 4: Gradual migration - sync to both old and new state
+        values$test_mode_auto_detect_ready <- timestamp
+        app_state$test_mode$auto_detect_ready <- timestamp
+        cat("DEBUG: [PHASE4] Synced test_mode_auto_detect_ready to both systems\n")
       }
     }) %>% bindEvent(values$current_data, once = TRUE, ignoreNULL = TRUE)
   }
