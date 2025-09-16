@@ -491,7 +491,8 @@ create_app_state <- function() {
       restoring_session = FALSE,
       file_uploaded = FALSE,
       user_started_session = FALSE,
-      last_save_time = NULL
+      last_save_time = NULL,
+      file_name = NULL
     ),
 
     # UI State

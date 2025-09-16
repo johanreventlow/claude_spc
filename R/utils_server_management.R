@@ -546,6 +546,10 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
       app_state$ui$hide_anhoej_rules <- TRUE
     }
     values$session_file_name <- NULL
+    # PHASE 4: Sync to both old and new state management
+    if (use_centralized_state) {
+      app_state$session$file_name <- NULL
+    }
 
     # Nulstil konfigurationer
     # PHASE 4: Sync to both old and new state management
@@ -633,6 +637,10 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
             app_state$ui$hide_anhoej_rules <- FALSE
           }
           values$session_file_name <- "Eksempel data (SPC demo)"
+          # PHASE 4: Sync to both old and new state management
+          if (use_centralized_state) {
+            app_state$session$file_name <- "Eksempel data (SPC demo)"
+          }
 
           # Skjul waiter
           later::later(function() {
