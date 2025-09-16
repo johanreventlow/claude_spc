@@ -100,7 +100,11 @@ setup_column_management <- function(input, output, session, values, app_state = 
       cat("DEBUG: [AUTO_DETECT] Manual auto-detect observer triggered\n")
 
       # Skip automatisk auto-detect hvis vi allerede har været igennem det i test mode
-      if (values$initial_auto_detect_completed %||% FALSE) {
+      # PHASE 4: Check both old and new state management
+      auto_detect_completed <- (values$initial_auto_detect_completed %||% FALSE) ||
+                              (use_centralized_state && (app_state$columns$auto_detect$completed %||% FALSE))
+
+      if (auto_detect_completed) {
         cat("DEBUG: [AUTO_DETECT] Skipping - initial auto-detect already completed\n")
         return()
       }
@@ -168,7 +172,12 @@ setup_column_management <- function(input, output, session, values, app_state = 
       auto_detect_and_update_columns(input, session, values, app_state)
 
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting initial_auto_detect_completed = TRUE\n")
+      # PHASE 4: Sync to both old and new state management
       values$initial_auto_detect_completed <- TRUE # Marker som færdig efter første kørsel
+      if (use_centralized_state) {
+        app_state$columns$auto_detect$completed <- TRUE
+        cat("DEBUG: [PHASE4] Synced initial_auto_detect_completed to centralized state\n")
+      }
 
       # Clear flag after auto-detect completion (event-driven instead of timing)
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = FALSE\n")
@@ -267,7 +276,13 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
     # PHASE 4: Pass centralized state to auto-detect function
     auto_detect_and_update_columns(input, session, values, app_state)
+
+    # PHASE 4: Sync completion state to both systems
     values$initial_auto_detect_completed <- TRUE # Marker som færdig
+    if (use_centralized_state) {
+      app_state$columns$auto_detect$completed <- TRUE
+      cat("DEBUG: [PHASE4] Manual auto-detect: synced completed to centralized state\n")
+    }
 
     # PHASE 4: Clear flag in both systems
     values$auto_detect_in_progress <- FALSE # Clear flag efter auto-detect er færdig
