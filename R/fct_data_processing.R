@@ -427,9 +427,15 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
     cat("DEBUG: [PHASE4] Centralized state available for auto-detect function\n")
   }
 
-  req(values$current_data)
+  # PHASE 4: Check both old and new state management for current_data
+  current_data_check <- if (use_centralized_state) {
+    app_state$data$current_data
+  } else {
+    values$current_data
+  }
+  req(current_data_check)
 
-  data <- values$current_data
+  data <- current_data_check
   col_names <- names(data)
 
   cat("DEBUG: [AUTO_DETECT_FUNC] Data dimensions:", dim(data), "\n")
@@ -603,7 +609,7 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
         # Konverter character kolonner der blev detekteret som datoer
         if (candidate$type %in% c("danish_date", "guessed_date") && candidate$success_rate >= 0.7) {
-          col_data <- values$current_data[[candidate_name]]
+          col_data <- current_data_check[[candidate_name]]
 
           if (is.character(col_data) || is.factor(col_data)) {
 
@@ -649,7 +655,11 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
             # Apply conversion if successful (inside isolate to prevent reactive triggers)
             if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
+              # PHASE 4: Sync assignment to both old and new state management
               values$current_data[[candidate_name]] <- converted_dates
+              if (use_centralized_state) {
+                app_state$data$current_data[[candidate_name]] <- converted_dates
+              }
             }
           }
         }
@@ -845,9 +855,15 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 ## Vis kolonne-redigeré modal
 # Viser modal dialog for redigering af kolonnenavne
 show_column_edit_modal <- function(session, values) {
-  req(values$current_data)
+  # PHASE 4: Check both old and new state management for current_data
+  current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$current_data
+  } else {
+    values$current_data
+  }
+  req(current_data_check)
 
-  current_names <- names(values$current_data)
+  current_names <- names(current_data_check)
 
   name_inputs <- lapply(1:length(current_names), function(i) {
     textInput(
