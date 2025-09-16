@@ -57,6 +57,7 @@ AUTO_RESTORE_ENABLED <- FALSE
 source("R/utils_danish_locale.R")
 source("R/utils_ui_helpers.R")
 source("R/utils_ui_components.R")
+source("R/utils_server_management.R")
 source("R/utils_performance.R")
 source("R/utils_memory_management.R")
 

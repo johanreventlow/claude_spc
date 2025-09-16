@@ -53,11 +53,13 @@ cleanup_reactive_values <- function(values) {
 
   log_debug("Cleaning reactive values", "MEMORY_MGMT")
 
-  # Clear data objects
+  # Clear data objects (with reactive context safety)
   safe_nullify <- function(value_name) {
     tryCatch({
       if (value_name %in% names(values)) {
-        values[[value_name]] <- NULL
+        shiny::isolate({
+          values[[value_name]] <- NULL
+        })
       }
     }, error = function(e) {
       log_warn(paste("Failed to clear", value_name, ":", e$message), "MEMORY_MGMT")
