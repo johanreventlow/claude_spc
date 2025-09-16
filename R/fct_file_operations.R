@@ -149,7 +149,11 @@ handle_excel_upload <- function(file_path, session, values) {
     if (use_centralized_state) {
       app_state$columns$auto_detect$completed <- TRUE
     }
+    # PHASE 4: Sync to both old and new state management
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
+    if (use_centralized_state) {
+      app_state$ui$hide_anhoej_rules <- FALSE
+    }
 
     # Restore metadata with delay to ensure UI is ready
     invalidateLater(500)
@@ -182,7 +186,11 @@ handle_excel_upload <- function(file_path, session, values) {
       app_state$columns$auto_detect$completed <- FALSE
     }
     values$initial_auto_detect_completed <- FALSE # Reset for new data
+    # PHASE 4: Sync to both old and new state management
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
+    if (use_centralized_state) {
+      app_state$ui$hide_anhoej_rules <- FALSE
+    }
 
     showNotification(
       paste("Excel fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
@@ -231,7 +239,11 @@ handle_csv_upload <- function(file_path, values) {
   if (use_centralized_state) {
     app_state$columns$auto_detect$completed <- FALSE
   }
+  # PHASE 4: Sync to both old and new state management
   values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
+  if (use_centralized_state) {
+    app_state$ui$hide_anhoej_rules <- FALSE
+  }
   cat("DEBUG: [CSV_UPLOAD] ✅ Reactive values set successfully\n")
 
   showNotification(

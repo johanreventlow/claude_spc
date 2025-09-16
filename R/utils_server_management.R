@@ -343,7 +343,11 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   }
 
   # Force hide Anhøj rules until real data is loaded
+  # PHASE 4: Sync to both old and new state management
   values$hide_anhoej_rules <- TRUE
+  if (use_centralized_state) {
+    app_state$ui$hide_anhoej_rules <- TRUE
+  }
 
   # Reset to standard column order using helper function
   values$current_data <- create_empty_session_data()
@@ -480,7 +484,11 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     values$current_data <- create_empty_session_data()
     values$original_data <- values$current_data
     values$file_uploaded <- TRUE
+    # PHASE 4: Sync to both old and new state management
     values$hide_anhoej_rules <- TRUE
+    if (use_centralized_state) {
+      app_state$ui$hide_anhoej_rules <- TRUE
+    }
     values$session_file_name <- NULL
 
     # Nulstil konfigurationer
@@ -556,7 +564,11 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
             app_state$columns$auto_detect$completed <- FALSE
           }
           values$initial_auto_detect_completed <- FALSE # Reset for new data
+          # PHASE 4: Sync to both old and new state management
           values$hide_anhoej_rules <- FALSE # Vis Anhøj regler for rigtige data
+          if (use_centralized_state) {
+            app_state$ui$hide_anhoej_rules <- FALSE
+          }
           values$session_file_name <- "Eksempel data (SPC demo)"
 
           # Skjul waiter

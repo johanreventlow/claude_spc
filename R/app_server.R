@@ -87,7 +87,9 @@ app_server <- function(input, output, session) {
           app_state$columns$auto_detect$completed <- FALSE
           values$initial_auto_detect_completed <- FALSE # Reset for new data
 
+          # PHASE 4: Sync to both old and new state management
           values$hide_anhoej_rules <- FALSE # Show Anhøj rules for real data
+          app_state$ui$hide_anhoej_rules <- FALSE
 
           # NOTE: Flag sættes efter setup_column_management() for at undgå race condition
 

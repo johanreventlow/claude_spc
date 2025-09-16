@@ -22,15 +22,22 @@ setup_visualization <- function(input, output, session, values) {
     cat("DEBUG: [PLOT_DATA] Column names:", paste(names(data), collapse = ", "), "\n")
 
     # Tilføj hide_anhoej_rules flag som attribut til data
-    attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
-    cat("DEBUG: [PLOT_DATA] Hide Anhøj rules flag:", values$hide_anhoej_rules, "\n")
+    # PHASE 4: Check both old and new state management for hide_anhoej_rules
+    hide_anhoej_rules_check <- if (use_centralized_state) {
+      app_state$ui$hide_anhoej_rules
+    } else {
+      values$hide_anhoej_rules
+    }
+
+    attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
+    cat("DEBUG: [PLOT_DATA] Hide Anhøj rules flag:", hide_anhoej_rules_check, "\n")
 
     # Tjek om dette er den tomme standard tabel fra session reset
     if (nrow(data) == 5 && all(c("Skift", "Dato", "Tæller", "Nævner", "Kommentar") %in% names(data))) {
       if (all(is.na(data$Dato)) && all(is.na(data$Tæller)) && all(is.na(data$Nævner))) {
         cat("DEBUG: [PLOT_DATA] ⚠️ Detected empty standard table - returning with flag\n")
         # Dette er tom standard tabel men vi skal stadig videregive hide flag
-        attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
+        attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
         return(data) # Retur nér data med flag i stedet for NULL
       }
     }
@@ -40,13 +47,13 @@ setup_visualization <- function(input, output, session, values) {
 
     if (any(non_empty_rows)) {
       filtered_data <- data[non_empty_rows, ]
-      attr(filtered_data, "hide_anhoej_rules") <- values$hide_anhoej_rules
+      attr(filtered_data, "hide_anhoej_rules") <- hide_anhoej_rules_check
       cat("DEBUG: [PLOT_DATA] ✅ Returning filtered data:", nrow(filtered_data), "rows\n")
       return(filtered_data)
     } else {
       cat("DEBUG: [PLOT_DATA] ⚠️ No meaningful data found - returning original with flag\n")
       # Selv når ingen meningsfuld data, videregiv flaget
-      attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
+      attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
       return(data)
     }
   })

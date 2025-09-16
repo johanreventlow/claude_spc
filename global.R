@@ -487,6 +487,11 @@ create_app_state <- function() {
       restoring_session = FALSE,
       file_uploaded = FALSE,
       user_started_session = FALSE
+    ),
+
+    # UI State
+    ui = list(
+      hide_anhoej_rules = FALSE
     )
   )
 }
