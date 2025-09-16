@@ -75,10 +75,14 @@ app_server <- function(input, output, session) {
 
           # Set reactive values
           values$current_data <- test_data
+          # PHASE 4: Sync original_data to both old and new state management
           values$original_data <- test_data
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+            app_state$data$original_data <- test_data
+          }
           # PHASE 4: Sync to both old and new state management
           app_state$data$current_data <- test_data
-          # Note: original_data ikke i centralized state schema endnu
+          # PHASE 4: original_data er nu tilføjet til centralized state schema
           values$file_uploaded <- TRUE
           app_state$session$file_uploaded <- TRUE
           # PHASE 4: Sync to both old and new state management

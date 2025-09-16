@@ -447,6 +447,7 @@ create_app_state <- function() {
     # Data Management
     data = list(
       current_data = NULL,
+      original_data = NULL,
       file_info = NULL,
       updating_table = FALSE,
       table_operation_in_progress = FALSE,

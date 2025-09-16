@@ -112,11 +112,19 @@ setup_session_management <- function(input, output, session, values, waiter_file
               }
 
               values$current_data <- reconstructed_data
+              # PHASE 4: Sync original_data to both old and new state management
               values$original_data <- reconstructed_data
+              if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+                app_state$data$original_data <- reconstructed_data
+              }
             } else {
               # Fallback for older save format
               values$current_data <- as.data.frame(saved_state$data)
+              # PHASE 4: Sync original_data to both old and new state management
               values$original_data <- as.data.frame(saved_state$data)
+              if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+                app_state$data$original_data <- as.data.frame(saved_state$data)
+              }
             }
 
             # PHASE 4: Sync to both old and new state management
@@ -394,7 +402,11 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   if (use_centralized_state) {
     app_state$session$user_started_session <- TRUE
   }
+  # PHASE 4: Sync original_data to both old and new state management
   values$original_data <- NULL
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$original_data <- NULL
+  }
   # PHASE 4: Sync to both old and new state management
   values$auto_detect_done <- FALSE
   if (use_centralized_state) {
@@ -519,7 +531,11 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
 
     # Samme logik som eksisterende start_new_session
     values$current_data <- create_empty_session_data()
+    # PHASE 4: Sync original_data to both old and new state management
     values$original_data <- values$current_data
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$original_data <- values$current_data
+    }
     values$file_uploaded <- TRUE
     # PHASE 4: Sync to both old and new state management
     values$hide_anhoej_rules <- TRUE
@@ -593,7 +609,11 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
 
           # Sæt reaktive værdier
           values$current_data <- demo_data
+          # PHASE 4: Sync original_data to both old and new state management
           values$original_data <- demo_data
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+            app_state$data$original_data <- demo_data
+          }
           values$file_uploaded <- TRUE
           # PHASE 4: Sync to both old and new state management
           values$auto_detect_done <- FALSE # Vil udløse auto-detekt

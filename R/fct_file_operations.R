@@ -142,7 +142,15 @@ handle_excel_upload <- function(file_path, session, values) {
     if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$current_data <- as.data.frame(data)
     }
-    values$original_data <- as.data.frame(data)
+    # PHASE 4: Sync original_data to both old and new state management
+    # PHASE 4: Sync original_data to both old and new state management
+  values$original_data <- as.data.frame(data)
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$original_data <- as.data.frame(data)
+  }
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$original_data <- as.data.frame(data)
+    }
     # PHASE 4: Sync to both old and new state management
     values$file_uploaded <- TRUE
     if (use_centralized_state) {
@@ -182,7 +190,15 @@ handle_excel_upload <- function(file_path, session, values) {
     if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$current_data <- as.data.frame(data)
     }
-    values$original_data <- as.data.frame(data)
+    # PHASE 4: Sync original_data to both old and new state management
+    # PHASE 4: Sync original_data to both old and new state management
+  values$original_data <- as.data.frame(data)
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$original_data <- as.data.frame(data)
+  }
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$original_data <- as.data.frame(data)
+    }
     # PHASE 4: Sync to both old and new state management
     values$file_uploaded <- TRUE
     if (use_centralized_state) {
@@ -244,7 +260,11 @@ handle_csv_upload <- function(file_path, values) {
   if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$data$current_data <- as.data.frame(data)
   }
+  # PHASE 4: Sync original_data to both old and new state management
   values$original_data <- as.data.frame(data)
+  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$original_data <- as.data.frame(data)
+  }
   values$file_uploaded <- TRUE
   # PHASE 4: Sync to both old and new state management
   values$auto_detect_done <- FALSE
