@@ -116,7 +116,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
             if (use_centralized_state) {
               app_state$session$file_uploaded <- TRUE
             }
+            # PHASE 4: Sync to both old and new state management
             values$auto_detect_done <- TRUE
+            if (use_centralized_state) {
+              app_state$columns$auto_detect$completed <- TRUE
+            }
 
             # Restore metadata if available
             if (!is.null(saved_state$metadata)) {
@@ -355,7 +359,11 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
     app_state$session$user_started_session <- TRUE
   }
   values$original_data <- NULL
+  # PHASE 4: Sync to both old and new state management
   values$auto_detect_done <- FALSE
+  if (use_centralized_state) {
+    app_state$columns$auto_detect$completed <- FALSE
+  }
   values$initial_auto_detect_completed <- FALSE # Reset for new session
 
   # Reset UI inputs
@@ -476,7 +484,11 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     values$session_file_name <- NULL
 
     # Nulstil konfigurationer
+    # PHASE 4: Sync to both old and new state management
     values$auto_detect_done <- FALSE
+    if (use_centralized_state) {
+      app_state$columns$auto_detect$completed <- FALSE
+    }
     updateSelectInput(session, "x_column", selected = "")
     updateSelectInput(session, "y_column", selected = "")
     updateSelectInput(session, "n_column", selected = "")
@@ -538,7 +550,11 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
           values$current_data <- demo_data
           values$original_data <- demo_data
           values$file_uploaded <- TRUE
+          # PHASE 4: Sync to both old and new state management
           values$auto_detect_done <- FALSE # Vil udløse auto-detekt
+          if (use_centralized_state) {
+            app_state$columns$auto_detect$completed <- FALSE
+          }
           values$initial_auto_detect_completed <- FALSE # Reset for new data
           values$hide_anhoej_rules <- FALSE # Vis Anhøj regler for rigtige data
           values$session_file_name <- "Eksempel data (SPC demo)"

@@ -144,7 +144,11 @@ handle_excel_upload <- function(file_path, session, values) {
     if (use_centralized_state) {
       app_state$session$file_uploaded <- TRUE
     }
+    # PHASE 4: Sync to both old and new state management
     values$auto_detect_done <- TRUE # Skip auto-detect since we have session info
+    if (use_centralized_state) {
+      app_state$columns$auto_detect$completed <- TRUE
+    }
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
 
     # Restore metadata with delay to ensure UI is ready
@@ -172,7 +176,11 @@ handle_excel_upload <- function(file_path, session, values) {
     if (use_centralized_state) {
       app_state$session$file_uploaded <- TRUE
     }
+    # PHASE 4: Sync to both old and new state management
     values$auto_detect_done <- FALSE
+    if (use_centralized_state) {
+      app_state$columns$auto_detect$completed <- FALSE
+    }
     values$initial_auto_detect_completed <- FALSE # Reset for new data
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
 
@@ -218,7 +226,11 @@ handle_csv_upload <- function(file_path, values) {
   values$current_data <- as.data.frame(data)
   values$original_data <- as.data.frame(data)
   values$file_uploaded <- TRUE
+  # PHASE 4: Sync to both old and new state management
   values$auto_detect_done <- FALSE
+  if (use_centralized_state) {
+    app_state$columns$auto_detect$completed <- FALSE
+  }
   values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
   cat("DEBUG: [CSV_UPLOAD] ✅ Reactive values set successfully\n")
 

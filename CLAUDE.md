@@ -12,6 +12,7 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 * `TEST_MODE_AUTO_LOAD` skal være **TRUE** under udvikling.
 * Bevar **dansk interface** og **danske kommentarer**.
 * Brug kun **godkendte commit-beskeder på dansk**.
+* Udelad **kommentarer om claude i commit-beskeder**
 * Brug **git commit hash `f05a97f`** som reference for stabil version.
 
 ---

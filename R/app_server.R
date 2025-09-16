@@ -82,7 +82,9 @@ app_server <- function(input, output, session) {
           # PHASE 4: Sync to both old and new state management
           values$user_started_session <- TRUE # Ensure dataLoaded triggers correctly
           app_state$session$user_started_session <- TRUE
+          # PHASE 4: Sync to both old and new state management
           values$auto_detect_done <- FALSE # Will trigger auto-detect
+          app_state$columns$auto_detect$completed <- FALSE
           values$initial_auto_detect_completed <- FALSE # Reset for new data
 
           values$hide_anhoej_rules <- FALSE # Show Anhøj rules for real data
