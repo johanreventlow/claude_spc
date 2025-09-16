@@ -57,10 +57,16 @@ setup_column_management <- function(input, output, session, values, app_state = 
       }
     }
 
-    req(values$current_data)
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+    req(current_data_check)
     cat("DEBUG: [COLUMN_MGMT] Data available - processing column choices\n")
 
-    data <- values$current_data
+    data <- current_data_check
     all_cols <- names(data)
     cat("DEBUG: [COLUMN_MGMT] Available columns:", paste(all_cols, collapse = ", "), "\n")
 
@@ -102,7 +108,14 @@ setup_column_management <- function(input, output, session, values, app_state = 
   }, priority = OBSERVER_PRIORITIES$DATA_PROCESSING)
 
   # Auto-detekterings trigger flag - bruges kun til manuel triggering (ikke test mode)
-  observeEvent(values$current_data,
+  observeEvent({
+    # PHASE 4: Check both old and new state management for current_data
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+  },
     {
       cat("DEBUG: [AUTO_DETECT] Manual auto-detect observer triggered\n")
 
@@ -116,7 +129,13 @@ setup_column_management <- function(input, output, session, values, app_state = 
         return()
       }
 
-      data_available <- !is.null(values$current_data)
+      # PHASE 4: Check both old and new state management for current_data
+      current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+        app_state$data$current_data
+      } else {
+        values$current_data
+      }
+      data_available <- !is.null(current_data_check)
       x_empty <- is.null(input$x_column) || input$x_column == ""
       y_empty <- is.null(input$y_column) || input$y_column == ""
 
@@ -301,7 +320,13 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
   # Kolonnevaliderings output
   output$column_validation_messages <- renderUI({
-    req(values$current_data)
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+    req(current_data_check)
 
     if ((is.null(input$x_column) || input$x_column == "") ||
       (is.null(input$y_column) || input$y_column == "")) {
@@ -312,8 +337,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
     warnings <- character(0)
 
     # Tjek om Y-kolonne er numerisk
-    if (!is.null(input$y_column) && input$y_column != "" && input$y_column %in% names(values$current_data)) {
-      y_data <- values$current_data[[input$y_column]]
+    if (!is.null(input$y_column) && input$y_column != "" && input$y_column %in% names(current_data_check)) {
+      y_data <- current_data_check[[input$y_column]]
       if (!is.numeric(y_data)) {
         numeric_test <- parse_danish_number(y_data)
         if (sum(!is.na(numeric_test)) < length(y_data) * 0.8) {
@@ -326,8 +351,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
     if (chart_type %in% c("p", "pp", "u", "up")) {
       if (is.null(input$n_column) || input$n_column == "") {
         warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne (N)"))
-      } else if (input$n_column %in% names(values$current_data)) {
-        n_data <- values$current_data[[input$n_column]]
+      } else if (input$n_column %in% names(current_data_check)) {
+        n_data <- current_data_check[[input$n_column]]
         if (!is.numeric(n_data)) {
           numeric_test <- parse_danish_number(n_data)
           if (sum(!is.na(numeric_test)) < length(n_data) * 0.8) {
