@@ -1105,7 +1105,7 @@ setup_data_table <- function(input, output, session, values) {
       values$updating_table <- TRUE
       if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
         app_state$data$updating_table <- TRUE
-        cat("DEBUG: [PHASE4] Set updating_table=TRUE in centralized state\n")
+        log_debug("Set updating_table=TRUE in centralized state", "PHASE4")
       }
       # PHASE 4: Sync to both old and new state management
       values$table_operation_in_progress <- TRUE
@@ -1119,7 +1119,7 @@ setup_data_table <- function(input, output, session, values) {
           values$updating_table <- FALSE
           if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$data$updating_table <- FALSE
-            cat("DEBUG: [PHASE4] Set updating_table=FALSE in centralized state\n")
+            log_debug("Set updating_table=FALSE in centralized state", "PHASE4")
           }
         },
         add = TRUE
@@ -1216,7 +1216,7 @@ setup_data_table <- function(input, output, session, values) {
           showNotification("Tabel opdateret", type = "message", duration = 2)
         },
         error = function(e) {
-          cat("ERROR in excelR table change:\n", e$message, "\n")
+          log_error(paste("ERROR in excelR table change:", e$message), "DATA_TABLE")
           showNotification(
             paste("Fejl ved tabel-opdatering:", e$message),
             type = "error",

@@ -10,43 +10,43 @@
 setup_file_upload <- function(input, output, session, values, waiter_file, app_state = NULL) {
   # PHASE 4: Check if centralized state is available
   use_centralized_state <- !is.null(app_state)
-  cat("DEBUG: [FILE_UPLOAD] ===========================================\n")
-  cat("DEBUG: [FILE_UPLOAD] Setting up file upload handlers\n")
+  log_debug("===========================================", "FILE_UPLOAD")
+  log_debug("Setting up file upload handlers", "FILE_UPLOAD")
 
   # File upload handler
   observeEvent(input$data_file, {
-    cat("DEBUG: [FILE_UPLOAD] File upload triggered\n")
+    log_debug("File upload triggered", "FILE_UPLOAD")
     req(input$data_file)
 
-    cat("DEBUG: [FILE_UPLOAD] File info:\n")
-    cat("DEBUG: [FILE_UPLOAD] - Name:", input$data_file$name, "\n")
-    cat("DEBUG: [FILE_UPLOAD] - Size:", input$data_file$size, "bytes\n")
-    cat("DEBUG: [FILE_UPLOAD] - Type:", input$data_file$type, "\n")
-    cat("DEBUG: [FILE_UPLOAD] - Path:", input$data_file$datapath, "\n")
+    log_debug("File info:", "FILE_UPLOAD")
+    log_debug(paste("- Name:", input$data_file$name), "FILE_UPLOAD")
+    log_debug(paste("- Size:", input$data_file$size, "bytes"), "FILE_UPLOAD")
+    log_debug(paste("- Type:", input$data_file$type), "FILE_UPLOAD")
+    log_debug(paste("- Path:", input$data_file$datapath), "FILE_UPLOAD")
 
     # Show loading
-    cat("DEBUG: [FILE_UPLOAD] Showing waiter...\n")
+    log_debug("Showing waiter...", "FILE_UPLOAD")
     waiter_file$show()
-    cat("DEBUG: [FILE_UPLOAD] ✅ Waiter displayed\n")
+    log_debug("✅ Waiter displayed", "FILE_UPLOAD")
 
     # Ensure loading is hidden no matter what happens
     on.exit({
-      cat("DEBUG: [FILE_UPLOAD] Hiding waiter on exit...\n")
+      log_debug("Hiding waiter on exit...", "FILE_UPLOAD")
       waiter_file$hide()
-      cat("DEBUG: [FILE_UPLOAD] ✅ Waiter hidden\n")
+      log_debug("✅ Waiter hidden", "FILE_UPLOAD")
     })
 
     # Close upload modal automatically
     on.exit(
       {
-        cat("DEBUG: [FILE_UPLOAD] Removing modal on exit...\n")
+        log_debug("Removing modal on exit...", "FILE_UPLOAD")
         removeModal()
-        cat("DEBUG: [FILE_UPLOAD] ✅ Modal removed\n")
+        log_debug("✅ Modal removed", "FILE_UPLOAD")
       },
       add = TRUE
     )
 
-    cat("DEBUG: [FILE_UPLOAD] Setting updating_table flag...\n")
+    log_debug("Setting updating_table flag...", "FILE_UPLOAD")
     # PHASE 4: Sync to both old and new state management
     values$updating_table <- TRUE
     if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
@@ -54,13 +54,13 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     }
     on.exit(
       {
-        cat("DEBUG: [FILE_UPLOAD] Clearing updating_table flag on exit...\n")
+        log_debug("Clearing updating_table flag on exit...", "FILE_UPLOAD")
         # PHASE 4: Sync to both old and new state management
         values$updating_table <- FALSE
         if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
           app_state$data$updating_table <- FALSE
         }
-        cat("DEBUG: [FILE_UPLOAD] ✅ updating_table flag cleared\n")
+        log_debug("✅ updating_table flag cleared", "FILE_UPLOAD")
       },
       add = TRUE
     )
@@ -68,31 +68,31 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     file_path <- input$data_file$datapath
     file_ext <- tools::file_ext(input$data_file$name)
 
-    cat("DEBUG: [FILE_UPLOAD] File processing:\n")
-    cat("DEBUG: [FILE_UPLOAD] - Extension:", file_ext, "\n")
-    cat("DEBUG: [FILE_UPLOAD] - File exists:", file.exists(file_path), "\n")
+    log_debug("File processing:", "FILE_UPLOAD")
+    log_debug(paste("- Extension:", file_ext), "FILE_UPLOAD")
+    log_debug(paste("- File exists:", file.exists(file_path)), "FILE_UPLOAD")
 
     if (file.exists(file_path)) {
       file_info <- file.info(file_path)
-      cat("DEBUG: [FILE_UPLOAD] - Actual file size:", file_info$size, "bytes\n")
+      log_debug(paste("- Actual file size:", file_info$size, "bytes"), "FILE_UPLOAD")
     }
 
     tryCatch(
       {
         if (file_ext %in% c("xlsx", "xls")) {
-          cat("DEBUG: [FILE_UPLOAD] 📊 Processing Excel file...\n")
+          log_debug("📊 Processing Excel file...", "FILE_UPLOAD")
           handle_excel_upload(file_path, session, values)
-          cat("DEBUG: [FILE_UPLOAD] ✅ Excel file processed successfully\n")
+          log_debug("✅ Excel file processed successfully", "FILE_UPLOAD")
         } else {
-          cat("DEBUG: [FILE_UPLOAD] 📄 Processing CSV file...\n")
+          log_debug("📄 Processing CSV file...", "FILE_UPLOAD")
           handle_csv_upload(file_path, values)
-          cat("DEBUG: [FILE_UPLOAD] ✅ CSV file processed successfully\n")
+          log_debug("✅ CSV file processed successfully", "FILE_UPLOAD")
         }
-        cat("DEBUG: [FILE_UPLOAD] File upload completed successfully\n")
+        log_debug("File upload completed successfully", "FILE_UPLOAD")
       },
       error = function(e) {
-        cat("DEBUG: [FILE_UPLOAD] ❌ Error during file processing:", e$message, "\n")
-        cat("DEBUG: [FILE_UPLOAD] Error class:", class(e), "\n")
+        log_debug(paste("❌ Error during file processing:", e$message), "FILE_UPLOAD")
+        log_debug(paste("Error class:", class(e)), "FILE_UPLOAD")
         showNotification(
           paste("Fejl ved upload:", e$message),
           type = "error",
@@ -101,20 +101,20 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
       }
     )
 
-    cat("DEBUG: [FILE_UPLOAD] File upload handler completed\n")
-    cat("DEBUG: [FILE_UPLOAD] ===========================================\n")
+    log_debug("File upload handler completed", "FILE_UPLOAD")
+    log_debug("===========================================", "FILE_UPLOAD")
   })
 }
 
 ## Håndter Excel fil upload
 handle_excel_upload <- function(file_path, session, values) {
-  cat("DEBUG: [EXCEL_UPLOAD] ========================================\n")
-  cat("DEBUG: [EXCEL_UPLOAD] Starting Excel file processing\n")
-  cat("DEBUG: [EXCEL_UPLOAD] File path:", file_path, "\n")
+  log_debug("========================================", "EXCEL_READ")
+  log_debug("Starting Excel file processing", "EXCEL_READ")
+  log_debug(paste("File path:", file_path), "EXCEL_READ")
 
-  cat("DEBUG: [EXCEL_UPLOAD] Reading Excel sheets...\n")
+  log_debug("Reading Excel sheets...", "EXCEL_READ")
   excel_sheets <- readxl::excel_sheets(file_path)
-  cat("DEBUG: [EXCEL_UPLOAD] Available sheets:", paste(excel_sheets, collapse = ", "), "\n")
+  log_debug(paste("Available sheets:", paste(excel_sheets, collapse = ", ")), "EXCEL_READ")
 
   if ("Data" %in% excel_sheets && "Metadata" %in% excel_sheets) {
     # Read data from Data sheet
@@ -227,15 +227,15 @@ handle_excel_upload <- function(file_path, session, values) {
 
 ## Håndter CSV fil upload
 handle_csv_upload <- function(file_path, values) {
-  cat("DEBUG: [CSV_UPLOAD] ==========================================\n")
-  cat("DEBUG: [CSV_UPLOAD] Starting CSV file processing\n")
-  cat("DEBUG: [CSV_UPLOAD] File path:", file_path, "\n")
+  log_debug("==========================================", "CSV_READ")
+  log_debug("Starting CSV file processing", "CSV_READ")
+  log_debug(paste("File path:", file_path), "CSV_READ")
 
   # CSV behandling med danske standarder
-  cat("DEBUG: [CSV_UPLOAD] Reading CSV with Danish locale...\n")
-  cat("DEBUG: [CSV_UPLOAD] - Decimal mark: ','\n")
-  cat("DEBUG: [CSV_UPLOAD] - Grouping mark: '.'\n")
-  cat("DEBUG: [CSV_UPLOAD] - Encoding: ISO-8859-1\n")
+  log_debug("Reading CSV with Danish locale...", "CSV_READ")
+  log_debug("- Decimal mark: ','", "CSV_READ")
+  log_debug("- Grouping mark: '.'", "CSV_READ")
+  log_debug("- Encoding: ISO-8859-1", "CSV_READ")
 
   data <- readr::read_csv2(
     file_path,
@@ -247,15 +247,15 @@ handle_csv_upload <- function(file_path, values) {
     show_col_types = FALSE
   )
 
-  cat("DEBUG: [CSV_UPLOAD] CSV read successfully - dimensions:", nrow(data), "x", ncol(data), "\n")
-  cat("DEBUG: [CSV_UPLOAD] Column names:", paste(names(data), collapse = ", "), "\n")
+  log_debug(paste("CSV read successfully - dimensions:", nrow(data), "x", ncol(data)), "CSV_READ")
+  log_debug(paste("Column names:", paste(names(data), collapse = ", ")), "CSV_READ")
 
   # Ensure standard columns are present and in correct order
-  cat("DEBUG: [CSV_UPLOAD] Ensuring standard columns...\n")
+  log_debug("Ensuring standard columns...", "CSV_READ")
   data <- ensure_standard_columns(data)
-  cat("DEBUG: [CSV_UPLOAD] Standard columns applied - dimensions:", nrow(data), "x", ncol(data), "\n")
+  log_debug(paste("Standard columns applied - dimensions:", nrow(data), "x", ncol(data)), "CSV_READ")
 
-  cat("DEBUG: [CSV_UPLOAD] Setting reactive values...\n")
+  log_debug("Setting reactive values...", "CSV_READ")
   # PHASE 4: Sync assignment to both old and new state management
   values$current_data <- as.data.frame(data)
   if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
@@ -281,7 +281,7 @@ handle_csv_upload <- function(file_path, values) {
   if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
     app_state$ui$hide_anhoej_rules <- FALSE
   }
-  cat("DEBUG: [CSV_UPLOAD] ✅ Reactive values set successfully\n")
+  log_debug("✅ Reactive values set successfully", "CSV_READ")
 
   showNotification(
     paste("CSV fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
@@ -535,7 +535,7 @@ create_complete_excel_export <- function(file, input, values) {
         )
       },
       error = function(e) {
-        cat("ERROR during Excel export:", e$message, "\n")
+        log_error(paste("Excel export failed:", e$message), "FILE_EXPORT")
         showNotification(
           paste("Fejl ved Excel eksport:", e$message),
           type = "error",
