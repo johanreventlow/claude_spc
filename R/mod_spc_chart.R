@@ -142,10 +142,15 @@ spc_out_of_control_icon <- HTML('
 #' @return Liste med reactive values for plot, status og resultater
 visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL) {
   moduleServer(id, function(input, output, session) {
+    cat("DEBUG: [MODULE] ==========================================\n")
+    cat("DEBUG: [MODULE] Initializing visualization module server\n")
+    cat("DEBUG: [MODULE] Module ID:", id, "\n")
     ns <- session$ns
+    cat("DEBUG: [MODULE] Namespace function created\n")
 
     # State Management --------------------------------------------------------
     # Reaktive værdier til tilstandshåndtering
+    cat("DEBUG: [MODULE] Setting up reactive values for state management\n")
     values <- reactiveValues(
       plot_object = NULL,
       plot_ready = FALSE,
@@ -153,6 +158,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       plot_warnings = character(0),
       is_computing = FALSE
     )
+    cat("DEBUG: [MODULE] ✅ Reactive values initialized\n")
 
     # Waiter til plot loading feedback
     waiter_plot <- waiter::Waiter$new(
@@ -405,12 +411,27 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Separat renderPlot for det faktiske SPC plot
     output$spc_plot_actual <- renderPlot(
       {
-        # Use req() for clean dependency management
-        req(values$plot_ready)
-        plot <- spc_plot()
-        req(inherits(plot, "ggplot"))
+        cat("DEBUG: [RENDER_PLOT] =====================================\n")
+        cat("DEBUG: [RENDER_PLOT] Plot rendering triggered\n")
 
-        return(plot)
+        # Use req() for clean dependency management
+        cat("DEBUG: [RENDER_PLOT] Checking plot_ready status...\n")
+        req(values$plot_ready)
+        cat("DEBUG: [RENDER_PLOT] ✅ Plot ready status confirmed\n")
+
+        cat("DEBUG: [RENDER_PLOT] Getting plot object...\n")
+        plot <- spc_plot()
+        cat("DEBUG: [RENDER_PLOT] Plot object retrieved, checking type...\n")
+
+        if (inherits(plot, "ggplot")) {
+          cat("DEBUG: [RENDER_PLOT] ✅ Valid ggplot object confirmed\n")
+          cat("DEBUG: [RENDER_PLOT] Plot layers count:", length(plot$layers), "\n")
+          cat("DEBUG: [RENDER_PLOT] Returning plot for rendering\n")
+          return(plot)
+        } else {
+          cat("DEBUG: [RENDER_PLOT] ❌ Invalid plot object type:", class(plot), "\n")
+          req(FALSE) # This will fail the req() check
+        }
       },
       res = 96
     )

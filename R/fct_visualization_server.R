@@ -8,18 +8,27 @@
 ## Hovedfunktion for visualisering
 # Opsætter al server logik relateret til visualisering og data forberedelse
 setup_visualization <- function(input, output, session, values) {
+  cat("DEBUG: [VISUALIZATION] =======================================\n")
+  cat("DEBUG: [VISUALIZATION] Setting up visualization system\n")
+
   # Data til visualiserings modul
   active_data <- reactive({
+    cat("DEBUG: [PLOT_DATA] Active data reactive triggered\n")
     req(values$current_data)
+    cat("DEBUG: [PLOT_DATA] Current data available, processing...\n")
 
     data <- values$current_data
+    cat("DEBUG: [PLOT_DATA] Data dimensions:", nrow(data), "x", ncol(data), "\n")
+    cat("DEBUG: [PLOT_DATA] Column names:", paste(names(data), collapse = ", "), "\n")
 
     # Tilføj hide_anhoej_rules flag som attribut til data
     attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
+    cat("DEBUG: [PLOT_DATA] Hide Anhøj rules flag:", values$hide_anhoej_rules, "\n")
 
     # Tjek om dette er den tomme standard tabel fra session reset
     if (nrow(data) == 5 && all(c("Skift", "Dato", "Tæller", "Nævner", "Kommentar") %in% names(data))) {
       if (all(is.na(data$Dato)) && all(is.na(data$Tæller)) && all(is.na(data$Nævner))) {
+        cat("DEBUG: [PLOT_DATA] ⚠️ Detected empty standard table - returning with flag\n")
         # Dette er tom standard tabel men vi skal stadig videregive hide flag
         attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
         return(data) # Retur nér data med flag i stedet for NULL
@@ -27,12 +36,15 @@ setup_visualization <- function(input, output, session, values) {
     }
 
     non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
+    cat("DEBUG: [PLOT_DATA] Non-empty rows:", sum(non_empty_rows), "out of", nrow(data), "\n")
 
     if (any(non_empty_rows)) {
       filtered_data <- data[non_empty_rows, ]
       attr(filtered_data, "hide_anhoej_rules") <- values$hide_anhoej_rules
+      cat("DEBUG: [PLOT_DATA] ✅ Returning filtered data:", nrow(filtered_data), "rows\n")
       return(filtered_data)
     } else {
+      cat("DEBUG: [PLOT_DATA] ⚠️ No meaningful data found - returning original with flag\n")
       # Selv når ingen meningsfuld data, videregiv flaget
       attr(data, "hide_anhoej_rules") <- values$hide_anhoej_rules
       return(data)
@@ -41,6 +53,7 @@ setup_visualization <- function(input, output, session, values) {
 
   # Kolonne konfiguration til visualisering
   # Store last valid config to avoid NULL during input updates
+  cat("DEBUG: [VISUALIZATION] Setting up column configuration reactives\n")
   last_valid_config <- reactiveVal(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run"))
 
   # Separate reactives for auto-detected and manual column selection
@@ -89,6 +102,7 @@ setup_visualization <- function(input, output, session, values) {
 
 
   # Initialiser visualiserings modul
+  cat("DEBUG: [VISUALIZATION] Initializing visualization module server\n")
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = active_data,

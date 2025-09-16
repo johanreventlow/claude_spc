@@ -145,7 +145,9 @@ app_server <- function(input, output, session) {
   # Initial UI Setup --------------------------------------------------------
   # Sæt standard chart_type når appen starter
   observe({
+    cat("DEBUG: [APP_SERVER] Setting initial chart_type to 'run'\n")
     updateSelectizeInput(session, "chart_type", selected = "run")
+    cat("DEBUG: [APP_SERVER] ✅ Initial chart_type set\n")
   }) %>%
     bindEvent(TRUE, once = TRUE)
 

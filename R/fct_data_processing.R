@@ -107,7 +107,8 @@ setup_column_management <- function(input, output, session, values) {
       cat("DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n")
       values$auto_detect_trigger <- Sys.time()
     },
-    ignoreInit = TRUE, ignoreNULL = TRUE
+    ignoreInit = TRUE, ignoreNULL = TRUE,
+    priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT
   )
 
   # Forsinket auto-detekterings udførelse
@@ -130,7 +131,8 @@ setup_column_management <- function(input, output, session, values) {
 
       cat("DEBUG: [AUTO_DETECT_EXEC] ✅ Auto-detect execution completed\n")
     },
-    ignoreInit = TRUE
+    ignoreInit = TRUE,
+    priority = OBSERVER_PRIORITIES$AUTO_DETECT
   )
 
   # Reaktiv UI sync observer for auto-detect kolonnematch
@@ -192,7 +194,8 @@ setup_column_management <- function(input, output, session, values) {
       # Ryd sync request
       values$ui_sync_needed <- NULL
     },
-    ignoreInit = TRUE, ignoreNULL = TRUE
+    ignoreInit = TRUE, ignoreNULL = TRUE,
+    priority = OBSERVER_PRIORITIES$UI_SYNC
   )
 
   # Auto-detekterings knap handler - kører altid når bruger trykker

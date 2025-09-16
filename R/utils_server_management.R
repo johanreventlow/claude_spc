@@ -180,6 +180,10 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
 # Helper functions for session management
 restore_metadata <- function(session, metadata) {
+  cat("DEBUG: [METADATA_RESTORE] ===================================\n")
+  cat("DEBUG: [METADATA_RESTORE] Starting metadata restoration\n")
+  cat("DEBUG: [METADATA_RESTORE] Metadata keys:", paste(names(metadata), collapse = ", "), "\n")
+
   isolate({
     if (!is.null(metadata$title)) {
       updateTextInput(session, "indicator_title", value = metadata$title)
@@ -188,7 +192,9 @@ restore_metadata <- function(session, metadata) {
       updateRadioButtons(session, "unit_type", selected = metadata$unit_type)
     }
     if (!is.null(metadata$unit_select)) {
+      cat("DEBUG: [METADATA_RESTORE] Updating unit_select to:", metadata$unit_select, "\n")
       updateSelectizeInput(session, "unit_select", selected = metadata$unit_select)
+      cat("DEBUG: [METADATA_RESTORE] ✅ unit_select updated\n")
     }
     if (!is.null(metadata$unit_custom)) {
       updateTextInput(session, "unit_custom", value = metadata$unit_custom)
@@ -197,16 +203,24 @@ restore_metadata <- function(session, metadata) {
       updateTextAreaInput(session, "indicator_description", value = metadata$description)
     }
     if (!is.null(metadata$chart_type)) {
+      cat("DEBUG: [METADATA_RESTORE] Updating chart_type to:", metadata$chart_type, "\n")
       updateSelectizeInput(session, "chart_type", selected = metadata$chart_type)
+      cat("DEBUG: [METADATA_RESTORE] ✅ chart_type updated\n")
     }
     if (!is.null(metadata$x_column)) {
+      cat("DEBUG: [METADATA_RESTORE] Updating x_column to:", metadata$x_column, "\n")
       updateSelectizeInput(session, "x_column", selected = metadata$x_column)
+      cat("DEBUG: [METADATA_RESTORE] ✅ x_column updated\n")
     }
     if (!is.null(metadata$y_column)) {
+      cat("DEBUG: [METADATA_RESTORE] Updating y_column to:", metadata$y_column, "\n")
       updateSelectizeInput(session, "y_column", selected = metadata$y_column)
+      cat("DEBUG: [METADATA_RESTORE] ✅ y_column updated\n")
     }
     if (!is.null(metadata$n_column)) {
+      cat("DEBUG: [METADATA_RESTORE] Updating n_column to:", metadata$n_column, "\n")
       updateSelectizeInput(session, "n_column", selected = metadata$n_column)
+      cat("DEBUG: [METADATA_RESTORE] ✅ n_column updated\n")
     }
     if (!is.null(metadata$target_value)) {
       updateTextInput(session, "target_value", value = metadata$target_value)
