@@ -242,7 +242,7 @@ create_ui_main_content <- function() {
       condition = "output.dataLoaded == 'TRUE'",
 
 
-      # Main content in columns
+      # Main content in 2x2 grid layout
       layout_columns(
         col_widths = c(6, 6, 6, 6),
         height = "auto",
@@ -250,13 +250,7 @@ create_ui_main_content <- function() {
         create_plot_only_card(),
         create_status_value_boxes(),
         create_data_table_card(),
-        create_chart_settings_card(),
-        # Left column: Data table and chart settings
-
-        # Status information as value boxes
-
-        # ),
-        # create_export_card(),
+        create_chart_settings_card()
       )
     )
   )
