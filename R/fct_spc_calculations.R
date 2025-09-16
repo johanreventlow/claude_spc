@@ -65,7 +65,7 @@ validate_x_column_format <- function(data, x_col, x_axis_unit = "observation") {
         x_data_converted <- as.POSIXct(danish_parsed)
         x_format <- get_x_format_string(x_axis_unit)
 
-        cat("ON-THE-FLY: Konverterede", x_col, "danske datoer til POSIXct (success rate:", round(danish_success_rate, 2), ")\n")
+        log_debug(paste("ON-THE-FLY: Konverterede", x_col, "danske datoer til POSIXct (success rate:", round(danish_success_rate, 2), ")"), "DATE_CONVERSION")
 
         return(list(
           x_data = x_data_converted,
@@ -111,7 +111,7 @@ validate_x_column_format <- function(data, x_col, x_axis_unit = "observation") {
         },
         error = function(e) {
           # Skip denne parsing metode hvis den fejler
-          cat("WARNING: guess_formats parsing fejlede:", e$message, "\n")
+          log_debug(paste("WARNING: guess_formats parsing fejlede:", e$message), "DATE_CONVERSION")
         }
       )
     }
@@ -188,12 +188,7 @@ detect_date_interval <- function(dates, debug = TRUE) {
   }
 
   if (debug) {
-    cat("DATE INTERVAL DEBUG:\n")
-    cat("- Observations:", length(sorted_dates), "\n")
-    cat("- Median interval:", round(median_interval, 1), "days\n")
-    cat("- Consistency:", round(consistency, 2), "\n")
-    cat("- Type:", interval_type, "\n")
-    cat("- Timespan:", round(timespan_days), "days\n")
+    log_debug(paste("DATE INTERVAL DEBUG:\n- Observations:", length(sorted_dates), "\n- Median interval:", round(median_interval, 1), "days\n- Consistency:", round(consistency, 2), "\n- Type:", interval_type, "\n- Timespan:", round(timespan_days), "days"), "DATE_INTERVAL")
   }
 
   return(list(
@@ -293,11 +288,7 @@ get_optimal_formatting <- function(interval_info, debug = TRUE) {
   )
 
   if (debug) {
-    cat("FORMATTING DEBUG:\n")
-    cat("- Selected labels:", if (is.function(config$labels)) "function (smart labels)" else config$labels, "\n")
-    cat("- Selected breaks:", config$breaks, "\n")
-    cat("- N breaks:", config$n_breaks, "\n")
-    if (!is.null(config$use_smart_labels)) cat("- Smart labels:", config$use_smart_labels, "\n")
+    log_debug(paste("FORMATTING DEBUG:\n- Selected labels:", if (is.function(config$labels)) "function (smart labels)" else config$labels, "\n- Selected breaks:", config$breaks, "\n- N breaks:", config$n_breaks, if (!is.null(config$use_smart_labels)) paste("\n- Smart labels:", config$use_smart_labels) else ""), "FORMATTING")
   }
 
   return(config)
@@ -309,9 +300,7 @@ get_optimal_formatting <- function(interval_info, debug = TRUE) {
 ## Generér SPC plot med tilpasset styling
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
   # DEBUG: Log input parameters
-  cat("=== FUNCTION INPUT DEBUG ===\n")
-  cat("y_axis_unit parameter received:", y_axis_unit, "\n")
-  cat("============================\n")
+  log_debug(paste("=== FUNCTION INPUT DEBUG ===\ny_axis_unit parameter received:", y_axis_unit, "\n============================"), "SPC_CALC")
 
   # Safety checks
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
@@ -372,25 +361,22 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       original_x_class <- class(data[[config$x_col]])
       filtered_x_class <- class(data_filtered[[config$x_col]])
 
-      cat("DATA FILTERING DEBUG:\n")
-      cat("- Original", config$x_col, "class:", original_x_class[1], "\n")
-      cat("- Filtered", config$x_col, "class:", filtered_x_class[1], "\n")
+      log_debug(paste("DATA FILTERING DEBUG:\n- Original", config$x_col, "class:", original_x_class[1], "\n- Filtered", config$x_col, "class:", filtered_x_class[1]), "DATA_FILTER")
 
       # If original was POSIXct/Date but filtered lost the class, restore it
       if (inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
         !inherits(data_filtered[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
-        cat("- RESTORING: Filtered data lost", original_x_class[1], "format, restoring...\n")
+        log_debug(paste("- RESTORING: Filtered data lost", original_x_class[1], "format, restoring..."), "DATA_FILTER")
 
         # Restore the original class attributes
         data_filtered[[config$x_col]] <- data[[config$x_col]][complete_rows]
         class(data_filtered[[config$x_col]]) <- original_x_class
         attributes(data_filtered[[config$x_col]]) <- attributes(data[[config$x_col]])
 
-        cat("- ✓ RESTORED:", config$x_col, "to", class(data_filtered[[config$x_col]])[1], "\n")
+        log_debug(paste("- ✓ RESTORED:", config$x_col, "to", class(data_filtered[[config$x_col]])[1]), "DATA_FILTER")
       }
 
-      cat("- Original sample:", paste(head(data[[config$x_col]], 3), collapse = ", "), "\n")
-      cat("- Filtered sample:", paste(head(data_filtered[[config$x_col]], 3), collapse = ", "), "\n")
+      log_debug(paste("- Original sample:", paste(head(data[[config$x_col]], 3), collapse = ", "), "\n- Filtered sample:", paste(head(data_filtered[[config$x_col]], 3), collapse = ", ")), "DATA_FILTER")
     }
 
     taeller <- parse_danish_number(data_filtered[[config$y_col]])
@@ -446,8 +432,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     # PRESERVE POSIXct/Date formats in non-ratio case too
     if (!is.null(config$x_col) && config$x_col %in% names(data)) {
       original_x_class <- class(data[[config$x_col]])
-      cat("DATA FILTERING DEBUG (non-ratio):\n")
-      cat("- Original", config$x_col, "class:", original_x_class[1], "\n")
+      log_debug(paste("DATA FILTERING DEBUG (non-ratio):\n- Original", config$x_col, "class:", original_x_class[1]), "DATA_FILTER")
     }
 
     data_backup <- data # Keep reference to original data
@@ -456,18 +441,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     # Restore POSIXct/Date format if lost during filtering
     if (!is.null(config$x_col) && config$x_col %in% names(data)) {
       filtered_x_class <- class(data[[config$x_col]])
-      cat("- Filtered", config$x_col, "class:", filtered_x_class[1], "\n")
+      log_debug(paste("- Filtered", config$x_col, "class:", filtered_x_class[1]), "DATA_FILTER")
 
       if (inherits(data_backup[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
         !inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
-        cat("- RESTORING (non-ratio): Lost", original_x_class[1], "format, restoring...\n")
+        log_debug(paste("- RESTORING (non-ratio): Lost", original_x_class[1], "format, restoring..."), "DATA_FILTER")
 
         # Restore the original class and attributes
         data[[config$x_col]] <- data_backup[[config$x_col]][complete_rows]
         class(data[[config$x_col]]) <- original_x_class
         attributes(data[[config$x_col]]) <- attributes(data_backup[[config$x_col]])
 
-        cat("- ✓ RESTORED (non-ratio):", config$x_col, "to", class(data[[config$x_col]])[1], "\n")
+        log_debug(paste("- ✓ RESTORED (non-ratio):", config$x_col, "to", class(data[[config$x_col]])[1]), "DATA_FILTER")
       }
     }
 
@@ -493,14 +478,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # }
 
   # DEBUG: Log x-validation results
-  cat("=== X-VALIDATION DEBUG ===\n")
-  cat("x_col:", config$x_col, "\n")
-  cat("x_data class:", class(x_data)[1], "\n")
-  cat("x_data sample:", paste(head(x_data, 3), collapse = ", "), "\n")
-  cat("is_date:", x_validation$is_date, "\n")
-  cat("x.period:", x_validation$x.period, "\n")
-  cat("x.format:", x_validation$x.format, "\n")
-  cat("========================\n")
+  log_debug(paste("=== X-VALIDATION DEBUG ===\nx_col:", config$x_col, "\nx_data class:", class(x_data)[1], "\nx_data sample:", paste(head(x_data, 3), collapse = ", "), "\nis_date:", x_validation$is_date, "\nx.period:", x_validation$x.period, "\nx.format:", x_validation$x.format, "\n========================"), "X_VALIDATION")
 
   # Handle phases from selected Skift column
   part_positions <- NULL
@@ -627,42 +605,31 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       n_col_name <- config$n_col # Should be "Nævner"
 
       # Brug data fra x_validation i stedet for duplikeret logik
-      cat("UPDATE CONDITION DEBUG:\n")
-      cat("- x_col_name is not NULL:", !is.null(x_col_name), "\n")
-      cat("- x_col_name in names(data):", if (!is.null(x_col_name)) x_col_name %in% names(data) else "N/A", "\n")
-      cat("- x_validation$is_date:", x_validation$is_date, "\n")
-      if (!is.null(x_col_name) && x_col_name %in% names(data)) {
-        cat("- data[[x_col_name]] is character:", is.character(data[[x_col_name]]), "\n")
-      }
+      log_debug(paste("UPDATE CONDITION DEBUG:\n- x_col_name is not NULL:", !is.null(x_col_name), "\n- x_col_name in names(data):", if (!is.null(x_col_name)) x_col_name %in% names(data) else "N/A", "\n- x_validation$is_date:", x_validation$is_date, if (!is.null(x_col_name) && x_col_name %in% names(data)) paste("\n- data[[x_col_name]] is character:", is.character(data[[x_col_name]])) else ""), "DATA_PROCESS")
 
       # UPDATED CONDITION: Accept both date columns AND character columns (like "Uge tekst")
       if (!is.null(x_col_name) && x_col_name %in% names(data) &&
         (x_validation$is_date || is.character(data[[x_col_name]]))) {
         # Debug logging før opdatering
-        cat("DATAFRAME UPDATE DEBUG:\n")
-        cat("- data nrows:", nrow(data), "\n")
-        cat("- Original", x_col_name, "class:", class(data[[x_col_name]])[1], "\n")
+        log_debug(paste("DATAFRAME UPDATE DEBUG:\n- data nrows:", nrow(data), "\n- Original", x_col_name, "class:", class(data[[x_col_name]])[1]), "DATA_PROCESS")
 
         if (x_validation$is_date) {
           # DATE COLUMN: Use processed data from x_validation
-          cat("- x_validation$x_data length:", length(x_validation$x_data), "\n")
-          cat("- x_validation$x_data class:", class(x_validation$x_data)[1], "\n")
+          log_debug(paste("- x_validation$x_data length:", length(x_validation$x_data), "\n- x_validation$x_data class:", class(x_validation$x_data)[1]), "DATA_PROCESS")
 
           # Opdater kolonnen med de processerede data fra x_validation
           if (length(x_validation$x_data) == nrow(data)) {
             data[[x_col_name]] <- x_validation$x_data
             x_col_for_qic <- x_col_name
 
-            cat("✓ SUCCESS: Opdaterede", x_col_name, "til", class(x_validation$x_data)[1], "\n")
-            cat("QICDATA DEBUG: Bruger dato-kolonne", x_col_name, "med", length(x_validation$x_data), "datoer\n")
+            log_debug(paste("✓ SUCCESS: Opdaterede", x_col_name, "til", class(x_validation$x_data)[1], "\nQICDATA DEBUG: Bruger dato-kolonne", x_col_name, "med", length(x_validation$x_data), "datoer"), "DATA_PROCESS")
           } else {
-            cat("✗ ERROR: Længde mismatch - x_validation$x_data:", length(x_validation$x_data), "vs data rows:", nrow(data), "\n")
+            log_debug(paste("✗ ERROR: Længde mismatch - x_validation$x_data:", length(x_validation$x_data), "vs data rows:", nrow(data), "\nQICDATA DEBUG: Bruger obs_sequence som fallback"), "DATA_PROCESS")
             # Fallback til observation sekvens
             if (!("obs_sequence" %in% names(data))) {
               data$obs_sequence <- 1:nrow(data)
             }
             x_col_for_qic <- "obs_sequence"
-            cat("QICDATA DEBUG: Bruger obs_sequence som fallback\n")
           }
         } else {
           # CHARACTER COLUMN: Convert to factor with original row order to prevent alphabetical sorting
@@ -673,10 +640,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           data[[x_col_name]] <- factor(original_labels, levels = unique_labels)
           x_col_for_qic <- x_col_name
 
-          cat("✓ SUCCESS: Konverterede tekstkolonne", x_col_name, "til factor med original rækkefølge\n")
-          cat("QICDATA DEBUG: Bruger tekst-kolonne", x_col_name, "med", length(data[[x_col_name]]), "tekstlabels som factor\n")
-          cat("- Sample labels:", paste(head(unique_labels, 3), collapse = ", "), "\n")
-          cat("- Levels i korrekt rækkefølge:", paste(head(unique_labels, 5), collapse = ", "), "\n")
+          log_debug(paste("✓ SUCCESS: Konverterede tekstkolonne", x_col_name, "til factor med original rækkefølge\nQICDATA DEBUG: Bruger tekst-kolonne", x_col_name, "med", length(data[[x_col_name]]), "tekstlabels som factor\n- Sample labels:", paste(head(unique_labels, 3), collapse = ", "), "\n- Levels i korrekt rækkefølge:", paste(head(unique_labels, 5), collapse = ", ")), "DATA_PROCESS")
         }
       } else {
         # Brug observation sekvens som fallback
@@ -685,7 +649,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         }
         x_col_for_qic <- "obs_sequence"
 
-        cat("QICDATA DEBUG: Bruger obs_sequence som fallback\n")
+        log_debug("QICDATA DEBUG: Bruger obs_sequence som fallback", "DATA_PROCESS")
       }
 
       # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
@@ -721,13 +685,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           }
 
           # Call qic() with prepared arguments
-          cat("=== QIC CALL DEBUG ===\n")
-          cat("qic_args structure:\n")
-          str(qic_args)
-          cat("Calling qic()...\n")
+          log_debug("=== QIC CALL DEBUG ===\nCalling qic()...", "QIC_CALL")
+          if (getOption("debug.mode", FALSE)) {
+            cat("qic_args structure:\n")
+            str(qic_args)
+          }
 
           qic_data <- do.call(qicharts2::qic, qic_args)
-          cat("QIC call successful, returned data dimensions:", nrow(qic_data), "x", ncol(qic_data), "\n")
+          log_debug(paste("QIC call successful, returned data dimensions:", nrow(qic_data), "x", ncol(qic_data)), "QIC_CALL")
 
           # Convert proportions to percentages for run charts with rate data
           if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
@@ -778,35 +743,33 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       }
 
       # Build custom ggplot using qic calculations
-      cat("=== GGPLOT BUILD DEBUG ===\n")
-      cat("qic_data dimensions:", nrow(qic_data), "x", ncol(qic_data), "\n")
-      cat("qic_data columns:", names(qic_data), "\n")
+      log_debug(paste("=== GGPLOT BUILD DEBUG ===\nqic_data dimensions:", nrow(qic_data), "x", ncol(qic_data), "\nqic_data columns:", paste(names(qic_data), collapse = ", ")), "GGPLOT_BUILD")
 
       tryCatch(
         {
           plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y))
-          cat("Base plot created successfully\n")
+          log_debug("Base plot created successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::geom_line(color = HOSPITAL_COLORS$lightgrey, linewidth = 1)
-          cat("Line geom added successfully\n")
+          log_debug("Line geom added successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$mediumgrey)
-          cat("Point geom added successfully\n")
+          log_debug("Point geom added successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::geom_line(ggplot2::aes(y = cl),
             color = HOSPITAL_COLORS$hospitalblue,
             linetype = "solid", linewidth = 1
           )
-          cat("Center line added successfully\n")
+          log_debug("Center line added successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::labs(title = call_args$title, x = "", y = "")
-          cat("Labels added successfully\n")
+          log_debug("Labels added successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::theme_minimal()
-          cat("Theme added successfully\n")
+          log_debug("Theme added successfully", "GGPLOT_BUILD")
         },
         error = function(e) {
-          cat("ERROR in ggplot build:", e$message, "\n")
+          log_debug(paste("ERROR in ggplot build:", e$message), "GGPLOT_BUILD")
           stop(e)
         }
       )
@@ -831,9 +794,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # Intelligent x-akse formatering baseret på dato-mønstre
       if (!is.null(x_validation$x.format) && x_validation$is_date) {
         # DEBUG: Tjek qic_data$x type
-        cat("QIC_DATA X DEBUG: class =", class(qic_data$x)[1], "\n")
-        cat("QIC_DATA X DEBUG: inherits Date =", inherits(qic_data$x, "Date"), "\n")
-        cat("QIC_DATA X DEBUG: inherits POSIXct =", inherits(qic_data$x, "POSIXct"), "\n")
+        log_debug(paste("QIC_DATA X DEBUG: class =", class(qic_data$x)[1], "\ninherits Date =", inherits(qic_data$x, "Date"), "\ninherits POSIXct =", inherits(qic_data$x, "POSIXct")), "X_AXIS_FORMAT")
 
         # Intelligent interval detektion og formatering
         interval_info <- detect_date_interval(qic_data$x, debug = TRUE)
@@ -843,7 +804,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         if (inherits(qic_data$x, c("POSIXct", "POSIXt"))) {
           # Håndter intelligent formatering separat
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            cat("SMART WEEKLY LABELS: Applying intelligent week formatting\n")
+            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
@@ -851,7 +812,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               breaks = scales::breaks_pretty(n = format_config$n_breaks)
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            cat("SMART MONTHLY LABELS: Applying intelligent month formatting\n")
+            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
@@ -875,14 +836,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         } else if (inherits(qic_data$x, "Date")) {
           # Date objekter - tilsvarende intelligent håndtering
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            cat("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects\n")
+            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects", "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_date(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               breaks = scales::date_breaks(format_config$breaks)
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            cat("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects\n")
+            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects", "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_date(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
