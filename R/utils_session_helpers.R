@@ -27,12 +27,19 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
 
   # Data indlæsnings status flags - følger BFH UTH mønster
   output$dataLoaded <- renderText({
-    result <- if (is.null(values$current_data)) {
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+
+    result <- if (is.null(current_data_check)) {
       "FALSE"
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
       # Tjek også om bruger aktivt er startet på at arbejde (fil uploadet eller startet manuelt)
-      meaningful_data <- any(sapply(values$current_data, function(x) {
+      meaningful_data <- any(sapply(current_data_check, function(x) {
         if (is.logical(x)) {
           return(any(x, na.rm = TRUE))
         }
@@ -72,11 +79,18 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
 
   output$has_data <- renderText({
-    if (is.null(values$current_data)) {
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+
+    if (is.null(current_data_check)) {
       "false"
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
-      meaningful_data <- any(sapply(values$current_data, function(x) {
+      meaningful_data <- any(sapply(current_data_check, function(x) {
         if (is.logical(x)) {
           return(any(x, na.rm = TRUE))
         }
@@ -103,21 +117,28 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       values$file_uploaded
     }
 
-    if (is.null(values$current_data)) {
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+
+    if (is.null(current_data_check)) {
       div(
         span(class = "status-indicator status-warning"),
         "Ingen data",
         style = "font-size: 0.9rem;"
       )
     } else if (file_uploaded_check) {
-      data_rows <- sum(!is.na(values$current_data[[1]]))
+      data_rows <- sum(!is.na(current_data_check[[1]]))
       div(
         span(class = "status-indicator status-ready"),
         paste("Fil uploadet -", data_rows, "datapunkter"),
         style = "font-size: 0.9rem;"
       )
     } else {
-      data_rows <- sum(!is.na(values$current_data[[1]]))
+      data_rows <- sum(!is.na(current_data_check[[1]]))
       if (data_rows > 0) {
         div(
           span(class = "status-indicator status-processing"),
@@ -173,11 +194,18 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       return(NULL)
     }
 
-    if (!is.null(values$current_data) &&
-      nrow(values$current_data) > 0 &&
-      any(!is.na(values$current_data))) {
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+
+    if (!is.null(current_data_check) &&
+      nrow(current_data_check) > 0 &&
+      any(!is.na(current_data_check))) {
       list(
-        data = values$current_data,
+        data = current_data_check,
         metadata = collect_metadata(input),
         timestamp = Sys.time()
       )
@@ -241,9 +269,16 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
       return(NULL)
     }
 
-    if (!is.null(values$current_data)) {
+    # PHASE 4: Check both old and new state management for current_data
+    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+
+    if (!is.null(current_data_check)) {
       list(
-        data = values$current_data,
+        data = current_data_check,
         metadata = collect_metadata(input),
         timestamp = Sys.time()
       )
