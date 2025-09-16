@@ -895,10 +895,23 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
             # Apply conversion if successful (inside isolate to prevent reactive triggers)
             if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
-              # PHASE 4: Sync assignment to both old and new state management
-              values$current_data[[candidate_name]] <- converted_dates
-              if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-                app_state$data$current_data[[candidate_name]] <- converted_dates
+              # PHASE 4: Dimension safety check before assignment
+              current_rows <- nrow(values$current_data)
+              converted_rows <- length(converted_dates)
+
+              if (current_rows == converted_rows) {
+                # Safe to assign - dimensions match
+                values$current_data[[candidate_name]] <- converted_dates
+                if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+                  app_state_rows <- nrow(app_state$data$current_data)
+                  if (app_state_rows == converted_rows) {
+                    app_state$data$current_data[[candidate_name]] <- converted_dates
+                  } else {
+                    log_warn(paste("Skipping app_state assignment - dimension mismatch:", app_state_rows, "vs", converted_rows), "POST_PROCESSING")
+                  }
+                }
+              } else {
+                log_warn(paste("Skipping date conversion assignment - dimension mismatch:", current_rows, "vs", converted_rows), "POST_PROCESSING")
               }
             }
           }

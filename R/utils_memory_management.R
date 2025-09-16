@@ -56,7 +56,7 @@ cleanup_reactive_values <- function(values) {
   # Clear data objects
   safe_nullify <- function(value_name) {
     tryCatch({
-      if (exists(value_name, envir = values)) {
+      if (value_name %in% names(values)) {
         values[[value_name]] <- NULL
       }
     }, error = function(e) {
