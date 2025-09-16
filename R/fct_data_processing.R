@@ -21,7 +21,7 @@ setup_column_management <- function(input, output, session, values, app_state = 
     cat("DEBUG: [COLUMN_MGMT] Column update observer triggered\n")
 
     # PHASE 4: Check both old and new state management for updating_table
-    updating_table_check <- if (use_centralized_state) {
+    updating_table_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$updating_table
     } else {
       values$updating_table
@@ -991,7 +991,7 @@ setup_data_table <- function(input, output, session, values) {
   observeEvent(input$main_data_table,
     {
       # PHASE 4: Check both old and new state management for updating_table
-      updating_table_check <- if (use_centralized_state) {
+      updating_table_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
         app_state$data$updating_table
       } else {
         values$updating_table
@@ -1003,7 +1003,7 @@ setup_data_table <- function(input, output, session, values) {
 
       # PHASE 4: Sync to both old and new state management
       values$updating_table <- TRUE
-      if (use_centralized_state) {
+      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
         app_state$data$updating_table <- TRUE
         cat("DEBUG: [PHASE4] Set updating_table=TRUE in centralized state\n")
       }
@@ -1013,7 +1013,7 @@ setup_data_table <- function(input, output, session, values) {
         {
           # PHASE 4: Sync to both old and new state management
           values$updating_table <- FALSE
-          if (use_centralized_state) {
+          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
             app_state$data$updating_table <- FALSE
             cat("DEBUG: [PHASE4] Set updating_table=FALSE in centralized state\n")
           }
