@@ -302,31 +302,7 @@ OBSERVER_PRIORITIES <- list(
 
 # FEJLHÅNDTERING HJÆLPEFUNKTIONER ================================
 
-## Centraliseret error logging med konsistent format
-log_error <- function(message, level = "warning", show_user = FALSE, session = NULL) {
-  timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  log_msg <- paste0("[", timestamp, "] ", toupper(level), ": ", message)
-
-  # Log til console (altid)
-  cat(log_msg, "\n")
-
-  # Vis til bruger hvis ønsket og session er tilgængelig
-  if (show_user && !is.null(session)) {
-    notification_type <- switch(level,
-      "error" = "error",
-      "warning" = "warning",
-      "info" = "message",
-      "warning" # default
-    )
-
-    showNotification(
-      message,
-      type = notification_type,
-      duration = if (level == "error") 8 else 5,
-      session = session
-    )
-  }
-}
+## Centraliseret error logging - DEPRECATED - bruge R/utils_logging.R i stedet
 
 ## Robust date parsing med standardiseret fejlhåndtering
 safe_date_parse <- function(data, locale = "da_DK.UTF-8", operation_name = "date parsing") {
@@ -344,7 +320,7 @@ safe_date_parse <- function(data, locale = "da_DK.UTF-8", operation_name = "date
       )
     },
     error = function(e) {
-      log_error(paste(operation_name, "fejlede:", e$message), level = "warning")
+      log_error(paste(operation_name, "fejlede:", e$message), "DATE_PARSING")
       list(
         data = rep(as.POSIXct(NA), length(data)),
         success_rate = 0,
@@ -356,7 +332,39 @@ safe_date_parse <- function(data, locale = "da_DK.UTF-8", operation_name = "date
   )
 }
 
-## Standard fejlhåndteringsmønster for kritiske operationer
+#' Sikker udførelse af kritiske operationer med fejlhåndtering
+#'
+#' @description
+#' Standard wrapper til kritiske operationer der kræver robust fejlhåndtering.
+#' Fanger fejl, logger dem med det nye logging system og returnerer fallback værdi.
+#'
+#' @param operation_name Beskrivende navn på operationen (bruges i fejl logs)
+#' @param code R kode der skal udføres sikkert
+#' @param fallback Værdi der returneres hvis operationen fejler (default: NULL)
+#' @param session Shiny session objekt (ikke implementeret endnu)
+#' @param show_user Om fejl skal vises til bruger (ikke implementeret endnu)
+#'
+#' @return Resultat af code hvis succesfuld, ellers fallback værdi
+#' @export
+#'
+#' @details
+#' Funktionen bruger tryCatch til at fange fejl og logger automatisk fejl
+#' med ERROR level til logging systemet med "ERROR_HANDLING" komponent.
+#'
+#' @examples
+#' # Sikker udførelse af potentielt farlig operation
+#' result <- safe_operation(
+#'   "Division operation",
+#'   code = 10 / 0,
+#'   fallback = NA_real_
+#' )
+#'
+#' # Sikker fil læsning
+#' data <- safe_operation(
+#'   "Læs CSV fil",
+#'   code = read.csv("ikke_eksisterende_fil.csv"),
+#'   fallback = data.frame()
+#' )
 safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE) {
   tryCatch(
     {
@@ -365,9 +373,7 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
     error = function(e) {
       log_error(
         paste(operation_name, "fejlede:", e$message),
-        level = "error",
-        show_user = show_user,
-        session = session
+        "ERROR_HANDLING"
       )
       return(fallback)
     }
@@ -386,7 +392,7 @@ create_debounced_reactive <- function(reactive_expr, millis = 1000) {
 ## Session cleanup manager
 setup_session_cleanup <- function(session, cleanup_functions = list()) {
   session$onSessionEnded(function() {
-    log_error("Session cleanup startet", level = "info")
+    log_info("Session cleanup startet", "CLEANUP")
 
     # Kør alle cleanup funktioner
     for (i in seq_along(cleanup_functions)) {
@@ -395,12 +401,12 @@ setup_session_cleanup <- function(session, cleanup_functions = list()) {
           cleanup_functions[[i]]()
         },
         error = function(e) {
-          log_error(paste("Cleanup funktion", i, "fejlede:", e$message), level = "warning")
+          log_error(paste("Cleanup funktion", i, "fejlede:", e$message), "CLEANUP")
         }
       )
     }
 
-    log_error("Session cleanup færdig", level = "info")
+    log_info("Session cleanup færdig", "CLEANUP")
   })
 }
 
@@ -430,7 +436,7 @@ observer_manager <- function() {
               observers[[id]]$destroy()
             },
             error = function(e) {
-              log_error(paste("Observer cleanup fejl for", id, ":", e$message))
+              log_error(paste("Observer cleanup fejl for", id, ":", e$message), "OBSERVER_MGMT")
             }
           )
         }
@@ -444,7 +450,56 @@ observer_manager <- function() {
 # CENTRALISERET STATE MANAGEMENT - FASE 4 ================================
 
 ## App State Schema -----
-# Single source of truth for app state
+#' Opret centraliseret applikations state struktur (Phase 4)
+#'
+#' @description
+#' Opretter det centraliserede state management schema for SPC App.
+#' Dette implementerer Phase 4 arkitekturen med single source of truth
+#' for al applikations tilstand.
+#'
+#' @return Liste med følgende hovedsektioner:
+#' \describe{
+#'   \item{data}{Data management state (current_data, original_data, fil info, flags)}
+#'   \item{columns}{Kolonne management (auto-detect, mappings, UI sync)}
+#'   \item{test_mode}{Test mode konfiguration}
+#'   \item{session}{Session management (save state, file upload status)}
+#'   \item{ui}{UI preferencer og indstillinger}
+#' }
+#' @export
+#'
+#' @details
+#' Centraliseret state structure:
+#'
+#' **Data Management:**
+#' - current_data: Det aktive dataset
+#' - original_data: Backup af oprindelige data
+#' - updating_table: Flag for table operation status
+#' - table_version: Versioning for optimistic updates
+#'
+#' **Column Management:**
+#' - auto_detect: Auto-detection progress og resultater
+#' - mappings: X/Y/N/CL kolonne mappings for SPC
+#' - ui_sync: UI synchronization state
+#'
+#' **Session Management:**
+#' - auto_save_enabled: Automatisk save funktionalitet
+#' - file_uploaded: Track fil upload status
+#' - user_started_session: Bruger session state
+#'
+#' @examples
+#' # Opret standard app state
+#' app_state <- create_app_state()
+#'
+#' # Tjek state struktur
+#' names(app_state)  # "data", "columns", "test_mode", "session", "ui"
+#'
+#' # Opdater data
+#' app_state$data$current_data <- data.frame(Dato = Sys.Date(), Værdi = 10)
+#' app_state$columns$mappings$x_column <- "Dato"
+#'
+#' @seealso
+#' - ARCHITECTURE_OVERVIEW.md for Phase 4 detaljer
+#' - test-phase4-centralized-state.R for eksempler
 create_app_state <- function() {
   list(
     # Data Management

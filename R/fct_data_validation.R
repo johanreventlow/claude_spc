@@ -6,7 +6,47 @@
 
 # VALIDERING FUNKTIONER =======================================================
 
-## Valider datastruktur til SPC analyse
+#' Validér datastruktur til SPC analyse
+#'
+#' @description
+#' Udfører omfattende validering af uploaded data for at sikre at det
+#' er egnet til SPC (Statistical Process Control) analyse. Checker
+#' datastruktur, kolonne-typer, data-kvalitet og giver anbefalinger.
+#'
+#' @param data Data frame med uploadede data der skal valideres
+#'
+#' @return Liste med validerings resultater indeholdende:
+#' \describe{
+#'   \item{valid}{Logisk værdi - TRUE hvis data er grundlæggende validt}
+#'   \item{errors}{Karakter vektor med kritiske fejl der forhindrer analyse}
+#'   \item{warnings}{Karakter vektor med advarsler og anbefalinger}
+#'   \item{potential_date_cols}{Navne på kolonner der ser ud til at indeholde datoer}
+#'   \item{potential_numeric_cols}{Navne på numeriske kolonner egnet til SPC}
+#'   \item{summary}{Liste med grundlæggende data statistikker}
+#' }
+#' @export
+#'
+#' @details
+#' Funktionen udfører følgende valideringer:
+#' \itemize{
+#'   \item Checker at data eksisterer og har indhold
+#'   \item Verificerer minimum antal kolonner (mindst 2)
+#'   \item Identificerer potentielle dato/tid kolonner
+#'   \item Finder numeriske kolonner (inkl. danske tal formater)
+#'   \item Vurderer data størrelse og anbefaler minimum antal punkter
+#'   \item Analyserer missing values og advarer ved høje procenter
+#' }
+#'
+#' @examples
+#' # Valider eksempel data
+#' test_data <- data.frame(
+#'   Dato = c("2023-01-01", "2023-01-02", "2023-01-03"),
+#'   Tæller = c(10, 15, 12),
+#'   Nævner = c(100, 120, 110)
+#' )
+#' result <- validateDataStructure(test_data)
+#' print(result$valid)  # TRUE
+#' print(result$potential_numeric_cols)  # "Tæller", "Nævner"
 validateDataStructure <- function(data) {
   errors <- character(0)
   warnings <- character(0)

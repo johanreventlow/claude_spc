@@ -2,13 +2,22 @@
 # Tests af error handling funktioner
 
 test_that("log_error fungerer korrekt", {
-  # Test basic logging (uden session) - forventer output
-  expect_output(log_error("Test besked", level = "info"), "INFO")
-  expect_output(log_error("Test warning", level = "warning"), "WARNING")
-  expect_output(log_error("Test error", level = "error"), "ERROR")
-  
-  # Test med invalid level bruger level som givet
-  expect_output(log_error("Test unknown", level = "unknown"), "UNKNOWN")
+  # Temporarily set log level to DEBUG for testing
+  old_level <- Sys.getenv("SPC_LOG_LEVEL", "")
+  Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+
+  # Test basic logging med nye logging system
+  expect_output(log_error("Test besked", "TEST"), "ERROR.*TEST.*Test besked")
+  expect_output(log_info("Test info", "TEST"), "INFO.*TEST.*Test info")
+  expect_output(log_warn("Test warning", "TEST"), "WARN.*TEST.*Test warning")
+  expect_output(log_debug("Test debug", "TEST"), "DEBUG.*TEST.*Test debug")
+
+  # Restore original log level
+  if (old_level == "") {
+    Sys.unsetenv("SPC_LOG_LEVEL")
+  } else {
+    Sys.setenv(SPC_LOG_LEVEL = old_level)
+  }
 })
 
 test_that("safe_operation håndterer fejl korrekt", {
