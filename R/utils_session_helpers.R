@@ -7,7 +7,9 @@
 
 ## Hovedfunktion for hjælper
 # Opsætter alle hjælper observers og status funktioner
-setup_helper_observers <- function(input, output, session, values, obs_manager = NULL) {
+setup_helper_observers <- function(input, output, session, values, obs_manager = NULL, app_state = NULL) {
+  # PHASE 4: Check if centralized state is available
+  use_centralized_state <- !is.null(app_state)
   # Initialiser ikke automatisk tom tabel ved opstart - vent på bruger aktion
   # observe({
   #   if (is.null(values$current_data)) {
@@ -115,8 +117,15 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   # Reaktiv debounced auto-save - følger Shiny best practices
   auto_save_trigger <- debounce(reactive({
     # Guards for at forhindre auto-gem under tabel operationer
+    # PHASE 4: Check both old and new state management for updating_table
+    updating_table_check <- if (use_centralized_state) {
+      app_state$data$updating_table
+    } else {
+      values$updating_table
+    }
+
     if (!values$auto_save_enabled ||
-      values$updating_table ||
+      updating_table_check ||
       values$table_operation_in_progress ||
       values$restoring_session) {
       return(NULL)
@@ -151,8 +160,15 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   # Reaktiv debounced settings save - følger Shiny best practices
   settings_save_trigger <- debounce(reactive({
     # Samme guards som data auto-gem
+    # PHASE 4: Check both old and new state management for updating_table
+    updating_table_check <- if (use_centralized_state) {
+      app_state$data$updating_table
+    } else {
+      values$updating_table
+    }
+
     if (!values$auto_save_enabled ||
-      values$updating_table ||
+      updating_table_check ||
       values$table_operation_in_progress ||
       values$restoring_session) {
       return(NULL)

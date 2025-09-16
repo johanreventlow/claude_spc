@@ -7,7 +7,9 @@
 
 ## Hovedfunktion for session management
 # Opsætter al server logik relateret til session håndtering
-setup_session_management <- function(input, output, session, values, waiter_file) {
+setup_session_management <- function(input, output, session, values, waiter_file, app_state = NULL) {
+  # PHASE 4: Check if centralized state is available
+  use_centralized_state <- !is.null(app_state)
   # Auto-gendan session data når tilgængelig (hvis aktiveret)
   observeEvent(input$auto_restore_data,
     {
@@ -25,14 +27,22 @@ setup_session_management <- function(input, output, session, values, waiter_file
           if (!is.null(saved_state$data)) {
             # Sæt gendannelses guards for at forhindre interferens
             values$restoring_session <- TRUE
+            # PHASE 4: Sync to both old and new state management
             values$updating_table <- TRUE
+            if (use_centralized_state) {
+              app_state$data$updating_table <- TRUE
+            }
             values$table_operation_in_progress <- TRUE
             values$auto_save_enabled <- FALSE
 
             # Oprydningsfunktion til at nulstille guards
             on.exit(
               {
+                # PHASE 4: Sync to both old and new state management
                 values$updating_table <- FALSE
+                if (use_centralized_state) {
+                  app_state$data$updating_table <- FALSE
+                }
                 values$restoring_session <- FALSE
                 values$auto_save_enabled <- TRUE
                 # Set flag for delayed cleanup - handled by separate observer
@@ -114,7 +124,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
           showNotification(paste("Fejl ved automatisk genindlæsning:", e$message), type = "error")
 
           # Reset guards even on error
+          # PHASE 4: Sync to both old and new state management
           values$updating_table <- FALSE
+          if (use_centralized_state) {
+            app_state$data$updating_table <- FALSE
+          }
           values$restoring_session <- FALSE
           values$auto_save_enabled <- TRUE
           values$table_operation_in_progress <- FALSE
@@ -269,7 +283,7 @@ handle_clear_saved_request <- function(input, session, values) {
 
   # If no data or settings, start new session directly
   if (!has_data && !has_settings) {
-    reset_to_empty_session(session, values)
+    reset_to_empty_session(session, values, if (use_centralized_state) app_state else NULL)
     showNotification("Ny session startet", type = "message", duration = 2)
     return()
   }
@@ -279,16 +293,22 @@ handle_clear_saved_request <- function(input, session, values) {
 }
 
 handle_confirm_clear_saved <- function(session, values) {
-  reset_to_empty_session(session, values)
+  reset_to_empty_session(session, values, if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) app_state else NULL)
   removeModal()
   showNotification("Ny session startet - alt data og indstillinger nulstillet", type = "message", duration = 4)
 }
 
-reset_to_empty_session <- function(session, values) {
+reset_to_empty_session <- function(session, values, app_state = NULL) {
+  # PHASE 4: Check if centralized state is available
+  use_centralized_state <- !is.null(app_state)
   clearDataLocally(session)
   values$last_save_time <- NULL
 
+  # PHASE 4: Sync to both old and new state management
   values$updating_table <- TRUE
+  if (use_centralized_state) {
+    app_state$data$updating_table <- TRUE
+  }
 
   # Force hide Anhøj rules until real data is loaded
   values$hide_anhoej_rules <- TRUE
@@ -319,7 +339,11 @@ reset_to_empty_session <- function(session, values) {
     shinyjs::reset("data_file")
   })
 
+  # PHASE 4: Sync to both old and new state management
   values$updating_table <- FALSE
+  if (use_centralized_state) {
+    app_state$data$updating_table <- FALSE
+  }
 }
 
 show_upload_modal <- function() {

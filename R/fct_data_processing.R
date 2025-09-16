@@ -20,7 +20,14 @@ setup_column_management <- function(input, output, session, values, app_state = 
   observe({
     cat("DEBUG: [COLUMN_MGMT] Column update observer triggered\n")
 
-    if (values$updating_table) {
+    # PHASE 4: Check both old and new state management for updating_table
+    updating_table_check <- if (use_centralized_state) {
+      app_state$data$updating_table
+    } else {
+      values$updating_table
+    }
+
+    if (updating_table_check) {
       cat("DEBUG: [COLUMN_MGMT] Skipping - table update in progress\n")
       return()
     }
@@ -983,16 +990,33 @@ setup_data_table <- function(input, output, session, values) {
   # Håndtér excelR tabel ændringer
   observeEvent(input$main_data_table,
     {
-      if (values$updating_table || values$restoring_session) {
+      # PHASE 4: Check both old and new state management for updating_table
+      updating_table_check <- if (use_centralized_state) {
+        app_state$data$updating_table
+      } else {
+        values$updating_table
+      }
+
+      if (updating_table_check || values$restoring_session) {
         return()
       }
 
+      # PHASE 4: Sync to both old and new state management
       values$updating_table <- TRUE
+      if (use_centralized_state) {
+        app_state$data$updating_table <- TRUE
+        cat("DEBUG: [PHASE4] Set updating_table=TRUE in centralized state\n")
+      }
       values$table_operation_in_progress <- TRUE
 
       on.exit(
         {
+          # PHASE 4: Sync to both old and new state management
           values$updating_table <- FALSE
+          if (use_centralized_state) {
+            app_state$data$updating_table <- FALSE
+            cat("DEBUG: [PHASE4] Set updating_table=FALSE in centralized state\n")
+          }
         },
         add = TRUE
       )

@@ -7,7 +7,9 @@
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
-setup_file_upload <- function(input, output, session, values, waiter_file) {
+setup_file_upload <- function(input, output, session, values, waiter_file, app_state = NULL) {
+  # PHASE 4: Check if centralized state is available
+  use_centralized_state <- !is.null(app_state)
   cat("DEBUG: [FILE_UPLOAD] ===========================================\n")
   cat("DEBUG: [FILE_UPLOAD] Setting up file upload handlers\n")
 
@@ -45,11 +47,19 @@ setup_file_upload <- function(input, output, session, values, waiter_file) {
     )
 
     cat("DEBUG: [FILE_UPLOAD] Setting updating_table flag...\n")
+    # PHASE 4: Sync to both old and new state management
     values$updating_table <- TRUE
+    if (use_centralized_state) {
+      app_state$data$updating_table <- TRUE
+    }
     on.exit(
       {
         cat("DEBUG: [FILE_UPLOAD] Clearing updating_table flag on exit...\n")
+        # PHASE 4: Sync to both old and new state management
         values$updating_table <- FALSE
+        if (use_centralized_state) {
+          app_state$data$updating_table <- FALSE
+        }
         cat("DEBUG: [FILE_UPLOAD] ✅ updating_table flag cleared\n")
       },
       add = TRUE

@@ -117,10 +117,10 @@ app_server <- function(input, output, session) {
   setup_welcome_page_handlers(input, output, session, values, waiter_file)
 
   ## Session management logik
-  setup_session_management(input, output, session, values, waiter_file)
+  setup_session_management(input, output, session, values, waiter_file, app_state)
 
   ## Fil upload logik
-  setup_file_upload(input, output, session, values, waiter_file)
+  setup_file_upload(input, output, session, values, waiter_file, app_state)
 
   ## Data tabel logik
   setup_data_table(input, output, session, values)
@@ -136,7 +136,7 @@ app_server <- function(input, output, session) {
   setup_download_handlers(input, output, session, values)
 
   ## Hjælpe observers
-  setup_helper_observers(input, output, session, values, obs_manager)
+  setup_helper_observers(input, output, session, values, obs_manager, app_state)
 
   # TEST MODE: Set auto-detect trigger flag AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {
