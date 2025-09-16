@@ -49,7 +49,7 @@ setup_session_cleanup <- function(session, values = NULL, app_state = NULL, obse
 #' @family memory_management
 #' @export
 cleanup_reactive_values <- function(values) {
-  if (is.null(values)) return()
+  if (is.null(values) || length(values) == 0) return()
 
   log_debug("Cleaning reactive values", "MEMORY_MGMT")
 
