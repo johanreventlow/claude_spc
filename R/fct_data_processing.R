@@ -949,7 +949,12 @@ setup_data_table <- function(input, output, session, values) {
     req(values$current_data)
 
     # Inkluder table_version for at tvinge re-render efter gendannelse
-    version_trigger <- values$table_version
+    # PHASE 4: Check both old and new state management for table_version
+    version_trigger <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$table_version
+    } else {
+      values$table_version
+    }
 
     data <- values$current_data
 
@@ -1033,7 +1038,11 @@ setup_data_table <- function(input, output, session, values) {
       )
 
       # Trigger event-driven cleanup instead of timing-based
+      # PHASE 4: Sync to both old and new state management
       values$table_operation_cleanup_needed <- TRUE
+      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+        app_state$data$table_operation_cleanup_needed <- TRUE
+      }
 
       tryCatch(
         {
@@ -1146,7 +1155,11 @@ setup_data_table <- function(input, output, session, values) {
     showNotification("Ny række tilføjet", type = "message")
 
     # Trigger event-driven cleanup instead of timing-based
+    # PHASE 4: Sync to both old and new state management
     values$table_operation_cleanup_needed <- TRUE
+    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+      app_state$data$table_operation_cleanup_needed <- TRUE
+    }
   })
 
   # Nulstil tabel

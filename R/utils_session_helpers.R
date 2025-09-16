@@ -191,7 +191,11 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     req(save_data)  # Only proceed if we have valid save data
 
     autoSaveAppState(session, save_data$data, save_data$metadata)
+    # PHASE 4: Sync to both old and new state management
     values$last_save_time <- save_data$timestamp
+    if (use_centralized_state) {
+      app_state$session$last_save_time <- save_data$timestamp
+    }
   })
 
   # Register observer with manager
@@ -253,7 +257,11 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     req(save_data)  # Only proceed if we have valid save data
 
     autoSaveAppState(session, save_data$data, save_data$metadata)
+    # PHASE 4: Sync to both old and new state management
     values$last_save_time <- save_data$timestamp
+    if (use_centralized_state) {
+      app_state$session$last_save_time <- save_data$timestamp
+    }
   }) %>%
     bindEvent(
       {
@@ -278,7 +286,14 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
 
   # Event-driven table operation cleanup - replaces later::later() anti-pattern
   table_cleanup_trigger <- debounce(reactive({
-    if (values$table_operation_cleanup_needed) {
+    # PHASE 4: Check both old and new state management for table_operation_cleanup_needed
+    table_operation_cleanup_needed_check <- if (use_centralized_state) {
+      app_state$data$table_operation_cleanup_needed
+    } else {
+      values$table_operation_cleanup_needed
+    }
+
+    if (table_operation_cleanup_needed_check) {
       Sys.time()  # Return timestamp to trigger cleanup
     } else {
       NULL
@@ -295,7 +310,11 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     if (use_centralized_state) {
       app_state$data$table_operation_in_progress <- FALSE
     }
+    # PHASE 4: Sync to both old and new state management
     values$table_operation_cleanup_needed <- FALSE
+    if (use_centralized_state) {
+      app_state$data$table_operation_cleanup_needed <- FALSE
+    }
   })
 
   # Register observer with manager

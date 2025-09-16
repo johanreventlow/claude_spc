@@ -66,7 +66,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
                   app_state$session$auto_save_enabled <- TRUE
                 }
                 # Set flag for delayed cleanup - handled by separate observer
+                # PHASE 4: Sync to both old and new state management
                 values$table_operation_cleanup_needed <- TRUE
+                if (use_centralized_state) {
+                  app_state$data$table_operation_cleanup_needed <- TRUE
+                }
               },
               add = TRUE
             )
@@ -185,7 +189,11 @@ setup_session_management <- function(input, output, session, values, waiter_file
     metadata <- collect_metadata(input)
 
     saveDataLocally(session, values$current_data, metadata)
+    # PHASE 4: Sync to both old and new state management
     values$last_save_time <- Sys.time()
+    if (use_centralized_state) {
+      app_state$session$last_save_time <- Sys.time()
+    }
     showNotification("Session gemt lokalt!", type = "message", duration = 2)
   })
 
@@ -217,8 +225,15 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
   # Save status display
   output$save_status_display <- renderUI({
-    if (!is.null(values$last_save_time)) {
-      time_diff <- as.numeric(difftime(Sys.time(), values$last_save_time, units = "mins"))
+    # PHASE 4: Check both old and new state management for last_save_time
+    last_save_time_check <- if (use_centralized_state) {
+      app_state$session$last_save_time
+    } else {
+      values$last_save_time
+    }
+
+    if (!is.null(last_save_time_check)) {
+      time_diff <- as.numeric(difftime(Sys.time(), last_save_time_check, units = "mins"))
       if (time_diff < 1) {
         span(icon("check"), " Gemt lige nu", style = "color: green;")
       } else if (time_diff < 60) {
@@ -319,7 +334,8 @@ handle_clear_saved_request <- function(input, session, values) {
     (!is.null(input$indicator_description) && input$indicator_description != "") ||
     (!is.null(input$unit_select) && input$unit_select != "") ||
     (!is.null(input$unit_custom) && input$unit_custom != "") ||
-    (!is.null(values$last_save_time))
+    # PHASE 4: Check both old and new state management for last_save_time
+    (!is.null(if (use_centralized_state) app_state$session$last_save_time else values$last_save_time))
 
   # If no data or settings, start new session directly
   if (!has_data && !has_settings) {
@@ -342,7 +358,11 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   # PHASE 4: Check if centralized state is available
   use_centralized_state <- !is.null(app_state)
   clearDataLocally(session)
+  # PHASE 4: Sync to both old and new state management
   values$last_save_time <- NULL
+  if (use_centralized_state) {
+    app_state$session$last_save_time <- NULL
+  }
 
   # PHASE 4: Sync to both old and new state management
   values$updating_table <- TRUE
@@ -461,7 +481,8 @@ show_clear_confirmation_modal <- function(has_data, has_settings, values) {
       tags$ul(
         if (has_data) tags$li("Slette eksisterende data i tabellen"),
         if (has_settings) tags$li("Nulstille titel, beskrivelse og andre indstillinger"),
-        if (!is.null(values$last_save_time)) tags$li("Fjerne gemt session fra lokal storage"),
+        # PHASE 4: Check both old and new state management for last_save_time
+        if (!is.null(if (use_centralized_state) app_state$session$last_save_time else values$last_save_time)) tags$li("Fjerne gemt session fra lokal storage"),
         tags$li("Oprette en tom standardtabel")
       ),
       br(),

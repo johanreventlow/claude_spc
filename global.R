@@ -449,7 +449,9 @@ create_app_state <- function() {
       current_data = NULL,
       file_info = NULL,
       updating_table = FALSE,
-      table_operation_in_progress = FALSE
+      table_operation_in_progress = FALSE,
+      table_operation_cleanup_needed = FALSE,
+      table_version = 0
     ),
 
     # Column Management - centraliseret
@@ -487,7 +489,8 @@ create_app_state <- function() {
       auto_save_enabled = TRUE,
       restoring_session = FALSE,
       file_uploaded = FALSE,
-      user_started_session = FALSE
+      user_started_session = FALSE,
+      last_save_time = NULL
     ),
 
     # UI State
