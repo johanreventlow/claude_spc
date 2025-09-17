@@ -162,8 +162,7 @@ setup_column_management <- function(input, output, session, values, app_state = 
         cat("DEBUG: [AUTO_DETECT] ✅ Triggering manual auto-detect\n")
         timestamp <- Sys.time()
 
-        # PHASE 4: Sync to both old and new state management
-        values$auto_detect_trigger <- timestamp # Brug timestamp for at sikre reaktivitet
+        # PHASE 4: Use unified state management
         app_state$columns$auto_detect$trigger <- timestamp
         cat("DEBUG: [PHASE4] Synced auto_detect_trigger to centralized state\n")
       } else {
@@ -181,8 +180,7 @@ setup_column_management <- function(input, output, session, values, app_state = 
       cat("DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n")
       timestamp <- Sys.time()
 
-      # PHASE 4: Sync to both old and new state management
-      values$auto_detect_trigger <- timestamp
+      # PHASE 4: Use unified state management
       app_state$columns$auto_detect$trigger <- timestamp
       cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state\n")
     },
@@ -196,8 +194,7 @@ setup_column_management <- function(input, output, session, values, app_state = 
       cat("DEBUG: [AUTO_DETECT_EXEC] Auto-detect execution started\n")
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = TRUE\n")
 
-      # PHASE 4: Sync to both old and new state management
-      values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
+      # PHASE 4: Use unified state management
       app_state$columns$auto_detect$in_progress <- TRUE
       cat("DEBUG: [PHASE4] Synced auto_detect_in_progress TRUE to centralized state\n")
 
@@ -206,15 +203,13 @@ setup_column_management <- function(input, output, session, values, app_state = 
       auto_detect_and_update_columns(input, session, values, app_state)
 
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting initial_auto_detect_completed = TRUE\n")
-      # PHASE 4: Sync to both old and new state management
-      values$initial_auto_detect_completed <- TRUE # Marker som færdig efter første kørsel
+      # PHASE 4: Use unified state management
       app_state$columns$auto_detect$completed <- TRUE
       cat("DEBUG: [PHASE4] Synced initial_auto_detect_completed to centralized state\n")
 
       # Clear flag after auto-detect completion (event-driven instead of timing)
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = FALSE\n")
-      # PHASE 4: Sync to both old and new state management
-      values$auto_detect_in_progress <- FALSE
+      # PHASE 4: Use unified state management
       app_state$columns$auto_detect$in_progress <- FALSE
       cat("DEBUG: [PHASE4] Synced auto_detect_in_progress FALSE to centralized state\n")
 

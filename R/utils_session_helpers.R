@@ -174,8 +174,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     req(save_data)  # Only proceed if we have valid save data
 
     autoSaveAppState(session, save_data$data, save_data$metadata)
-    # PHASE 4: Sync to both old and new state management
-    values$last_save_time <- save_data$timestamp
+    # PHASE 4: Use unified state management
     app_state$session$last_save_time <- save_data$timestamp
   })
 
@@ -225,8 +224,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     req(save_data)  # Only proceed if we have valid save data
 
     autoSaveAppState(session, save_data$data, save_data$metadata)
-    # PHASE 4: Sync to both old and new state management
-    values$last_save_time <- save_data$timestamp
+    # PHASE 4: Use unified state management
     app_state$session$last_save_time <- save_data$timestamp
   }) %>%
     bindEvent(
@@ -267,11 +265,8 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     req(cleanup_time)  # Only proceed if cleanup is needed
 
     # Clear the table operation flag and reset cleanup request
-    # PHASE 4: Sync to both old and new state management
-    values$table_operation_in_progress <- FALSE
+    # PHASE 4: Use unified state management
     app_state$data$table_operation_in_progress <- FALSE
-    # PHASE 4: Sync to both old and new state management
-    values$table_operation_cleanup_needed <- FALSE
     app_state$data$table_operation_cleanup_needed <- FALSE
   })
 
