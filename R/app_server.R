@@ -170,7 +170,7 @@ app_server <- function(input, output, session) {
   setup_file_upload(input, output, session, values, waiter_file, app_state)
 
   ## Data tabel logik
-  setup_data_table(input, output, session, values)
+  setup_data_table(input, output, session, values, app_state)
 
   ## Kolonne management logik
   # PHASE 4: Pass centralized state to column management

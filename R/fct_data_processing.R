@@ -1257,12 +1257,29 @@ handle_add_column <- function(input, session, values, app_state = NULL) {
 
 ## Hovedfunktion for datatabel
 # Opsætter al server logik relateret til data-tabel håndtering
-setup_data_table <- function(input, output, session, values) {
+setup_data_table <- function(input, output, session, values, app_state = NULL) {
+  cat("DEBUG: [DATA_TABLE] ===========================================\n")
+  cat("DEBUG: [DATA_TABLE] Setting up data table with unified state\n")
+
+  # NAVIGATION TRIGGER: Create reactive that uses the navigation trigger
+  app_data_reactive <- eventReactive(app_state$navigation_trigger(), {
+    current_data_value <- app_state$data$current_data
+
+    cat("DEBUG: [DATA_TABLE] Table reactive triggered\n")
+    cat("DEBUG: [DATA_TABLE] trigger_value:", app_state$navigation_trigger(), "\n")
+    cat("DEBUG: [DATA_TABLE] current_data is null:", is.null(current_data_value), "\n")
+
+    # Return the actual data from unified state
+    return(current_data_value)
+  }, ignoreNULL = FALSE)
+
   # Hovedtabel rendering med excelR
   output$main_data_table <- excelR::renderExcel({
-    # PHASE 4: Use unified state management
-    current_data_check <- app_state$data$current_data
+    # NAVIGATION TRIGGER: Use eventReactive pattern for consistent behavior
+    current_data_check <- app_data_reactive()
     req(current_data_check)
+
+    cat("DEBUG: [DATA_TABLE] Rendering table with data dimensions:", dim(current_data_check), "\n")
 
     # Inkluder table_version for at tvinge re-render efter gendannelse
     # PHASE 4: Use unified state management
@@ -1429,8 +1446,8 @@ setup_data_table <- function(input, output, session, values) {
 
   # Tilføj række
   observeEvent(input$add_row, {
-    # PHASE 4: Use unified state management
-    current_data_check <- app_state$data$current_data
+    # NAVIGATION TRIGGER: Use eventReactive pattern for consistent behavior
+    current_data_check <- app_data_reactive()
     req(current_data_check)
 
     # Sæt vedvarende flag for at forhindre auto-save interferens
