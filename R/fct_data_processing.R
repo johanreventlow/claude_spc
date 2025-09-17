@@ -69,14 +69,14 @@ setup_column_management <- function(input, output, session, values, app_state = 
     }
 
     # Skip hvis UI sync er pending for at undgå race condition
-    if (!is.null(values$ui_sync_needed)) {
+    if (!is.null(app_state$columns$ui_sync$needed)) {
       log_debug("Skipping - UI sync pending, would override auto-detect results", "COLUMN_MGMT")
       return()
     }
 
     # Skip hvis UI sync netop er udført (1 sekund cooling-off periode)
-    if (!is.null(values$last_ui_sync_time)) {
-      time_since_sync <- as.numeric(difftime(Sys.time(), values$last_ui_sync_time, units = "secs"))
+    if (!is.null(app_state$columns$ui_sync$last_sync_time)) {
+      time_since_sync <- as.numeric(difftime(Sys.time(), app_state$columns$ui_sync$last_sync_time, units = "secs"))
       if (time_since_sync < 1.0) {
         cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync completed", round(time_since_sync, 2), "seconds ago, cooling off\n")
         return()
@@ -219,12 +219,12 @@ setup_column_management <- function(input, output, session, values, app_state = 
   )
 
   # Reaktiv UI sync observer for auto-detect kolonnematch
-  observeEvent(values$ui_sync_needed,
+  observeEvent(app_state$columns$ui_sync$needed,
     {
       cat("DEBUG: [UI_SYNC] UI sync observer triggered - CRITICAL for input field updates\n")
-      req(values$ui_sync_needed)
+      req(app_state$columns$ui_sync$needed)
 
-      sync_data <- values$ui_sync_needed
+      sync_data <- app_state$columns$ui_sync$needed
       cat("DEBUG: [UI_SYNC] Sync data received:\n")
       cat("DEBUG: [UI_SYNC] - X column suggestion:", if(is.null(sync_data$x_col)) "NULL" else sync_data$x_col, "\n")
       cat("DEBUG: [UI_SYNC] - Y column suggestion:", if(is.null(sync_data$taeller_col)) "NULL" else sync_data$taeller_col, "\n")
@@ -548,7 +548,7 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
   )
 
   if (use_centralized_state && !is.null(app_state)) {
-    app_state$ui_sync_needed <- ui_sync_data
+    app_state$columns$ui_sync$needed <- ui_sync_data
     cat("DEBUG: [PHASE4] Synced name-only UI sync data to centralized state\n")
   } else {
     values$ui_sync_needed <- ui_sync_data

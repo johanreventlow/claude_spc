@@ -324,8 +324,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   # PHASE 4B: Unified state assignment only
   app_state$session$last_save_time <- NULL
 
-  # Unified state: Set table updating flag
-  values$updating_table <- TRUE
+  # PHASE 4C: Unified state only
   app_state$data$updating_table <- TRUE
 
   # Force hide Anhøj rules until real data is loaded
@@ -409,8 +408,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
     cat("DEBUG: [SESSION_RESET] ✅ Name-only detection completed for session reset\n")
   }
 
-  # Unified state: Clear table updating flag
-  values$updating_table <- FALSE
+  # PHASE 4C: Unified state only
   app_state$data$updating_table <- FALSE
 }
 
