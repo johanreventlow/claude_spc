@@ -39,7 +39,9 @@
 #'
 #' @seealso \code{\link{detect_columns_name_only}}, \code{\link{ensure_standard_columns}}
 setup_column_management <- function(input, output, session, values, app_state = NULL) {
+  cat("DEBUG: [COLUMN_MGMT] ===========================================\n")
   cat("DEBUG: [COLUMN_MGMT] Setting up column management\n")
+  cat("DEBUG: [COLUMN_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
 
   # PHASE 4: Centralized state availability check
   use_centralized_state <- !is.null(app_state)

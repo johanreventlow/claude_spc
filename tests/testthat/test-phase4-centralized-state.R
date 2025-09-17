@@ -8,8 +8,8 @@ test_that("create_app_state opretter korrekt schema", {
   # Opret app state
   app_state <- create_app_state()
 
-  # Verificer hovedstrukturen
-  expect_type(app_state, "list")
+  # Verificer hovedstrukturen - nu environment i stedet for list for by-reference sharing
+  expect_type(app_state, "environment")
   expect_true("data" %in% names(app_state))
   expect_true("columns" %in% names(app_state))
   expect_true("test_mode" %in% names(app_state))

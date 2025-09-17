@@ -8,6 +8,10 @@
 ## Hovedfunktion for session management
 # Opsætter al server logik relateret til session håndtering
 setup_session_management <- function(input, output, session, values, waiter_file, app_state = NULL) {
+  cat("DEBUG: [SESSION_MGMT] ===========================================\n")
+  cat("DEBUG: [SESSION_MGMT] Initializing session management observers\n")
+  cat("DEBUG: [SESSION_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
+
   # PHASE 4: Check if centralized state is available
   use_centralized_state <- !is.null(app_state)
   # Auto-gendan session data når tilgængelig (hvis aktiveret)

@@ -488,63 +488,69 @@ observer_manager <- function() {
 #' - ARCHITECTURE_OVERVIEW.md for Phase 4 detaljer
 #' - test-phase4-centralized-state.R for eksempler
 create_app_state <- function() {
-  list(
-    # Data Management
-    data = list(
-      current_data = NULL,
-      original_data = NULL,
-      file_info = NULL,
-      updating_table = FALSE,
-      table_operation_in_progress = FALSE,
-      table_operation_cleanup_needed = FALSE,
-      table_version = 0
+  # Create environment-based state for by-reference sharing
+  # CRITICAL FIX: Environment passes by reference, solving scope isolation
+  app_state <- new.env(parent = emptyenv())
+
+  cat("DEBUG: [CREATE_APP_STATE] Environment created with address:", capture.output(print(app_state)), "\n")
+
+  # Data Management
+  app_state$data <- list(
+    current_data = NULL,
+    original_data = NULL,
+    file_info = NULL,
+    updating_table = FALSE,
+    table_operation_in_progress = FALSE,
+    table_operation_cleanup_needed = FALSE,
+    table_version = 0
+  )
+
+  # Column Management - centraliseret
+  app_state$columns <- list(
+    # Auto-detection state
+    auto_detect = list(
+      in_progress = FALSE,
+      completed = FALSE,
+      trigger = NULL,
+      results = NULL
     ),
 
-    # Column Management - centraliseret
-    columns = list(
-      # Auto-detection state
-      auto_detect = list(
-        in_progress = FALSE,
-        completed = FALSE,
-        trigger = NULL,
-        results = NULL
-      ),
-
-      # Column mappings
-      mappings = list(
-        x_column = NULL,
-        y_column = NULL,
-        n_column = NULL,
-        cl_column = NULL
-      ),
-
-      # UI sync state
-      ui_sync = list(
-        needed = NULL,
-        last_sync_time = NULL
-      )
+    # Column mappings
+    mappings = list(
+      x_column = NULL,
+      y_column = NULL,
+      n_column = NULL,
+      cl_column = NULL
     ),
 
-    # Test Mode
-    test_mode = list(
-      auto_detect_ready = FALSE
-    ),
-
-    # Session Management
-    session = list(
-      auto_save_enabled = TRUE,
-      restoring_session = FALSE,
-      file_uploaded = FALSE,
-      user_started_session = FALSE,
-      last_save_time = NULL,
-      file_name = NULL
-    ),
-
-    # UI State
-    ui = list(
-      hide_anhoej_rules = FALSE
+    # UI sync state
+    ui_sync = list(
+      needed = NULL,
+      last_sync_time = NULL
     )
   )
+
+  # Test Mode
+  app_state$test_mode <- list(
+    auto_detect_ready = FALSE
+  )
+
+  # Session Management
+  app_state$session <- list(
+    auto_save_enabled = TRUE,
+    restoring_session = FALSE,
+    file_uploaded = FALSE,
+    user_started_session = FALSE,
+    last_save_time = NULL,
+    file_name = NULL
+  )
+
+  # UI State
+  app_state$ui <- list(
+    hide_anhoej_rules = FALSE
+  )
+
+  return(app_state)
 }
 
 ## Dato kolonnevalidering -----
