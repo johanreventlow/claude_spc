@@ -173,20 +173,32 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
   # Test mode auto-detect trigger (event-driven instead of later::later)
   # PHASE 4: Unified state observer for test mode auto-detect trigger
-  observeEvent(if (!is.null(app_state)) app_state$test_mode$auto_detect_ready else NULL,
-    {
-      cat("DEBUG: [TEST_MODE] Test mode auto-detect observer triggered\n")
-      req(if (!is.null(app_state)) app_state$test_mode$auto_detect_ready else NULL)
-      cat("DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n")
-      timestamp <- Sys.time()
+  if (!is.null(app_state)) {
+    cat("DEBUG: [TEST_MODE] Creating test mode auto-detect observer\n")
 
-      # PHASE 4: Use unified state management
+    # Check if flag is already set (race condition fix)
+    if (!is.null(app_state$test_mode$auto_detect_ready) && app_state$test_mode$auto_detect_ready != FALSE) {
+      cat("DEBUG: [TEST_MODE] Flag already set, triggering autodetection immediately\n")
+      timestamp <- Sys.time()
       app_state$columns$auto_detect$trigger <- timestamp
-      cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state\n")
-    },
-    ignoreInit = TRUE, ignoreNULL = TRUE,
-    priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT
-  )
+      cat("DEBUG: [PHASE4] Immediate auto_detect_trigger set in centralized state\n")
+    }
+
+    observeEvent(app_state$test_mode$auto_detect_ready,
+      {
+        cat("DEBUG: [TEST_MODE] Test mode auto-detect observer triggered\n")
+        req(app_state$test_mode$auto_detect_ready)
+        cat("DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n")
+        timestamp <- Sys.time()
+
+        # PHASE 4: Use unified state management
+        app_state$columns$auto_detect$trigger <- timestamp
+        cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state\n")
+      },
+      ignoreInit = FALSE, ignoreNULL = TRUE,
+      priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT
+    )
+  }
 
   # REACTIVE FIX: Watch for trigger_needed and fire direct reactiveVal
   # Use a helper reactiveVal to bridge the nested state to direct trigger

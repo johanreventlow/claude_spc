@@ -87,7 +87,7 @@ validate_state_consistency <- function(values, app_state) {
 ## Testmodus -----
 # TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
 # Respekter environment variable hvis sat, ellers default til FALSE
-TEST_MODE_AUTO_LOAD <- as.logical(Sys.getenv("TEST_MODE_AUTO_LOAD", "FALSE"))
+TEST_MODE_AUTO_LOAD <- as.logical(Sys.getenv("TEST_MODE_AUTO_LOAD", "TRUE"))
 
 # Specificer hvilken fil der skal indlæses automatisk i test mode
 # Filsti skal være relativ til app root-mappen

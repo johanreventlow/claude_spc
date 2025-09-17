@@ -65,10 +65,8 @@ setup_visualization <- function(input, output, session, values, app_state = NULL
     }
   }, ignoreNULL = FALSE)
 
-  # MODULE COMPATIBILITY: Wrap eventReactive in regular reactive for module passing
-  active_data <- reactive({
-    active_data_event()
-  })
+  # MODULE COMPATIBILITY: Pass eventReactive directly to preserve reactive context
+  active_data <- active_data_event
 
   # Kolonne konfiguration til visualisering
   # Store last valid config to avoid NULL during input updates
@@ -77,16 +75,31 @@ setup_visualization <- function(input, output, session, values, app_state = NULL
 
   # Separate reactives for auto-detected and manual column selection
   auto_detected_config <- reactive({
-    # PHASE 4: Use unified state management
-    auto_columns <- app_state$columns$auto_detect$results
+    log_debug("======================================", "AUTO_DETECTED_CONFIG")
+    log_debug("auto_detected_config reactive triggered", "AUTO_DETECTED_CONFIG")
+
+    # PHASE 4: Use unified state management - CORRECTED PATH
+    auto_columns <- app_state$columns$auto_detected_columns
+    log_debug(paste("Auto columns state (auto_detected_columns):", if(is.null(auto_columns)) "NULL" else "PRESENT"), "AUTO_DETECTED_CONFIG")
+
+    if (!is.null(auto_columns)) {
+      log_debug(paste("Auto detected columns - X:", auto_columns$x_col, "Y:", auto_columns$y_col, "N:", auto_columns$n_col), "AUTO_DETECTED_CONFIG")
+      if (!is.null(auto_columns$timestamp)) {
+        log_debug(paste("Auto detection timestamp:", auto_columns$timestamp), "AUTO_DETECTED_CONFIG")
+      }
+    }
 
     req(auto_columns)
-    list(
+
+    config <- list(
       x_col = auto_columns$x_col,
       y_col = auto_columns$y_col,
       n_col = auto_columns$n_col,
       chart_type = get_qic_chart_type(if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
     )
+
+    log_debug(paste("✅ auto_detected_config returning:", paste(names(config), config, sep="=", collapse=", ")), "AUTO_DETECTED_CONFIG")
+    return(config)
   })
 
   manual_config <- reactive({
@@ -104,19 +117,39 @@ setup_visualization <- function(input, output, session, values, app_state = NULL
 
   # Clear column config selection - prioritize manual input when available
   column_config <- reactive({
+    log_debug("======================================", "COLUMN_CONFIG")
+    log_debug("column_config reactive triggered", "COLUMN_CONFIG")
+
     # Prioritize manual config when user has made selections
     manual_config_check <- manual_config()
+    log_debug(paste("Manual config Y column:", if(is.null(manual_config_check) || is.null(manual_config_check$y_col)) "NULL" else manual_config_check$y_col), "COLUMN_CONFIG")
+
     if (!is.null(manual_config_check) && !is.null(manual_config_check$y_col)) {
+      log_debug("✅ Using manual config", "COLUMN_CONFIG")
       return(manual_config_check)
     }
 
     # Fall back to auto-detected config
-    auto_config <- auto_detected_config()
+    log_debug("Manual config not available, checking auto-detected config", "COLUMN_CONFIG")
+    auto_config <- tryCatch({
+      auto_detected_config()
+    }, error = function(e) {
+      log_debug(paste("❌ Error calling auto_detected_config():", e$message), "COLUMN_CONFIG")
+      return(NULL)
+    })
+
+    log_debug(paste("Auto config result:", if(is.null(auto_config)) "NULL" else "PRESENT"), "COLUMN_CONFIG")
+    if (!is.null(auto_config)) {
+      log_debug(paste("Auto config Y column:", if(is.null(auto_config$y_col)) "NULL" else auto_config$y_col), "COLUMN_CONFIG")
+    }
+
     if (!is.null(auto_config) && !is.null(auto_config$y_col)) {
+      log_debug("✅ Using auto-detected config", "COLUMN_CONFIG")
       return(auto_config)
     }
 
     # Final fallback - return NULL if neither available
+    log_debug("⚠️ No valid config found - returning NULL", "COLUMN_CONFIG")
     return(NULL)
   })
 
@@ -241,7 +274,8 @@ setup_visualization <- function(input, output, session, values, app_state = NULL
         return(input$kommentar_column)
       }
     }),
-    app_state = app_state
+    app_state = app_state,
+    navigation_trigger = navigation_trigger
   )
 
   # Plot klar tjek

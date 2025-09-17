@@ -3,6 +3,7 @@
 
 # Dependencies ----------------------------------------------------------------
 library(shiny)
+library(shinyjs)
 
 # Source required helper functions
 source("R/fct_chart_helpers.R")
@@ -22,9 +23,17 @@ visualizationModuleUI <- function(id) {
     id = ns("plot_container"),
     style = "position: relative; height: 100%;",
 
-    # Dynamic Content Container -------------------------------------------
-    # Dynamisk indhold der skifter mellem plot og placeholder beskeder
-    uiOutput(ns("dynamic_content"))
+    # Static Plot Output -----------------------------------------------
+    # Always present - visibility controlled via shinyjs::toggle()
+    plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%"),
+
+    # Message Overlay --------------------------------------------------
+    # Shown when plot is not ready or has errors
+    div(
+      id = ns("message_overlay"),
+      style = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000;",
+      uiOutput(ns("plot_messages"))
+    )
   )
 }
 
@@ -140,7 +149,7 @@ spc_out_of_control_icon <- HTML('
 #' @param chart_title_reactive Reaktiv chart titel (optional)
 #'
 #' @return Liste med reactive values for plot, status og resultater
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL, navigation_trigger = NULL) {
   moduleServer(id, function(input, output, session) {
     log_debug("==========================================", "MODULE")
     log_debug("Initializing visualization module server", "MODULE")
@@ -151,6 +160,64 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # State Management --------------------------------------------------------
     # PHASE 4: Use unified state management if available, fallback to local reactiveValues
     log_debug("Setting up state management", "MODULE")
+
+    # MODULE-INTERNAL DATA REACTIVE ==========================================
+    # Create both reactive and cached value for robust access
+    log_debug("Creating module-internal data reactive with navigation trigger", "MODULE")
+
+    # Cached data storage
+    cached_data <- reactiveVal(NULL)
+
+    # Create a pure data function that works in any context
+    get_module_data <- function() {
+      log_debug("get_module_data() called - pure function approach", "MODULE_DATA")
+
+      # Direct access to app_state (not reactive)
+      current_data_check <- app_state$data$current_data
+      if (is.null(current_data_check)) {
+        log_debug("get_module_data: No current data available", "MODULE_DATA")
+        return(NULL)
+      }
+
+      log_debug("get_module_data: Current data available", "MODULE_DATA")
+      data <- current_data_check
+      log_debug(paste("get_module_data: Data dimensions:", nrow(data), "x", ncol(data)), "MODULE_DATA")
+
+      # Add hide_anhoej_rules flag as attribute
+      hide_anhoej_rules_check <- app_state$ui$hide_anhoej_rules
+      attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
+      log_debug(paste("get_module_data: Hide Anhøj rules flag:", hide_anhoej_rules_check), "MODULE_DATA")
+
+      # Filter non-empty rows
+      non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
+      log_debug(paste("get_module_data: Non-empty rows:", sum(non_empty_rows), "out of", nrow(data)), "MODULE_DATA")
+
+      if (any(non_empty_rows)) {
+        filtered_data <- data[non_empty_rows, ]
+        attr(filtered_data, "hide_anhoej_rules") <- hide_anhoej_rules_check
+        log_debug(paste("✅ get_module_data: Returning filtered data:", nrow(filtered_data), "rows"), "MODULE_DATA")
+        return(filtered_data)
+      } else {
+        log_debug("⚠️ get_module_data: No meaningful data found - returning original with flag", "MODULE_DATA")
+        attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
+        return(data)
+      }
+    }
+
+    # Primary reactive
+    module_data_reactive <- eventReactive(navigation_trigger(), {
+      log_debug("Module data reactive triggered", "MODULE_DATA")
+      log_debug("Navigation trigger fired", "MODULE_DATA")
+
+      # Use the pure function to get data
+      result_data <- get_module_data()
+
+      # Cache the result for renderPlot access
+      cached_data(result_data)
+      log_debug("✅ Data cached for renderPlot access via pure function", "MODULE_DATA")
+
+      return(result_data)
+    }, ignoreNULL = FALSE)
 
     use_unified_state <- !is.null(app_state)
     if (use_unified_state) {
@@ -199,10 +266,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Håndterer kolonne-validering og auto-detection
     chart_config <- reactive({
       # Proper req() guards - stop execution if dependencies not ready
-      req(data_reactive())
+      req(module_data_reactive())
       req(column_config_reactive())
 
-      data <- data_reactive()
+      data <- module_data_reactive()
       config <- column_config_reactive()
       chart_type <- chart_type_reactive() %||% "run"  # Use %||% for cleaner fallback
 
@@ -242,7 +309,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Proper req() guards - rely on chart_config() validation
       req(chart_config())  # This already validates data_reactive() and column_config_reactive()
 
-      data <- data_reactive()
+      data <- module_data_reactive()
       config <- chart_config()
 
       # Clean state management - only set computing when actually needed
@@ -364,24 +431,26 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # UI Output Funktioner ----------------------------------------------------
 
-    ## Plot Display Logic
-    # Dynamisk indhold output - håndterer både plot og beskeder
-    output$dynamic_content <- renderUI({
-      div(
-        style = "width: 100%; height: 100%;",
-        uiOutput(ns("plot_or_message"))
-      )
-    })
+    ## Plot Messages Logic
+    # Simple messages function for overlay display
+    output$plot_messages <- renderUI({
+      cat("DEBUG: [PLOT_VISIBILITY] ===========================================\n")
+      cat("DEBUG: [PLOT_VISIBILITY] Rendering plot messages\n")
 
-    # Unified output der håndterer både beskeder og plots
-    # Smart besked logik baseret på app tilstand
-    output$plot_or_message <- renderUI({
       # Safe data access - don't use req() here as we need to handle NULL states
-      data <- data_reactive()
+      data <- module_data_reactive()
       config <- chart_config()
+      plot <- spc_plot()
+      plot_ready <- get_plot_state("plot_ready")
+
+      cat("DEBUG: [PLOT_VISIBILITY] Data is null:", is.null(data), "\n")
+      cat("DEBUG: [PLOT_VISIBILITY] Config is null:", is.null(config), "\n")
+      cat("DEBUG: [PLOT_VISIBILITY] Plot is null:", is.null(plot), "\n")
+      cat("DEBUG: [PLOT_VISIBILITY] Plot ready:", plot_ready, "\n")
 
       # Smart besked logik baseret på app tilstand
       if (is.null(data) || nrow(data) == 0) {
+        cat("DEBUG: [PLOT_VISIBILITY] Showing welcome message\n")
         return(createPlotMessage("welcome"))
       }
 
@@ -393,16 +462,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       # Hvis tabel er helt tom (alle NA undtagen Skift kolonne), vis velkomst besked
       if (!has_meaningful_data) {
+        cat("DEBUG: [PLOT_VISIBILITY] No meaningful data, showing welcome\n")
         return(createPlotMessage("welcome"))
       }
 
       if (is.null(config) || is.null(config$y_col)) {
+        cat("DEBUG: [PLOT_VISIBILITY] Config needed\n")
         return(createPlotMessage("config_needed"))
       }
 
-      plot <- spc_plot()
-
       if (is.null(plot)) {
+        cat("DEBUG: [PLOT_VISIBILITY] Plot is null, showing error message\n")
         # Bestem specifik fejl type
         plot_warnings <- get_plot_state("plot_warnings")
         if (length(plot_warnings) > 0) {
@@ -426,15 +496,50 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         }
       }
 
-      if (inherits(plot, "ggplot")) {
-        # Returner det faktiske plot wrapped i plotOutput
-        return(
-          plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
-        )
-      } else {
+      if (!inherits(plot, "ggplot")) {
+        cat("DEBUG: [PLOT_VISIBILITY] Invalid plot object\n")
         return(createPlotMessage("technical_error"))
       }
+
+      # If we get here, we should show the plot, so return NULL (no message)
+      cat("DEBUG: [PLOT_VISIBILITY] Plot ready, returning NULL (no message)\n")
+      return(NULL)
     })
+
+    ## Plot Visibility Control
+    # Control visibility of plot vs. message overlay
+    observe({
+      cat("DEBUG: [PLOT_VISIBILITY] ===========================================\n")
+      cat("DEBUG: [PLOT_VISIBILITY] Checking plot visibility conditions\n")
+
+      # Get current state
+      data <- module_data_reactive()
+      config <- chart_config()
+      plot <- spc_plot()
+      plot_ready <- get_plot_state("plot_ready")
+
+      # Determine if plot should be shown
+      show_plot <- !is.null(data) &&
+                   nrow(data) > 0 &&
+                   !is.null(config) &&
+                   !is.null(config$y_col) &&
+                   !is.null(plot) &&
+                   inherits(plot, "ggplot") &&
+                   plot_ready
+
+      cat("DEBUG: [PLOT_VISIBILITY] Show plot condition:", show_plot, "\n")
+
+      # Toggle visibility using shinyjs
+      if (show_plot) {
+        cat("DEBUG: [PLOT_VISIBILITY] ✅ Showing plot, hiding messages\n")
+        shinyjs::show("spc_plot_actual")
+        shinyjs::hide("message_overlay")
+      } else {
+        cat("DEBUG: [PLOT_VISIBILITY] ❌ Hiding plot, showing messages\n")
+        shinyjs::hide("spc_plot_actual")
+        shinyjs::show("message_overlay")
+      }
+    }, priority = 1000)
 
     ## Faktisk Plot Rendering
     # Separat renderPlot for det faktiske SPC plot
@@ -443,26 +548,104 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         log_debug("=====================================", "RENDER_PLOT")
         log_debug("Plot rendering triggered", "RENDER_PLOT")
 
-        # Use req() for clean dependency management
-        log_debug("Checking plot_ready status...", "RENDER_PLOT")
-        req(get_plot_state("plot_ready"))
-        log_debug("✅ Plot ready status confirmed", "RENDER_PLOT")
+        # Debug reactive chain dependencies
+        log_debug("Checking dependencies...", "RENDER_PLOT")
 
-        log_debug("Getting plot object...", "RENDER_PLOT")
-        plot <- spc_plot()
-        log_debug("Plot object retrieved, checking type...", "RENDER_PLOT")
+        data <- tryCatch({
+          log_debug("Using pure function approach to bypass reactive scope issues...", "RENDER_PLOT")
 
-        if (inherits(plot, "ggplot")) {
+          # PRIORITY 1: Try cached data (most reliable, populated by reactive)
+          cached_result <- cached_data()
+          log_debug(paste("Cached data is.null:", is.null(cached_result)), "RENDER_PLOT")
+
+          if (!is.null(cached_result)) {
+            log_debug("✅ Using cached data successfully", "RENDER_PLOT")
+            if (is.data.frame(cached_result)) {
+              log_debug(paste("Cached data dimensions:", nrow(cached_result), "x", ncol(cached_result)), "RENDER_PLOT")
+            }
+            return(cached_result)
+          }
+
+          # PRIORITY 2: Try pure function approach (fallback during timing issues)
+          log_debug("No cached data found, using pure function approach...", "RENDER_PLOT")
+          pure_result <- get_module_data()
+          log_debug("Pure function call completed", "RENDER_PLOT")
+
+          if (!is.null(pure_result)) {
+            log_debug("✅ Pure function returned data successfully", "RENDER_PLOT")
+            if (is.data.frame(pure_result)) {
+              log_debug(paste("Pure function data dimensions:", nrow(pure_result), "x", ncol(pure_result)), "RENDER_PLOT")
+            }
+            # Cache this result for future calls
+            cached_data(pure_result)
+            log_debug("✅ Pure function result cached for future use", "RENDER_PLOT")
+            return(pure_result)
+          }
+
+          # PRIORITY 3: Wait for next reactive cycle
+          log_debug("⚠️ Both cached and pure function returned NULL - will retry on next reactive cycle", "RENDER_PLOT")
+          return(NULL)
+
+        }, error = function(e) {
+          log_debug(paste("❌ Pure function approach failed:", e$message), "RENDER_PLOT")
+          log_debug(paste("Error class:", class(e)), "RENDER_PLOT")
+          if (length(e$message) == 0 || e$message == "") {
+            log_debug("Empty error message detected", "RENDER_PLOT")
+            log_debug(paste("Error call:", deparse(e$call)), "RENDER_PLOT")
+          }
+          return(NULL)
+        }, finally = function() {
+          log_debug("Pure function approach completed", "RENDER_PLOT")
+        })
+        log_debug(paste("Data reactive result:", !is.null(data)), "RENDER_PLOT")
+
+        if (is.null(data)) {
+          log_debug("❌ No data available, showing empty plot", "RENDER_PLOT")
+          return(ggplot2::ggplot() + ggplot2::theme_void() + ggplot2::labs(title = "No Data Available"))
+        }
+
+        column_config <- column_config_reactive()
+        log_debug(paste("Column config reactive:", !is.null(column_config)), "RENDER_PLOT")
+        if (!is.null(column_config)) {
+          log_debug(paste("X col:", column_config$x_col), "RENDER_PLOT")
+          log_debug(paste("Y col:", column_config$y_col), "RENDER_PLOT")
+        }
+
+        chart_config_result <- tryCatch({
+          chart_config()
+        }, error = function(e) {
+          log_debug(paste("Chart config error:", e$message), "RENDER_PLOT")
+          return(NULL)
+        })
+        log_debug(paste("Chart config:", !is.null(chart_config_result)), "RENDER_PLOT")
+
+        plot_ready <- get_plot_state("plot_ready")
+        log_debug(paste("Plot ready status:", plot_ready), "RENDER_PLOT")
+
+        # Try to get plot
+        plot <- tryCatch({
+          spc_plot()
+        }, error = function(e) {
+          log_debug(paste("SPC plot error:", e$message), "RENDER_PLOT")
+          return(NULL)
+        })
+
+        log_debug(paste("Plot object result:", !is.null(plot)), "RENDER_PLOT")
+
+        if (!is.null(plot) && inherits(plot, "ggplot")) {
           log_debug("✅ Valid ggplot object confirmed", "RENDER_PLOT")
           log_debug(paste("Plot layers count:", length(plot$layers)), "RENDER_PLOT")
           log_debug("Returning plot for rendering", "RENDER_PLOT")
           return(plot)
         } else {
-          log_error(paste("Invalid plot object type:", paste(class(plot), collapse = ", ")), "RENDER_PLOT")
-          req(FALSE) # This will fail the req() check
+          log_debug("❌ Plot not ready, showing empty plot", "RENDER_PLOT")
+          # Return empty ggplot to avoid errors
+          return(ggplot2::ggplot() + ggplot2::theme_void())
         }
       },
-      res = 96
+      res = 96,
+      width = 800,
+      height = 600
     )
 
     # Status og Information ---------------------------------------------------
@@ -492,7 +675,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         )
       } else if (plot_ready) {
         # Only access external reactives when needed, with isolation
-        data <- isolate(data_reactive())
+        data <- isolate(module_data_reactive())
         chart_type <- isolate(chart_type_reactive()) %||% "ukendt"
 
         div(
@@ -519,7 +702,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       if (plot_ready) {
         # Only access external reactives when needed, with isolation
-        data <- isolate(data_reactive())
+        data <- isolate(module_data_reactive())
         config <- isolate(chart_config())
         chart_type <- isolate(chart_type_reactive()) %||% "run"
 
@@ -555,7 +738,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     ## Data Summary Box
     # Data oversigt value box til fejlkontrol
     output$data_summary_box <- renderUI({
-      data <- data_reactive()
+      data <- module_data_reactive()
       config <- chart_config()
 
       if (is.null(data) || nrow(data) == 0) {
@@ -610,7 +793,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Anhøj rules som value boxes - ALTID SYNLIGE
     # Viser serielængde og antal kryds for alle chart typer
     output$anhoej_rules_boxes <- renderUI({
-      data <- data_reactive()
+      data <- module_data_reactive()
 
       # Smart indhold baseret på nuværende status - ALTID vis boxes
       config <- chart_config()
@@ -868,7 +1051,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     ### Data Kvalitet Box
     output$data_quality_box <- renderUI({
-      data <- data_reactive()
+      data <- module_data_reactive()
       if (is.null(data) || nrow(data) == 0) {
         return(div())
       }
@@ -884,7 +1067,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     ### Rapport Status Box
     output$report_status_box <- renderUI({
-      data <- data_reactive()
+      data <- module_data_reactive()
       if (is.null(data) || nrow(data) == 0) {
         return(div())
       }
