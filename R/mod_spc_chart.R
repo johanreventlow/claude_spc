@@ -265,13 +265,19 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Reaktiv konfiguration for chart setup
     # Håndterer kolonne-validering og auto-detection
     chart_config <- reactive({
-      # Proper req() guards - stop execution if dependencies not ready
-      req(module_data_reactive())
-      req(column_config_reactive())
-
+      # Enhanced req() guards - stop execution if dependencies not ready
       data <- module_data_reactive()
+      req(data)
+      req(is.data.frame(data))
+      req(nrow(data) > 0)
+      req(ncol(data) > 0)
+
       config <- column_config_reactive()
+      req(config)
+      req(is.list(config))
+
       chart_type <- chart_type_reactive() %||% "run"  # Use %||% for cleaner fallback
+      req(chart_type)
 
       # Valider at kolonner eksisterer i data - hvis ikke, fallback til NULL
       if (!is.null(config$x_col) && !(config$x_col %in% names(data))) {
@@ -287,10 +293,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # INGEN AUTO-DETECTION her - dropdown values respekteres altid
       # Auto-detection sker kun ved data upload i server_column_management.R
 
-      # Hvis stadig ingen y_col (påkrævet for plotting), returner NULL config
-      if (is.null(config$y_col)) {
-        return(NULL)
-      }
+      # Explicit validation: y_col is required for plotting
+      req(config$y_col)
+      req(config$y_col %in% names(data))
 
       return(list(
         x_col = config$x_col,
@@ -302,8 +307,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # Plot Generering ---------------------------------------------------------
 
+    # Plot caching infrastructure
+    plot_cache <- reactiveVal(NULL)
+    plot_cache_key <- reactiveVal(NULL)
+
     ## Hoved SPC Plot Reactive
-    # Hovedfunktion for SPC plot generering
+    # Hovedfunktion for SPC plot generering med caching
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- reactive({
       # Proper req() guards - rely on chart_config() validation
@@ -311,6 +320,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       data <- module_data_reactive()
       config <- chart_config()
+
+      # Generate cache key based on data and config
+      current_cache_key <- digest::digest(list(
+        data = data,
+        config = config,
+        target = target_value_reactive(),
+        centerline = centerline_value_reactive(),
+        skift = skift_config_reactive(),
+        frys = frys_config_reactive()
+      ))
+
+      # Check if we can use cached plot
+      if (!is.null(plot_cache()) && !is.null(plot_cache_key()) &&
+          plot_cache_key() == current_cache_key) {
+        cat("DEBUG: [PLOT_CACHE] Using cached plot\n")
+        return(plot_cache())
+      }
+
+      cat("DEBUG: [PLOT_CACHE] Cache miss - generating new plot\n")
 
       # Clean state management - only set computing when actually needed
       # PHASE 4: Unified state assignment using helper functions
@@ -418,12 +446,23 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             set_plot_state("anhoej_results", NULL)
           }
 
+          # Cache the plot with current key
+          plot_cache(plot)
+          plot_cache_key(current_cache_key)
+          cat("DEBUG: [PLOT_CACHE] Plot cached with key:", substr(current_cache_key, 1, 8), "\n")
+
           return(plot)
         },
         error = function(e) {
           set_plot_state("plot_warnings", c("Graf-generering fejlede:", e$message))
           set_plot_state("plot_ready", FALSE)
           set_plot_state("anhoej_results", NULL)
+
+          # Invalidate cache on error
+          plot_cache(NULL)
+          plot_cache_key(NULL)
+          cat("DEBUG: [PLOT_CACHE] Cache invalidated due to error\n")
+
           return(NULL)
         }
       )
@@ -547,6 +586,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       {
         log_debug("=====================================", "RENDER_PLOT")
         log_debug("Plot rendering triggered", "RENDER_PLOT")
+
+        # CRITICAL FIX: Force dependency on column config to trigger render after auto-detection
+        config_dependency <- column_config_reactive()
+        log_debug(paste("Column config dependency check:", !is.null(config_dependency)), "RENDER_PLOT")
+        if (!is.null(config_dependency)) {
+          log_debug(paste("Y column from config:", config_dependency$y_col), "RENDER_PLOT")
+        }
 
         # Debug reactive chain dependencies
         log_debug("Checking dependencies...", "RENDER_PLOT")

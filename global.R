@@ -346,22 +346,23 @@ validate_numeric_column <- function(data, column_name) {
 
 ## Observer Priorities -----
 # Phase 3: Prioriteret observer eksekveringsrækkefølge
+# Enhanced with wider gaps to prevent race conditions
 OBSERVER_PRIORITIES <- list(
   # Høj prioritet - kritisk state management
-  STATE_MANAGEMENT = 1000,
+  STATE_MANAGEMENT = 2000,    # Critical state operations
 
   # Medium prioritet - data processing
-  AUTO_DETECT = 800,
-  DATA_PROCESSING = 700,
+  AUTO_DETECT = 1500,         # Auto-detection logic
+  DATA_PROCESSING = 1250,     # Data operations
 
   # Lav prioritet - UI updates og visuel feedback
-  UI_SYNC = 500,
-  PLOT_GENERATION = 400,
-  STATUS_UPDATES = 300,
+  UI_SYNC = 750,              # UI synchronization
+  PLOT_GENERATION = 600,      # Plot rendering
+  STATUS_UPDATES = 500,       # Status indicators
 
   # Meget lav prioritet - cleanup og logging
-  CLEANUP = 100,
-  LOGGING = 50
+  CLEANUP = 200,              # Cleanup operations
+  LOGGING = 100               # Monitoring and logging
 )
 
 # FEJLHÅNDTERING HJÆLPEFUNKTIONER ================================

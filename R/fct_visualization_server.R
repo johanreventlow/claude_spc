@@ -115,40 +115,37 @@ setup_visualization <- function(input, output, session, values, app_state = NULL
     )
   })
 
-  # Clear column config selection - prioritize manual input when available
+  # Simplified column config - single source of truth
   column_config <- reactive({
     log_debug("======================================", "COLUMN_CONFIG")
-    log_debug("column_config reactive triggered", "COLUMN_CONFIG")
+    log_debug("column_config reactive triggered (simplified)", "COLUMN_CONFIG")
 
-    # Prioritize manual config when user has made selections
+    # Always prioritize manual input when available (user selections)
     manual_config_check <- manual_config()
     log_debug(paste("Manual config Y column:", if(is.null(manual_config_check) || is.null(manual_config_check$y_col)) "NULL" else manual_config_check$y_col), "COLUMN_CONFIG")
 
+    # If user has made explicit selections, use those
     if (!is.null(manual_config_check) && !is.null(manual_config_check$y_col)) {
-      log_debug("✅ Using manual config", "COLUMN_CONFIG")
+      log_debug("✅ Using manual config (user selections take priority)", "COLUMN_CONFIG")
       return(manual_config_check)
     }
 
-    # Fall back to auto-detected config
+    # Otherwise, try auto-detected config as fallback only
     log_debug("Manual config not available, checking auto-detected config", "COLUMN_CONFIG")
-    auto_config <- tryCatch({
-      auto_detected_config()
-    }, error = function(e) {
-      log_debug(paste("❌ Error calling auto_detected_config():", e$message), "COLUMN_CONFIG")
-      return(NULL)
-    })
 
-    log_debug(paste("Auto config result:", if(is.null(auto_config)) "NULL" else "PRESENT"), "COLUMN_CONFIG")
-    if (!is.null(auto_config)) {
-      log_debug(paste("Auto config Y column:", if(is.null(auto_config$y_col)) "NULL" else auto_config$y_col), "COLUMN_CONFIG")
+    # Simplified auto-config access with better error handling
+    auto_columns <- app_state$columns$auto_detected_columns
+    if (!is.null(auto_columns) && !is.null(auto_columns$y_col)) {
+      log_debug("✅ Using auto-detected config as fallback", "COLUMN_CONFIG")
+      return(list(
+        x_col = auto_columns$x_col,
+        y_col = auto_columns$y_col,
+        n_col = auto_columns$n_col,
+        chart_type = get_qic_chart_type(if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
+      ))
     }
 
-    if (!is.null(auto_config) && !is.null(auto_config$y_col)) {
-      log_debug("✅ Using auto-detected config", "COLUMN_CONFIG")
-      return(auto_config)
-    }
-
-    # Final fallback - return NULL if neither available
+    # No valid config available
     log_debug("⚠️ No valid config found - returning NULL", "COLUMN_CONFIG")
     return(NULL)
   })

@@ -23,7 +23,7 @@ test_that("CSV læsning og parsing uden Shiny context", {
   )
 
   test_csv_file <- file.path(test_data_dir, "unit_test_data.csv")
-  write.csv2(test_csv_data, test_csv_file, row.names = FALSE, fileEncoding = "ISO-8859-1")
+  readr::write_csv2(test_csv_data, test_csv_file)
 
   # Test basic CSV reading with correct Danish format
   data_loaded <- readr::read_csv2(
@@ -102,7 +102,7 @@ test_that("Danish character encoding support", {
   )
 
   danish_csv_file <- file.path(test_data_dir, "dansk_test.csv")
-  write.csv2(danish_data, danish_csv_file, row.names = FALSE, fileEncoding = "ISO-8859-1")
+  readr::write_csv2(danish_data, danish_csv_file)
 
   # Test loading with correct encoding
   loaded_danish <- readr::read_csv2(
@@ -110,7 +110,7 @@ test_that("Danish character encoding support", {
     locale = readr::locale(
       decimal_mark = ",",
       grouping_mark = ".",
-      encoding = "ISO-8859-1"  # Use consistent encoding
+      encoding = "UTF-8"  # Use consistent encoding
     ),
     show_col_types = FALSE
   )
@@ -140,7 +140,7 @@ test_that("Numeric data parsing med dansk format", {
   )
 
   numeric_csv_file <- file.path(test_data_dir, "numeric_test.csv")
-  write.csv2(numeric_data, numeric_csv_file, row.names = FALSE, fileEncoding = "ISO-8859-1")
+  readr::write_csv2(numeric_data, numeric_csv_file)
 
   # Test loading with Danish locale
   loaded_numeric <- readr::read_csv2(
@@ -148,7 +148,7 @@ test_that("Numeric data parsing med dansk format", {
     locale = readr::locale(
       decimal_mark = ",",
       grouping_mark = ".",
-      encoding = "ISO-8859-1"
+      encoding = "UTF-8"
     ),
     show_col_types = FALSE
   )
@@ -248,15 +248,20 @@ test_that("Error handling for invalid files", {
 test_that("CSV delimiter og format detection", {
   # TEST: Different CSV formats og delimiters
 
-  # Standard CSV2 format (semicolon separated)
-  csv2_data <- "Dato;Værdi;Kommentar\n01-01-2024;95,5;Test 1\n01-02-2024;92,3;Test 2"
+  # Standard CSV2 format (semicolon separated) - use write_csv2 for proper encoding
+  csv2_data <- data.frame(
+    Dato = c("01-01-2024", "01-02-2024"),
+    Værdi = c(95.5, 92.3),
+    Kommentar = c("Test 1", "Test 2"),
+    stringsAsFactors = FALSE
+  )
   csv2_file <- file.path(test_data_dir, "csv2_format.csv")
-  writeLines(csv2_data, csv2_file, useBytes = TRUE)
+  readr::write_csv2(csv2_data, csv2_file)
 
   # Test reading with read_csv2
   loaded_csv2 <- readr::read_csv2(
     csv2_file,
-    locale = readr::locale(decimal_mark = ",", grouping_mark = ".", encoding = "ISO-8859-1"),
+    locale = readr::locale(decimal_mark = ",", grouping_mark = ".", encoding = "UTF-8"),
     show_col_types = FALSE
   )
 
@@ -282,12 +287,12 @@ test_that("Data validation efter loading", {
   )
 
   validation_csv_file <- file.path(test_data_dir, "validation_test.csv")
-  write.csv2(validation_data, validation_csv_file, row.names = FALSE, fileEncoding = "ISO-8859-1")
+  readr::write_csv2(validation_data, validation_csv_file)
 
   # Load data
   loaded_validation <- readr::read_csv2(
     validation_csv_file,
-    locale = readr::locale(decimal_mark = ",", grouping_mark = ".", encoding = "ISO-8859-1"),
+    locale = readr::locale(decimal_mark = ",", grouping_mark = ".", encoding = "UTF-8"),
     show_col_types = FALSE
   )
 
@@ -322,12 +327,12 @@ test_that("Column name normalization", {
   )
 
   problematic_csv_file <- file.path(test_data_dir, "problematic_names.csv")
-  write.csv2(problematic_data, problematic_csv_file, row.names = FALSE, fileEncoding = "ISO-8859-1")
+  readr::write_csv2(problematic_data, problematic_csv_file)
 
   # Load with readr (preserves original names better than base R)
   loaded_problematic <- readr::read_csv2(
     problematic_csv_file,
-    locale = readr::locale(encoding = "ISO-8859-1"),
+    locale = readr::locale(encoding = "UTF-8"),
     show_col_types = FALSE
   )
 

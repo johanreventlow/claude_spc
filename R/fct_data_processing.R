@@ -74,10 +74,10 @@ setup_column_management <- function(input, output, session, values, app_state = 
       return()
     }
 
-    # Skip hvis UI sync netop er udført (1 sekund cooling-off periode)
+    # Skip hvis UI sync netop er udført (3 sekunder cooling-off periode)
     if (!is.null(app_state$columns$ui_sync$last_sync_time)) {
       time_since_sync <- as.numeric(difftime(Sys.time(), app_state$columns$ui_sync$last_sync_time, units = "secs"))
-      if (time_since_sync < 1.0) {
+      if (time_since_sync < 3.0) {
         cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync completed", round(time_since_sync, 2), "seconds ago, cooling off\n")
         return()
       }
@@ -115,6 +115,7 @@ setup_column_management <- function(input, output, session, values, app_state = 
         cat("DEBUG: [COLUMN_MGMT] - Y column:", if(is.null(current_y)) "NULL" else current_y, "\n")
         cat("DEBUG: [COLUMN_MGMT] - N column:", if(is.null(current_n)) "NULL" else current_n, "\n")
 
+        # Isolate UI updates to prevent reactive loops during choices update
         updateSelectizeInput(session, "x_column", choices = col_choices, selected = current_x)
         updateSelectizeInput(session, "y_column", choices = col_choices, selected = current_y)
         updateSelectizeInput(session, "n_column", choices = col_choices, selected = current_n)
@@ -187,13 +188,20 @@ setup_column_management <- function(input, output, session, values, app_state = 
     observeEvent(app_state$test_mode$auto_detect_ready,
       {
         cat("DEBUG: [TEST_MODE] Test mode auto-detect observer triggered\n")
-        req(app_state$test_mode$auto_detect_ready)
+        cat("DEBUG: [TEST_MODE] auto_detect_ready value:", if(is.null(app_state$test_mode$auto_detect_ready)) "NULL" else as.character(app_state$test_mode$auto_detect_ready), "\n")
+
+        auto_detect_ready_value <- app_state$test_mode$auto_detect_ready
+        if (is.null(auto_detect_ready_value)) {
+          cat("DEBUG: [TEST_MODE] ❌ auto_detect_ready is NULL, skipping trigger\n")
+          return()
+        }
+
         cat("DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n")
         timestamp <- Sys.time()
 
         # PHASE 4: Use unified state management
         app_state$columns$auto_detect$trigger <- timestamp
-        cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state\n")
+        cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state:", as.character(timestamp), "\n")
       },
       ignoreInit = FALSE, ignoreNULL = TRUE,
       priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT
@@ -274,6 +282,27 @@ setup_column_management <- function(input, output, session, values, app_state = 
   cat("DEBUG: [AUTODETECT_SETUP] Creating dedicated autodetection trigger reactiveVal\n")
   autodetect_trigger <- reactiveVal(NULL)
 
+  # CRITICAL FIX: Bridge observer between app_state trigger and reactiveVal
+  # This was the missing link that prevented auto-detection at app startup
+  cat("DEBUG: [BRIDGE_SETUP] Creating bridge observer for app_state auto_detect trigger\n")
+  observe({
+    cat("DEBUG: [BRIDGE] Bridge observer triggered\n")
+    if (!is.null(app_state)) {
+      trigger_value <- app_state$columns$auto_detect$trigger
+      cat("DEBUG: [BRIDGE] Checking trigger_value:", if(is.null(trigger_value)) "NULL" else as.character(trigger_value), "\n")
+      if (!is.null(trigger_value)) {
+        cat("DEBUG: [BRIDGE] app_state trigger detected:", as.character(trigger_value), "\n")
+        cat("DEBUG: [BRIDGE] Firing autodetect_trigger reactiveVal\n")
+        autodetect_trigger(trigger_value)
+        cat("DEBUG: [BRIDGE] ✅ reactiveVal triggered successfully\n")
+      } else {
+        cat("DEBUG: [BRIDGE] No trigger value available yet\n")
+      }
+    } else {
+      cat("DEBUG: [BRIDGE] app_state is NULL\n")
+    }
+  })
+
   # Reaktiv UI sync observer med direct reactiveVal trigger
   cat("DEBUG: [UI_SYNC_SETUP] Setting up UI sync observer for ui_sync_trigger\n")
   observeEvent(ui_sync_trigger(),
@@ -298,48 +327,51 @@ setup_column_management <- function(input, output, session, values, app_state = 
         cat("DEBUG: [UI_SYNC] Column choices available - updating selectize inputs\n")
         cat("DEBUG: [UI_SYNC] Col choices length:", length(sync_data$col_choices), "\n")
 
-        # X-kolonne (dato/tid)
-        x_selection <- sync_data$x_col %||% ""
-        cat("DEBUG: [UI_SYNC] Updating X column to:", x_selection, "\n")
-        updateSelectizeInput(session, "x_column",
-                           choices = sync_data$col_choices,
-                           selected = x_selection)
+        # Isolate all UI updates to prevent reactive loops
+        isolate({
+          # X-kolonne (dato/tid)
+          x_selection <- sync_data$x_col %||% ""
+          cat("DEBUG: [UI_SYNC] Updating X column to:", x_selection, "\n")
+          updateSelectizeInput(session, "x_column",
+                             choices = sync_data$col_choices,
+                             selected = x_selection)
 
-        # Y-kolonne (tæller/værdi)
-        y_selection <- sync_data$taeller_col %||% ""
-        cat("DEBUG: [UI_SYNC] Updating Y column to:", y_selection, "\n")
-        updateSelectizeInput(session, "y_column",
-                           choices = sync_data$col_choices,
-                           selected = y_selection)
+          # Y-kolonne (tæller/værdi)
+          y_selection <- sync_data$taeller_col %||% ""
+          cat("DEBUG: [UI_SYNC] Updating Y column to:", y_selection, "\n")
+          updateSelectizeInput(session, "y_column",
+                             choices = sync_data$col_choices,
+                             selected = y_selection)
 
-        # N-kolonne (nævner)
-        n_selection <- sync_data$naevner_col %||% ""
-        cat("DEBUG: [UI_SYNC] Updating N column to:", n_selection, "\n")
-        updateSelectizeInput(session, "n_column",
-                           choices = sync_data$col_choices,
-                           selected = n_selection)
+          # N-kolonne (nævner)
+          n_selection <- sync_data$naevner_col %||% ""
+          cat("DEBUG: [UI_SYNC] Updating N column to:", n_selection, "\n")
+          updateSelectizeInput(session, "n_column",
+                             choices = sync_data$col_choices,
+                             selected = n_selection)
 
-        # Skift kolonne
-        updateSelectizeInput(session, "skift_column",
-                           choices = sync_data$col_choices,
-                           selected = sync_data$skift_col %||% "")
+          # Skift kolonne
+          updateSelectizeInput(session, "skift_column",
+                             choices = sync_data$col_choices,
+                             selected = sync_data$skift_col %||% "")
 
-        # Frys kolonne
-        updateSelectizeInput(session, "frys_column",
-                           choices = sync_data$col_choices,
-                           selected = sync_data$frys_col %||% "")
+          # Frys kolonne
+          updateSelectizeInput(session, "frys_column",
+                             choices = sync_data$col_choices,
+                             selected = sync_data$frys_col %||% "")
 
-        # Kommentar kolonne
-        updateSelectizeInput(session, "kommentar_column",
-                           choices = sync_data$col_choices,
-                           selected = sync_data$kommentar_col %||% "")
+          # Kommentar kolonne
+          updateSelectizeInput(session, "kommentar_column",
+                             choices = sync_data$col_choices,
+                             selected = sync_data$kommentar_col %||% "")
+        })
       }
 
       # Ryd sync request og sæt timestamp for at forhindre immediate column mgmt override
       # PHASE 4: Use unified state management
       app_state$columns$ui_sync$needed <- NULL
-      app_state$columns$ui_sync$last_sync_time <- Sys.time()
-      cat("DEBUG: [UI_SYNC] ✅ UI sync completed, set timestamp to prevent override\n")
+      # NOTE: Timestamp allerede sat i auto-detect for at forhindre race condition
+      cat("DEBUG: [UI_SYNC] ✅ UI sync completed, timestamp was set earlier to prevent race condition\n")
     },
     ignoreInit = TRUE, ignoreNULL = TRUE,
     priority = OBSERVER_PRIORITIES$UI_SYNC
@@ -591,8 +623,9 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
   )
 
   if (use_centralized_state && !is.null(app_state)) {
-    app_state$auto_detected_columns <- auto_detected_columns
-    cat("DEBUG: [PHASE4] Synced name-only auto_detected_columns to centralized state\n")
+    # FIX: Use correct state path that visualization expects
+    app_state$columns$auto_detected_columns <- auto_detected_columns
+    cat("DEBUG: [PHASE4] Synced name-only auto_detected_columns to centralized state (FIXED PATH)\n")
   } else {
     # PHASE 4: Use unified state management - this assignment is now handled in centralized state
   }
@@ -619,6 +652,10 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
     cat("DEBUG: [UI_SYNC_TRIGGER] After: app_state$columns$ui_sync$needed is", if(is.null(app_state$columns$ui_sync$needed)) "NULL" else "SET", "\n")
     cat("DEBUG: [UI_SYNC_TRIGGER] UI sync data keys:", paste(names(ui_sync_data), collapse = ", "), "\n")
     cat("DEBUG: [PHASE4] Synced name-only UI sync data to centralized state\n")
+
+    # CRITICAL: Set debounce timestamp BEFORE triggering UI sync to prevent race condition
+    app_state$columns$ui_sync$last_sync_time <- Sys.time()
+    cat("DEBUG: [UI_SYNC_TRIGGER] ⏰ Debounce timestamp set BEFORE UI sync (name-only mode) to prevent column mgmt override\n")
 
     # REACTIVE FIX: Trigger direct reactiveVal if available
     if (!is.null(ui_sync_trigger)) {
@@ -1127,17 +1164,17 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
     # PHASE 4: Legacy values$auto_detected_columns assignment removed - now using unified state only
     cat("DEBUG: [PHASE4] Skipping legacy values$auto_detected_columns assignment (unified state handles this)\n")
-    # PHASE 4: Sync auto_detected_columns to centralized state
-    app_state$columns$auto_detect$results <- list(
+    # PHASE 4: Sync auto_detected_columns to centralized state - FIX: Use correct path that visualization expects
+    app_state$columns$auto_detected_columns <- list(
       x_col = x_col,
       y_col = taeller_col,
-        n_col = naevner_col,
-        skift_col = skift_col,
-        frys_col = frys_col,
-        kommentar_col = kommentar_col,
-        timestamp = Sys.time()
-      )
-      cat("DEBUG: [PHASE4] Synced auto_detected_columns to centralized state\n")
+      n_col = naevner_col,
+      skift_col = skift_col,
+      frys_col = frys_col,
+      kommentar_col = kommentar_col,
+      timestamp = Sys.time()
+    )
+    cat("DEBUG: [PHASE4] Synced auto_detected_columns to centralized state (FIXED PATH)\n")
 
     # Trigger UI sync for visual feedback on Kolonnematch tab using reactive trigger
     cat("DEBUG: [AUTO_DETECT_FUNC] 🎯 CRITICAL: Setting ui_sync_needed with:\n")
@@ -1161,6 +1198,10 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
     # PHASE 4: Use unified state management
     app_state$columns$ui_sync$needed <- sync_data
+
+    # CRITICAL: Set debounce timestamp BEFORE triggering UI sync to prevent race condition
+    app_state$columns$ui_sync$last_sync_time <- Sys.time()
+    cat("DEBUG: [UI_SYNC_TRIGGER] ⏰ Debounce timestamp set BEFORE UI sync to prevent column mgmt override\n")
 
     # REACTIVE FIX: Trigger direct reactiveVal if available (CRITICAL for UI sync)
     if (!is.null(ui_sync_trigger)) {

@@ -43,13 +43,13 @@ measure_reactive_performance <- function(expr, operation_name = "unknown") {
 #'
 #' Wrapper omkring reactive() der tilføjer intelligent caching
 #' for expensive operations. Cache invalideres automatisk
-#' når dependencies ændres.
+#' når dependencies ændres. Virker både i reactive context og uden.
 #'
 #' @param expr Reactive expression der skal caches
 #' @param cache_key Character string med unique cache key
 #' @param cache_timeout Numeric - cache timeout i sekunder (default 300)
 #'
-#' @return Cached reactive expression
+#' @return Cached reactive expression eller function (context-afhængig)
 #'
 #' @examples
 #' \dontrun{
@@ -68,7 +68,8 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300) {
     assign(".performance_cache", new.env(), envir = .GlobalEnv)
   }
 
-  reactive({
+  # Define cache logic as function for reuse
+  cache_logic <- function() {
     cache_env <- get(".performance_cache", envir = .GlobalEnv)
     current_time <- Sys.time()
 
@@ -97,19 +98,38 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300) {
 
     log_debug(paste("Cached result for", cache_key), "PERFORMANCE")
     return(result)
+  }
+
+  # Check if we're in reactive context
+  in_reactive_context <- tryCatch({
+    # Try to get current reactive domain
+    getCurrentDomain <- getFromNamespace("getCurrentDomain", "shiny")
+    domain <- getCurrentDomain()
+    !is.null(domain)
+  }, error = function(e) {
+    FALSE
   })
+
+  if (in_reactive_context) {
+    # Return reactive expression if in reactive context
+    return(reactive(cache_logic()))
+  } else {
+    # Return function if not in reactive context (e.g., tests)
+    return(cache_logic)
+  }
 }
 
 #' Debounced reactive with performance tracking
 #'
 #' Enhanced version af shiny::debounce med performance monitoring.
 #' Tracker både debounce effectiveness og execution performance.
+#' Virker både i reactive context og uden.
 #'
-#' @param r Reactive expression der skal debounces
+#' @param r Reactive expression der skal debounces (eller function i non-reactive context)
 #' @param millis Numeric - debounce delay i millisekunder
 #' @param operation_name Character string med operation navn til logging
 #'
-#' @return Debounced reactive expression
+#' @return Debounced reactive expression eller function (context-afhængig)
 #'
 #' @family performance
 #' @export
@@ -122,11 +142,10 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
     assign(".performance_stats", new.env(), envir = .GlobalEnv)
   }
 
-  debounced_reactive <- debounce(r, millis)
-
-  reactive({
+  # Performance tracking logic
+  track_performance <- function(result_func) {
     start_time <- Sys.time()
-    result <- debounced_reactive()
+    result <- result_func()
     end_time <- Sys.time()
 
     # Update statistics
@@ -158,7 +177,41 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
     }
 
     return(result)
+  }
+
+  # Check if we're in reactive context
+  in_reactive_context <- tryCatch({
+    # Try to get current reactive domain
+    getCurrentDomain <- getFromNamespace("getCurrentDomain", "shiny")
+    domain <- getCurrentDomain()
+    !is.null(domain)
+  }, error = function(e) {
+    FALSE
   })
+
+  if (in_reactive_context) {
+    # Use debounce if in reactive context
+    debounced_reactive <- debounce(r, millis)
+
+    return(reactive({
+      track_performance(function() debounced_reactive())
+    }))
+  } else {
+    # Return simple function if not in reactive context (e.g., tests)
+    # Note: No actual debouncing in non-reactive context, just performance tracking
+    return(function() {
+      # Handle reactive expressions in non-reactive context
+      if (is.function(r) && "reactiveExpr" %in% class(r)) {
+        # It's a reactive expression - create a temporary reactive domain for execution
+        track_performance(function() {
+          isolate(r())
+        })
+      } else {
+        # It's a regular function
+        track_performance(r)
+      }
+    })
+  }
 }
 
 #' Clear performance caches

@@ -172,13 +172,14 @@ Y_AXIS_UNITS_DA <- list(
 # OBSERVER PRIORITIES ===========================================================
 
 #' Shiny observer prioriteter for kontrolleret execution orden
+#' Enhanced with wider gaps to prevent race conditions
 #' @export
 OBSERVER_PRIORITIES <- list(
-  highest = 1000,
-  high = 800,
-  medium = 500,
-  low = 200,
-  lowest = 100
+  highest = 2000,    # Critical state management
+  high = 1500,       # Data processing
+  medium = 1000,     # Auto-detection
+  low = 500,         # UI sync and updates
+  lowest = 100       # Cleanup operations
 )
 
 # LOGGING CONSTANTS =============================================================
