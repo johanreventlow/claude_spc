@@ -324,10 +324,8 @@ reset_app_to_clean_state <- function(values, app_state = NULL, session = NULL) {
   # PHASE 4: Data reset handled by unified state management
   # Legacy values$ data assignments removed - unified state handles data lifecycle
 
-  # Reset UI state
-  values$file_uploaded <- FALSE
-  values$user_started_session <- FALSE
-  values$auto_detect_done <- FALSE
+  # PHASE 4B: Legacy assignments removed - reset handled by unified state
+  # Session reset managed by unified state architecture in reset_app_to_clean_state
 
   # Clean temp files
   cleanup_temp_files(pattern = "spc_temp_")

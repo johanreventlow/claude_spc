@@ -62,8 +62,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     log_debug("Setting updating_table flag...", "FILE_UPLOAD")
     upload_tracer$step("state_management_setup")
 
-    # Unified state: Set table updating flag
-    values$updating_table <- TRUE
+    # PHASE 4B: Unified state assignment only - Set table updating flag
     app_state$data$updating_table <- TRUE
 
     debug_log("File upload state flags set", "FILE_UPLOAD_FLOW", level = "TRACE",
@@ -72,8 +71,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     on.exit(
       {
         log_debug("Clearing updating_table flag on exit...", "FILE_UPLOAD")
-        # Unified state: Clear table updating flag
-        values$updating_table <- FALSE
+        # PHASE 4B: Unified state assignment only - Clear table updating flag
         app_state$data$updating_table <- FALSE
         log_debug("✅ updating_table flag cleared", "FILE_UPLOAD")
       },
@@ -168,15 +166,13 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     if (!is.null(auto_detect_result)) {
       log_debug("✅ Auto-detect completed successfully from trigger", "AUTO_DETECT_TRIGGER")
       # Sæt auto_detect_done flag
-      # Unified state: Set auto detect completed
-      values$auto_detect_done <- TRUE
+      # PHASE 4B: Unified state assignment only - Set auto detect completed
       app_state$columns$auto_detect$completed <- TRUE
     } else {
       log_debug("⚠️ Auto-detect failed from trigger", "AUTO_DETECT_TRIGGER")
     }
 
-    # Unified state: Clear trigger flag
-    values$trigger_auto_detect <- FALSE
+    # PHASE 4B: Unified state assignment only - Clear trigger flag
     app_state$columns$auto_detect$trigger_needed <- FALSE
 
     log_debug("✅ Auto-detect trigger processing completed", "AUTO_DETECT_TRIGGER")
@@ -219,14 +215,11 @@ handle_excel_upload <- function(file_path, session, values) {
     data_frame <- as.data.frame(data)
     app_state$data$current_data <- data_frame
     app_state$data$original_data <- data_frame
-    # Unified state: Set file uploaded flag
-    values$file_uploaded <- TRUE
+    # PHASE 4B: Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
-    # Unified state: Set auto detect completed (skip since we have session info)
-    values$auto_detect_done <- TRUE # Skip auto-detect since we have session info
+    # PHASE 4B: Unified state assignment only - Set auto detect completed (skip since we have session info)
     app_state$columns$auto_detect$completed <- TRUE
-    # Unified state: Re-enable Anhøj rules when real data is uploaded
-    values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
+    # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
     app_state$ui$hide_anhoej_rules <- FALSE
 
     # Restore metadata with delay to ensure UI is ready
@@ -251,15 +244,11 @@ handle_excel_upload <- function(file_path, session, values) {
     data_frame <- as.data.frame(data)
     app_state$data$current_data <- data_frame
     app_state$data$original_data <- data_frame
-    # Unified state: Set file uploaded flag
-    values$file_uploaded <- TRUE
+    # PHASE 4B: Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
-    # Unified state: Set auto detect flag
-    values$auto_detect_done <- FALSE
+    # PHASE 4B: Unified state assignment only - Set auto detect flag
     app_state$columns$auto_detect$completed <- FALSE
-    values$initial_auto_detect_completed <- FALSE # Reset for new data
-    # Unified state: Re-enable Anhøj rules when real data is uploaded
-    values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
+    # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
     app_state$ui$hide_anhoej_rules <- FALSE
 
     showNotification(
@@ -365,21 +354,17 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
   log_debug("✅ Set current_data to unified state", "CSV_READ")
   app_state$data$original_data <- data_frame
   log_debug("✅ Set original_data to unified state", "CSV_READ")
-  # Unified state: Set file uploaded flag
-  values$file_uploaded <- TRUE
+  # PHASE 4B: Unified state assignment only - Set file uploaded flag
   app_state$session$file_uploaded <- TRUE
-  # Unified state: Set auto detect flag
-  values$auto_detect_done <- FALSE
+  # PHASE 4B: Unified state assignment only - Set auto detect flag
   app_state$columns$auto_detect$completed <- FALSE
-  # Unified state: Re-enable Anhøj rules when real data is uploaded
-  values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
+  # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
   app_state$ui$hide_anhoej_rules <- FALSE
   log_debug("✅ Reactive values set successfully", "CSV_READ")
 
   # TRIGGER AUTO-DETECT: Sæt flag til at triggre auto-detect i Shiny context
   log_debug("Setting auto-detect trigger flag after CSV upload...", "CSV_READ")
-  # Unified state: Set auto-detect trigger flag
-  values$trigger_auto_detect <- TRUE
+  # PHASE 4B: Unified state assignment only - Set auto-detect trigger flag
   app_state$columns$auto_detect$trigger_needed <- TRUE
   log_debug("✅ Synced trigger flag to app_state", "CSV_READ")
   log_debug("✅ Auto-detect trigger flag set", "CSV_READ")

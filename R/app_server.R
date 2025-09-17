@@ -113,14 +113,14 @@ app_server <- function(input, output, session) {
           app_state$data$original_data <- test_data
           # Unified state: Set data and flags in both legacy and centralized state
           app_state$data$current_data <- test_data
-          values$file_uploaded <- TRUE
+          # PHASE 4B: Unified state assignment only
           app_state$session$file_uploaded <- TRUE
-          values$user_started_session <- TRUE # Ensure dataLoaded triggers correctly
+          # PHASE 4B: Unified state assignment only
           app_state$session$user_started_session <- TRUE
-          values$auto_detect_done <- FALSE # Will trigger auto-detect
+          # PHASE 4B: Unified state assignment only
           app_state$columns$auto_detect$completed <- FALSE
-          values$initial_auto_detect_completed <- FALSE # Reset for new data
-          values$hide_anhoej_rules <- FALSE # Show Anhøj rules for real data
+          # PHASE 4B: Legacy assignment removed - managed by unified state
+          # PHASE 4B: Unified state assignment only
           app_state$ui$hide_anhoej_rules <- FALSE
 
           autoload_tracer$step("state_synchronization_complete")
@@ -198,8 +198,7 @@ app_server <- function(input, output, session) {
         log_debug("Setting test_mode_auto_detect_ready flag after setup", "TEST_MODE")
         timestamp <- Sys.time()
 
-        # Unified state: Set timestamp in both legacy and centralized state
-        values$test_mode_auto_detect_ready <- timestamp
+        # PHASE 4B: Unified state assignment only
         app_state$test_mode$auto_detect_ready <- timestamp
         log_debug("Synced test_mode_auto_detect_ready to both systems", "UNIFIED_STATE")
       }

@@ -329,8 +329,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   app_state$data$updating_table <- TRUE
 
   # Force hide Anhøj rules until real data is loaded
-  # Unified state: Hide Anhøj rules
-  values$hide_anhoej_rules <- TRUE
+  # PHASE 4B: Unified state assignment only
   app_state$ui$hide_anhoej_rules <- TRUE
 
   # Reset to standard column order using helper function
@@ -343,18 +342,14 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   cat("DEBUG: [SESSION_RESET] Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), "\n")
   cat("DEBUG: [SESSION_RESET] app_state hash after:", digest::digest(app_state$data$current_data), "\n")
 
-  # Unified state: Clear file uploaded flag
-  values$file_uploaded <- FALSE
+  # PHASE 4B: Unified state assignment only
   app_state$session$file_uploaded <- FALSE
-  # Unified state: Set user started session flag
-  values$user_started_session <- TRUE # NEW: Set flag that user has started
-  app_state$session$user_started_session <- TRUE
+  # PHASE 4B: Unified state assignment only
+  app_state$session$user_started_session <- TRUE # NEW: Set flag that user has started
   # PHASE 4: Unified state assignment only
   app_state$data$original_data <- NULL
-  # Unified state: Reset auto detect flag
-  values$auto_detect_done <- FALSE
+  # PHASE 4B: Unified state assignment only
   app_state$columns$auto_detect$completed <- FALSE
-  values$initial_auto_detect_completed <- FALSE # Reset for new session
 
   # Unified state: Get new standard session data
   new_data <- app_state$data$current_data
@@ -511,19 +506,17 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     empty_session_data <- create_empty_session_data()
     app_state$data$current_data <- empty_session_data
     app_state$data$original_data <- empty_session_data
-    # Unified state: Set file uploaded flag
-    values$file_uploaded <- TRUE
+    # PHASE 4B: Unified state assignment only
     app_state$session$file_uploaded <- TRUE
-    # Unified state: Hide Anhøj rules for welcome page
-    values$hide_anhoej_rules <- TRUE
+    # PHASE 4B: Unified state assignment only
     app_state$ui$hide_anhoej_rules <- TRUE
     # Unified state: Clear session file name
-    values$session_file_name <- NULL
+    # PHASE 4B: Legacy session_file_name assignment removed - not used elsewhere
     app_state$session$file_name <- NULL
 
     # Nulstil konfigurationer
     # Unified state: Reset auto detect for welcome page
-    values$auto_detect_done <- FALSE
+    # PHASE 4B: Legacy values$auto_detect_done assignment removed - using unified state only
     app_state$columns$auto_detect$completed <- FALSE
     updateSelectInput(session, "x_column", selected = "")
     updateSelectInput(session, "y_column", selected = "")
@@ -586,20 +579,18 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
           # PHASE 4: Unified state assignment only
           app_state$data$current_data <- demo_data
           app_state$data$original_data <- demo_data
-          # Unified state: Set file uploaded for demo
-          values$file_uploaded <- TRUE
+          # PHASE 4B: Unified state assignment only
           app_state$session$file_uploaded <- TRUE
           # Unified state: Set user started session for demo navigation
           app_state$session$user_started_session <- TRUE
           # Unified state: Reset auto detect for demo
-          values$auto_detect_done <- FALSE # Vil udløse auto-detekt
+          # PHASE 4B: Legacy values$auto_detect_done assignment removed - using unified state only # Vil udløse auto-detekt
           app_state$columns$auto_detect$completed <- FALSE
-          values$initial_auto_detect_completed <- FALSE # Reset for new data
-          # Unified state: Show Anhøj rules for demo data
-          values$hide_anhoej_rules <- FALSE # Vis Anhøj regler for rigtige data
-          app_state$ui$hide_anhoej_rules <- FALSE
+          # PHASE 4B: Legacy values$initial_auto_detect_completed assignment removed - using unified state only # Reset for new data
+          # PHASE 4B: Unified state assignment only
+          app_state$ui$hide_anhoej_rules <- FALSE # Vis Anhøj regler for rigtige data
           # Unified state: Set demo file name
-          values$session_file_name <- "Eksempel data (SPC demo)"
+          # PHASE 4B: Legacy session_file_name assignment removed - not used elsewhere
           app_state$session$file_name <- "Eksempel data (SPC demo)"
 
           # Skjul waiter

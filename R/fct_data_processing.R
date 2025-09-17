@@ -138,9 +138,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
       cat("DEBUG: [AUTO_DETECT] Manual auto-detect observer triggered\n")
 
       # Skip automatisk auto-detect hvis vi allerede har været igennem det i test mode
-      # PHASE 4: Check both old and new state management
-      auto_detect_completed <- (values$initial_auto_detect_completed %||% FALSE) ||
-                              (use_centralized_state && (app_state$columns$auto_detect$completed %||% FALSE))
+      # PHASE 4B: Use unified state management only
+      auto_detect_completed <- app_state$columns$auto_detect$completed %||% FALSE
 
       if (auto_detect_completed) {
         cat("DEBUG: [AUTO_DETECT] Skipping - initial auto-detect already completed\n")
