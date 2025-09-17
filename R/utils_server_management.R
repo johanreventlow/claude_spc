@@ -336,6 +336,7 @@ handle_confirm_clear_saved <- function(session, values, app_state = NULL) {
 
 reset_to_empty_session <- function(session, values, app_state = NULL) {
   # Unified state: App state is always available
+  use_centralized_state <- !is.null(app_state)
   cat("DEBUG: [SESSION_RESET] Session reset started, centralized state available:", use_centralized_state, "\n")
   cat("DEBUG: [SESSION_RESET] app_state hash before:", if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL", "\n")
   clearDataLocally(session)
@@ -615,6 +616,8 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
           # Unified state: Set file uploaded for demo
           values$file_uploaded <- TRUE
           app_state$session$file_uploaded <- TRUE
+          # Unified state: Set user started session for demo navigation
+          app_state$session$user_started_session <- TRUE
           # Unified state: Reset auto detect for demo
           values$auto_detect_done <- FALSE # Vil udløse auto-detekt
           app_state$columns$auto_detect$completed <- FALSE
