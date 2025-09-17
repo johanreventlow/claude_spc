@@ -107,10 +107,9 @@ app_server <- function(input, output, session) {
           test_data <- ensure_standard_columns(test_data)
           autoload_tracer$step("data_processing_complete")
 
-          # Set reactive values
-          values$current_data <- test_data
-          # Unified state: Set data in both legacy and centralized state
-          values$original_data <- test_data
+          # Set reactive values - PHASE 4: Unified state only
+          # Legacy values$current_data removed - now using app_state only
+          # Legacy values$original_data removed - now using app_state only
           app_state$data$original_data <- test_data
           # Unified state: Set data and flags in both legacy and centralized state
           app_state$data$current_data <- test_data

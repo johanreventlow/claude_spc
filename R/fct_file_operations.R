@@ -215,12 +215,10 @@ handle_excel_upload <- function(file_path, session, values) {
     metadata <- parse_session_metadata(session_lines, names(data))
 
     # Load data
-    # Unified state: Set current data
-    values$current_data <- as.data.frame(data)
-    app_state$data$current_data <- as.data.frame(data)
-    # Unified state: Set original data
-    values$original_data <- as.data.frame(data)
-    app_state$data$original_data <- as.data.frame(data)
+    # PHASE 4: Unified state assignment only - session restore
+    data_frame <- as.data.frame(data)
+    app_state$data$current_data <- data_frame
+    app_state$data$original_data <- data_frame
     # Unified state: Set file uploaded flag
     values$file_uploaded <- TRUE
     app_state$session$file_uploaded <- TRUE
@@ -249,12 +247,10 @@ handle_excel_upload <- function(file_path, session, values) {
     # Ensure standard columns are present and in correct order
     data <- ensure_standard_columns(data)
 
-    # Unified state: Set current data
-    values$current_data <- as.data.frame(data)
-    app_state$data$current_data <- as.data.frame(data)
-    # Unified state: Set original data
-    values$original_data <- as.data.frame(data)
-    app_state$data$original_data <- as.data.frame(data)
+    # PHASE 4: Unified state assignment only - Excel file loading
+    data_frame <- as.data.frame(data)
+    app_state$data$current_data <- data_frame
+    app_state$data$original_data <- data_frame
     # Unified state: Set file uploaded flag
     values$file_uploaded <- TRUE
     app_state$session$file_uploaded <- TRUE
@@ -363,14 +359,12 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
     debug_state_snapshot("before_csv_data_assignment", app_state, session_id = session_id)
   }
 
-  # Unified state: Set current data
-  values$current_data <- as.data.frame(data)
-  app_state$data$current_data <- as.data.frame(data)
-  log_debug("✅ Synced current_data to app_state", "CSV_READ")
-  # Unified state: Set original data
-  values$original_data <- as.data.frame(data)
-  app_state$data$original_data <- as.data.frame(data)
-  log_debug("✅ Synced original_data to app_state", "CSV_READ")
+  # PHASE 4: Unified state assignment only - CSV file loading
+  data_frame <- as.data.frame(data)
+  app_state$data$current_data <- data_frame
+  log_debug("✅ Set current_data to unified state", "CSV_READ")
+  app_state$data$original_data <- data_frame
+  log_debug("✅ Set original_data to unified state", "CSV_READ")
   # Unified state: Set file uploaded flag
   values$file_uploaded <- TRUE
   app_state$session$file_uploaded <- TRUE

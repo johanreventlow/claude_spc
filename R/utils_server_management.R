@@ -99,20 +99,15 @@ setup_session_management <- function(input, output, session, values, waiter_file
                 }
               }
 
-              # Unified state: Set reconstructed current data
-              values$current_data <- reconstructed_data
+              # PHASE 4: Unified state assignment only
               app_state$data$current_data <- reconstructed_data
-              # Unified state: Set reconstructed original data
-              values$original_data <- reconstructed_data
               app_state$data$original_data <- reconstructed_data
             } else {
               # Fallback for older save format
-              # Unified state: Set fallback current data
-              values$current_data <- as.data.frame(saved_state$data)
-              app_state$data$current_data <- as.data.frame(saved_state$data)
-              # Unified state: Set fallback original data
-              values$original_data <- as.data.frame(saved_state$data)
-              app_state$data$original_data <- as.data.frame(saved_state$data)
+              # PHASE 4: Unified state assignment only
+              fallback_data <- as.data.frame(saved_state$data)
+              app_state$data$current_data <- fallback_data
+              app_state$data$original_data <- fallback_data
             }
 
             # Unified state: Set file uploaded flag
@@ -305,10 +300,11 @@ collect_metadata <- function(input) {
 }
 
 handle_clear_saved_request <- function(input, session, values, app_state = NULL) {
-  # Check if there's data or settings to lose
-  has_data <- !is.null(values$current_data) &&
-    any(!is.na(values$current_data), na.rm = TRUE) &&
-    nrow(values$current_data) > 0
+  # Check if there's data or settings to lose - PHASE 4: Use unified state
+  current_data_check <- app_state$data$current_data
+  has_data <- !is.null(current_data_check) &&
+    any(!is.na(current_data_check), na.rm = TRUE) &&
+    nrow(current_data_check) > 0
 
   has_settings <- (!is.null(input$indicator_title) && input$indicator_title != "") ||
     (!is.null(input$indicator_description) && input$indicator_description != "") ||
@@ -358,8 +354,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   # Brug synlige standarddata (så tabel er synlig) men force name-only detection
   standard_data <- create_empty_session_data()
 
-  # Unified state: Set standard data
-  values$current_data <- standard_data
+  # PHASE 4: Unified state assignment only
   app_state$data$current_data <- standard_data
   cat("DEBUG: [SESSION_RESET] Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), "\n")
   cat("DEBUG: [SESSION_RESET] app_state hash after:", digest::digest(app_state$data$current_data), "\n")
@@ -370,8 +365,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   # Unified state: Set user started session flag
   values$user_started_session <- TRUE # NEW: Set flag that user has started
   app_state$session$user_started_session <- TRUE
-  # Unified state: Clear original data
-  values$original_data <- NULL
+  # PHASE 4: Unified state assignment only
   app_state$data$original_data <- NULL
   # Unified state: Reset auto detect flag
   values$auto_detect_done <- FALSE
@@ -529,12 +523,10 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     cat("Welcome page: Start new session clicked\n")
 
     # Samme logik som eksisterende start_new_session
-    # Unified state: Set empty session data
-    values$current_data <- create_empty_session_data()
-    app_state$data$current_data <- create_empty_session_data()
-    # Unified state: Set original data from current data
-    values$original_data <- values$current_data
-    app_state$data$original_data <- values$current_data
+    # PHASE 4: Unified state assignment only
+    empty_session_data <- create_empty_session_data()
+    app_state$data$current_data <- empty_session_data
+    app_state$data$original_data <- empty_session_data
     # Unified state: Set file uploaded flag
     values$file_uploaded <- TRUE
     app_state$session$file_uploaded <- TRUE
@@ -607,11 +599,8 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
           cat("Final data dimensions:", paste(dim(demo_data), collapse = "x"), "\n")
 
           # Sæt reaktive værdier
-          # Unified state: Set demo current data
-          values$current_data <- demo_data
+          # PHASE 4: Unified state assignment only
           app_state$data$current_data <- demo_data
-          # Unified state: Set demo original data
-          values$original_data <- demo_data
           app_state$data$original_data <- demo_data
           # Unified state: Set file uploaded for demo
           values$file_uploaded <- TRUE

@@ -321,11 +321,8 @@ reset_app_to_clean_state <- function(values, app_state = NULL, session = NULL) {
   # Clear performance caches
   clear_performance_cache()
 
-  # Reset to empty session data
-  if (exists("create_empty_session_data")) {
-    values$current_data <- create_empty_session_data()
-    values$original_data <- values$current_data
-  }
+  # PHASE 4: Data reset handled by unified state management
+  # Legacy values$ data assignments removed - unified state handles data lifecycle
 
   # Reset UI state
   values$file_uploaded <- FALSE

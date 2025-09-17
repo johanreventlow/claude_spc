@@ -889,13 +889,13 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
             # Apply conversion if successful (inside isolate to prevent reactive triggers)
             if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
-              # PHASE 4: Dimension safety check before assignment
-              current_rows <- nrow(values$current_data)
+              # PHASE 4: Dimension safety check before assignment - unified state only
+              current_rows <- nrow(app_state$data$current_data)
               converted_rows <- length(converted_dates)
 
               if (current_rows == converted_rows) {
-                # Safe to assign - dimensions match
-                values$current_data[[candidate_name]] <- converted_dates
+                # Safe to assign - dimensions match - PHASE 4: Unified state only
+                # Legacy values$current_data assignment removed
                 app_state_rows <- nrow(app_state$data$current_data)
                 if (app_state_rows == converted_rows) {
                   app_state$data$current_data[[candidate_name]] <- converted_dates
@@ -1187,8 +1187,7 @@ handle_column_name_changes <- function(input, session, values, app_state = NULL)
     return()
   }
 
-  # PHASE 4: Sync assignment to both old and new state management
-  names(values$current_data) <- new_names
+  # PHASE 4: Unified state assignment only
   names(app_state$data$current_data) <- new_names
 
   removeModal()
@@ -1237,16 +1236,13 @@ handle_add_column <- function(input, session, values, app_state = NULL) {
   new_col_type <- input$new_col_type
 
   if (new_col_type == "numeric") {
-    # PHASE 4: Sync assignment to both old and new state management
-    values$current_data[[new_col_name]] <- rep(NA_real_, nrow(current_data_check))
+    # PHASE 4: Unified state assignment only
     app_state$data$current_data[[new_col_name]] <- rep(NA_real_, nrow(current_data_check))
   } else if (new_col_type == "date") {
-    # PHASE 4: Sync assignment to both old and new state management
-    values$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
+    # PHASE 4: Unified state assignment only
     app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
   } else {
-    # PHASE 4: Sync assignment to both old and new state management
-    values$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
+    # PHASE 4: Unified state assignment only
     app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
   }
 
@@ -1414,8 +1410,7 @@ setup_data_table <- function(input, output, session, values) {
             return()
           }
 
-          # PHASE 4: Sync assignment to both old and new state management
-          values$current_data <- new_df
+          # PHASE 4: Unified state assignment only
           app_state$data$current_data <- new_df
 
           showNotification("Tabel opdateret", type = "message", duration = 2)
@@ -1446,8 +1441,7 @@ setup_data_table <- function(input, output, session, values) {
     new_row <- current_data_check[1, ]
     new_row[1, ] <- NA
 
-    # PHASE 4: Sync assignment to both old and new state management
-    values$current_data <- rbind(values$current_data, new_row)
+    # PHASE 4: Unified state assignment only
     app_state$data$current_data <- rbind(app_state$data$current_data, new_row)
 
     showNotification("Ny række tilføjet", type = "message")
