@@ -261,9 +261,9 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
       sync_data <- values$ui_sync_needed
       cat("DEBUG: [UI_SYNC] Sync data received:\n")
-      cat("DEBUG: [UI_SYNC] - X column suggestion:", if(is.null(sync_data$x_column)) "NULL" else sync_data$x_column, "\n")
-      cat("DEBUG: [UI_SYNC] - Y column suggestion:", if(is.null(sync_data$y_column)) "NULL" else sync_data$y_column, "\n")
-      cat("DEBUG: [UI_SYNC] - N column suggestion:", if(is.null(sync_data$n_column)) "NULL" else sync_data$n_column, "\n")
+      cat("DEBUG: [UI_SYNC] - X column suggestion:", if(is.null(sync_data$x_col)) "NULL" else sync_data$x_col, "\n")
+      cat("DEBUG: [UI_SYNC] - Y column suggestion:", if(is.null(sync_data$taeller_col)) "NULL" else sync_data$taeller_col, "\n")
+      cat("DEBUG: [UI_SYNC] - N column suggestion:", if(is.null(sync_data$naevner_col)) "NULL" else sync_data$naevner_col, "\n")
 
       cat("DEBUG: [UI_SYNC] 🔄 Auto-detect triggered selectize opdateringer\n")
 

@@ -28,6 +28,58 @@ library(later) # Til forsinket udførelse
 source("R/utils_logging.R")
 source("R/constants.R")
 
+# ENHANCED DEBUGGING UTILITIES --------------------------------
+# Enhanced reactive context logging for Shiny fejlidentifikation
+log_reactive_context <- function(message, component = "REACTIVE", reactive_name = NULL) {
+  if (SHINY_DEBUG_MODE) {
+    context_info <- ""
+    if (!is.null(reactive_name)) {
+      context_info <- paste0(" [", reactive_name, "]")
+    }
+
+    # Attempt to get reactive context info
+    tryCatch({
+      is_reactive_context <- isolate({ TRUE })
+      context_info <- paste0(context_info, " (in reactive)")
+    }, error = function(e) {
+      context_info <- paste0(context_info, " (outside reactive)")
+    })
+
+    log_debug(paste0(message, context_info), component)
+  }
+}
+
+# State consistency validator for dual-state debugging
+validate_state_consistency <- function(values, app_state) {
+  if (!SHINY_DEBUG_MODE) return(TRUE)
+
+  inconsistencies <- c()
+
+  # Check current_data sync
+  if (exists("app_state") && !is.null(app_state) && !is.null(app_state$data)) {
+    if (!is.null(values$current_data) && !is.null(app_state$data$current_data)) {
+      if (!identical(values$current_data, app_state$data$current_data)) {
+        inconsistencies <- c(inconsistencies, "current_data mismatch")
+      }
+    }
+  }
+
+  # Check file_uploaded sync
+  if (exists("app_state") && !is.null(app_state) && !is.null(app_state$session)) {
+    if (!is.null(values$file_uploaded) && !is.null(app_state$session$file_uploaded)) {
+      if (values$file_uploaded != app_state$session$file_uploaded) {
+        inconsistencies <- c(inconsistencies, "file_uploaded mismatch")
+      }
+    }
+  }
+
+  if (length(inconsistencies) > 0) {
+    log_debug(paste("State inconsistencies found:", paste(inconsistencies, collapse = ", ")), "STATE_VALIDATOR")
+  }
+
+  return(length(inconsistencies) == 0)
+}
+
 # UDVIKLINGSINDSTILLINGER --------------------------------
 
 ## Testmodus -----
@@ -48,6 +100,10 @@ TEST_MODE_FILE_PATH <- "R/data/SPC_test_data_forskellige.xlsx"
 # AUTO-RESTORE: Gendan automatisk tidligere sessioner
 # Sæt til FALSE under udvikling, TRUE til produktion
 AUTO_RESTORE_ENABLED <- FALSE
+
+## Enhanced debugging til Shiny-kontekst fejl -----
+# SHINY_DEBUG_MODE: Enhanced debugging for fejlidentifikation
+SHINY_DEBUG_MODE <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
 
 ## Tabeltype -----
 # TABLE TYPE: Bruger excelR til Excel-lignende redigerbare tabeller
