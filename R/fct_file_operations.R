@@ -125,7 +125,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
         if (file_ext %in% c("xlsx", "xls")) {
           log_debug("📊 Processing Excel file...", "FILE_UPLOAD")
           debug_log("Starting Excel file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
-          handle_excel_upload(file_path, session, values)
+          handle_excel_upload(file_path, session, values, app_state, autodetect_trigger)
           log_debug("✅ Excel file processed successfully", "FILE_UPLOAD")
           upload_tracer$step("excel_processing_complete")
         } else {
@@ -162,7 +162,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
 }
 
 ## Håndter Excel fil upload
-handle_excel_upload <- function(file_path, session, values) {
+handle_excel_upload <- function(file_path, session, values, app_state = NULL, autodetect_trigger = NULL) {
   log_debug("========================================", "EXCEL_READ")
   log_debug("Starting Excel file processing", "EXCEL_READ")
   log_debug(paste("File path:", file_path), "EXCEL_READ")
@@ -246,6 +246,25 @@ handle_excel_upload <- function(file_path, session, values) {
       app_state$navigation_trigger(old_trigger + 1)
       new_trigger <- app_state$navigation_trigger()
       log_debug(paste("EXCEL_READ: navigation_trigger incremented from", old_trigger, "to", new_trigger), "EXCEL_READ")
+    }
+
+    # Validate data suitability for auto-detection (for standard Excel files)
+    auto_detect_suitable <- validate_data_for_auto_detect(data, session$token)
+    if (auto_detect_suitable$suitable) {
+      # DIRECT TRIGGER: Call autodetect_trigger reactiveVal directly
+      if (!is.null(autodetect_trigger)) {
+        cat("DEBUG: [EXCEL_UPLOAD] 🔥 DIRECT TRIGGER: Firing autodetect_trigger reactiveVal!\n")
+        autodetect_trigger(Sys.time())
+        cat("DEBUG: [EXCEL_UPLOAD] ✅ Direct autodetect trigger fired successfully\n")
+      } else {
+        # Fallback to old method for backwards compatibility
+        app_state$columns$auto_detect$trigger_needed <- TRUE
+        cat("DEBUG: [EXCEL_UPLOAD] ⚠️ Using fallback trigger_needed method\n")
+      }
+      log_debug("✅ Data suitable for auto-detection - trigger set", "EXCEL_READ")
+    } else {
+      log_debug("⚠️ Data not suitable for auto-detection", "EXCEL_READ")
+      app_state$columns$auto_detect$trigger_needed <- FALSE
     }
 
     showNotification(
