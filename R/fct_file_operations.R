@@ -7,13 +7,20 @@
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
-setup_file_upload <- function(input, output, session, values, waiter_file, app_state = NULL) {
+setup_file_upload <- function(input, output, session, values, waiter_file, app_state = NULL, autodetect_trigger = NULL) {
   # Unified state: App state is always available
   log_debug("===========================================", "FILE_UPLOAD")
   log_debug("Setting up file upload handlers", "FILE_UPLOAD")
 
   # File upload handler
   observeEvent(input$data_file, {
+    # PHASE 8: Enhanced debug tracking for comprehensive testing
+    debug_user_interaction("file_upload_initiated",
+                          list(filename = input$data_file$name,
+                               size = input$data_file$size,
+                               type = input$data_file$type),
+                          session$token)
+
     log_debug("File upload triggered", "FILE_UPLOAD")
     req(input$data_file)
 
@@ -150,44 +157,8 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     log_debug("===========================================", "FILE_UPLOAD")
   })
 
-  # AUTO-DETECT TRIGGER OBSERVER ===============================================
-  # Observer som reagerer på trigger_auto_detect flag og kører auto-detect
-  observeEvent(values$trigger_auto_detect, {
-    log_debug("===========================================", "AUTO_DETECT_TRIGGER")
-    log_debug("Auto-detect trigger flag detected", "AUTO_DETECT_TRIGGER")
-
-    # Check at der er data at arbejde med
-    # Unified state: Use centralized state for current data
-    current_data_check <- app_state$data$current_data
-
-    req(current_data_check)
-    req(values$trigger_auto_detect == TRUE)
-
-    log_debug("Running auto-detect from trigger...", "AUTO_DETECT_TRIGGER")
-
-    # Kør auto-detect funktionen
-    auto_detect_result <- auto_detect_and_update_columns(
-      input = input,
-      session = session,
-      values = values,
-      app_state = app_state
-    )
-
-    if (!is.null(auto_detect_result)) {
-      log_debug("✅ Auto-detect completed successfully from trigger", "AUTO_DETECT_TRIGGER")
-      # Sæt auto_detect_done flag
-      # PHASE 4B: Unified state assignment only - Set auto detect completed
-      app_state$columns$auto_detect$completed <- TRUE
-    } else {
-      log_debug("⚠️ Auto-detect failed from trigger", "AUTO_DETECT_TRIGGER")
-    }
-
-    # PHASE 4B: Unified state assignment only - Clear trigger flag
-    app_state$columns$auto_detect$trigger_needed <- FALSE
-
-    log_debug("✅ Auto-detect trigger processing completed", "AUTO_DETECT_TRIGGER")
-    log_debug("===========================================", "AUTO_DETECT_TRIGGER")
-  }, ignoreNULL = TRUE, ignoreInit = TRUE)
+  # PHASE 4: Legacy observer removed - auto-detection now uses direct reactiveVal triggers
+  # See setup_column_management() for new autodetect_trigger implementation
 }
 
 ## Håndter Excel fil upload
@@ -410,6 +381,12 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
 
   # PHASE 4: Unified state assignment only - CSV file loading
   data_frame <- as.data.frame(data)
+
+  # PHASE 8: Enhanced state change tracking
+  debug_state_change("CSV_UPLOAD", "app_state$data$current_data",
+                    app_state$data$current_data, data_frame,
+                    "file_upload_processing", session_id)
+
   app_state$data$current_data <- data_frame
   log_debug("✅ Set current_data to unified state", "CSV_READ")
   app_state$data$original_data <- data_frame
@@ -437,8 +414,16 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
   # Validate data suitability for auto-detection
   auto_detect_suitable <- validate_data_for_auto_detect(data, session_id)
   if (auto_detect_suitable$suitable) {
-    # PHASE 4B: Unified state assignment only - Set auto detect trigger
-    app_state$columns$auto_detect$trigger_needed <- TRUE
+    # DIRECT TRIGGER: Call autodetect_trigger reactiveVal directly
+    if (!is.null(autodetect_trigger)) {
+      cat("DEBUG: [FILE_UPLOAD] 🔥 DIRECT TRIGGER: Firing autodetect_trigger reactiveVal!\n")
+      autodetect_trigger(Sys.time())
+      cat("DEBUG: [FILE_UPLOAD] ✅ Direct autodetect trigger fired successfully\n")
+    } else {
+      # Fallback to old method for backwards compatibility
+      app_state$columns$auto_detect$trigger_needed <- TRUE
+      cat("DEBUG: [FILE_UPLOAD] ⚠️ Using fallback trigger_needed method\n")
+    }
     log_debug("✅ Data suitable for auto-detection - trigger set", "CSV_READ")
 
     debug_log("Auto-detection trigger set successfully", "FILE_UPLOAD_FLOW", level = "INFO",

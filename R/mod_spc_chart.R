@@ -140,7 +140,7 @@ spc_out_of_control_icon <- HTML('
 #' @param chart_title_reactive Reaktiv chart titel (optional)
 #'
 #' @return Liste med reactive values for plot, status og resultater
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL) {
   moduleServer(id, function(input, output, session) {
     log_debug("==========================================", "MODULE")
     log_debug("Initializing visualization module server", "MODULE")
@@ -149,16 +149,41 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     log_debug("Namespace function created", "MODULE")
 
     # State Management --------------------------------------------------------
-    # Reaktive værdier til tilstandshåndtering
-    log_debug("Setting up reactive values for state management", "MODULE")
-    values <- reactiveValues(
-      plot_object = NULL,
-      plot_ready = FALSE,
-      anhoej_results = NULL,
-      plot_warnings = character(0),
-      is_computing = FALSE
-    )
-    log_debug("✅ Reactive values initialized", "MODULE")
+    # PHASE 4: Use unified state management if available, fallback to local reactiveValues
+    log_debug("Setting up state management", "MODULE")
+
+    use_unified_state <- !is.null(app_state)
+    if (use_unified_state) {
+      log_debug("Using unified app_state for visualization state", "MODULE")
+      cat("DEBUG: [MODULE] Using app_state$visualization for plot state management\n")
+    } else {
+      log_debug("Using local reactiveValues for visualization state", "MODULE")
+      values <- reactiveValues(
+        plot_object = NULL,
+        plot_ready = FALSE,
+        anhoej_results = NULL,
+        plot_warnings = character(0),
+        is_computing = FALSE
+      )
+    }
+    log_debug("✅ State management initialized", "MODULE")
+
+    # PHASE 4: Helper function for dual-state assignment
+    set_plot_state <- function(key, value) {
+      if (use_unified_state) {
+        app_state$visualization[[key]] <- value
+      } else {
+        values[[key]] <- value
+      }
+    }
+
+    get_plot_state <- function(key) {
+      if (use_unified_state) {
+        return(app_state$visualization[[key]])
+      } else {
+        return(values[[key]])
+      }
+    }
 
     # Waiter til plot loading feedback
     waiter_plot <- waiter::Waiter$new(
@@ -221,21 +246,24 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       config <- chart_config()
 
       # Clean state management - only set computing when actually needed
-      values$plot_ready <- FALSE
-      values$plot_warnings <- character(0)
-      values$anhoej_results <- NULL
+      # PHASE 4: Unified state assignment using helper functions
+      set_plot_state("plot_ready", FALSE)
+      set_plot_state("plot_warnings", character(0))
+      set_plot_state("anhoej_results", NULL)
 
       waiter_plot$show()
 
       on.exit(
         {
           waiter_plot$hide()
-          values$is_computing <- FALSE
+          # PHASE 4: Unified state assignment using helper function
+          set_plot_state("is_computing", FALSE)
         },
         add = TRUE
       )
 
-      values$is_computing <- TRUE
+      # PHASE 4: Unified state assignment using helper function
+      set_plot_state("is_computing", TRUE)
 
       # Get chart type from config (already validated)
       chart_type <- config$chart_type
@@ -244,13 +272,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       validation <- validateDataForChart(data, config, chart_type)
 
       if (!validation$valid) {
-        values$plot_warnings <- validation$warnings
-        values$plot_ready <- FALSE
-        values$anhoej_results <- NULL
+        set_plot_state("plot_warnings", validation$warnings)
+        set_plot_state("plot_ready", FALSE)
+        set_plot_state("anhoej_results", NULL)
         return(NULL)
       }
 
-      values$plot_warnings <- character(0)
+      set_plot_state("plot_warnings", character(0))
 
       # Generer plot
       tryCatch(
@@ -285,8 +313,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           plot <- applyHospitalTheme(spc_result$plot)
           qic_data <- spc_result$qic_data
 
-          values$plot_object <- plot
-          values$plot_ready <- TRUE
+          set_plot_state("plot_object", plot)
+          set_plot_state("plot_ready", TRUE)
 
           # Udtræk ALLE qic() resultater for ALLE chart typer - vigtig for konsistent beregning
           if (!is.null(qic_data)) {
@@ -318,17 +346,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               }
             )
 
-            values$anhoej_results <- qic_results
+            set_plot_state("anhoej_results", qic_results)
           } else {
-            values$anhoej_results <- NULL
+            set_plot_state("anhoej_results", NULL)
           }
 
           return(plot)
         },
         error = function(e) {
-          values$plot_warnings <- c("Graf-generering fejlede:", e$message)
-          values$plot_ready <- FALSE
-          values$anhoej_results <- NULL
+          set_plot_state("plot_warnings", c("Graf-generering fejlede:", e$message))
+          set_plot_state("plot_ready", FALSE)
+          set_plot_state("anhoej_results", NULL)
           return(NULL)
         }
       )
@@ -376,17 +404,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       if (is.null(plot)) {
         # Bestem specifik fejl type
-        if (length(values$plot_warnings) > 0) {
-          warning_details <- paste(values$plot_warnings, collapse = " • ")
+        plot_warnings <- get_plot_state("plot_warnings")
+        if (length(plot_warnings) > 0) {
+          warning_details <- paste(plot_warnings, collapse = " • ")
 
           # Check for utilstrækkelig data
-          if (any(grepl("datapunkter", values$plot_warnings, ignore.case = TRUE)) ||
-            any(grepl("points", values$plot_warnings, ignore.case = TRUE))) {
+          if (any(grepl("datapunkter", plot_warnings, ignore.case = TRUE)) ||
+            any(grepl("points", plot_warnings, ignore.case = TRUE))) {
             return(createPlotMessage("insufficient_data", details = warning_details))
           }
 
           # Check for validerings fejl
-          if (any(grepl("kolonne|column|påkrævet|required", values$plot_warnings, ignore.case = TRUE))) {
+          if (any(grepl("kolonne|column|påkrævet|required", plot_warnings, ignore.case = TRUE))) {
             return(createPlotMessage("validation_error", details = warning_details))
           }
 
@@ -416,7 +445,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
         # Use req() for clean dependency management
         log_debug("Checking plot_ready status...", "RENDER_PLOT")
-        req(values$plot_ready)
+        req(get_plot_state("plot_ready"))
         log_debug("✅ Plot ready status confirmed", "RENDER_PLOT")
 
         log_debug("Getting plot object...", "RENDER_PLOT")
@@ -441,7 +470,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     ## Plot Status
     # Plot klar status - exposed til parent
     output$plot_ready <- reactive({
-      values$plot_ready
+      get_plot_state("plot_ready")
     })
     outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
 
@@ -449,8 +478,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Plot info og advarsler - event-driven med reactive isolation
     output$plot_info <- renderUI({
       # Use reactive values for event-driven updates
-      warnings <- values$plot_warnings
-      plot_ready <- values$plot_ready
+      warnings <- get_plot_state("plot_warnings")
+      plot_ready <- get_plot_state("plot_ready")
 
       if (length(warnings) > 0) {
         div(
@@ -486,7 +515,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Data oversigt value box - event-driven med isolation
     output$plot_status_boxes <- renderUI({
       # Event-driven approach - react to plot_ready changes
-      plot_ready <- values$plot_ready
+      plot_ready <- get_plot_state("plot_ready")
 
       if (plot_ready) {
         # Only access external reactives when needed, with isolation
@@ -586,7 +615,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Smart indhold baseret på nuværende status - ALTID vis boxes
       config <- chart_config()
       chart_type <- chart_type_reactive() %||% "run"
-      anhoej <- values$anhoej_results
+      anhoej <- get_plot_state("anhoej_results")
 
       # Simplificeret logik - hvis vi har data med meningsfuldt indhold, er vi klar
       has_meaningful_data <- !is.null(data) && nrow(data) > 0 &&
@@ -629,7 +658,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             status = "insufficient_data",
             message = "Mindst 10 datapunkter nødvendigt for SPC analyse"
           )
-        } else if (!(values$plot_ready %||% FALSE)) {
+        } else if (!(get_plot_state("plot_ready") %||% FALSE)) {
           list(
             status = "processing",
             message = "Behandler data og beregner...",
@@ -874,9 +903,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Giver adgang til plot objekt, status og Anhøj resultater
     return(
       list(
-        plot = reactive(values$plot_object),
-        plot_ready = reactive(values$plot_ready),
-        anhoej_results = reactive(values$anhoej_results),
+        plot = reactive(get_plot_state("plot_object")),
+        plot_ready = reactive(get_plot_state("plot_ready")),
+        anhoej_results = reactive(get_plot_state("anhoej_results")),
         chart_config = chart_config
       )
     )

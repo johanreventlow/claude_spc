@@ -14,6 +14,11 @@ setup_visualization <- function(input, output, session, values, app_state = NULL
   # NAVIGATION TRIGGER: Create eventReactive and wrap in reactive for module compatibility
   # NOTE: Use direct navigation_trigger parameter instead of app_state reference
   active_data_event <- eventReactive(navigation_trigger(), {
+    # PHASE 8: Enhanced reactive execution tracking
+    debug_reactive_execution("active_data_event", "visualization_trigger_fired",
+                            list(trigger_value = navigation_trigger()),
+                            session_id = session$token)
+
     log_debug("[PLOT_DATA] Active data reactive triggered", "PLOT_DATA")
     log_debug("[PLOT_DATA] Navigation trigger fired", "PLOT_DATA")
 
@@ -235,7 +240,8 @@ setup_visualization <- function(input, output, session, values, app_state = NULL
       } else {
         return(input$kommentar_column)
       }
-    })
+    }),
+    app_state = app_state
   )
 
   # Plot klar tjek

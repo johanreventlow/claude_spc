@@ -27,6 +27,7 @@ library(later) # Til forsinket udførelse
 # SOURCE UTILITIES --------------------------------
 source("R/utils_logging.R")
 source("R/utils_advanced_debug.R")  # Advanced debug infrastructure
+source("R/utils_end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing
 source("R/constants.R")
 
 # ENHANCED DEBUGGING UTILITIES --------------------------------
@@ -85,8 +86,8 @@ validate_state_consistency <- function(values, app_state) {
 
 ## Testmodus -----
 # TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
-# Sæt til FALSE for at deaktivere auto-indlæsning og vende tilbage til normal brugerstyret dataindlæsning
-TEST_MODE_AUTO_LOAD <- FALSE
+# Respekter environment variable hvis sat, ellers default til FALSE
+TEST_MODE_AUTO_LOAD <- as.logical(Sys.getenv("TEST_MODE_AUTO_LOAD", "FALSE"))
 
 # Specificer hvilken fil der skal indlæses automatisk i test mode
 # Filsti skal være relativ til app root-mappen
@@ -605,6 +606,15 @@ create_app_state <- function() {
   # UI State
   app_state$ui <- list(
     hide_anhoej_rules = FALSE
+  )
+
+  # Visualization State - PHASE 4: For unified plot and QIC management
+  app_state$visualization <- list(
+    plot_ready = FALSE,
+    plot_warnings = character(0),
+    anhoej_results = NULL,
+    is_computing = FALSE,
+    plot_object = NULL
   )
 
   return(app_state)

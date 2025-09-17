@@ -108,8 +108,6 @@ app_server <- function(input, output, session) {
           autoload_tracer$step("data_processing_complete")
 
           # Set reactive values - PHASE 4: Unified state only
-          # Legacy values$current_data removed - now using app_state only
-          # Legacy values$original_data removed - now using app_state only
           app_state$data$original_data <- test_data
           # Unified state: Set data and flags in both legacy and centralized state
           app_state$data$current_data <- test_data
@@ -167,7 +165,7 @@ app_server <- function(input, output, session) {
   setup_session_management(input, output, session, values, waiter_file, app_state)
 
   ## Fil upload logik
-  setup_file_upload(input, output, session, values, waiter_file, app_state)
+  setup_file_upload(input, output, session, values, waiter_file, app_state, autodetect_trigger)
 
   ## Data tabel logik
   setup_data_table(input, output, session, values, app_state)
@@ -176,8 +174,9 @@ app_server <- function(input, output, session) {
   navigation_trigger <- setup_helper_observers(input, output, session, values, obs_manager, app_state)
 
   ## Kolonne management logik
-  # PHASE 4: Pass centralized state to column management
-  setup_column_management(input, output, session, values, app_state)
+  # PHASE 4: Pass centralized state to column management and get autodetect trigger
+  autodetect_trigger <- setup_column_management(input, output, session, values, app_state)
+  cat("DEBUG: [APP_SERVER] Received autodetect_trigger from column management\n")
 
   ## Visualiserings logik
   visualization <- setup_visualization(input, output, session, values, app_state, navigation_trigger)
