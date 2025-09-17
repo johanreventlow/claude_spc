@@ -24,33 +24,29 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   #   }
   # })
 
-  # REACTIVE WRAPPER: Make app_state reactive for navigation
-  # Create a reactive values object to bridge app_state to Shiny reactive system
-  reactive_bridge <- reactiveValues(
-    data_change_trigger = 0
-  )
+  # NAVIGATION TRIGGER: Event-driven reactive pattern following best practices
+  # Use reactiveVal for simple signal/trigger mechanism
+  navigation_trigger <- reactiveVal(0)
 
-  # Store reactive bridge in app_state for access from other functions
-  app_state$reactive_bridge <- reactive_bridge
+  # Store navigation trigger in app_state for access from other functions
+  app_state$navigation_trigger <- navigation_trigger
 
-  # This creates a reactive dependency on the reactive bridge
-  app_data_reactive <- reactive({
-    # Watch the reactive bridge trigger for change notifications
-    trigger_value <- reactive_bridge$data_change_trigger
+  # This creates a reactive that updates only when navigation_trigger changes
+  app_data_reactive <- eventReactive(navigation_trigger(), {
     current_data_value <- app_state$data$current_data
 
-    cat("DEBUG: [REACTIVE_WRAPPER] app_data_reactive triggered\n")
-    cat("DEBUG: [REACTIVE_WRAPPER] trigger_value:", trigger_value, "\n")
-    cat("DEBUG: [REACTIVE_WRAPPER] current_data is null:", is.null(current_data_value), "\n")
+    cat("DEBUG: [NAVIGATION_TRIGGER] app_data_reactive triggered\n")
+    cat("DEBUG: [NAVIGATION_TRIGGER] trigger_value:", navigation_trigger(), "\n")
+    cat("DEBUG: [NAVIGATION_TRIGGER] current_data is null:", is.null(current_data_value), "\n")
 
     # Return the actual data from unified state
     return(current_data_value)
-  })
+  }, ignoreNULL = FALSE)
 
   # Data indlæsnings status flags - følger BFH UTH mønster
   output$dataLoaded <- renderText({
-    # REACTIVE WRAPPER FIX: Use reactive wrapper for app_state navigation
-    # This now properly triggers when app_state$data$table_version changes
+    # NAVIGATION TRIGGER: Use eventReactive pattern for app_state navigation
+    # This now properly triggers when navigation_trigger is incremented
     current_data_check <- app_data_reactive()
 
     cat("DEBUG: [NAVIGATION] Evaluating dataLoaded status\n")
@@ -102,7 +98,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
 
   output$has_data <- renderText({
-    # REACTIVE WRAPPER FIX: Use reactive wrapper for consistent behavior
+    # NAVIGATION TRIGGER: Use eventReactive pattern for consistent behavior
     current_data_check <- app_data_reactive()
 
     if (is.null(current_data_check)) {
@@ -132,7 +128,7 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     # PHASE 4: Use unified state management
     file_uploaded_check <- app_state$session$file_uploaded
 
-    # REACTIVE WRAPPER FIX: Use reactive wrapper for consistent behavior
+    # NAVIGATION TRIGGER: Use eventReactive pattern for consistent behavior
     current_data_check <- app_data_reactive()
 
     if (is.null(current_data_check)) {

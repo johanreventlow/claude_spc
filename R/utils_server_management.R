@@ -349,12 +349,12 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   cat("DEBUG: [SESSION_RESET] Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), "\n")
   cat("DEBUG: [SESSION_RESET] app_state hash after:", digest::digest(app_state$data$current_data), "\n")
 
-  # REACTIVE WRAPPER FIX: Trigger reactive bridge to trigger reactive navigation
-  if (!is.null(app_state$reactive_bridge)) {
-    old_trigger <- app_state$reactive_bridge$data_change_trigger
-    app_state$reactive_bridge$data_change_trigger <- app_state$reactive_bridge$data_change_trigger + 1
-    new_trigger <- app_state$reactive_bridge$data_change_trigger
-    cat("DEBUG: [SESSION_RESET] reactive_bridge trigger incremented from", old_trigger, "to", new_trigger, "\n")
+  # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
+  if (!is.null(app_state$navigation_trigger)) {
+    old_trigger <- app_state$navigation_trigger()
+    app_state$navigation_trigger(old_trigger + 1)
+    new_trigger <- app_state$navigation_trigger()
+    cat("DEBUG: [SESSION_RESET] navigation_trigger incremented from", old_trigger, "to", new_trigger, "\n")
   }
 
   # PHASE 4B: Unified state assignment only
