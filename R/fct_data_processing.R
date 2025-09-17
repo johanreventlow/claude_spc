@@ -684,7 +684,6 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
   } else {
     # PHASE 4: Legacy values$ access removed - now using unified state only
     cat("DEBUG: [AUTO_DETECT_FUNC] - Legacy values$current_data access skipped (unified state only)\n")
-    }
   }
 
   autodetect_tracer$step("data_inspection_started")
