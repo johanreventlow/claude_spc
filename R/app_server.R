@@ -172,18 +172,18 @@ app_server <- function(input, output, session) {
   ## Data tabel logik
   setup_data_table(input, output, session, values, app_state)
 
+  ## Hjælpe observers (IMPORTANT: Must be set up before visualization for navigation_trigger)
+  navigation_trigger <- setup_helper_observers(input, output, session, values, obs_manager, app_state)
+
   ## Kolonne management logik
   # PHASE 4: Pass centralized state to column management
   setup_column_management(input, output, session, values, app_state)
 
   ## Visualiserings logik
-  visualization <- setup_visualization(input, output, session, values, app_state)
+  visualization <- setup_visualization(input, output, session, values, app_state, navigation_trigger)
 
   ## Download handlers
   setup_download_handlers(input, output, session, values)
-
-  ## Hjælpe observers
-  setup_helper_observers(input, output, session, values, obs_manager, app_state)
 
   session_debugger$event("server_setup_complete")
   debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)

@@ -306,6 +306,9 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   if (!is.null(obs_manager)) {
     obs_manager$add(obs_settings_save, "settings_auto_save")
   }
+
+  # Return navigation_trigger for use in other functions
+  return(navigation_trigger)
 }
 
 # HJÆLPEFUNKTIONER ============================================================

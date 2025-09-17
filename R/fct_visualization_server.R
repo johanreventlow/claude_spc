@@ -7,13 +7,15 @@
 
 ## Hovedfunktion for visualisering
 # Opsætter al server logik relateret til visualisering og data forberedelse
-setup_visualization <- function(input, output, session, values, app_state = NULL) {
+setup_visualization <- function(input, output, session, values, app_state = NULL, navigation_trigger = NULL) {
   log_debug("=======================================", "VISUALIZATION")
   log_debug("Setting up visualization system", "VISUALIZATION")
 
-  # Data til visualiserings modul
-  active_data <- reactive({
-    log_debug("Active data reactive triggered", "PLOT_DATA")
+  # NAVIGATION TRIGGER: Create eventReactive and wrap in reactive for module compatibility
+  # NOTE: Use direct navigation_trigger parameter instead of app_state reference
+  active_data_event <- eventReactive(navigation_trigger(), {
+    log_debug("[PLOT_DATA] Active data reactive triggered", "PLOT_DATA")
+    log_debug("[PLOT_DATA] Navigation trigger fired", "PLOT_DATA")
 
     # PHASE 4: Use unified state management
     current_data_check <- app_state$data$current_data
@@ -56,6 +58,11 @@ setup_visualization <- function(input, output, session, values, app_state = NULL
       attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
       return(data)
     }
+  }, ignoreNULL = FALSE)
+
+  # MODULE COMPATIBILITY: Wrap eventReactive in regular reactive for module passing
+  active_data <- reactive({
+    active_data_event()
   })
 
   # Kolonne konfiguration til visualisering

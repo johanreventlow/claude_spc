@@ -37,6 +37,27 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
 
     upload_tracer$step("file_validation")
 
+    # ENHANCED FILE VALIDATION
+    validation_result <- validate_uploaded_file(input$data_file, session$token)
+    if (!validation_result$valid) {
+      upload_tracer$complete("file_validation_failed")
+      debug_log("File validation failed", "ERROR_HANDLING", level = "ERROR",
+                context = list(
+                  validation_errors = validation_result$errors,
+                  filename = input$data_file$name
+                ),
+                session_id = session$token)
+
+      showNotification(
+        paste("File validation failed:", paste(validation_result$errors, collapse = "; ")),
+        type = "error",
+        duration = 8
+      )
+      return()
+    }
+
+    upload_tracer$step("file_validation_complete")
+
     # Show loading
     log_debug("Showing waiter...", "FILE_UPLOAD")
     waiter_file$show()
@@ -117,22 +138,11 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
         log_debug(paste("❌ Error during file processing:", e$message), "FILE_UPLOAD")
         log_debug(paste("Error class:", class(e)), "FILE_UPLOAD")
 
-        debug_log("File upload error occurred", "ERROR_HANDLING", level = "ERROR",
-                  context = list(
-                    error_message = e$message,
-                    error_class = class(e)[1],
-                    filename = input$data_file$name,
-                    file_extension = file_ext
-                  ),
-                  session_id = session$token)
-
         upload_tracer$complete("file_upload_workflow_failed")
 
-        showNotification(
-          paste("Fejl ved upload:", e$message),
-          type = "error",
-          duration = 5
-        )
+        # ENHANCED ERROR HANDLING: Use comprehensive error recovery
+        error_result <- handle_upload_error(e, input$data_file, session$token)
+        log_debug(paste("Error categorized as:", error_result$error_type), "FILE_UPLOAD")
       }
     )
 
@@ -352,6 +362,40 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
             ),
             session_id = session_id)
 
+  # ENHANCED DATA PREPROCESSING: Clean and validate data
+  log_debug("Starting data preprocessing...", "CSV_READ")
+  preprocessing_result <- preprocess_uploaded_data(
+    data,
+    list(name = basename(file_path), size = file.info(file_path)$size),
+    session_id
+  )
+  data <- preprocessing_result$data
+  log_debug(paste("Preprocessing completed - dimensions:", nrow(data), "x", ncol(data)), "CSV_READ")
+
+  # Show user notification if significant cleaning occurred
+  if (!is.null(preprocessing_result$cleaning_log)) {
+    cleaning_messages <- character(0)
+    if (!is.null(preprocessing_result$cleaning_log$empty_rows_removed)) {
+      cleaning_messages <- c(cleaning_messages,
+        paste(preprocessing_result$cleaning_log$empty_rows_removed, "empty rows removed"))
+    }
+    if (!is.null(preprocessing_result$cleaning_log$empty_columns_removed)) {
+      cleaning_messages <- c(cleaning_messages,
+        paste(preprocessing_result$cleaning_log$empty_columns_removed, "empty columns removed"))
+    }
+    if (!is.null(preprocessing_result$cleaning_log$column_names_cleaned)) {
+      cleaning_messages <- c(cleaning_messages, "column names cleaned")
+    }
+
+    if (length(cleaning_messages) > 0) {
+      showNotification(
+        paste("Data cleaned:", paste(cleaning_messages, collapse = ", ")),
+        type = "message",
+        duration = 5
+      )
+    }
+  }
+
   # Ensure standard columns are present and in correct order
   log_debug("Ensuring standard columns...", "CSV_READ")
   data <- ensure_standard_columns(data)
@@ -387,16 +431,42 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
 
   log_debug("✅ Reactive values set successfully", "CSV_READ")
 
-  # TRIGGER AUTO-DETECT: Sæt flag til at triggre auto-detect i Shiny context
-  log_debug("Setting auto-detect trigger flag after CSV upload...", "CSV_READ")
-  # PHASE 4B: Unified state assignment only - Set auto-detect trigger flag
-  app_state$columns$auto_detect$trigger_needed <- TRUE
-  log_debug("✅ Synced trigger flag to app_state", "CSV_READ")
-  log_debug("✅ Auto-detect trigger flag set", "CSV_READ")
+  # ROBUST AUTO-DETECT: Enhanced auto-detection triggering with validation
+  log_debug("Setting auto-detect trigger with validation...", "CSV_READ")
 
-  debug_log("Auto-detect trigger flag set", "FILE_UPLOAD_FLOW", level = "INFO",
-            context = list(trigger_auto_detect = TRUE),
-            session_id = session_id)
+  # Validate data suitability for auto-detection
+  auto_detect_suitable <- validate_data_for_auto_detect(data, session_id)
+  if (auto_detect_suitable$suitable) {
+    # PHASE 4B: Unified state assignment only - Set auto detect trigger
+    app_state$columns$auto_detect$trigger_needed <- TRUE
+    log_debug("✅ Data suitable for auto-detection - trigger set", "CSV_READ")
+
+    debug_log("Auto-detection trigger set successfully", "FILE_UPLOAD_FLOW", level = "INFO",
+              context = list(
+                data_validation = auto_detect_suitable$validation_results,
+                rows = nrow(data),
+                columns = ncol(data)
+              ),
+              session_id = session_id)
+  } else {
+    log_debug("⚠️ Data not suitable for auto-detection", "CSV_READ")
+    app_state$columns$auto_detect$trigger_needed <- FALSE
+
+    debug_log("Auto-detection skipped due to data validation", "FILE_UPLOAD_FLOW", level = "WARNING",
+              context = list(
+                validation_issues = auto_detect_suitable$issues,
+                rows = nrow(data),
+                columns = ncol(data)
+              ),
+              session_id = session_id)
+
+    # Show user notification about auto-detection skip
+    showNotification(
+      paste("Auto-detection skipped:", paste(auto_detect_suitable$issues, collapse = "; ")),
+      type = "warning",
+      duration = 8
+    )
+  }
 
   # Take state snapshot after all state is set
   if (!is.null(app_state)) {
@@ -709,4 +779,439 @@ create_session_info_lines <- function(input, active_data_for_export, values) {
     "",
     paste("Genereret af:", HOSPITAL_NAME, "SPC App")
   )
+}
+
+# ENHANCED FILE VALIDATION ===================================================
+
+## Enhanced file validation with comprehensive checks
+validate_uploaded_file <- function(file_info, session_id = NULL) {
+  errors <- character(0)
+
+  # File existence check
+  if (!file.exists(file_info$datapath)) {
+    errors <- c(errors, "Uploaded file does not exist or is corrupted")
+    return(list(valid = FALSE, errors = errors))
+  }
+
+  # File size validation (max 50MB)
+  max_size_mb <- 50
+  if (file_info$size > max_size_mb * 1024 * 1024) {
+    errors <- c(errors, paste("File size exceeds maximum allowed size of", max_size_mb, "MB"))
+  }
+
+  # Empty file check
+  if (file_info$size == 0) {
+    errors <- c(errors, "Uploaded file is empty")
+  }
+
+  # File extension validation
+  file_ext <- tools::file_ext(file_info$name)
+  allowed_extensions <- c("csv", "xlsx", "xls")
+  if (!tolower(file_ext) %in% allowed_extensions) {
+    errors <- c(errors, paste("File type not supported. Allowed types:", paste(allowed_extensions, collapse = ", ")))
+  }
+
+  # Additional validation for specific file types
+  if (tolower(file_ext) %in% c("xlsx", "xls")) {
+    validation_excel <- validate_excel_file(file_info$datapath)
+    if (!validation_excel$valid) {
+      errors <- c(errors, validation_excel$errors)
+    }
+  } else if (tolower(file_ext) == "csv") {
+    validation_csv <- validate_csv_file(file_info$datapath)
+    if (!validation_csv$valid) {
+      errors <- c(errors, validation_csv$errors)
+    }
+  }
+
+  # Log validation results
+  if (length(errors) > 0) {
+    debug_log("File validation failed", "FILE_UPLOAD_FLOW", level = "WARNING",
+              context = list(
+                filename = file_info$name,
+                file_size = file_info$size,
+                validation_errors = errors
+              ),
+              session_id = session_id)
+  } else {
+    debug_log("File validation successful", "FILE_UPLOAD_FLOW", level = "INFO",
+              context = list(
+                filename = file_info$name,
+                file_size = file_info$size,
+                file_extension = file_ext
+              ),
+              session_id = session_id)
+  }
+
+  return(list(
+    valid = length(errors) == 0,
+    errors = errors
+  ))
+}
+
+## Excel file specific validation
+validate_excel_file <- function(file_path) {
+  errors <- character(0)
+
+  tryCatch({
+    # Check if file can be read
+    sheets <- readxl::excel_sheets(file_path)
+
+    if (length(sheets) == 0) {
+      errors <- c(errors, "Excel file contains no sheets")
+    }
+
+    # If this is a session restore file, check for required sheets
+    if (all(c("Data", "Metadata") %in% sheets)) {
+      # Validate Data sheet
+      data_validation <- tryCatch({
+        data <- readxl::read_excel(file_path, sheet = "Data", n_max = 1)
+        if (ncol(data) == 0) {
+          errors <- c(errors, "Data sheet is empty")
+        }
+        if (nrow(data) == 0) {
+          errors <- c(errors, "Data sheet contains no data rows")
+        }
+        TRUE
+      }, error = function(e) {
+        errors <<- c(errors, paste("Cannot read Data sheet:", e$message))
+        FALSE
+      })
+
+      # Validate Metadata sheet
+      metadata_validation <- tryCatch({
+        metadata <- readxl::read_excel(file_path, sheet = "Metadata", n_max = 1)
+        TRUE
+      }, error = function(e) {
+        errors <<- c(errors, paste("Cannot read Metadata sheet:", e$message))
+        FALSE
+      })
+    } else {
+      # Regular Excel file - validate first sheet
+      tryCatch({
+        data <- readxl::read_excel(file_path, n_max = 1)
+        if (ncol(data) == 0) {
+          errors <- c(errors, "Excel file contains no columns")
+        }
+      }, error = function(e) {
+        errors <<- c(errors, paste("Cannot read Excel file:", e$message))
+      })
+    }
+
+  }, error = function(e) {
+    errors <<- c(errors, paste("Excel file is corrupted or invalid:", e$message))
+  })
+
+  return(list(
+    valid = length(errors) == 0,
+    errors = errors
+  ))
+}
+
+## CSV file specific validation
+validate_csv_file <- function(file_path) {
+  errors <- character(0)
+
+  tryCatch({
+    # Try to read first few lines to validate structure
+    sample_data <- readr::read_csv2(
+      file_path,
+      locale = readr::locale(
+        decimal_mark = ",",
+        grouping_mark = ".",
+        encoding = "ISO-8859-1"
+      ),
+      n_max = 5,
+      show_col_types = FALSE
+    )
+
+    if (ncol(sample_data) == 0) {
+      errors <- c(errors, "CSV file contains no columns")
+    }
+
+    if (nrow(sample_data) == 0) {
+      errors <- c(errors, "CSV file contains no data rows")
+    }
+
+    # Check for proper column separation
+    if (ncol(sample_data) == 1 && nrow(sample_data) > 0) {
+      first_value <- as.character(sample_data[1, 1])
+      if (grepl("[,;\\t]", first_value)) {
+        errors <- c(errors, "CSV file may have incorrect delimiter. Expected semicolon (;) separated values")
+      }
+    }
+
+  }, error = function(e) {
+    if (grepl("invalid", tolower(e$message)) || grepl("encoding", tolower(e$message))) {
+      errors <<- c(errors, "CSV file has encoding issues. Try saving as UTF-8 or ISO-8859-1")
+    } else {
+      errors <<- c(errors, paste("Cannot read CSV file:", e$message))
+    }
+  })
+
+  return(list(
+    valid = length(errors) == 0,
+    errors = errors
+  ))
+}
+
+# ENHANCED ERROR RECOVERY ====================================================
+
+## Enhanced error handling with recovery suggestions
+handle_upload_error <- function(error, file_info, session_id = NULL) {
+  error_message <- as.character(error$message)
+  error_type <- "unknown"
+  user_message <- "An unexpected error occurred during file upload"
+  suggestions <- character(0)
+
+  # Categorize error types and provide specific guidance
+  if (grepl("encoding|locale|character", error_message, ignore.case = TRUE)) {
+    error_type <- "encoding"
+    user_message <- "File encoding issue detected"
+    suggestions <- c(
+      "Try saving your file with UTF-8 or ISO-8859-1 encoding",
+      "Ensure Danish characters (æ, ø, å) are properly encoded",
+      "For Excel files: Save as 'Excel Workbook (.xlsx)' format"
+    )
+  } else if (grepl("permission|access|locked", error_message, ignore.case = TRUE)) {
+    error_type <- "permission"
+    user_message <- "File access permission issue"
+    suggestions <- c(
+      "Close the file in other applications (Excel, etc.)",
+      "Check that the file is not read-only",
+      "Try copying the file to a different location"
+    )
+  } else if (grepl("memory|size|allocation", error_message, ignore.case = TRUE)) {
+    error_type <- "memory"
+    user_message <- "File too large or memory issue"
+    suggestions <- c(
+      "Try uploading a smaller file",
+      "Remove unnecessary columns or rows",
+      "Split large datasets into smaller files"
+    )
+  } else if (grepl("column|header|sheet", error_message, ignore.case = TRUE)) {
+    error_type <- "structure"
+    user_message <- "File structure issue"
+    suggestions <- c(
+      "Ensure your file has proper column headers",
+      "Check that data is properly organized in rows and columns",
+      "For Excel files: Ensure data is in the first sheet or 'Data' sheet"
+    )
+  } else if (grepl("corrupt|invalid|damaged", error_message, ignore.case = TRUE)) {
+    error_type <- "corruption"
+    user_message <- "File appears to be corrupted"
+    suggestions <- c(
+      "Try re-saving the file from the original application",
+      "Check if the file opens correctly in Excel or other applications",
+      "Try exporting data to a new file"
+    )
+  }
+
+  # Log detailed error information
+  debug_log("Enhanced error handling triggered", "ERROR_HANDLING", level = "ERROR",
+            context = list(
+              error_type = error_type,
+              error_message = error_message,
+              filename = file_info$name,
+              file_size = file_info$size,
+              file_type = file_info$type,
+              suggestions = suggestions
+            ),
+            session_id = session_id)
+
+  # Create comprehensive user notification
+  notification_html <- tags$div(
+    tags$strong(user_message),
+    tags$br(),
+    tags$em(paste("Technical details:", error_message)),
+    if (length(suggestions) > 0) {
+      tags$div(
+        tags$br(),
+        tags$strong("Suggestions:"),
+        tags$ul(
+          lapply(suggestions, function(s) tags$li(s))
+        )
+      )
+    }
+  )
+
+  showNotification(
+    notification_html,
+    type = "error",
+    duration = 15
+  )
+
+  return(list(
+    error_type = error_type,
+    user_message = user_message,
+    suggestions = suggestions
+  ))
+}
+
+# DATA VALIDATION FOR AUTO-DETECTION ========================================
+
+## Validate data suitability for auto-detection
+validate_data_for_auto_detect <- function(data, session_id = NULL) {
+  issues <- character(0)
+  validation_results <- list()
+
+  # Check data dimensions
+  validation_results$rows <- nrow(data)
+  validation_results$columns <- ncol(data)
+
+  if (nrow(data) < 2) {
+    issues <- c(issues, "Too few data rows (minimum 2 required)")
+  }
+
+  if (ncol(data) < 2) {
+    issues <- c(issues, "Too few columns (minimum 2 required)")
+  }
+
+  # Check for reasonable column names
+  col_names <- names(data)
+  validation_results$column_names <- col_names
+
+  # Count empty/missing column names
+  empty_names <- sum(is.na(col_names) | col_names == "" | grepl("^\\.\\.\\.", col_names))
+  validation_results$empty_column_names <- empty_names
+
+  if (empty_names > 0) {
+    issues <- c(issues, paste(empty_names, "columns have missing or invalid names"))
+  }
+
+  # Check for data content
+  has_data_content <- sapply(data, function(col) {
+    if (is.numeric(col)) {
+      sum(!is.na(col)) > 0
+    } else if (is.character(col)) {
+      sum(nzchar(col, keepNA = FALSE)) > 0
+    } else if (is.logical(col)) {
+      sum(!is.na(col)) > 0
+    } else {
+      sum(!is.na(col)) > 0
+    }
+  })
+
+  columns_with_data <- sum(has_data_content)
+  validation_results$columns_with_data <- columns_with_data
+
+  if (columns_with_data < 2) {
+    issues <- c(issues, "Insufficient columns with meaningful data")
+  }
+
+  # Check for potential date columns (for X-axis)
+  potential_date_columns <- sapply(col_names, function(name) {
+    grepl("dato|date|tid|time", tolower(name)) ||
+    grepl("^(x|uge|måned|år|dag)", tolower(name))
+  })
+  validation_results$potential_date_columns <- sum(potential_date_columns)
+
+  # Check for potential numeric columns (for Y-axis)
+  potential_numeric_columns <- sapply(data, function(col) {
+    if (is.numeric(col)) return(TRUE)
+    if (is.character(col)) {
+      # Check if character data looks like it could be numeric
+      non_empty <- col[nzchar(col, keepNA = FALSE)]
+      if (length(non_empty) == 0) return(FALSE)
+      # Try to parse some values as numbers (Danish format)
+      sample_size <- min(10, length(non_empty))
+      sample_values <- non_empty[1:sample_size]
+      parsed <- suppressWarnings(parse_danish_number(sample_values))
+      return(sum(!is.na(parsed)) > 0)
+    }
+    return(FALSE)
+  })
+  validation_results$potential_numeric_columns <- sum(potential_numeric_columns)
+
+  if (sum(potential_numeric_columns) < 1) {
+    issues <- c(issues, "No suitable numeric columns found for Y-axis")
+  }
+
+  # Overall suitability assessment
+  suitable <- length(issues) == 0
+
+  # Log validation results
+  debug_log("Data validation for auto-detection completed", "FILE_UPLOAD_FLOW", level = "INFO",
+            context = list(
+              suitable = suitable,
+              validation_results = validation_results,
+              issues = if (length(issues) > 0) issues else "none"
+            ),
+            session_id = session_id)
+
+  return(list(
+    suitable = suitable,
+    issues = issues,
+    validation_results = validation_results
+  ))
+}
+
+# EDGE CASE HANDLING =========================================================
+
+## Enhanced data cleaning and preprocessing
+preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
+  log_debug("Starting data preprocessing...", "DATA_PREPROCESSING")
+
+  original_dims <- c(nrow(data), ncol(data))
+  cleaning_log <- list()
+
+  # Handle completely empty rows
+  if (nrow(data) > 0) {
+    empty_rows <- apply(data, 1, function(row) all(is.na(row) | row == "" | row == " "))
+    if (sum(empty_rows) > 0) {
+      data <- data[!empty_rows, ]
+      cleaning_log$empty_rows_removed <- sum(empty_rows)
+      log_debug(paste("Removed", sum(empty_rows), "completely empty rows"), "DATA_PREPROCESSING")
+    }
+  }
+
+  # Handle columns with only missing values
+  if (ncol(data) > 0) {
+    empty_cols <- sapply(data, function(col) all(is.na(col) | col == "" | col == " "))
+    if (sum(empty_cols) > 0) {
+      data <- data[, !empty_cols, drop = FALSE]
+      cleaning_log$empty_columns_removed <- sum(empty_cols)
+      log_debug(paste("Removed", sum(empty_cols), "completely empty columns"), "DATA_PREPROCESSING")
+    }
+  }
+
+  # Clean column names
+  if (ncol(data) > 0) {
+    original_names <- names(data)
+    cleaned_names <- make.names(original_names, unique = TRUE)
+
+    # Replace problematic characters with readable alternatives
+    cleaned_names <- gsub("\\.\\.+", "_", cleaned_names)  # Multiple dots to underscore
+    cleaned_names <- gsub("^X", "Column_", cleaned_names)  # R's automatic X prefix
+    cleaned_names <- gsub("\\.$", "", cleaned_names)  # Trailing dots
+
+    if (!identical(original_names, cleaned_names)) {
+      names(data) <- cleaned_names
+      cleaning_log$column_names_cleaned <- TRUE
+      log_debug("Cleaned column names for R compatibility", "DATA_PREPROCESSING")
+    }
+  }
+
+  final_dims <- c(nrow(data), ncol(data))
+  cleaning_log$dimension_change <- list(
+    original = original_dims,
+    final = final_dims
+  )
+
+  # Log preprocessing results
+  debug_log("Data preprocessing completed", "FILE_UPLOAD_FLOW", level = "INFO",
+            context = list(
+              filename = file_info$name,
+              cleaning_log = cleaning_log,
+              original_dimensions = original_dims,
+              final_dimensions = final_dims
+            ),
+            session_id = session_id)
+
+  log_debug(paste("Data preprocessing completed - dimensions:", final_dims[1], "x", final_dims[2]), "DATA_PREPROCESSING")
+
+  return(list(
+    data = data,
+    cleaning_log = cleaning_log
+  ))
 }
