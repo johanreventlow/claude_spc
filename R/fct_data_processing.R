@@ -43,22 +43,15 @@ setup_column_management <- function(input, output, session, values, app_state = 
   cat("DEBUG: [COLUMN_MGMT] Setting up column management\n")
   cat("DEBUG: [COLUMN_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
 
-  # PHASE 4: Centralized state availability check
-  use_centralized_state <- !is.null(app_state)
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-    cat("DEBUG: [PHASE4] Centralized state available for column management\n")
-  }
+  # PHASE 4: Centralized state is now always available
+  cat("DEBUG: [PHASE4] Centralized state available for column management\n")
 
   # Opdater kolonnevalg når data ændres
   observe({
     log_debug("Column update observer triggered", "COLUMN_MGMT")
 
-    # PHASE 4: Check both old and new state management for updating_table
-    updating_table_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$updating_table
-    } else {
-      values$updating_table
-    }
+    # PHASE 4: Use unified state management
+    updating_table_check <- app_state$data$updating_table
 
     if (updating_table_check) {
       log_debug("Skipping - table update in progress", "COLUMN_MGMT")
@@ -66,9 +59,9 @@ setup_column_management <- function(input, output, session, values, app_state = 
     }
 
     # Skip hvis auto-detect er i gang for at undgå at overskrive auto-detect resultater
-    # PHASE 4: Check both old and new state management
+    # PHASE 4: Use unified state management
     auto_detect_active <- values$auto_detect_in_progress ||
-                         (use_centralized_state && app_state$columns$auto_detect$in_progress)
+                         app_state$columns$auto_detect$in_progress
 
     if (auto_detect_active) {
       log_debug("Skipping - auto-detect in progress", "COLUMN_MGMT")
@@ -90,12 +83,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
       }
     }
 
-    # PHASE 4: Check both old and new state management for current_data
-    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data
-    } else {
-      values$current_data
-    }
+    # PHASE 4: Use unified state management
+    current_data_check <- app_state$data$current_data
     req(current_data_check)
     cat("DEBUG: [COLUMN_MGMT] Data available - processing column choices\n")
 
@@ -142,12 +131,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
   # Auto-detekterings trigger flag - bruges kun til manuel triggering (ikke test mode)
   observeEvent({
-    # PHASE 4: Check both old and new state management for current_data
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data
-    } else {
-      values$current_data
-    }
+    # PHASE 4: Use unified state management
+    app_state$data$current_data
   },
     {
       cat("DEBUG: [AUTO_DETECT] Manual auto-detect observer triggered\n")
@@ -162,12 +147,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
         return()
       }
 
-      # PHASE 4: Check both old and new state management for current_data
-      current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$data$current_data
-      } else {
-        values$current_data
-      }
+      # PHASE 4: Use unified state management
+      current_data_check <- app_state$data$current_data
       data_available <- !is.null(current_data_check)
       x_empty <- is.null(input$x_column) || input$x_column == ""
       y_empty <- is.null(input$y_column) || input$y_column == ""
@@ -183,10 +164,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
         # PHASE 4: Sync to both old and new state management
         values$auto_detect_trigger <- timestamp # Brug timestamp for at sikre reaktivitet
-        if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-          app_state$columns$auto_detect$trigger <- timestamp
-          cat("DEBUG: [PHASE4] Synced auto_detect_trigger to centralized state\n")
-        }
+        app_state$columns$auto_detect$trigger <- timestamp
+        cat("DEBUG: [PHASE4] Synced auto_detect_trigger to centralized state\n")
       } else {
         cat("DEBUG: [AUTO_DETECT] ❌ Conditions not met for auto-detect\n")
       }
@@ -204,10 +183,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
       # PHASE 4: Sync to both old and new state management
       values$auto_detect_trigger <- timestamp
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$columns$auto_detect$trigger <- timestamp
-        cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state\n")
-      }
+      app_state$columns$auto_detect$trigger <- timestamp
+      cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state\n")
     },
     ignoreInit = TRUE, ignoreNULL = TRUE,
     priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT
@@ -221,10 +198,8 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
       # PHASE 4: Sync to both old and new state management
       values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$columns$auto_detect$in_progress <- TRUE
-        cat("DEBUG: [PHASE4] Synced auto_detect_in_progress TRUE to centralized state\n")
-      }
+      app_state$columns$auto_detect$in_progress <- TRUE
+      cat("DEBUG: [PHASE4] Synced auto_detect_in_progress TRUE to centralized state\n")
 
       cat("DEBUG: [AUTO_DETECT_EXEC] Calling auto_detect_and_update_columns...\n")
       # PHASE 4: Pass centralized state to auto-detect function
@@ -233,19 +208,15 @@ setup_column_management <- function(input, output, session, values, app_state = 
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting initial_auto_detect_completed = TRUE\n")
       # PHASE 4: Sync to both old and new state management
       values$initial_auto_detect_completed <- TRUE # Marker som færdig efter første kørsel
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$columns$auto_detect$completed <- TRUE
-        cat("DEBUG: [PHASE4] Synced initial_auto_detect_completed to centralized state\n")
-      }
+      app_state$columns$auto_detect$completed <- TRUE
+      cat("DEBUG: [PHASE4] Synced initial_auto_detect_completed to centralized state\n")
 
       # Clear flag after auto-detect completion (event-driven instead of timing)
       cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = FALSE\n")
       # PHASE 4: Sync to both old and new state management
       values$auto_detect_in_progress <- FALSE
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$columns$auto_detect$in_progress <- FALSE
-        cat("DEBUG: [PHASE4] Synced auto_detect_in_progress FALSE to centralized state\n")
-      }
+      app_state$columns$auto_detect$in_progress <- FALSE
+      cat("DEBUG: [PHASE4] Synced auto_detect_in_progress FALSE to centralized state\n")
 
       cat("DEBUG: [AUTO_DETECT_EXEC] ✅ Auto-detect execution completed\n")
     },
@@ -313,11 +284,9 @@ setup_column_management <- function(input, output, session, values, app_state = 
       # PHASE 4: Sync to both old and new state management
       values$ui_sync_needed <- NULL
       values$last_ui_sync_time <- Sys.time()
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$columns$ui_sync$needed <- NULL
-        app_state$columns$ui_sync$last_sync_time <- Sys.time()
-        cat("DEBUG: [PHASE4] Synced UI sync clear to centralized state\n")
-      }
+      app_state$columns$ui_sync$needed <- NULL
+      app_state$columns$ui_sync$last_sync_time <- Sys.time()
+      cat("DEBUG: [PHASE4] Synced UI sync clear to centralized state\n")
       cat("DEBUG: [UI_SYNC] ✅ UI sync completed, set timestamp to prevent override\n")
     },
     ignoreInit = TRUE, ignoreNULL = TRUE,
@@ -328,37 +297,27 @@ setup_column_management <- function(input, output, session, values, app_state = 
   observeEvent(input$auto_detect_columns, {
     # PHASE 4: Sync to both old and new state management
     values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$columns$auto_detect$in_progress <- TRUE
-      cat("DEBUG: [PHASE4] Manual auto-detect: synced in_progress TRUE to centralized state\n")
-    }
+    app_state$columns$auto_detect$in_progress <- TRUE
+    cat("DEBUG: [PHASE4] Manual auto-detect: synced in_progress TRUE to centralized state\n")
 
     # PHASE 4: Pass centralized state to auto-detect function
     auto_detect_and_update_columns(input, session, values, app_state)
 
     # PHASE 4: Sync completion state to both systems
     values$initial_auto_detect_completed <- TRUE # Marker som færdig
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$columns$auto_detect$completed <- TRUE
-      cat("DEBUG: [PHASE4] Manual auto-detect: synced completed to centralized state\n")
-    }
+    app_state$columns$auto_detect$completed <- TRUE
+    cat("DEBUG: [PHASE4] Manual auto-detect: synced completed to centralized state\n")
 
     # PHASE 4: Clear flag in both systems
     values$auto_detect_in_progress <- FALSE # Clear flag efter auto-detect er færdig
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$columns$auto_detect$in_progress <- FALSE
-      cat("DEBUG: [PHASE4] Manual auto-detect: synced in_progress FALSE to centralized state\n")
-    }
+    app_state$columns$auto_detect$in_progress <- FALSE
+    cat("DEBUG: [PHASE4] Manual auto-detect: synced in_progress FALSE to centralized state\n")
   })
 
   # Kolonnevaliderings output
   output$column_validation_messages <- renderUI({
-    # PHASE 4: Check both old and new state management for current_data
-    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data
-    } else {
-      values$current_data
-    }
+    # PHASE 4: Use unified state management
+    current_data_check <- app_state$data$current_data
     req(current_data_check)
 
     if ((is.null(input$x_column) || input$x_column == "") ||
@@ -428,12 +387,12 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
   # Redigér kolonnenavne modal
   observeEvent(input$edit_column_names, {
-    show_column_edit_modal(session, values)
+    show_column_edit_modal(session, values, app_state)
   })
 
   # Bekræft kolonnenavn ændringer
   observeEvent(input$confirm_column_names, {
-    handle_column_name_changes(input, session, values)
+    handle_column_name_changes(input, session, values, app_state)
   })
 
   # Tilføj kolonne
@@ -442,7 +401,7 @@ setup_column_management <- function(input, output, session, values, app_state = 
   })
 
   observeEvent(input$confirm_add_col, {
-    handle_add_column(input, session, values)
+    handle_add_column(input, session, values, app_state)
   })
 }
 
@@ -951,13 +910,11 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
               if (current_rows == converted_rows) {
                 # Safe to assign - dimensions match
                 values$current_data[[candidate_name]] <- converted_dates
-                if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-                  app_state_rows <- nrow(app_state$data$current_data)
-                  if (app_state_rows == converted_rows) {
-                    app_state$data$current_data[[candidate_name]] <- converted_dates
-                  } else {
-                    log_warn(paste("Skipping app_state assignment - dimension mismatch:", app_state_rows, "vs", converted_rows), "POST_PROCESSING")
-                  }
+                app_state_rows <- nrow(app_state$data$current_data)
+                if (app_state_rows == converted_rows) {
+                  app_state$data$current_data[[candidate_name]] <- converted_dates
+                } else {
+                  log_warn(paste("Skipping app_state assignment - dimension mismatch:", app_state_rows, "vs", converted_rows), "POST_PROCESSING")
                 }
               } else {
                 log_warn(paste("Skipping date conversion assignment - dimension mismatch:", current_rows, "vs", converted_rows), "POST_PROCESSING")
@@ -1119,10 +1076,9 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
       timestamp = Sys.time()  # Force reactivity even if values are same
     )
     # PHASE 4: Sync auto_detected_columns to centralized state
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$columns$auto_detect$results <- list(
-        x_col = x_col,
-        y_col = taeller_col,
+    app_state$columns$auto_detect$results <- list(
+      x_col = x_col,
+      y_col = taeller_col,
         n_col = naevner_col,
         skift_col = skift_col,
         frys_col = frys_col,
@@ -1130,7 +1086,6 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
         timestamp = Sys.time()
       )
       cat("DEBUG: [PHASE4] Synced auto_detected_columns to centralized state\n")
-    }
 
     # Trigger UI sync for visual feedback on Kolonnematch tab using reactive trigger
     cat("DEBUG: [AUTO_DETECT_FUNC] 🎯 CRITICAL: Setting ui_sync_needed with:\n")
@@ -1154,10 +1109,8 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
     # PHASE 4: Sync to both old and new state management
     values$ui_sync_needed <- sync_data
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$columns$ui_sync$needed <- sync_data
-      cat("DEBUG: [PHASE4] Synced UI sync data to centralized state\n")
-    }
+    app_state$columns$ui_sync$needed <- sync_data
+    cat("DEBUG: [PHASE4] Synced UI sync data to centralized state\n")
 
     cat("DEBUG: [AUTO_DETECT_FUNC] ✅ Auto-detect completed successfully\n")
     cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
@@ -1187,13 +1140,9 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
 ## Vis kolonne-redigeré modal
 # Viser modal dialog for redigering af kolonnenavne
-show_column_edit_modal <- function(session, values) {
-  # PHASE 4: Check both old and new state management for current_data
-  current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-    app_state$data$current_data
-  } else {
-    values$current_data
-  }
+show_column_edit_modal <- function(session, values, app_state = NULL) {
+  # PHASE 4: Use unified state management
+  current_data_check <- app_state$data$current_data
   req(current_data_check)
 
   current_names <- names(current_data_check)
@@ -1228,13 +1177,9 @@ show_column_edit_modal <- function(session, values) {
 
 ## Håndtér kolonnenavn ændringer
 # Behandler ændringer af kolonnenavne fra modal dialog
-handle_column_name_changes <- function(input, session, values) {
-  # PHASE 4: Check both old and new state management for current_data
-  current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-    app_state$data$current_data
-  } else {
-    values$current_data
-  }
+handle_column_name_changes <- function(input, session, values, app_state = NULL) {
+  # PHASE 4: Use unified state management
+  current_data_check <- app_state$data$current_data
   req(current_data_check)
 
   current_names <- names(current_data_check)
@@ -1260,9 +1205,7 @@ handle_column_name_changes <- function(input, session, values) {
 
   # PHASE 4: Sync assignment to both old and new state management
   names(values$current_data) <- new_names
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-    names(app_state$data$current_data) <- new_names
-  }
+  names(app_state$data$current_data) <- new_names
 
   removeModal()
 
@@ -1301,13 +1244,9 @@ show_add_column_modal <- function() {
 
 ## Håndtér tilføjelse af kolonne
 # Behandler tilføjelse af nye kolonner til data
-handle_add_column <- function(input, session, values) {
-  # PHASE 4: Check both old and new state management for current_data
-  current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-    app_state$data$current_data
-  } else {
-    values$current_data
-  }
+handle_add_column <- function(input, session, values, app_state = NULL) {
+  # PHASE 4: Use unified state management
+  current_data_check <- app_state$data$current_data
   req(input$new_col_name, current_data_check)
 
   new_col_name <- input$new_col_name
@@ -1316,21 +1255,15 @@ handle_add_column <- function(input, session, values) {
   if (new_col_type == "numeric") {
     # PHASE 4: Sync assignment to both old and new state management
     values$current_data[[new_col_name]] <- rep(NA_real_, nrow(current_data_check))
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data[[new_col_name]] <- rep(NA_real_, nrow(current_data_check))
-    }
+    app_state$data$current_data[[new_col_name]] <- rep(NA_real_, nrow(current_data_check))
   } else if (new_col_type == "date") {
     # PHASE 4: Sync assignment to both old and new state management
     values$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
-    }
+    app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
   } else {
     # PHASE 4: Sync assignment to both old and new state management
     values$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
-    }
+    app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
   }
 
   removeModal()
@@ -1348,21 +1281,13 @@ handle_add_column <- function(input, session, values) {
 setup_data_table <- function(input, output, session, values) {
   # Hovedtabel rendering med excelR
   output$main_data_table <- excelR::renderExcel({
-    # PHASE 4: Check both old and new state management for current_data
-    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data
-    } else {
-      values$current_data
-    }
+    # PHASE 4: Use unified state management
+    current_data_check <- app_state$data$current_data
     req(current_data_check)
 
     # Inkluder table_version for at tvinge re-render efter gendannelse
-    # PHASE 4: Check both old and new state management for table_version
-    version_trigger <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$table_version
-    } else {
-      values$table_version
-    }
+    # PHASE 4: Use unified state management
+    version_trigger <- app_state$session$table_version
 
     data <- current_data_check
 
@@ -1403,19 +1328,11 @@ setup_data_table <- function(input, output, session, values) {
   # Håndtér excelR tabel ændringer
   observeEvent(input$main_data_table,
     {
-      # PHASE 4: Check both old and new state management for updating_table
-      updating_table_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$data$updating_table
-      } else {
-        values$updating_table
-      }
+      # PHASE 4: Use unified state management
+      updating_table_check <- app_state$data$updating_table
 
-      # PHASE 4: Check both old and new state management for restoring_session
-      restoring_session_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$session$restoring_session
-      } else {
-        values$restoring_session
-      }
+      # PHASE 4: Use unified state management
+      restoring_session_check <- app_state$session$restoring_session
 
       if (updating_table_check || restoring_session_check) {
         return()
@@ -1423,24 +1340,18 @@ setup_data_table <- function(input, output, session, values) {
 
       # PHASE 4: Sync to both old and new state management
       values$updating_table <- TRUE
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$data$updating_table <- TRUE
-        log_debug("Set updating_table=TRUE in centralized state", "PHASE4")
-      }
+      app_state$data$updating_table <- TRUE
+      log_debug("Set updating_table=TRUE in centralized state", "PHASE4")
       # PHASE 4: Sync to both old and new state management
       values$table_operation_in_progress <- TRUE
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$data$table_operation_in_progress <- TRUE
-      }
+      app_state$data$table_operation_in_progress <- TRUE
 
       on.exit(
         {
           # PHASE 4: Sync to both old and new state management
           values$updating_table <- FALSE
-          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-            app_state$data$updating_table <- FALSE
-            log_debug("Set updating_table=FALSE in centralized state", "PHASE4")
-          }
+          app_state$data$updating_table <- FALSE
+          log_debug("Set updating_table=FALSE in centralized state", "PHASE4")
         },
         add = TRUE
       )
@@ -1448,9 +1359,7 @@ setup_data_table <- function(input, output, session, values) {
       # Trigger event-driven cleanup instead of timing-based
       # PHASE 4: Sync to both old and new state management
       values$table_operation_cleanup_needed <- TRUE
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$data$table_operation_cleanup_needed <- TRUE
-      }
+      app_state$data$table_operation_cleanup_needed <- TRUE
 
       tryCatch(
         {
@@ -1529,9 +1438,7 @@ setup_data_table <- function(input, output, session, values) {
 
           # PHASE 4: Sync assignment to both old and new state management
           values$current_data <- new_df
-          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-            app_state$data$current_data <- new_df
-          }
+          app_state$data$current_data <- new_df
 
           showNotification("Tabel opdateret", type = "message", duration = 2)
         },
@@ -1550,38 +1457,28 @@ setup_data_table <- function(input, output, session, values) {
 
   # Tilføj række
   observeEvent(input$add_row, {
-    # PHASE 4: Check both old and new state management for current_data
-    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data
-    } else {
-      values$current_data
-    }
+    # PHASE 4: Use unified state management
+    current_data_check <- app_state$data$current_data
     req(current_data_check)
 
     # Sæt vedvarende flag for at forhindre auto-save interferens
     # PHASE 4: Sync to both old and new state management
     values$table_operation_in_progress <- TRUE
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$table_operation_in_progress <- TRUE
-    }
+    app_state$data$table_operation_in_progress <- TRUE
 
     new_row <- current_data_check[1, ]
     new_row[1, ] <- NA
 
     # PHASE 4: Sync assignment to both old and new state management
     values$current_data <- rbind(values$current_data, new_row)
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data <- rbind(app_state$data$current_data, new_row)
-    }
+    app_state$data$current_data <- rbind(app_state$data$current_data, new_row)
 
     showNotification("Ny række tilføjet", type = "message")
 
     # Trigger event-driven cleanup instead of timing-based
     # PHASE 4: Sync to both old and new state management
     values$table_operation_cleanup_needed <- TRUE
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$table_operation_cleanup_needed <- TRUE
-    }
+    app_state$data$table_operation_cleanup_needed <- TRUE
   })
 
   # Nulstil tabel

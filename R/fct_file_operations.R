@@ -8,8 +8,7 @@
 
 ## Setup fil upload funktionalitet
 setup_file_upload <- function(input, output, session, values, waiter_file, app_state = NULL) {
-  # PHASE 4: Check if centralized state is available
-  use_centralized_state <- !is.null(app_state)
+  # Unified state: App state is always available
   log_debug("===========================================", "FILE_UPLOAD")
   log_debug("Setting up file upload handlers", "FILE_UPLOAD")
 
@@ -63,11 +62,9 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     log_debug("Setting updating_table flag...", "FILE_UPLOAD")
     upload_tracer$step("state_management_setup")
 
-    # PHASE 4: Sync to both old and new state management
+    # Unified state: Set table updating flag
     values$updating_table <- TRUE
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$updating_table <- TRUE
-    }
+    app_state$data$updating_table <- TRUE
 
     debug_log("File upload state flags set", "FILE_UPLOAD_FLOW", level = "TRACE",
               context = list(updating_table = TRUE),
@@ -75,11 +72,9 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     on.exit(
       {
         log_debug("Clearing updating_table flag on exit...", "FILE_UPLOAD")
-        # PHASE 4: Sync to both old and new state management
+        # Unified state: Clear table updating flag
         values$updating_table <- FALSE
-        if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-          app_state$data$updating_table <- FALSE
-        }
+        app_state$data$updating_table <- FALSE
         log_debug("✅ updating_table flag cleared", "FILE_UPLOAD")
       },
       add = TRUE
@@ -154,11 +149,8 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     log_debug("Auto-detect trigger flag detected", "AUTO_DETECT_TRIGGER")
 
     # Check at der er data at arbejde med
-    current_data_check <- if (use_centralized_state && !is.null(app_state)) {
-      app_state$data$current_data
-    } else {
-      values$current_data
-    }
+    # Unified state: Use centralized state for current data
+    current_data_check <- app_state$data$current_data
 
     req(current_data_check)
     req(values$trigger_auto_detect == TRUE)
@@ -176,19 +168,16 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     if (!is.null(auto_detect_result)) {
       log_debug("✅ Auto-detect completed successfully from trigger", "AUTO_DETECT_TRIGGER")
       # Sæt auto_detect_done flag
+      # Unified state: Set auto detect completed
       values$auto_detect_done <- TRUE
-      if (use_centralized_state && !is.null(app_state)) {
-        app_state$columns$auto_detect$completed <- TRUE
-      }
+      app_state$columns$auto_detect$completed <- TRUE
     } else {
       log_debug("⚠️ Auto-detect failed from trigger", "AUTO_DETECT_TRIGGER")
     }
 
-    # Ryd trigger flag
+    # Unified state: Clear trigger flag
     values$trigger_auto_detect <- FALSE
-    if (use_centralized_state && !is.null(app_state)) {
-      app_state$columns$auto_detect$trigger_needed <- FALSE
-    }
+    app_state$columns$auto_detect$trigger_needed <- FALSE
 
     log_debug("✅ Auto-detect trigger processing completed", "AUTO_DETECT_TRIGGER")
     log_debug("===========================================", "AUTO_DETECT_TRIGGER")
@@ -226,35 +215,21 @@ handle_excel_upload <- function(file_path, session, values) {
     metadata <- parse_session_metadata(session_lines, names(data))
 
     # Load data
-    # PHASE 4: Sync assignment to both old and new state management
+    # Unified state: Set current data
     values$current_data <- as.data.frame(data)
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data <- as.data.frame(data)
-    }
-    # PHASE 4: Sync original_data to both old and new state management
-    # PHASE 4: Sync original_data to both old and new state management
-  values$original_data <- as.data.frame(data)
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$current_data <- as.data.frame(data)
+    # Unified state: Set original data
+    values$original_data <- as.data.frame(data)
     app_state$data$original_data <- as.data.frame(data)
-  }
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$original_data <- as.data.frame(data)
-    }
-    # PHASE 4: Sync to both old and new state management
+    # Unified state: Set file uploaded flag
     values$file_uploaded <- TRUE
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$session$file_uploaded <- TRUE
-    }
-    # PHASE 4: Sync to both old and new state management
+    app_state$session$file_uploaded <- TRUE
+    # Unified state: Set auto detect completed (skip since we have session info)
     values$auto_detect_done <- TRUE # Skip auto-detect since we have session info
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$columns$auto_detect$completed <- TRUE
-    }
-    # PHASE 4: Sync to both old and new state management
+    app_state$columns$auto_detect$completed <- TRUE
+    # Unified state: Re-enable Anhøj rules when real data is uploaded
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$ui$hide_anhoej_rules <- FALSE
-    }
+    app_state$ui$hide_anhoej_rules <- FALSE
 
     # Restore metadata with delay to ensure UI is ready
     invalidateLater(500)
@@ -274,37 +249,22 @@ handle_excel_upload <- function(file_path, session, values) {
     # Ensure standard columns are present and in correct order
     data <- ensure_standard_columns(data)
 
-    # PHASE 4: Sync assignment to both old and new state management
+    # Unified state: Set current data
     values$current_data <- as.data.frame(data)
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data <- as.data.frame(data)
-    }
-    # PHASE 4: Sync original_data to both old and new state management
-    # PHASE 4: Sync original_data to both old and new state management
-  values$original_data <- as.data.frame(data)
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+    app_state$data$current_data <- as.data.frame(data)
+    # Unified state: Set original data
+    values$original_data <- as.data.frame(data)
     app_state$data$original_data <- as.data.frame(data)
-  }
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$original_data <- as.data.frame(data)
-    }
-    # PHASE 4: Sync to both old and new state management
+    # Unified state: Set file uploaded flag
     values$file_uploaded <- TRUE
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$session$file_uploaded <- TRUE
-    }
-    # PHASE 4: Sync to both old and new state management
+    app_state$session$file_uploaded <- TRUE
+    # Unified state: Set auto detect flag
     values$auto_detect_done <- FALSE
-    # PHASE 4: Sync auto_detect_done to centralized state
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$columns$auto_detect$completed <- FALSE
-    }
+    app_state$columns$auto_detect$completed <- FALSE
     values$initial_auto_detect_completed <- FALSE # Reset for new data
-    # PHASE 4: Sync to both old and new state management
+    # Unified state: Re-enable Anhøj rules when real data is uploaded
     values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
-    if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$ui$hide_anhoej_rules <- FALSE
-    }
+    app_state$ui$hide_anhoej_rules <- FALSE
 
     showNotification(
       paste("Excel fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
@@ -403,42 +363,31 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
     debug_state_snapshot("before_csv_data_assignment", app_state, session_id = session_id)
   }
 
-  # PHASE 4: Sync assignment to both old and new state management
+  # Unified state: Set current data
   values$current_data <- as.data.frame(data)
-  if (!is.null(app_state)) {
-    app_state$data$current_data <- as.data.frame(data)
-    log_debug("✅ Synced current_data to app_state", "CSV_READ")
-  }
-  # PHASE 4: Sync original_data to both old and new state management
+  app_state$data$current_data <- as.data.frame(data)
+  log_debug("✅ Synced current_data to app_state", "CSV_READ")
+  # Unified state: Set original data
   values$original_data <- as.data.frame(data)
-  if (!is.null(app_state)) {
-    app_state$data$original_data <- as.data.frame(data)
-    log_debug("✅ Synced original_data to app_state", "CSV_READ")
-  }
+  app_state$data$original_data <- as.data.frame(data)
+  log_debug("✅ Synced original_data to app_state", "CSV_READ")
+  # Unified state: Set file uploaded flag
   values$file_uploaded <- TRUE
-  # PHASE 4: Sync to both old and new state management
-  if (!is.null(app_state)) {
-    app_state$session$file_uploaded <- TRUE
-  }
+  app_state$session$file_uploaded <- TRUE
+  # Unified state: Set auto detect flag
   values$auto_detect_done <- FALSE
-  # PHASE 4: Sync auto_detect_done to centralized state
-  if (!is.null(app_state)) {
-    app_state$columns$auto_detect$completed <- FALSE
-  }
-  # PHASE 4: Sync to both old and new state management
+  app_state$columns$auto_detect$completed <- FALSE
+  # Unified state: Re-enable Anhøj rules when real data is uploaded
   values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
-  if (!is.null(app_state)) {
-    app_state$ui$hide_anhoej_rules <- FALSE
-  }
+  app_state$ui$hide_anhoej_rules <- FALSE
   log_debug("✅ Reactive values set successfully", "CSV_READ")
 
   # TRIGGER AUTO-DETECT: Sæt flag til at triggre auto-detect i Shiny context
   log_debug("Setting auto-detect trigger flag after CSV upload...", "CSV_READ")
+  # Unified state: Set auto-detect trigger flag
   values$trigger_auto_detect <- TRUE
-  if (!is.null(app_state)) {
-    app_state$columns$auto_detect$trigger_needed <- TRUE
-    log_debug("✅ Synced trigger flag to app_state", "CSV_READ")
-  }
+  app_state$columns$auto_detect$trigger_needed <- TRUE
+  log_debug("✅ Synced trigger flag to app_state", "CSV_READ")
   log_debug("✅ Auto-detect trigger flag set", "CSV_READ")
 
   debug_log("Auto-detect trigger flag set", "FILE_UPLOAD_FLOW", level = "INFO",
@@ -602,12 +551,8 @@ setup_download_handlers <- function(input, output, session, values) {
 # Opretter omfattende Excel eksport med data og metadata
 create_complete_excel_export <- function(file, input, values) {
   # Hent aktive data til eksport
-  # PHASE 4: Check both old and new state management for current_data
-  active_data_for_export <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-    app_state$data$current_data
-  } else {
-    values$current_data
-  }
+  # Unified state: Use centralized state for current data
+  active_data_for_export <- app_state$data$current_data
 
   # Filtrer tomme rækker fra
   if (!is.null(active_data_for_export)) {
@@ -743,8 +688,8 @@ create_session_info_lines <- function(input, active_data_for_export, values) {
     paste("• Rækker:", nrow(active_data_for_export)),
     paste("• Kolonner:", ncol(active_data_for_export)),
     paste("• Kolonnenavne:", paste(names(active_data_for_export), collapse = ", ")),
-    # PHASE 4: Check both old and new state management for file_uploaded
-    paste("• Data kilde:", if (if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) app_state$session$file_uploaded else values$file_uploaded) "File Upload" else "Manuel indtastning"),
+    # Unified state: Use centralized state for file_uploaded
+    paste("• Data kilde:", if (app_state$session$file_uploaded) "File Upload" else "Manuel indtastning"),
     paste("• Eksporteret:", format(Sys.time(), "%d-%m-%Y %H:%M")),
     "",
     "TEKNISK INFORMATION:",

@@ -109,25 +109,18 @@ app_server <- function(input, output, session) {
 
           # Set reactive values
           values$current_data <- test_data
-          # PHASE 4: Sync original_data to both old and new state management
+          # Unified state: Set data in both legacy and centralized state
           values$original_data <- test_data
-          if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-            app_state$data$original_data <- test_data
-          }
-          # PHASE 4: Sync to both old and new state management
+          app_state$data$original_data <- test_data
+          # Unified state: Set data and flags in both legacy and centralized state
           app_state$data$current_data <- test_data
-          # PHASE 4: original_data er nu tilføjet til centralized state schema
           values$file_uploaded <- TRUE
           app_state$session$file_uploaded <- TRUE
-          # PHASE 4: Sync to both old and new state management
           values$user_started_session <- TRUE # Ensure dataLoaded triggers correctly
           app_state$session$user_started_session <- TRUE
-          # PHASE 4: Sync to both old and new state management
           values$auto_detect_done <- FALSE # Will trigger auto-detect
           app_state$columns$auto_detect$completed <- FALSE
           values$initial_auto_detect_completed <- FALSE # Reset for new data
-
-          # PHASE 4: Sync to both old and new state management
           values$hide_anhoej_rules <- FALSE # Show Anhøj rules for real data
           app_state$ui$hide_anhoej_rules <- FALSE
 
@@ -185,7 +178,7 @@ app_server <- function(input, output, session) {
   setup_column_management(input, output, session, values, app_state)
 
   ## Visualiserings logik
-  visualization <- setup_visualization(input, output, session, values)
+  visualization <- setup_visualization(input, output, session, values, app_state)
 
   ## Download handlers
   setup_download_handlers(input, output, session, values)
@@ -199,29 +192,21 @@ app_server <- function(input, output, session) {
   # TEST MODE: Set auto-detect trigger flag AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {
     observe({
-      # PHASE 4: Check both old and new state management for current_data
-      current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$data$current_data
-      } else {
-        values$current_data
-      }
+      # Unified state: Use centralized state as primary data source
+      current_data_check <- app_state$data$current_data
 
       if (!is.null(current_data_check)) {
         log_debug("Setting test_mode_auto_detect_ready flag after setup", "TEST_MODE")
         timestamp <- Sys.time()
 
-        # PHASE 4: Gradual migration - sync to both old and new state
+        # Unified state: Set timestamp in both legacy and centralized state
         values$test_mode_auto_detect_ready <- timestamp
         app_state$test_mode$auto_detect_ready <- timestamp
-        log_debug("Synced test_mode_auto_detect_ready to both systems", "PHASE4")
+        log_debug("Synced test_mode_auto_detect_ready to both systems", "UNIFIED_STATE")
       }
     }) %>% bindEvent({
-      # PHASE 4: Check both old and new state management for current_data
-      if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-        app_state$data$current_data
-      } else {
-        values$current_data
-      }
+      # Unified state: Use centralized state for reactive triggers
+      app_state$data$current_data
     }, once = TRUE, ignoreNULL = TRUE)
   }
 

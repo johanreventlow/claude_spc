@@ -20,6 +20,7 @@ initialize_reactive_values <- function() {
     auto_detect_done = FALSE,
     initial_auto_detect_completed = FALSE,
     auto_detect_in_progress = FALSE,
+    trigger_auto_detect = FALSE, # NEW: Flag to trigger auto-detect after upload
     # Auto-save related values with restore guard
     auto_save_enabled = TRUE,
     last_save_time = NULL,

@@ -8,13 +8,13 @@
 #' @export
 DEFAULT_PORT <- 3838
 
-#' Test mode konfiguration
+#' Test mode konfiguration (defined in global.R)
 #' @export
-TEST_MODE_AUTO_LOAD <- TRUE
+# TEST_MODE_AUTO_LOAD <- TRUE  # Disabled - global.R defines this
 
-#' Standard test data fil path
+#' Standard test data fil path (defined in global.R)
 #' @export
-TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"
+# TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"  # Disabled - global.R defines this
 
 #' Auto restore funktion
 #' @export

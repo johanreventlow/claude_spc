@@ -7,7 +7,7 @@
 
 ## Hovedfunktion for visualisering
 # Opsætter al server logik relateret til visualisering og data forberedelse
-setup_visualization <- function(input, output, session, values) {
+setup_visualization <- function(input, output, session, values, app_state = NULL) {
   log_debug("=======================================", "VISUALIZATION")
   log_debug("Setting up visualization system", "VISUALIZATION")
 
@@ -15,12 +15,8 @@ setup_visualization <- function(input, output, session, values) {
   active_data <- reactive({
     log_debug("Active data reactive triggered", "PLOT_DATA")
 
-    # Check both old and new state management for current_data
-    current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$data$current_data
-    } else {
-      values$current_data
-    }
+    # PHASE 4: Use unified state management
+    current_data_check <- app_state$data$current_data
 
     req(current_data_check)
     log_debug("Current data available, processing...", "PLOT_DATA")
@@ -30,12 +26,8 @@ setup_visualization <- function(input, output, session, values) {
     log_debug(paste("Column names:", paste(names(data), collapse = ", ")), "PLOT_DATA")
 
     # Tilføj hide_anhoej_rules flag som attribut til data
-    # PHASE 4: Check both old and new state management for hide_anhoej_rules
-    hide_anhoej_rules_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$ui$hide_anhoej_rules
-    } else {
-      values$hide_anhoej_rules
-    }
+    # PHASE 4: Use unified state management
+    hide_anhoej_rules_check <- app_state$ui$hide_anhoej_rules
 
     attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
     log_debug(paste("Hide Anhøj rules flag:", hide_anhoej_rules_check), "PLOT_DATA")
@@ -73,12 +65,8 @@ setup_visualization <- function(input, output, session, values) {
 
   # Separate reactives for auto-detected and manual column selection
   auto_detected_config <- reactive({
-    # PHASE 4: Check both old and new state management for auto_detected_columns
-    auto_columns <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
-      app_state$columns$auto_detect$results
-    } else {
-      values$auto_detected_columns
-    }
+    # PHASE 4: Use unified state management
+    auto_columns <- app_state$columns$auto_detect$results
 
     req(auto_columns)
     list(
