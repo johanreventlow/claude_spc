@@ -619,18 +619,33 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
 auto_detect_and_update_columns <- function(input, session, values, app_state = NULL) {
+  # Get session ID for debugging
+  session_id <- if (!is.null(session)) session$token else NULL
+
+  # Start auto-detect workflow tracing
+  autodetect_tracer <- debug_workflow_tracer("auto_detect_columns", app_state, session_id)
+  autodetect_tracer$step("auto_detect_initiated")
+
   cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
   cat("DEBUG: [AUTO_DETECT_FUNC] Starting auto_detect_and_update_columns\n")
   cat("DEBUG: [AUTO_DETECT_FUNC] app_state hash:", if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL", "\n")
 
+  debug_log("Auto-detect columns process started", "AUTO_DETECT_FLOW", level = "INFO",
+            context = list(
+              use_centralized_state = !is.null(app_state)
+            ),
+            session_id = session_id)
+
   # PHASE 4: Centralized state availability check
   use_centralized_state <- !is.null(app_state)
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (use_centralized_state) {
     cat("DEBUG: [PHASE4] Centralized state available for auto-detect function\n")
   }
 
-  # PHASE 4: Check both old and new state management for current_data
-  current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  autodetect_tracer$step("data_source_validation")
+
+  # PHASE 4: Check both old and new state management for current_data - FIX SCOPING
+  current_data_check <- if (!is.null(app_state)) {
     app_state$data$current_data
   } else {
     values$current_data
@@ -639,10 +654,17 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
   data <- current_data_check
 
+  debug_log("Data source validated for auto-detect", "AUTO_DETECT_FLOW", level = "TRACE",
+            context = list(
+              data_source = if (!is.null(app_state)) "app_state" else "values",
+              data_available = !is.null(current_data_check)
+            ),
+            session_id = session_id)
+
   # DEBUGGING: Verificer hvilke data auto-detection faktisk læser
   cat("DEBUG: [AUTO_DETECT_FUNC] DATA SOURCE VERIFICATION:\n")
-  cat("DEBUG: [AUTO_DETECT_FUNC] - use_centralized_state:", exists("use_centralized_state") && use_centralized_state, "\n")
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  cat("DEBUG: [AUTO_DETECT_FUNC] - use_centralized_state:", use_centralized_state, "\n")
+  if (!is.null(app_state)) {
     cat("DEBUG: [AUTO_DETECT_FUNC] - Reading from app_state$data$current_data\n")
     if (!is.null(app_state$data$current_data)) {
       cat("DEBUG: [AUTO_DETECT_FUNC] - app_state data dims:", dim(app_state$data$current_data), "\n")
@@ -656,9 +678,15 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
     }
   }
 
+  autodetect_tracer$step("data_inspection_started")
+
   # Tjek for tomme datasæt - skift til name-only mode
   if (is.null(data) || ncol(data) == 0) {
     cat("DEBUG: [AUTO_DETECT_FUNC] ⚠️ Tomt datasæt (NULL eller ingen kolonner) - afbryder auto-detection\n")
+    debug_log("Auto-detect aborted - empty dataset", "AUTO_DETECT_FLOW", level = "WARN",
+              context = list(reason = "null_or_no_columns"),
+              session_id = session_id)
+    autodetect_tracer$complete("auto_detect_aborted_empty_dataset")
     return(NULL)
   }
 
@@ -666,6 +694,10 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
   name_only_mode <- nrow(data) == 0
   if (name_only_mode) {
     cat("DEBUG: [AUTO_DETECT_FUNC] Tomt datasæt (0 rækker) - skifter til name-only detection\n")
+    debug_log("Switching to name-only detection mode", "AUTO_DETECT_FLOW", level = "INFO",
+              context = list(rows = 0, columns = ncol(data)),
+              session_id = session_id)
+    autodetect_tracer$step("name_only_mode_activated")
   }
 
   col_names <- names(data)
@@ -673,10 +705,24 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
   cat("DEBUG: [AUTO_DETECT_FUNC] Data dimensions:", dim(data), "\n")
   cat("DEBUG: [AUTO_DETECT_FUNC] Column names:", paste(col_names, collapse = ", "), "\n")
 
+  debug_log("Data analysis for auto-detect", "AUTO_DETECT_FLOW", level = "TRACE",
+            context = list(
+              rows = nrow(data),
+              columns = ncol(data),
+              column_names = col_names,
+              name_only_mode = name_only_mode
+            ),
+            session_id = session_id)
+
   # NAME-ONLY DETECTION for tomme datasaet
   if (name_only_mode) {
-    return(detect_columns_name_only(col_names, input, session, values, app_state))
+    autodetect_tracer$step("executing_name_only_detection")
+    result <- detect_columns_name_only(col_names, input, session, values, app_state)
+    autodetect_tracer$complete("auto_detect_name_only_complete")
+    return(result)
   }
+
+  autodetect_tracer$step("full_content_analysis_started")
 
   # Forbedret detektering af potentielle dato-kolonner
   # Evaluer ALLE kolonner og find den bedste dato-kandidat
@@ -1115,6 +1161,24 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
     cat("DEBUG: [AUTO_DETECT_FUNC] ✅ Auto-detect completed successfully\n")
     cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
+
+    # Complete auto-detect workflow tracing
+    autodetect_tracer$step("ui_sync_data_created")
+    autodetect_tracer$complete("auto_detect_full_workflow_complete")
+
+    debug_log("Auto-detect process completed successfully", "AUTO_DETECT_FLOW", level = "INFO",
+              context = list(
+                x_col = if(exists("x_col")) x_col else "unknown",
+                y_col = if(exists("y_col")) y_col else "unknown",
+                n_col = if(exists("n_col")) n_col else "unknown",
+                ui_sync_triggered = TRUE
+              ),
+              session_id = session_id)
+
+    # Take final state snapshot
+    if (!is.null(app_state)) {
+      debug_state_snapshot("after_auto_detect_complete", app_state, session_id = session_id)
+    }
   })
 
 }

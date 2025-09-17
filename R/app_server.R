@@ -7,9 +7,19 @@
 #' 
 #' @noRd
 app_server <- function(input, output, session) {
+  # Initialize advanced debug system
+  initialize_advanced_debug(enable_history = TRUE, max_history_entries = 1000)
+
+  # Start session lifecycle debugging
+  session_debugger <- debug_session_lifecycle(session$token, session)
+  session_debugger$event("server_initialization")
+
   log_debug("===========================================", "APP_SERVER")
   log_debug("Starting main server function", "APP_SERVER")
   log_debug(paste("Session ID:", session$token), "APP_SERVER")
+
+  debug_log("SPC App server initialization started", "SESSION_LIFECYCLE",
+            level = "INFO", session_id = session$token)
 
   # Source all required server components
   log_debug("Sourcing server components...", "APP_SERVER")
@@ -25,13 +35,20 @@ app_server <- function(input, output, session) {
   # Reaktive Værdier --------------------------------------------------------
   # Initialiser reaktive værdier
   log_debug("Initializing reactive values...", "APP_SERVER")
+  debug_log("Creating reactive values", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
   values <- initialize_reactive_values()
   log_debug("✅ Reactive values initialized", "APP_SERVER")
+  session_debugger$event("reactive_values_initialized")
 
   # PHASE 4: Centraliseret state management (parallel til existing values)
   log_debug("Initializing centralized app state...", "APP_SERVER")
+  debug_log("Creating centralized app_state", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
   app_state <- create_app_state()
   log_debug("✅ Centralized state initialized", "APP_SERVER")
+  session_debugger$event("centralized_state_initialized")
+
+  # Take initial state snapshot
+  initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = session$token)
 
   # FASE 5: Memory management setup
   log_debug("Setting up memory management...", "APP_SERVER")
@@ -43,15 +60,26 @@ app_server <- function(input, output, session) {
   log_debug("Checking TEST_MODE configuration...", "APP_SERVER")
   log_debug(paste("TEST_MODE_AUTO_LOAD:", if(exists("TEST_MODE_AUTO_LOAD")) TEST_MODE_AUTO_LOAD else "UNDEFINED"), "APP_SERVER")
 
+  debug_log("Checking TEST_MODE configuration", "SESSION_LIFECYCLE", level = "TRACE",
+            context = list(
+              TEST_MODE_AUTO_LOAD = if(exists("TEST_MODE_AUTO_LOAD")) TEST_MODE_AUTO_LOAD else "UNDEFINED"
+            ),
+            session_id = session$token)
+
   if (exists("TEST_MODE_AUTO_LOAD") && TEST_MODE_AUTO_LOAD) {
+    # Start workflow tracer for auto-load process
+    autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, session$token)
     log_debug(paste("🔄 Attempting auto-load with TEST_MODE_AUTO_LOAD =", TEST_MODE_AUTO_LOAD), "TEST_MODE")
     test_file_path <- if(exists("TEST_MODE_FILE_PATH")) TEST_MODE_FILE_PATH else "UNDEFINED"
     log_debug(paste("Test file path:", test_file_path), "TEST_MODE")
 
     if (exists("TEST_MODE_FILE_PATH") && file.exists(test_file_path)) {
       log_debug("✅ Test file found, starting auto-load...", "TEST_MODE")
+      autoload_tracer$step("file_validation_complete")
+
       tryCatch(
         {
+          autoload_tracer$step("data_loading_started")
           # Bestem hvilken loader der skal bruges baseret på fil-extension
           file_extension <- tools::file_ext(test_file_path)
 
@@ -77,6 +105,7 @@ app_server <- function(input, output, session) {
 
           # Ensure standard columns are present
           test_data <- ensure_standard_columns(test_data)
+          autoload_tracer$step("data_processing_complete")
 
           # Set reactive values
           values$current_data <- test_data
@@ -102,12 +131,19 @@ app_server <- function(input, output, session) {
           values$hide_anhoej_rules <- FALSE # Show Anhøj rules for real data
           app_state$ui$hide_anhoej_rules <- FALSE
 
+          autoload_tracer$step("state_synchronization_complete")
+
+          # Take state snapshot after auto-load
+          debug_state_snapshot("after_test_data_autoload", app_state, session_id = session$token)
+
           # NOTE: Flag sættes efter setup_column_management() for at undgå race condition
 
           # Debug output
           log_info(paste("Auto-indlæst fil:", test_file_path), "TEST_MODE")
           log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), "TEST_MODE")
           log_info(paste("Kolonner:", paste(names(test_data), collapse = ", ")), "TEST_MODE")
+
+          autoload_tracer$complete("test_data_autoload_complete")
         },
         error = function(e) {
           log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), "TEST_MODE")
@@ -157,6 +193,9 @@ app_server <- function(input, output, session) {
   ## Hjælpe observers
   setup_helper_observers(input, output, session, values, obs_manager, app_state)
 
+  session_debugger$event("server_setup_complete")
+  debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
+
   # TEST MODE: Set auto-detect trigger flag AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {
     observe({
@@ -198,6 +237,9 @@ app_server <- function(input, output, session) {
   # Session Cleanup ---------------------------------------------------------
   # Additional cleanup når session lukker
   session$onSessionEnded(function() {
+    session_debugger$event("session_cleanup_started")
+    debug_log("Session cleanup initiated", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
+
     # Cleanup alle observers
     obs_manager$cleanup_all()
 
@@ -206,7 +248,16 @@ app_server <- function(input, output, session) {
       waiter_file$hide()
     }
 
+    # Complete session lifecycle debugging
+    session_lifecycle_result <- session_debugger$complete()
+
     # Log session statistics
     log_info(paste("Session afsluttet - Observer count:", obs_manager$count()), "APP_SERVER")
+    debug_log("Session ended successfully", "SESSION_LIFECYCLE", level = "INFO",
+              context = list(
+                session_duration = round(session_lifecycle_result$total_duration, 3),
+                events_tracked = length(session_lifecycle_result$events)
+              ),
+              session_id = session$token)
   })
 }

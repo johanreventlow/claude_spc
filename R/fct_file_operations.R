@@ -18,11 +18,25 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     log_debug("File upload triggered", "FILE_UPLOAD")
     req(input$data_file)
 
+    # Start workflow tracer for file upload
+    upload_tracer <- debug_workflow_tracer("file_upload_workflow", app_state, session$token)
+    upload_tracer$step("upload_initiated")
+
     log_debug("File info:", "FILE_UPLOAD")
     log_debug(paste("- Name:", input$data_file$name), "FILE_UPLOAD")
     log_debug(paste("- Size:", input$data_file$size, "bytes"), "FILE_UPLOAD")
     log_debug(paste("- Type:", input$data_file$type), "FILE_UPLOAD")
     log_debug(paste("- Path:", input$data_file$datapath), "FILE_UPLOAD")
+
+    debug_log("File upload started", "FILE_UPLOAD_FLOW", level = "INFO",
+              context = list(
+                filename = input$data_file$name,
+                size_bytes = input$data_file$size,
+                file_type = input$data_file$type
+              ),
+              session_id = session$token)
+
+    upload_tracer$step("file_validation")
 
     # Show loading
     log_debug("Showing waiter...", "FILE_UPLOAD")
@@ -47,11 +61,17 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     )
 
     log_debug("Setting updating_table flag...", "FILE_UPLOAD")
+    upload_tracer$step("state_management_setup")
+
     # PHASE 4: Sync to both old and new state management
     values$updating_table <- TRUE
     if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
       app_state$data$updating_table <- TRUE
     }
+
+    debug_log("File upload state flags set", "FILE_UPLOAD_FLOW", level = "TRACE",
+              context = list(updating_table = TRUE),
+              session_id = session$token)
     on.exit(
       {
         log_debug("Clearing updating_table flag on exit...", "FILE_UPLOAD")
@@ -79,20 +99,42 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
 
     tryCatch(
       {
+        upload_tracer$step("file_processing_started")
+
         if (file_ext %in% c("xlsx", "xls")) {
           log_debug("📊 Processing Excel file...", "FILE_UPLOAD")
+          debug_log("Starting Excel file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
           handle_excel_upload(file_path, session, values)
           log_debug("✅ Excel file processed successfully", "FILE_UPLOAD")
+          upload_tracer$step("excel_processing_complete")
         } else {
           log_debug("📄 Processing CSV file...", "FILE_UPLOAD")
-          handle_csv_upload(file_path, values)
+          debug_log("Starting CSV file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
+          handle_csv_upload(file_path, values, app_state, session$token)
           log_debug("✅ CSV file processed successfully", "FILE_UPLOAD")
+          upload_tracer$step("csv_processing_complete")
         }
         log_debug("File upload completed successfully", "FILE_UPLOAD")
+
+        # Complete workflow tracing
+        upload_tracer$complete("file_upload_workflow_complete")
+        debug_log("File upload workflow completed successfully", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
       },
       error = function(e) {
         log_debug(paste("❌ Error during file processing:", e$message), "FILE_UPLOAD")
         log_debug(paste("Error class:", class(e)), "FILE_UPLOAD")
+
+        debug_log("File upload error occurred", "ERROR_HANDLING", level = "ERROR",
+                  context = list(
+                    error_message = e$message,
+                    error_class = class(e)[1],
+                    filename = input$data_file$name,
+                    file_extension = file_ext
+                  ),
+                  session_id = session$token)
+
+        upload_tracer$complete("file_upload_workflow_failed")
+
         showNotification(
           paste("Fejl ved upload:", e$message),
           type = "error",
@@ -104,6 +146,53 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
     log_debug("File upload handler completed", "FILE_UPLOAD")
     log_debug("===========================================", "FILE_UPLOAD")
   })
+
+  # AUTO-DETECT TRIGGER OBSERVER ===============================================
+  # Observer som reagerer på trigger_auto_detect flag og kører auto-detect
+  observeEvent(values$trigger_auto_detect, {
+    log_debug("===========================================", "AUTO_DETECT_TRIGGER")
+    log_debug("Auto-detect trigger flag detected", "AUTO_DETECT_TRIGGER")
+
+    # Check at der er data at arbejde med
+    current_data_check <- if (use_centralized_state && !is.null(app_state)) {
+      app_state$data$current_data
+    } else {
+      values$current_data
+    }
+
+    req(current_data_check)
+    req(values$trigger_auto_detect == TRUE)
+
+    log_debug("Running auto-detect from trigger...", "AUTO_DETECT_TRIGGER")
+
+    # Kør auto-detect funktionen
+    auto_detect_result <- auto_detect_and_update_columns(
+      input = input,
+      session = session,
+      values = values,
+      app_state = app_state
+    )
+
+    if (!is.null(auto_detect_result)) {
+      log_debug("✅ Auto-detect completed successfully from trigger", "AUTO_DETECT_TRIGGER")
+      # Sæt auto_detect_done flag
+      values$auto_detect_done <- TRUE
+      if (use_centralized_state && !is.null(app_state)) {
+        app_state$columns$auto_detect$completed <- TRUE
+      }
+    } else {
+      log_debug("⚠️ Auto-detect failed from trigger", "AUTO_DETECT_TRIGGER")
+    }
+
+    # Ryd trigger flag
+    values$trigger_auto_detect <- FALSE
+    if (use_centralized_state && !is.null(app_state)) {
+      app_state$columns$auto_detect$trigger_needed <- FALSE
+    }
+
+    log_debug("✅ Auto-detect trigger processing completed", "AUTO_DETECT_TRIGGER")
+    log_debug("===========================================", "AUTO_DETECT_TRIGGER")
+  }, ignoreNULL = TRUE, ignoreInit = TRUE)
 }
 
 ## Håndter Excel fil upload
@@ -266,10 +355,14 @@ handle_excel_upload <- function(file_path, session, values) {
 #' }
 #'
 #' @seealso \code{\link{handle_excel_upload}}, \code{\link{ensure_standard_columns}}
-handle_csv_upload <- function(file_path, values) {
+handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = NULL) {
   log_debug("==========================================", "CSV_READ")
   log_debug("Starting CSV file processing", "CSV_READ")
   log_debug(paste("File path:", file_path), "CSV_READ")
+
+  debug_log("CSV upload processing started", "FILE_UPLOAD_FLOW", level = "INFO",
+            context = list(file_path = file_path),
+            session_id = session_id)
 
   # CSV behandling med danske standarder
   log_debug("Reading CSV with Danish locale...", "CSV_READ")
@@ -290,38 +383,72 @@ handle_csv_upload <- function(file_path, values) {
   log_debug(paste("CSV read successfully - dimensions:", nrow(data), "x", ncol(data)), "CSV_READ")
   log_debug(paste("Column names:", paste(names(data), collapse = ", ")), "CSV_READ")
 
+  debug_log("CSV data loaded successfully", "FILE_UPLOAD_FLOW", level = "INFO",
+            context = list(
+              rows = nrow(data),
+              columns = ncol(data),
+              column_names = names(data)
+            ),
+            session_id = session_id)
+
   # Ensure standard columns are present and in correct order
   log_debug("Ensuring standard columns...", "CSV_READ")
   data <- ensure_standard_columns(data)
   log_debug(paste("Standard columns applied - dimensions:", nrow(data), "x", ncol(data)), "CSV_READ")
 
   log_debug("Setting reactive values...", "CSV_READ")
+
+  # Take state snapshot before data assignment
+  if (!is.null(app_state)) {
+    debug_state_snapshot("before_csv_data_assignment", app_state, session_id = session_id)
+  }
+
   # PHASE 4: Sync assignment to both old and new state management
   values$current_data <- as.data.frame(data)
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (!is.null(app_state)) {
     app_state$data$current_data <- as.data.frame(data)
+    log_debug("✅ Synced current_data to app_state", "CSV_READ")
   }
   # PHASE 4: Sync original_data to both old and new state management
   values$original_data <- as.data.frame(data)
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (!is.null(app_state)) {
     app_state$data$original_data <- as.data.frame(data)
+    log_debug("✅ Synced original_data to app_state", "CSV_READ")
   }
   values$file_uploaded <- TRUE
   # PHASE 4: Sync to both old and new state management
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (!is.null(app_state)) {
     app_state$session$file_uploaded <- TRUE
   }
   values$auto_detect_done <- FALSE
   # PHASE 4: Sync auto_detect_done to centralized state
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (!is.null(app_state)) {
     app_state$columns$auto_detect$completed <- FALSE
   }
   # PHASE 4: Sync to both old and new state management
   values$hide_anhoej_rules <- FALSE # Re-enable Anhøj rules when real data is uploaded
-  if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
+  if (!is.null(app_state)) {
     app_state$ui$hide_anhoej_rules <- FALSE
   }
   log_debug("✅ Reactive values set successfully", "CSV_READ")
+
+  # TRIGGER AUTO-DETECT: Sæt flag til at triggre auto-detect i Shiny context
+  log_debug("Setting auto-detect trigger flag after CSV upload...", "CSV_READ")
+  values$trigger_auto_detect <- TRUE
+  if (!is.null(app_state)) {
+    app_state$columns$auto_detect$trigger_needed <- TRUE
+    log_debug("✅ Synced trigger flag to app_state", "CSV_READ")
+  }
+  log_debug("✅ Auto-detect trigger flag set", "CSV_READ")
+
+  debug_log("Auto-detect trigger flag set", "FILE_UPLOAD_FLOW", level = "INFO",
+            context = list(trigger_auto_detect = TRUE),
+            session_id = session_id)
+
+  # Take state snapshot after all state is set
+  if (!is.null(app_state)) {
+    debug_state_snapshot("after_csv_upload_complete", app_state, session_id = session_id)
+  }
 
   showNotification(
     paste("CSV fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
