@@ -276,12 +276,9 @@ setup_column_management <- function(input, output, session, values, app_state = 
       }
 
       # Ryd sync request og sæt timestamp for at forhindre immediate column mgmt override
-      # PHASE 4: Sync to both old and new state management
-      values$ui_sync_needed <- NULL
-      values$last_ui_sync_time <- Sys.time()
+      # PHASE 4: Use unified state management
       app_state$columns$ui_sync$needed <- NULL
       app_state$columns$ui_sync$last_sync_time <- Sys.time()
-      cat("DEBUG: [PHASE4] Synced UI sync clear to centralized state\n")
       cat("DEBUG: [UI_SYNC] ✅ UI sync completed, set timestamp to prevent override\n")
     },
     ignoreInit = TRUE, ignoreNULL = TRUE,
@@ -290,23 +287,17 @@ setup_column_management <- function(input, output, session, values, app_state = 
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
-    # PHASE 4: Sync to both old and new state management
-    values$auto_detect_in_progress <- TRUE # Set flag før auto-detect starter
+    # PHASE 4: Use unified state management
     app_state$columns$auto_detect$in_progress <- TRUE
-    cat("DEBUG: [PHASE4] Manual auto-detect: synced in_progress TRUE to centralized state\n")
 
     # PHASE 4: Pass centralized state to auto-detect function
     auto_detect_and_update_columns(input, session, values, app_state)
 
-    # PHASE 4: Sync completion state to both systems
-    values$initial_auto_detect_completed <- TRUE # Marker som færdig
+    # PHASE 4: Use unified state management
     app_state$columns$auto_detect$completed <- TRUE
-    cat("DEBUG: [PHASE4] Manual auto-detect: synced completed to centralized state\n")
 
-    # PHASE 4: Clear flag in both systems
-    values$auto_detect_in_progress <- FALSE # Clear flag efter auto-detect er færdig
+    # PHASE 4: Use unified state management
     app_state$columns$auto_detect$in_progress <- FALSE
-    cat("DEBUG: [PHASE4] Manual auto-detect: synced in_progress FALSE to centralized state\n")
   })
 
   # Kolonnevaliderings output
@@ -1102,10 +1093,8 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
       timestamp = as.numeric(Sys.time())  # Force reactivity trigger
     )
 
-    # PHASE 4: Sync to both old and new state management
-    values$ui_sync_needed <- sync_data
+    # PHASE 4: Use unified state management
     app_state$columns$ui_sync$needed <- sync_data
-    cat("DEBUG: [PHASE4] Synced UI sync data to centralized state\n")
 
     cat("DEBUG: [AUTO_DETECT_FUNC] ✅ Auto-detect completed successfully\n")
     cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
@@ -1333,27 +1322,21 @@ setup_data_table <- function(input, output, session, values) {
         return()
       }
 
-      # PHASE 4: Sync to both old and new state management
-      values$updating_table <- TRUE
+      # PHASE 4: Use unified state management
       app_state$data$updating_table <- TRUE
-      log_debug("Set updating_table=TRUE in centralized state", "PHASE4")
-      # PHASE 4: Sync to both old and new state management
-      values$table_operation_in_progress <- TRUE
+      # PHASE 4: Use unified state management
       app_state$data$table_operation_in_progress <- TRUE
 
       on.exit(
         {
-          # PHASE 4: Sync to both old and new state management
-          values$updating_table <- FALSE
+          # PHASE 4: Use unified state management
           app_state$data$updating_table <- FALSE
-          log_debug("Set updating_table=FALSE in centralized state", "PHASE4")
         },
         add = TRUE
       )
 
       # Trigger event-driven cleanup instead of timing-based
-      # PHASE 4: Sync to both old and new state management
-      values$table_operation_cleanup_needed <- TRUE
+      # PHASE 4: Use unified state management
       app_state$data$table_operation_cleanup_needed <- TRUE
 
       tryCatch(
@@ -1457,8 +1440,7 @@ setup_data_table <- function(input, output, session, values) {
     req(current_data_check)
 
     # Sæt vedvarende flag for at forhindre auto-save interferens
-    # PHASE 4: Sync to both old and new state management
-    values$table_operation_in_progress <- TRUE
+    # PHASE 4: Use unified state management
     app_state$data$table_operation_in_progress <- TRUE
 
     new_row <- current_data_check[1, ]
@@ -1471,8 +1453,7 @@ setup_data_table <- function(input, output, session, values) {
     showNotification("Ny række tilføjet", type = "message")
 
     # Trigger event-driven cleanup instead of timing-based
-    # PHASE 4: Sync to both old and new state management
-    values$table_operation_cleanup_needed <- TRUE
+    # PHASE 4: Use unified state management
     app_state$data$table_operation_cleanup_needed <- TRUE
   })
 
