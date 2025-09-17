@@ -30,34 +30,26 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
           if (!is.null(saved_state$data)) {
             # Sæt gendannelses guards for at forhindre interferens
-            # Unified state: Set restoring session flag
-            values$restoring_session <- TRUE
+            # PHASE 4B: Unified state assignment only
             app_state$session$restoring_session <- TRUE
-            # Unified state: Set table updating flag
-            values$updating_table <- TRUE
+            # PHASE 4B: Unified state assignment only
             app_state$data$updating_table <- TRUE
-            # Unified state: Set table operation in progress flag
-            values$table_operation_in_progress <- TRUE
+            # PHASE 4B: Unified state assignment only
             app_state$data$table_operation_in_progress <- TRUE
-            # Unified state: Disable auto save during restore
-            values$auto_save_enabled <- FALSE
+            # PHASE 4B: Unified state assignment only
             app_state$session$auto_save_enabled <- FALSE
 
             # Oprydningsfunktion til at nulstille guards
             on.exit(
               {
-                # Unified state: Clear table updating flag
-                values$updating_table <- FALSE
+                # PHASE 4B: Unified state assignment only
                 app_state$data$updating_table <- FALSE
-                # Unified state: Clear restoring session flag
-                values$restoring_session <- FALSE
+                # PHASE 4B: Unified state assignment only
                 app_state$session$restoring_session <- FALSE
-                # Unified state: Re-enable auto save after restore
-                values$auto_save_enabled <- TRUE
+                # PHASE 4B: Unified state assignment only
                 app_state$session$auto_save_enabled <- TRUE
                 # Set flag for delayed cleanup - handled by separate observer
-                # Unified state: Set cleanup needed flag
-                values$table_operation_cleanup_needed <- TRUE
+                # PHASE 4B: Unified state assignment only
                 app_state$data$table_operation_cleanup_needed <- TRUE
               },
               add = TRUE
@@ -110,11 +102,9 @@ setup_session_management <- function(input, output, session, values, waiter_file
               app_state$data$original_data <- fallback_data
             }
 
-            # Unified state: Set file uploaded flag
-            values$file_uploaded <- TRUE
+            # PHASE 4B: Unified state assignment only
             app_state$session$file_uploaded <- TRUE
-            # Unified state: Set auto detect completed flag
-            values$auto_detect_done <- TRUE
+            # PHASE 4B: Unified state assignment only
             app_state$columns$auto_detect$completed <- TRUE
 
             # Restore metadata if available
@@ -143,17 +133,13 @@ setup_session_management <- function(input, output, session, values, waiter_file
           showNotification(paste("Fejl ved automatisk genindlæsning:", e$message), type = "error")
 
           # Reset guards even on error
-          # Unified state: Clear table updating flag on error
-          values$updating_table <- FALSE
+          # PHASE 4B: Unified state assignment only
           app_state$data$updating_table <- FALSE
-          # Unified state: Clear restoring session flag on error
-          values$restoring_session <- FALSE
+          # PHASE 4B: Unified state assignment only
           app_state$session$restoring_session <- FALSE
-          # Unified state: Re-enable auto save on error
-          values$auto_save_enabled <- TRUE
+          # PHASE 4B: Unified state assignment only
           app_state$session$auto_save_enabled <- TRUE
-          # Unified state: Clear table operation flag on error
-          values$table_operation_in_progress <- FALSE
+          # PHASE 4B: Unified state assignment only
           app_state$data$table_operation_in_progress <- FALSE
         }
       )
@@ -170,8 +156,7 @@ setup_session_management <- function(input, output, session, values, waiter_file
     metadata <- collect_metadata(input)
 
     saveDataLocally(session, current_data_check, metadata)
-    # Unified state: Set last save time
-    values$last_save_time <- Sys.time()
+    # PHASE 4B: Unified state assignment only
     app_state$session$last_save_time <- Sys.time()
     showNotification("Session gemt lokalt!", type = "message", duration = 2)
   })
@@ -336,8 +321,7 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   cat("DEBUG: [SESSION_RESET] Session reset started, centralized state available:", use_centralized_state, "\n")
   cat("DEBUG: [SESSION_RESET] app_state hash before:", if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL", "\n")
   clearDataLocally(session)
-  # Unified state: Clear last save time
-  values$last_save_time <- NULL
+  # PHASE 4B: Unified state assignment only
   app_state$session$last_save_time <- NULL
 
   # Unified state: Set table updating flag
