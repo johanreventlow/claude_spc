@@ -184,6 +184,14 @@ setup_session_management <- function(input, output, session, values, waiter_file
 
   # Confirm upload handler
   observeEvent(input$confirm_upload, {
+    cat("DEBUG: [UPLOAD_MODAL] Confirm upload clicked\n")
+
+    # Set navigation flags for file upload flow
+    # PHASE 4: Use unified state management
+    app_state$session$user_started_session <- TRUE
+    app_state$session$file_uploaded <- FALSE  # Will be set to TRUE by actual file upload handler
+
+    cat("DEBUG: [UPLOAD_MODAL] Navigation flags set, closing modal\n")
     removeModal()
   })
 
@@ -341,6 +349,14 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   cat("DEBUG: [SESSION_RESET] Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), "\n")
   cat("DEBUG: [SESSION_RESET] app_state hash after:", digest::digest(app_state$data$current_data), "\n")
 
+  # REACTIVE WRAPPER FIX: Trigger reactive bridge to trigger reactive navigation
+  if (!is.null(app_state$reactive_bridge)) {
+    old_trigger <- app_state$reactive_bridge$data_change_trigger
+    app_state$reactive_bridge$data_change_trigger <- app_state$reactive_bridge$data_change_trigger + 1
+    new_trigger <- app_state$reactive_bridge$data_change_trigger
+    cat("DEBUG: [SESSION_RESET] reactive_bridge trigger incremented from", old_trigger, "to", new_trigger, "\n")
+  }
+
   # PHASE 4B: Unified state assignment only
   app_state$session$file_uploaded <- FALSE
   # PHASE 4B: Unified state assignment only
@@ -494,18 +510,36 @@ show_clear_confirmation_modal <- function(has_data, has_settings, values) {
 
 ## Hovedfunktion for velkomstside
 # Opsætter alle handlers for velkomstside interaktioner
-setup_welcome_page_handlers <- function(input, output, session, values, waiter_file) {
+setup_welcome_page_handlers <- function(input, output, session, values, waiter_file, app_state = NULL) {
+  cat("DEBUG: [WELCOME_PAGE_SETUP] Setting up welcome page handlers\n")
+  cat("DEBUG: [WELCOME_PAGE_SETUP] app_state provided:", !is.null(app_state), "\n")
+
   # Håndtér "Start ny analyse" knap fra velkomstsiden
   observeEvent(input$start_new_session, {
-    cat("Welcome page: Start new session clicked\n")
+    cat("DEBUG: [WELCOME_PAGE] Start new session clicked\n")
+    cat("DEBUG: [WELCOME_PAGE] app_state available:", !is.null(app_state), "\n")
+
+    if (is.null(app_state)) {
+      cat("ERROR: [WELCOME_PAGE] app_state is NULL - navigation will not work properly\n")
+      return()
+    }
 
     # Samme logik som eksisterende start_new_session
     # PHASE 4: Unified state assignment only
     empty_session_data <- create_empty_session_data()
     app_state$data$current_data <- empty_session_data
     app_state$data$original_data <- empty_session_data
-    # PHASE 4B: Unified state assignment only
-    app_state$session$file_uploaded <- TRUE
+
+    # REACTIVE WRAPPER FIX: Increment version to trigger reactive navigation
+    old_version <- app_state$data$table_version
+    app_state$data$table_version <- app_state$data$table_version + 1
+    new_version <- app_state$data$table_version
+    cat("DEBUG: [WELCOME_PAGE] table_version incremented from", old_version, "to", new_version, "\n")
+
+    # PHASE 4B: Unified state assignment only - FALSE for manual session
+    app_state$session$file_uploaded <- FALSE
+    # Set user_started_session to TRUE for proper navigation
+    app_state$session$user_started_session <- TRUE
     # PHASE 4B: Unified state assignment only
     app_state$ui$hide_anhoej_rules <- TRUE
     # Unified state: Clear session file name
@@ -520,7 +554,9 @@ setup_welcome_page_handlers <- function(input, output, session, values, waiter_f
     updateSelectInput(session, "y_column", selected = "")
     updateSelectInput(session, "n_column", selected = "")
 
-    cat("Welcome page: New empty session created\n")
+    cat("DEBUG: [WELCOME_PAGE] New empty session created\n")
+    cat("DEBUG: [WELCOME_PAGE] app_state$data$current_data set with", nrow(empty_session_data), "rows\n")
+    cat("DEBUG: [WELCOME_PAGE] app_state$session$user_started_session set to TRUE\n")
   })
 
   # Håndtér "Upload data" knap fra velkomstsiden

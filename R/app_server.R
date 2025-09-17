@@ -161,7 +161,7 @@ app_server <- function(input, output, session) {
   # Opsæt alle server-komponenter
 
   ## Velkomstside interaktioner
-  setup_welcome_page_handlers(input, output, session, values, waiter_file)
+  setup_welcome_page_handlers(input, output, session, values, waiter_file, app_state)
 
   ## Session management logik
   setup_session_management(input, output, session, values, waiter_file, app_state)

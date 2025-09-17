@@ -222,6 +222,14 @@ handle_excel_upload <- function(file_path, session, values) {
     # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
     app_state$ui$hide_anhoej_rules <- FALSE
 
+    # REACTIVE WRAPPER FIX: Trigger reactive bridge to trigger reactive navigation
+    if (!is.null(app_state$reactive_bridge)) {
+      old_trigger <- app_state$reactive_bridge$data_change_trigger
+      app_state$reactive_bridge$data_change_trigger <- app_state$reactive_bridge$data_change_trigger + 1
+      new_trigger <- app_state$reactive_bridge$data_change_trigger
+      log_debug(paste("SESSION_RESTORE: reactive_bridge trigger incremented from", old_trigger, "to", new_trigger), "SESSION_RESTORE")
+    }
+
     # Restore metadata with delay to ensure UI is ready
     invalidateLater(500)
     isolate({
@@ -250,6 +258,14 @@ handle_excel_upload <- function(file_path, session, values) {
     app_state$columns$auto_detect$completed <- FALSE
     # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
     app_state$ui$hide_anhoej_rules <- FALSE
+
+    # REACTIVE WRAPPER FIX: Trigger reactive bridge to trigger reactive navigation
+    if (!is.null(app_state$reactive_bridge)) {
+      old_trigger <- app_state$reactive_bridge$data_change_trigger
+      app_state$reactive_bridge$data_change_trigger <- app_state$reactive_bridge$data_change_trigger + 1
+      new_trigger <- app_state$reactive_bridge$data_change_trigger
+      log_debug(paste("EXCEL_READ: reactive_bridge trigger incremented from", old_trigger, "to", new_trigger), "EXCEL_READ")
+    }
 
     showNotification(
       paste("Excel fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
@@ -360,6 +376,15 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
   app_state$columns$auto_detect$completed <- FALSE
   # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
   app_state$ui$hide_anhoej_rules <- FALSE
+
+  # REACTIVE WRAPPER FIX: Trigger reactive bridge to trigger reactive navigation
+  if (!is.null(app_state$reactive_bridge)) {
+    old_trigger <- app_state$reactive_bridge$data_change_trigger
+    app_state$reactive_bridge$data_change_trigger <- app_state$reactive_bridge$data_change_trigger + 1
+    new_trigger <- app_state$reactive_bridge$data_change_trigger
+    log_debug(paste("CSV_READ: reactive_bridge trigger incremented from", old_trigger, "to", new_trigger), "CSV_READ")
+  }
+
   log_debug("✅ Reactive values set successfully", "CSV_READ")
 
   # TRIGGER AUTO-DETECT: Sæt flag til at triggre auto-detect i Shiny context

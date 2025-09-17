@@ -24,12 +24,40 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
   #   }
   # })
 
+  # REACTIVE WRAPPER: Make app_state reactive for navigation
+  # Create a reactive values object to bridge app_state to Shiny reactive system
+  reactive_bridge <- reactiveValues(
+    data_change_trigger = 0
+  )
+
+  # Store reactive bridge in app_state for access from other functions
+  app_state$reactive_bridge <- reactive_bridge
+
+  # This creates a reactive dependency on the reactive bridge
+  app_data_reactive <- reactive({
+    # Watch the reactive bridge trigger for change notifications
+    trigger_value <- reactive_bridge$data_change_trigger
+    current_data_value <- app_state$data$current_data
+
+    cat("DEBUG: [REACTIVE_WRAPPER] app_data_reactive triggered\n")
+    cat("DEBUG: [REACTIVE_WRAPPER] trigger_value:", trigger_value, "\n")
+    cat("DEBUG: [REACTIVE_WRAPPER] current_data is null:", is.null(current_data_value), "\n")
+
+    # Return the actual data from unified state
+    return(current_data_value)
+  })
+
   # Data indlæsnings status flags - følger BFH UTH mønster
   output$dataLoaded <- renderText({
-    # PHASE 4: Use unified state management
-    current_data_check <- app_state$data$current_data
+    # REACTIVE WRAPPER FIX: Use reactive wrapper for app_state navigation
+    # This now properly triggers when app_state$data$table_version changes
+    current_data_check <- app_data_reactive()
+
+    cat("DEBUG: [NAVIGATION] Evaluating dataLoaded status\n")
+    cat("DEBUG: [NAVIGATION] current_data_check is null:", is.null(current_data_check), "\n")
 
     result <- if (is.null(current_data_check)) {
+      cat("DEBUG: [NAVIGATION] No current data - showing welcome screen\n")
       "FALSE"
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
@@ -59,15 +87,23 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
 
       user_has_started <- file_uploaded_check || user_started_session_check %||% FALSE
 
-      if (meaningful_data || user_has_started) "TRUE" else "FALSE"
+      cat("DEBUG: [NAVIGATION] meaningful_data:", meaningful_data, "\n")
+      cat("DEBUG: [NAVIGATION] file_uploaded_check:", file_uploaded_check, "\n")
+      cat("DEBUG: [NAVIGATION] user_started_session_check:", user_started_session_check, "\n")
+      cat("DEBUG: [NAVIGATION] user_has_started:", user_has_started, "\n")
+
+      final_result <- if (meaningful_data || user_has_started) "TRUE" else "FALSE"
+      cat("DEBUG: [NAVIGATION] Final dataLoaded result:", final_result, "\n")
+      final_result
     }
+    cat("DEBUG: [NAVIGATION] Returning dataLoaded:", result, "\n")
     result
   })
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
 
   output$has_data <- renderText({
-    # PHASE 4: Use unified state management
-    current_data_check <- app_state$data$current_data
+    # REACTIVE WRAPPER FIX: Use reactive wrapper for consistent behavior
+    current_data_check <- app_data_reactive()
 
     if (is.null(current_data_check)) {
       "false"
@@ -96,8 +132,8 @@ setup_helper_observers <- function(input, output, session, values, obs_manager =
     # PHASE 4: Use unified state management
     file_uploaded_check <- app_state$session$file_uploaded
 
-    # PHASE 4: Use unified state management
-    current_data_check <- app_state$data$current_data
+    # REACTIVE WRAPPER FIX: Use reactive wrapper for consistent behavior
+    current_data_check <- app_data_reactive()
 
     if (is.null(current_data_check)) {
       div(
