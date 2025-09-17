@@ -647,7 +647,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
         if (is.null(data)) {
           log_debug("❌ No data available, showing empty plot", "RENDER_PLOT")
-          return(ggplot2::ggplot() + ggplot2::theme_void() + ggplot2::labs(title = "No Data Available"))
+          print(ggplot2::ggplot() + ggplot2::theme_void() + ggplot2::labs(title = "No Data Available"))
+          return()
         }
 
         column_config <- column_config_reactive()
@@ -681,12 +682,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         if (!is.null(plot) && inherits(plot, "ggplot")) {
           log_debug("✅ Valid ggplot object confirmed", "RENDER_PLOT")
           log_debug(paste("Plot layers count:", length(plot$layers)), "RENDER_PLOT")
-          log_debug("Returning plot for rendering", "RENDER_PLOT")
-          return(plot)
+          log_debug("Showing plot with print()", "RENDER_PLOT")
+          print(plot)
         } else {
           log_debug("❌ Plot not ready, showing empty plot", "RENDER_PLOT")
-          # Return empty ggplot to avoid errors
-          return(ggplot2::ggplot() + ggplot2::theme_void())
+          # Show empty ggplot to avoid errors
+          print(ggplot2::ggplot() + ggplot2::theme_void())
         }
       },
       res = 96,

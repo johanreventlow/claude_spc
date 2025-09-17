@@ -94,20 +94,36 @@ log_msg <- function(message, level = "INFO", component = NULL) {
               message))
 }
 
-#' Log debug besked (kun vist ved DEBUG log level)
+#' Log debug besked (kun vist ved DEBUG log level) - Variadisk og fejlsikker
 #'
-#' @description Convenience funktion til logging af debug beskeder.
+#' @description Convenience funktion til logging af debug beskeder. Accepterer
+#' variable antal argumenter og er fejlsikker for at undgå renderPlot crashes.
 #'
-#' @param message Debug besked der skal logges
-#' @param component Valgfri komponent tag (f.eks. "AUTO_DETECT")
+#' @param ... Variable argumenter der skal sammenkædes til debug besked
+#' @param .context Valgfri kontekst tag (f.eks. "RENDER_PLOT", "AUTO_DETECT")
 #' @export
 #'
 #' @examples
-#' # Sæt debug level først
-#' Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
-#' log_debug("Processerer data række", "DATA_PROC")
-log_debug <- function(message, component = NULL) {
-  log_msg(message, "DEBUG", component)
+#' # Basis brug
+#' log_debug("Processerer data række")
+#'
+#' # Med kontekst
+#' log_debug("Column config check:", TRUE, .context = "RENDER_PLOT")
+#'
+#' # Multiple argumenter
+#' log_debug("Status:", status_var, "for fil:", filename)
+log_debug <- function(..., .context = NULL) {
+  tryCatch({
+    msg <- paste(..., collapse = " ")
+    if (!is.null(.context)) {
+      msg <- paste0("[", .context, "] ", msg)
+    }
+    log_msg(msg, "DEBUG", component = .context)
+  }, error = function(e) {
+    # Fejlsikker fallback - aldrig crash renderPlot
+    try(cat("DEBUG: [LOGGING_ERROR] Could not format debug message\n"), silent = TRUE)
+  })
+  invisible(NULL)
 }
 
 #' Log information besked
