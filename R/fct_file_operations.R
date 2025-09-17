@@ -225,7 +225,47 @@ handle_excel_upload <- function(file_path, session, values) {
   }
 }
 
-## Håndter CSV fil upload
+#' Håndter CSV fil upload med dansk formattering
+#'
+#' Indlæser og processer CSV filer med danske standarder inklusive
+#' encoding, decimal separatorer og standard kolonner. Funktionen
+#' håndterer fejl robust og opdaterer app state accordingly.
+#'
+#' @param file_path Character string med sti til CSV fil
+#' @param values Reactive values list til opdatering af app state
+#'
+#' @details
+#' CSV læsning konfiguration:
+#' \itemize{
+#'   \item Encoding: ISO-8859-1 (danske karakterer)
+#'   \item Decimal mark: komma (,)
+#'   \item Grouping mark: punktum (.)
+#'   \item Separator: semikolon (;) - CSV2 format
+#' }
+#'
+#' Behandling proces:
+#' \enumerate{
+#'   \item Læs CSV med readr::read_csv2 og dansk locale
+#'   \item Tilføj standard SPC kolonner hvis manglende
+#'   \item Opdater reactive values med ny data
+#'   \item Sæt file_uploaded flag til TRUE
+#'   \item Vis success notification til bruger
+#' }
+#'
+#' @return NULL ved success, character string med fejlbesked ved fejl
+#'
+#' @examples
+#' \dontrun{
+#' # Upload CSV fil
+#' result <- handle_csv_upload("data/spc_data.csv", values)
+#' if (is.null(result)) {
+#'   message("CSV uploaded successfully")
+#' } else {
+#'   message("Error:", result)
+#' }
+#' }
+#'
+#' @seealso \code{\link{handle_excel_upload}}, \code{\link{ensure_standard_columns}}
 handle_csv_upload <- function(file_path, values) {
   log_debug("==========================================", "CSV_READ")
   log_debug("Starting CSV file processing", "CSV_READ")

@@ -795,6 +795,169 @@ memory_profile()  # After operation
 
 ---
 
+## Function Documentation med roxygen2
+
+### Documentation Standards
+
+Alle eksporterede funktioner og vigtige interne funktioner skal dokumenteres med roxygen2. Dette sikrer konsistent API dokumentation og letter maintainability.
+
+#### roxygen2 Syntax Guide
+
+**Basis template:**
+```r
+#' Kort beskrivelse af funktionen
+#'
+#' Længere beskrivelse der forklarer funktionens formål,
+#' use cases og eventuelle side effects. Beskriv også
+#' special behavior eller PHASE 4 compatibility.
+#'
+#' @param param_name Beskrivelse af parameter inklusive type og format
+#' @param optional_param Beskrivelse (optional) - marker optional parameters
+#'
+#' @details
+#' Detaljeret forklaring af algoritme, implementation choices
+#' eller særlige considerations. Brug itemize/enumerate
+#' for strukturerede lister.
+#'
+#' @return Beskrivelse af return value med struktur hvis complex
+#'
+#' @examples
+#' \dontrun{
+#' # Praktisk eksempel på funktions brug
+#' result <- function_name(param1, param2)
+#' }
+#'
+#' @seealso \code{\link{related_function1}}, \code{\link{related_function2}}
+function_name <- function(param_name, optional_param = NULL) {
+```
+
+#### Documentation Categories
+
+**Core SPC Functions:**
+```r
+#' @family spc_calculations
+#' @keywords spc control_charts statistical_process_control
+```
+
+**Data Processing Functions:**
+```r
+#' @family data_processing
+#' @keywords data_validation column_detection auto_detection
+```
+
+**File Operations:**
+```r
+#' @family file_operations
+#' @keywords csv excel file_upload danish_locale
+```
+
+**UI/UX Functions:**
+```r
+#' @family ui_helpers
+#' @keywords shiny reactive user_interface
+```
+
+#### Danish Documentation Standards
+
+**Beskrivelse på dansk:**
+- Funktions formål og behavior på dansk
+- Parameter beskrivelser på dansk
+- Examples med danske variable navne hvor relevant
+
+**English for technical terms:**
+- Function names og parameter names på engelsk
+- Technical keywords på engelsk
+- Code examples kan blande dansk/engelsk naturligt
+
+**Eksempel:**
+```r
+#' Auto-detekter SPC kolonner baseret på kolonnenavne
+#'
+#' Intelligent matching af kolonnenavne til standard SPC kolonner.
+#' Understøtter både danske og engelske kolonnenavne med fallback strategies.
+#'
+#' @param col_names Character vector med tilgængelige kolonnenavne
+#' @param input Shiny input object (kan være NULL)
+#' @param session Shiny session object for UI opdateringer
+#'
+#' @return List med detekterede kolonner og UI sync data
+#'
+#' @examples
+#' \dontrun{
+#' kolonner <- c("Dato", "Tæller", "Nævner", "Kommentar")
+#' result <- detect_columns_name_only(kolonner, NULL, session, values)
+#' }
+```
+
+### Generation og Maintenance
+
+**Generer dokumentation:**
+```r
+# Install roxygen2 if needed
+install.packages("roxygen2")
+
+# Generate/update documentation
+roxygen2::roxygenise()
+
+# View generated help
+?function_name
+help(package = "claude_spc")
+```
+
+**Documentation workflow:**
+1. **Skriv roxygen2 comments** når du opretter ny funktion
+2. **Update dokumentation** når du ændrer function signature
+3. **Test examples** - sørg for at examples kører uden fejl
+4. **Cross-reference** - link til relaterede funktioner
+5. **Review generated docs** - tjek at formatering er korrekt
+
+### Documentation Coverage Goals
+
+**Mandatory documentation:**
+- Alle setup_* funktioner (app initialization)
+- Alle detect_* funktioner (auto-detection logic)
+- Alle handle_* funktioner (file operations)
+- Alle validate_* funktioner (data validation)
+
+**Nice-to-have documentation:**
+- Komplekse interne utility funktioner
+- Observer functions med kompleks logic
+- Error handling wrapper functions
+
+**Skip documentation:**
+- Simple helper functions (< 10 lines)
+- Internal debug functions
+- Temporary/experimental code
+
+### Examples Best Practices
+
+**Good examples:**
+```r
+#' @examples
+#' \dontrun{
+#' # Standard SPC kolonner
+#' cols <- c("Dato", "Tæller", "Nævner", "Skift", "Frys")
+#' result <- detect_columns_name_only(cols, NULL, session, values)
+#' print(result$x_col)  # "Dato"
+#'
+#' # Engelske kolonner
+#' cols_en <- c("Date", "Count", "Total", "Phase")
+#' result <- detect_columns_name_only(cols_en, NULL, session, values)
+#' print(result$x_col)  # "Date"
+#' }
+```
+
+**Avoid:**
+```r
+#' @examples
+#' \dontrun{
+#' # Dette er et eksempel  (for generic)
+#' result <- function_name(data)  (too simple)
+#' }
+```
+
+---
+
 ## Resources
 
 ### Internal Documentation

@@ -279,12 +279,12 @@ create_chart_settings_card <- function() {
           textInput(
             "indicator_title",
             "Titel på indikator:",
-            width = "100%",
+            width = UI_INPUT_WIDTHS$full,
             value = "",
             placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
           ),
           layout_column_wrap(
-            width = 1 / 2,
+            width = UI_LAYOUT_PROPORTIONS$half,
 
             # Target value input
             textInput(
@@ -292,7 +292,7 @@ create_chart_settings_card <- function() {
               "Målværdi:",
               value = "",
               placeholder = "fx 80%, 0,8 el. 25",
-              width = "100%"
+              width = UI_INPUT_WIDTHS$full
             ),
 
             # Centerline input
@@ -301,7 +301,7 @@ create_chart_settings_card <- function() {
               "Evt. baseline:",
               value = "",
               placeholder = "fx 68%, 0,7 el. 22",
-              width = "100%"
+              width = UI_INPUT_WIDTHS$full
             )
           ),
 
@@ -315,7 +315,7 @@ create_chart_settings_card <- function() {
               value = "",
               placeholder = "Angiv kort, hvad indikatoren udtrykker, og hvordan data opgøres – fx beregning af tæller og nævner.",
               resize = "none",
-              width = "100%",
+              width = UI_INPUT_WIDTHS$full,
             )
           ),
         ),
