@@ -16,31 +16,28 @@
    - ✅ Opdateret alle function signatures
    - ✅ Minimeret initialize_reactive_values() til tom reactiveValues()
 
-### 🔄 **I GANG:**
+### ✅ **FULDFØRT:**
 3. **Konverter direct reactive observers til event-driven**
    - ✅ Tilføjet `data_changed` event listener i utils_event_system.R
    - ✅ Oprettet `update_column_choices_unified()` funktion
-   - 🔄 **AKTUELT:** Kommenterer gammel column update observer ud i fct_data_processing.R
-   - ⏳ **NÆSTE:** Tilføj emit$data_changed() calls til alle steder hvor data ændres
+   - ✅ Kommenteret legacy column update observer ud
+   - ✅ Tilføjet emit$data_loaded() til alle fil upload steder
 
 ---
 
 ## Fase 2: EVENT SYSTEM EXPANSION
 
-### ⏳ **MANGLER:**
-1. **Tilføj emit$data_changed() til alle data assignments**
-   ```r
-   # Steder der skal have emit$data_changed() tilføjet:
-   - fct_file_operations.R: 3 steder (after app_state$data$current_data <-)
-   - utils_server_management.R: 5 steder
-   - app_server.R: 1 sted (test mode)
-   - fct_data_processing.R: 2 steder
-   ```
+### 🔄 **I GANG:**
+1. **Konverter reactiveVal triggers til unified events**
+   - ✅ Erstattet navigation_trigger increment calls med emit$navigation_changed() i 2 filer
+   - 🔄 **AKTUELT:** Konverterer navigation_trigger reactiveVal system i utils_session_helpers.R
+   - ⏳ **NÆSTE:** Fjern eventReactive(navigation_trigger()) patterns
 
-2. **Konverter reactiveVal triggers til unified events**
-   - `navigation_trigger` → `emit$navigation_changed()`
-   - `autodetect_trigger` → fjern helt (erstattet af event system)
-   - Alle manual reactive triggers i utils_session_helpers.R
+### ⏳ **MANGLER:**
+
+2. **Fjern autodetect_trigger system**
+   - Fjern autodetect_trigger fra setup_column_management return value
+   - Erstat med emit$auto_detection_started() calls
 
 3. **Implementer systematic observer management**
    - Centraliseret priority management

@@ -38,7 +38,7 @@
 #' }
 #'
 #' @seealso \code{\link{detect_columns_name_only}}, \code{\link{ensure_standard_columns}}
-setup_column_management <- function(input, output, session, app_state) {
+setup_column_management <- function(input, output, session, app_state, emit) {
   cat("DEBUG: [COLUMN_MGMT] ===========================================\n")
   cat("DEBUG: [COLUMN_MGMT] Setting up column management\n")
   cat("DEBUG: [COLUMN_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
@@ -1188,16 +1188,10 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
     autodetect_tracer$complete("auto_detect_full_workflow_complete")
 
     # CRITICAL: Trigger navigation update efter autodetect completion
-    # Dette sikrer at alle eventReactive komponenter (inklusive generateSPCPlot) re-evalueres
-    if (!is.null(app_state$navigation_trigger)) {
-      old_trigger <- app_state$navigation_trigger()
-      app_state$navigation_trigger(old_trigger + 1)
-      new_trigger <- app_state$navigation_trigger()
-      cat("DEBUG: [AUTO_DETECT] navigation_trigger incremented from", old_trigger, "to", new_trigger, "\n")
-      log_debug(paste("AUTO_DETECT: navigation_trigger incremented from", old_trigger, "to", new_trigger), "AUTO_DETECT")
-    } else {
-      cat("DEBUG: [AUTO_DETECT] ⚠️ navigation_trigger not available - plots may not update\n")
-      log_debug("AUTO_DETECT: navigation_trigger not available - plots may not update", "AUTO_DETECT")
+    # UNIFIED EVENTS: Trigger navigation change through event system
+    cat("DEBUG: [AUTO_DETECT] Emitting navigation_changed event\n")
+    emit$navigation_changed()
+    log_debug("AUTO_DETECT: navigation_changed event emitted", "AUTO_DETECT")
     }
 
     debug_log("Auto-detect process completed successfully", "AUTO_DETECT_FLOW", level = "INFO",

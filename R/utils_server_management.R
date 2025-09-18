@@ -292,7 +292,7 @@ collect_metadata <- function(input) {
   })
 }
 
-handle_clear_saved_request <- function(input, session, values, app_state = NULL) {
+handle_clear_saved_request <- function(input, session, app_state, emit) {
   # Check if there's data or settings to lose - PHASE 4: Use unified state
   current_data_check <- app_state$data$current_data
   has_data <- !is.null(current_data_check) &&
@@ -308,7 +308,7 @@ handle_clear_saved_request <- function(input, session, values, app_state = NULL)
 
   # If no data or settings, start new session directly
   if (!has_data && !has_settings) {
-    reset_to_empty_session(session, values, app_state)
+    reset_to_empty_session(session, app_state, emit)
     showNotification("Ny session startet", type = "message", duration = 2)
     return()
   }
@@ -317,13 +317,13 @@ handle_clear_saved_request <- function(input, session, values, app_state = NULL)
   show_clear_confirmation_modal(has_data, has_settings, values)
 }
 
-handle_confirm_clear_saved <- function(session, values, app_state = NULL) {
-  reset_to_empty_session(session, values, app_state)
+handle_confirm_clear_saved <- function(session, app_state, emit) {
+  reset_to_empty_session(session, app_state, emit)
   removeModal()
   showNotification("Ny session startet - alt data og indstillinger nulstillet", type = "message", duration = 4)
 }
 
-reset_to_empty_session <- function(session, values, app_state = NULL) {
+reset_to_empty_session <- function(session, app_state, emit) {
   # Unified state: App state is always available
   use_centralized_state <- !is.null(app_state)
   cat("DEBUG: [SESSION_RESET] Session reset started, centralized state available:", use_centralized_state, "\n")
@@ -349,13 +349,9 @@ reset_to_empty_session <- function(session, values, app_state = NULL) {
   cat("DEBUG: [SESSION_RESET] Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), "\n")
   cat("DEBUG: [SESSION_RESET] app_state hash after:", digest::digest(app_state$data$current_data), "\n")
 
-  # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
-  if (!is.null(app_state$navigation_trigger)) {
-    old_trigger <- app_state$navigation_trigger()
-    app_state$navigation_trigger(old_trigger + 1)
-    new_trigger <- app_state$navigation_trigger()
-    cat("DEBUG: [SESSION_RESET] navigation_trigger incremented from", old_trigger, "to", new_trigger, "\n")
-  }
+  # UNIFIED EVENTS: Trigger navigation change through event system
+  cat("DEBUG: [SESSION_RESET] Emitting navigation_changed event\n")
+  emit$navigation_changed()
 
   # PHASE 4B: Unified state assignment only
   app_state$session$file_uploaded <- FALSE

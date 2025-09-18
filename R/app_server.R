@@ -180,7 +180,7 @@ app_server <- function(input, output, session) {
 
   ## Kolonne management logik
   # PHASE 4: Pass centralized state to column management and get autodetect trigger
-  autodetect_trigger <- setup_column_management(input, output, session, app_state)
+  autodetect_trigger <- setup_column_management(input, output, session, app_state, emit)
   cat("DEBUG: [APP_SERVER] Received autodetect_trigger from column management\n")
 
   ## Visualiserings logik
