@@ -79,7 +79,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
     app_state$columns$auto_detect$in_progress <- TRUE
 
     # PHASE 4: Pass centralized state to auto-detect function - now uses unified events
-    auto_detect_and_update_columns(input, session, app_state)
+    auto_detect_and_update_columns(input, session, app_state, emit)
 
     # PHASE 4: Use unified state management
     app_state$columns$auto_detect$completed <- TRUE
@@ -374,7 +374,7 @@ detect_columns_name_only <- function(col_names, input, session, app_state = NULL
 
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
-auto_detect_and_update_columns <- function(input, session, app_state = NULL) {
+auto_detect_and_update_columns <- function(input, session, app_state = NULL, emit = NULL) {
   # Get session ID for debugging
   session_id <- if (!is.null(session)) session$token else NULL
 
@@ -643,9 +643,11 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL) {
   # NOTE: app_state$data$original_data bevares uændret, kun current_data modificeres
 
   # Sikker dato-konvertering uden at trigger reaktive loops
-  tryCatch({
-    # Temporarily disable reactive observers during data modification
-    isolate({
+  safe_operation(
+    operation_name = "POST-PROCESSING: Dato-konvertering",
+    code = {
+      # Temporarily disable reactive observers during data modification
+      isolate({
       for (candidate_name in names(date_candidates)) {
         candidate <- date_candidates[[candidate_name]]
 
@@ -717,10 +719,12 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL) {
           }
         }
       }
-    })
-  }, error = function(e) {
-    log_error(paste("POST-PROCESSING fejlede:", e$message))
-  })
+      })
+    },
+    error_type = "processing",
+    emit = emit,
+    app_state = app_state
+  )
 
   # Detekter numeriske kolonner
   cat("DEBUG: [AUTO_DETECT_FUNC] 🔢 Detecting numeric columns...\n")
@@ -1187,8 +1191,9 @@ setup_data_table <- function(input, output, session, app_state, emit) {
       # PHASE 4: Use unified state management
       app_state$data$table_operation_cleanup_needed <- TRUE
 
-      tryCatch(
-        {
+      safe_operation(
+        operation_name = "ExcelR tabel data opdatering",
+        code = {
           new_data <- input$main_data_table
 
           if (is.null(new_data) || length(new_data) == 0) {
@@ -1270,14 +1275,11 @@ setup_data_table <- function(input, output, session, app_state, emit) {
 
           showNotification("Tabel opdateret", type = "message", duration = 2)
         },
-        error = function(e) {
-          log_error(paste("ERROR in excelR table change:", e$message), "DATA_TABLE")
-          showNotification(
-            paste("Fejl ved tabel-opdatering:", e$message),
-            type = "error",
-            duration = 3
-          )
-        }
+        error_type = "processing",
+        emit = emit,
+        app_state = app_state,
+        show_user = TRUE,
+        session = session
       )
     },
     ignoreInit = TRUE

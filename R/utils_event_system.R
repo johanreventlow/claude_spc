@@ -134,7 +134,84 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
     cat("DEBUG: [EVENT] Session state reset completed\n")
   })
 
-  cat("DEBUG: [EVENT_SYSTEM] ✅ All event listeners registered\n")
+  # ERROR HANDLING EVENTS ===================================================
+
+  # General error event listener
+  observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$highest, {
+    error_info <- app_state$errors$last_error
+
+    cat("DEBUG: [ERROR_EVENT] General error event received\n")
+
+    # Centralized error logging with context
+    debug_log("Error event triggered", "ERROR_SYSTEM", level = "ERROR",
+              context = error_info,
+              session_id = if(!is.null(session)) session$token else NULL)
+
+    # Emit recovery attempts if appropriate
+    if (!is.null(error_info) && !is.null(emit)) {
+      if (error_info$type %in% c("processing", "validation")) {
+        # For processing errors, increment recovery attempts
+        app_state$errors$recovery_attempts <- app_state$errors$recovery_attempts + 1L
+      }
+    }
+  })
+
+  # Processing error event listener
+  observeEvent(app_state$events$processing_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
+    error_info <- app_state$errors$last_error
+
+    cat("DEBUG: [ERROR_EVENT] Processing error event received\n")
+
+    # For processing errors, we might want to trigger data validation
+    if (!is.null(error_info) && !is.null(emit)) {
+      if (grepl("data|processing|convert", error_info$message, ignore.case = TRUE)) {
+        cat("DEBUG: [ERROR_RECOVERY] Suggesting data validation after processing error\n")
+        # Could emit validation_needed event if we had one
+      }
+    }
+  })
+
+  # Validation error event listener
+  observeEvent(app_state$events$validation_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
+    error_info <- app_state$errors$last_error
+
+    cat("DEBUG: [ERROR_EVENT] Validation error event received\n")
+
+    # For validation errors, clear problematic state
+    if (!is.null(error_info) && !is.null(app_state)) {
+      cat("DEBUG: [ERROR_RECOVERY] Clearing validation state after error\n")
+      # Reset validation-related state if needed
+    }
+  })
+
+  # Network error event listener
+  observeEvent(app_state$events$network_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$medium, {
+    error_info <- app_state$errors$last_error
+
+    cat("DEBUG: [ERROR_EVENT] Network error event received\n")
+
+    # For network errors (file I/O), we might want to retry or suggest file check
+    if (!is.null(error_info) && !is.null(emit)) {
+      cat("DEBUG: [ERROR_RECOVERY] Network error suggests file operation issue\n")
+    }
+  })
+
+  # Recovery completed event listener
+  observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+    error_info <- app_state$errors$last_error
+
+    cat("DEBUG: [ERROR_EVENT] Recovery completed event received\n")
+
+    # Update recovery timestamp
+    app_state$errors$last_recovery_time <- Sys.time()
+
+    # Log successful recovery
+    debug_log("Error recovery completed", "ERROR_SYSTEM", level = "INFO",
+              context = list(recovery_time = Sys.time()),
+              session_id = if(!is.null(session)) session$token else NULL)
+  })
+
+  cat("DEBUG: [EVENT_SYSTEM] ✅ All event listeners registered (including error handling)\n")
 }
 
 #' Auto-detect and update columns (Unified Event Version)

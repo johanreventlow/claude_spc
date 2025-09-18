@@ -118,8 +118,9 @@ setup_file_upload <- function(input, output, session, waiter_file, app_state, em
       log_debug(paste("- Actual file size:", file_info$size, "bytes"), "FILE_UPLOAD")
     }
 
-    tryCatch(
-      {
+    safe_operation(
+      operation_name = "Fil upload processing",
+      code = {
         upload_tracer$step("file_processing_started")
 
         if (file_ext %in% c("xlsx", "xls")) {
@@ -141,16 +142,11 @@ setup_file_upload <- function(input, output, session, waiter_file, app_state, em
         upload_tracer$complete("file_upload_workflow_complete")
         debug_log("File upload workflow completed successfully", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
       },
-      error = function(e) {
-        log_debug(paste("❌ Error during file processing:", e$message), "FILE_UPLOAD")
-        log_debug(paste("Error class:", class(e)), "FILE_UPLOAD")
-
-        upload_tracer$complete("file_upload_workflow_failed")
-
-        # ENHANCED ERROR HANDLING: Use comprehensive error recovery
-        error_result <- handle_upload_error(e, input$data_file, session$token)
-        log_debug(paste("Error categorized as:", error_result$error_type), "FILE_UPLOAD")
-      }
+      error_type = "network",
+      emit = emit,
+      app_state = app_state,
+      session = session,
+      show_user = TRUE
     )
 
     log_debug("File upload handler completed", "FILE_UPLOAD")

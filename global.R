@@ -430,16 +430,69 @@ safe_date_parse <- function(data, locale = "da_DK.UTF-8", operation_name = "date
 #'   code = read.csv("ikke_eksisterende_fil.csv"),
 #'   fallback = data.frame()
 #' )
-safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE) {
+safe_operation <- function(operation_name, code,
+                          fallback = NULL,
+                          session = NULL,
+                          show_user = FALSE,
+                          error_type = "general",
+                          emit = NULL,
+                          app_state = NULL) {
   tryCatch(
     {
       code
     },
     error = function(e) {
+      # Log error
       log_error(
         paste(operation_name, "fejlede:", e$message),
         "ERROR_HANDLING"
       )
+
+      # Update error state if app_state available
+      if (!is.null(app_state)) {
+        error_details <- list(
+          operation = operation_name,
+          message = e$message,
+          type = error_type,
+          timestamp = Sys.time(),
+          session_id = if(!is.null(session)) session$token else NULL
+        )
+
+        # Update error state
+        app_state$errors$last_error <- error_details
+        app_state$errors$error_count <- app_state$errors$error_count + 1L
+
+        # Add to error history (keep max 10)
+        current_history <- app_state$errors$error_history
+        if (length(current_history) >= 10) {
+          current_history <- current_history[2:10]  # Remove oldest
+        }
+        app_state$errors$error_history <- c(current_history, list(error_details))
+      }
+
+      # Emit error event if emit API available
+      if (!is.null(emit)) {
+        # Choose specific error event based on type
+        if (error_type == "validation") {
+          emit$validation_error()
+        } else if (error_type == "processing") {
+          emit$processing_error()
+        } else if (error_type == "network") {
+          emit$network_error()
+        } else {
+          emit$error_occurred()
+        }
+      }
+
+      # User feedback via unified pattern
+      if (show_user && !is.null(session)) {
+        showNotification(
+          paste("Fejl:", operation_name),
+          type = "error",
+          duration = 5
+        )
+      }
+
       return(fallback)
     }
   )
@@ -574,7 +627,14 @@ create_app_state <- function() {
 
     # Session lifecycle events
     session_reset = 0L,
-    test_mode_ready = 0L
+    test_mode_ready = 0L,
+
+    # Error handling events
+    error_occurred = 0L,           # General error event
+    validation_error = 0L,         # Input validation errors
+    processing_error = 0L,         # Data processing errors
+    network_error = 0L,           # File I/O and network errors
+    recovery_completed = 0L       # Successful error recovery
   )
 
   # Data Management - Convert to reactiveValues for consistency
@@ -636,6 +696,15 @@ create_app_state <- function() {
     anhoej_results = NULL,
     is_computing = FALSE,
     plot_object = NULL
+  )
+
+  # Error State - Convert to reactiveValues for consistency
+  app_state$errors <- reactiveValues(
+    last_error = NULL,           # Last error details
+    error_count = 0L,           # Total error count
+    error_history = list(),     # Recent error history (max 10)
+    recovery_attempts = 0L,     # Number of recovery attempts
+    last_recovery_time = NULL   # Timestamp of last recovery
   )
 
   return(app_state)
@@ -736,6 +805,42 @@ create_emit_api <- function(app_state) {
       isolate({
         app_state$events$test_mode_ready <- app_state$events$test_mode_ready + 1L
         cat("DEBUG: [EVENT] test_mode_ready emitted:", app_state$events$test_mode_ready, "\n")
+      })
+    },
+
+    # Error handling events
+    error_occurred = function() {
+      isolate({
+        app_state$events$error_occurred <- app_state$events$error_occurred + 1L
+        cat("DEBUG: [EVENT] error_occurred emitted:", app_state$events$error_occurred, "\n")
+      })
+    },
+
+    validation_error = function() {
+      isolate({
+        app_state$events$validation_error <- app_state$events$validation_error + 1L
+        cat("DEBUG: [EVENT] validation_error emitted:", app_state$events$validation_error, "\n")
+      })
+    },
+
+    processing_error = function() {
+      isolate({
+        app_state$events$processing_error <- app_state$events$processing_error + 1L
+        cat("DEBUG: [EVENT] processing_error emitted:", app_state$events$processing_error, "\n")
+      })
+    },
+
+    network_error = function() {
+      isolate({
+        app_state$events$network_error <- app_state$events$network_error + 1L
+        cat("DEBUG: [EVENT] network_error emitted:", app_state$events$network_error, "\n")
+      })
+    },
+
+    recovery_completed = function() {
+      isolate({
+        app_state$events$recovery_completed <- app_state$events$recovery_completed + 1L
+        cat("DEBUG: [EVENT] recovery_completed emitted:", app_state$events$recovery_completed, "\n")
       })
     }
   )
