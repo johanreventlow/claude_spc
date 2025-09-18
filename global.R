@@ -595,6 +595,9 @@ create_app_state <- function() {
     auto_detect_completed = FALSE,
     auto_detect_results = NULL,
 
+    # Unified auto-detection results (consistent naming across all files)
+    auto_detected_columns = NULL,
+
     # Column mappings
     x_column = NULL,
     y_column = NULL,

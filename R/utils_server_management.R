@@ -7,7 +7,7 @@
 
 ## Hovedfunktion for session management
 # Opsætter al server logik relateret til session håndtering
-setup_session_management <- function(input, output, session, values, waiter_file, app_state = NULL) {
+setup_session_management <- function(input, output, session, waiter_file, app_state) {
   cat("DEBUG: [SESSION_MGMT] ===========================================\n")
   cat("DEBUG: [SESSION_MGMT] Initializing session management observers\n")
   cat("DEBUG: [SESSION_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
@@ -511,7 +511,7 @@ show_clear_confirmation_modal <- function(has_data, has_settings, values) {
 
 ## Hovedfunktion for velkomstside
 # Opsætter alle handlers for velkomstside interaktioner
-setup_welcome_page_handlers <- function(input, output, session, values, waiter_file, app_state = NULL) {
+setup_welcome_page_handlers <- function(input, output, session, waiter_file, app_state) {
   cat("DEBUG: [WELCOME_PAGE_SETUP] Setting up welcome page handlers\n")
   cat("DEBUG: [WELCOME_PAGE_SETUP] app_state provided:", !is.null(app_state), "\n")
 

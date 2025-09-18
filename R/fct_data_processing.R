@@ -38,7 +38,7 @@
 #' }
 #'
 #' @seealso \code{\link{detect_columns_name_only}}, \code{\link{ensure_standard_columns}}
-setup_column_management <- function(input, output, session, values, app_state = NULL) {
+setup_column_management <- function(input, output, session, app_state) {
   cat("DEBUG: [COLUMN_MGMT] ===========================================\n")
   cat("DEBUG: [COLUMN_MGMT] Setting up column management\n")
   cat("DEBUG: [COLUMN_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
@@ -46,8 +46,9 @@ setup_column_management <- function(input, output, session, values, app_state = 
   # PHASE 4: Centralized state is now always available
   cat("DEBUG: [PHASE4] Centralized state available for column management\n")
 
-  # Opdater kolonnevalg når data ændres
-  observe({
+  # LEGACY: Column choices update observer moved to unified event system
+  # Now handled by emit$data_changed() -> update_column_choices_unified()
+  # observe({
     log_debug("Column update observer triggered", "COLUMN_MGMT")
 
     # PHASE 4: Use unified state management
@@ -168,45 +169,12 @@ setup_column_management <- function(input, output, session, values, app_state = 
       } else {
         cat("DEBUG: [AUTO_DETECT] ❌ Conditions not met for auto-detect\n")
       }
-    },
-    ignoreInit = TRUE
-  )
+    # },
+    # ignoreInit = TRUE
+  # )
 
-  # Test mode auto-detect trigger (event-driven instead of later::later)
-  # PHASE 4: Unified state observer for test mode auto-detect trigger
-  if (!is.null(app_state)) {
-    cat("DEBUG: [TEST_MODE] Creating test mode auto-detect observer\n")
-
-    # Check if flag is already set (race condition fix)
-    if (!is.null(app_state$test_mode$auto_detect_ready) && app_state$test_mode$auto_detect_ready != FALSE) {
-      cat("DEBUG: [TEST_MODE] Flag already set, triggering autodetection immediately\n")
-      timestamp <- Sys.time()
-      app_state$columns$auto_detect$trigger <- timestamp
-      cat("DEBUG: [PHASE4] Immediate auto_detect_trigger set in centralized state\n")
-    }
-
-    observeEvent(app_state$test_mode$auto_detect_ready,
-      {
-        cat("DEBUG: [TEST_MODE] Test mode auto-detect observer triggered\n")
-        cat("DEBUG: [TEST_MODE] auto_detect_ready value:", if(is.null(app_state$test_mode$auto_detect_ready)) "NULL" else as.character(app_state$test_mode$auto_detect_ready), "\n")
-
-        auto_detect_ready_value <- app_state$test_mode$auto_detect_ready
-        if (is.null(auto_detect_ready_value)) {
-          cat("DEBUG: [TEST_MODE] ❌ auto_detect_ready is NULL, skipping trigger\n")
-          return()
-        }
-
-        cat("DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n")
-        timestamp <- Sys.time()
-
-        # PHASE 4: Use unified state management
-        app_state$columns$auto_detect$trigger <- timestamp
-        cat("DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state:", as.character(timestamp), "\n")
-      },
-      ignoreInit = FALSE, ignoreNULL = TRUE,
-      priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT
-    )
-  }
+  # TEST MODE: Now handled by unified event system in utils_event_system.R
+  # Legacy test mode observer removed - replaced by emit$test_mode_ready() pattern
 
   # REACTIVE FIX: Watch for trigger_needed and fire direct reactiveVal
   # Use a helper reactiveVal to bridge the nested state to direct trigger
@@ -1388,7 +1356,7 @@ handle_add_column <- function(input, session, values, app_state = NULL) {
 
 ## Hovedfunktion for datatabel
 # Opsætter al server logik relateret til data-tabel håndtering
-setup_data_table <- function(input, output, session, values, app_state = NULL) {
+setup_data_table <- function(input, output, session, app_state) {
   cat("DEBUG: [DATA_TABLE] ===========================================\n")
   cat("DEBUG: [DATA_TABLE] Setting up data table with unified state\n")
 

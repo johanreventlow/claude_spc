@@ -17,7 +17,6 @@ NULL
 #' @param input Shiny input
 #' @param output Shiny output
 #' @param session Shiny session
-#' @param values Legacy reactive values (for compatibility)
 #'
 #' @details
 #' This function consolidates all event-driven reactive patterns
@@ -28,7 +27,7 @@ NULL
 #' All observers use ignoreInit = TRUE to prevent firing at startup
 #' and appropriate priorities to ensure correct execution order.
 #'
-setup_event_listeners <- function(app_state, emit, input, output, session, values) {
+setup_event_listeners <- function(app_state, emit, input, output, session) {
   cat("DEBUG: [EVENT_SYSTEM] Setting up unified event listeners\n")
 
   # DATA LIFECYCLE EVENTS
@@ -40,6 +39,13 @@ setup_event_listeners <- function(app_state, emit, input, output, session, value
       cat("DEBUG: [EVENT] Data available, emitting auto_detection_started\n")
       emit$auto_detection_started()
     }
+  })
+
+  observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = 990, {
+    cat("DEBUG: [EVENT] data_changed event received\n")
+
+    # Update column choices when data changes
+    update_column_choices_unified(app_state, input, output, session)
   })
 
   # AUTO-DETECTION EVENTS
@@ -182,8 +188,9 @@ auto_detect_and_update_columns_unified <- function(app_state, emit) {
     }
   }
 
-  # Store results
+  # Store results in both locations for consistency during transition
   app_state$columns$auto_detect_results <- results
+  app_state$columns$auto_detected_columns <- results
 
   # Update individual column mappings
   if (!is.null(results$x_column)) app_state$columns$x_column <- results$x_column
@@ -247,4 +254,67 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session) {
   }, error = function(e) {
     cat("DEBUG: [UI_SYNC_UNIFIED] UI sync error:", e$message, "\n")
   })
+}
+
+#' Update Column Choices (Unified Event Version)
+#'
+#' Unified version of column choice updates that handles
+#' data changes through the event system.
+#'
+#' @param app_state The centralized app state
+#' @param input Shiny input
+#' @param output Shiny output
+#' @param session Shiny session
+#'
+update_column_choices_unified <- function(app_state, input, output, session) {
+  cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Starting column choices update\n")
+
+  # Check if we should skip during table operations
+  if (app_state$data$updating_table) {
+    cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Skipping - table update in progress\n")
+    return()
+  }
+
+  # Skip if auto-detect is in progress
+  if (app_state$columns$auto_detect_in_progress) {
+    cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Skipping - auto-detect in progress\n")
+    return()
+  }
+
+  # Skip if UI sync is needed (to avoid race conditions)
+  if (app_state$columns$ui_sync_needed) {
+    cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Skipping - UI sync pending\n")
+    return()
+  }
+
+  # Get current data
+  if (is.null(app_state$data$current_data)) {
+    cat("DEBUG: [COLUMN_CHOICES_UNIFIED] No data available\n")
+    return()
+  }
+
+  data <- app_state$data$current_data
+  all_cols <- names(data)
+  cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Available columns:", paste(all_cols, collapse = ", "), "\n")
+
+  if (length(all_cols) > 0) {
+    # Create column choices
+    col_choices <- setNames(
+      c("", all_cols),
+      c("Vælg kolonne...", all_cols)
+    )
+
+    # Update UI controls
+    tryCatch({
+      updateSelectizeInput(session, "x_column", choices = col_choices)
+      updateSelectizeInput(session, "y_column", choices = col_choices)
+      updateSelectizeInput(session, "n_column", choices = col_choices)
+      updateSelectizeInput(session, "cl_column", choices = col_choices)
+
+      cat("DEBUG: [COLUMN_CHOICES_UNIFIED] ✅ Column choices updated\n")
+
+    }, error = function(e) {
+      cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Error updating UI:", e$message, "\n")
+    })
+  }
 }

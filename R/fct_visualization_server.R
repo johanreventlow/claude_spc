@@ -7,7 +7,7 @@
 
 ## Hovedfunktion for visualisering
 # Opsætter al server logik relateret til visualisering og data forberedelse
-setup_visualization <- function(input, output, session, values, app_state = NULL, navigation_trigger = NULL) {
+setup_visualization <- function(input, output, session, app_state, navigation_trigger = NULL) {
   log_debug("=======================================", "VISUALIZATION")
   log_debug("Setting up visualization system", "VISUALIZATION")
 

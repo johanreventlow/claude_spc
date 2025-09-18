@@ -7,7 +7,7 @@
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
-setup_file_upload <- function(input, output, session, values, waiter_file, app_state = NULL, emit = NULL) {
+setup_file_upload <- function(input, output, session, waiter_file, app_state, emit) {
   # Unified state: App state is always available
   log_debug("===========================================", "FILE_UPLOAD")
   log_debug("Setting up file upload handlers", "FILE_UPLOAD")
@@ -125,13 +125,13 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
         if (file_ext %in% c("xlsx", "xls")) {
           log_debug("📊 Processing Excel file...", "FILE_UPLOAD")
           debug_log("Starting Excel file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
-          handle_excel_upload(file_path, session, values, app_state, emit)
+          handle_excel_upload(file_path, session, app_state, emit)
           log_debug("✅ Excel file processed successfully", "FILE_UPLOAD")
           upload_tracer$step("excel_processing_complete")
         } else {
           log_debug("📄 Processing CSV file...", "FILE_UPLOAD")
           debug_log("Starting CSV file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
-          handle_csv_upload(file_path, values, app_state, session$token, emit)
+          handle_csv_upload(file_path, app_state, session$token, emit)
           log_debug("✅ CSV file processed successfully", "FILE_UPLOAD")
           upload_tracer$step("csv_processing_complete")
         }
@@ -162,7 +162,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
 }
 
 ## Håndter Excel fil upload
-handle_excel_upload <- function(file_path, session, values, app_state = NULL, emit = NULL) {
+handle_excel_upload <- function(file_path, session, app_state, emit) {
   log_debug("========================================", "EXCEL_READ")
   log_debug("Starting Excel file processing", "EXCEL_READ")
   log_debug(paste("File path:", file_path), "EXCEL_READ")
@@ -196,6 +196,10 @@ handle_excel_upload <- function(file_path, session, values, app_state = NULL, em
     data_frame <- as.data.frame(data)
     app_state$data$current_data <- data_frame
     app_state$data$original_data <- data_frame
+
+    # Emit data_loaded event to trigger unified event system
+    emit$data_loaded()
+
     # PHASE 4B: Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
     # PHASE 4B: Unified state assignment only - Set auto detect completed (skip since we have session info)
@@ -233,6 +237,10 @@ handle_excel_upload <- function(file_path, session, values, app_state = NULL, em
     data_frame <- as.data.frame(data)
     app_state$data$current_data <- data_frame
     app_state$data$original_data <- data_frame
+
+    # Emit data_loaded event to trigger unified event system
+    emit$data_loaded()
+
     # PHASE 4B: Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
     # PHASE 4B: Unified state assignment only - Set auto detect flag
@@ -308,7 +316,7 @@ handle_excel_upload <- function(file_path, session, values, app_state = NULL, em
 #' }
 #'
 #' @seealso \code{\link{handle_excel_upload}}, \code{\link{ensure_standard_columns}}
-handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = NULL, emit = NULL) {
+handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NULL) {
   log_debug("==========================================", "CSV_READ")
   log_debug("Starting CSV file processing", "CSV_READ")
   log_debug(paste("File path:", file_path), "CSV_READ")
@@ -402,6 +410,10 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
   log_debug("✅ Set current_data to unified state", "CSV_READ")
   app_state$data$original_data <- data_frame
   log_debug("✅ Set original_data to unified state", "CSV_READ")
+
+  # Emit data_loaded event to trigger unified event system
+  emit$data_loaded()
+
   # PHASE 4B: Unified state assignment only - Set file uploaded flag
   app_state$session$file_uploaded <- TRUE
   # PHASE 4B: Unified state assignment only - Set auto detect flag
@@ -544,9 +556,8 @@ parse_session_metadata <- function(session_lines, data_cols) {
 
 ## Hovedfunktion for downloads
 # Opsætter alle download handlers for forskellige eksport formater
-setup_download_handlers <- function(input, output, session, values) {
-  # Hent visualisering objekt til download handlers
-  visualization <- setup_visualization(input, output, session, values)
+setup_download_handlers <- function(input, output, session, app_state, visualization) {
+  # Note: visualization object passed from main server setup
 
   # Komplet Excel eksport
   output$download_complete_excel <- downloadHandler(

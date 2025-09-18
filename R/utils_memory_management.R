@@ -8,7 +8,7 @@
 #'
 #' @family memory_management
 #' @export
-setup_session_cleanup <- function(session, values = NULL, app_state = NULL, observers = NULL) {
+setup_session_cleanup <- function(session, app_state = NULL, observers = NULL) {
 
   # Register cleanup på session end
   session$onSessionEnded(function() {
@@ -17,10 +17,7 @@ setup_session_cleanup <- function(session, values = NULL, app_state = NULL, obse
     # Clear performance caches
     clear_performance_cache()
 
-    # Clear reactive values if provided
-    if (!is.null(values)) {
-      cleanup_reactive_values(values)
-    }
+    # Legacy reactive values cleanup removed - using unified state only
 
     # Clear centralized state if provided
     if (!is.null(app_state)) {

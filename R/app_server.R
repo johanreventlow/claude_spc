@@ -32,12 +32,12 @@ app_server <- function(input, output, session) {
   source("R/mod_spc_chart.R", local = TRUE)
   log_debug("✅ All server components sourced", "APP_SERVER")
 
-  # Reaktive Værdier --------------------------------------------------------
-  # Initialiser reaktive værdier
-  log_debug("Initializing reactive values...", "APP_SERVER")
-  debug_log("Creating reactive values", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
-  values <- initialize_reactive_values()
-  log_debug("✅ Reactive values initialized", "APP_SERVER")
+  # LEGACY SYSTEM: Minimal reactive values for compatibility during transition
+  # PHASE 4: This will be removed when all components use unified state
+  log_debug("Initializing minimal legacy reactive values for compatibility...", "APP_SERVER")
+  debug_log("Creating minimal reactive values", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
+  values <- reactiveValues()  # Empty values for compatibility
+  log_debug("✅ Minimal legacy values initialized", "APP_SERVER")
   session_debugger$event("reactive_values_initialized")
 
   # PHASE 4: Centraliseret state management (parallel til existing values)
@@ -57,7 +57,7 @@ app_server <- function(input, output, session) {
 
   # FASE 5: Memory management setup
   log_debug("Setting up memory management...", "APP_SERVER")
-  setup_session_cleanup(session, values, app_state)
+  setup_session_cleanup(session, app_state)
   log_debug("✅ Memory management configured", "APP_SERVER")
 
   # Test Tilstand ------------------------------------------------------------
@@ -121,7 +121,7 @@ app_server <- function(input, output, session) {
           # PHASE 4B: Unified state assignment only
           app_state$session$user_started_session <- TRUE
           # PHASE 4B: Unified state assignment only
-          app_state$columns$auto_detect$completed <- FALSE
+          app_state$columns$auto_detect_completed <- FALSE
           # PHASE 4B: Legacy assignment removed - managed by unified state
           # PHASE 4B: Unified state assignment only
           app_state$ui$hide_anhoej_rules <- FALSE
@@ -164,36 +164,36 @@ app_server <- function(input, output, session) {
   # Opsæt alle server-komponenter
 
   ## Velkomstside interaktioner
-  setup_welcome_page_handlers(input, output, session, values, waiter_file, app_state)
+  setup_welcome_page_handlers(input, output, session, waiter_file, app_state)
 
   ## Session management logik
-  setup_session_management(input, output, session, values, waiter_file, app_state)
+  setup_session_management(input, output, session, waiter_file, app_state)
 
   ## Fil upload logik
-  setup_file_upload(input, output, session, values, waiter_file, app_state, emit)
+  setup_file_upload(input, output, session, waiter_file, app_state, emit)
 
   ## Data tabel logik
-  setup_data_table(input, output, session, values, app_state)
+  setup_data_table(input, output, session, app_state)
 
   ## Hjælpe observers (IMPORTANT: Must be set up before visualization for navigation_trigger)
-  navigation_trigger <- setup_helper_observers(input, output, session, values, obs_manager, app_state)
+  navigation_trigger <- setup_helper_observers(input, output, session, obs_manager, app_state)
 
   ## Kolonne management logik
   # PHASE 4: Pass centralized state to column management and get autodetect trigger
-  autodetect_trigger <- setup_column_management(input, output, session, values, app_state)
+  autodetect_trigger <- setup_column_management(input, output, session, app_state)
   cat("DEBUG: [APP_SERVER] Received autodetect_trigger from column management\n")
 
   ## Visualiserings logik
-  visualization <- setup_visualization(input, output, session, values, app_state, navigation_trigger)
+  visualization <- setup_visualization(input, output, session, app_state, navigation_trigger)
 
   ## Download handlers
-  setup_download_handlers(input, output, session, values)
+  setup_download_handlers(input, output, session, app_state, visualization)
 
   session_debugger$event("server_setup_complete")
   debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
 
   # EVENT SYSTEM: Set up reactive event listeners
-  setup_event_listeners(app_state, emit, input, output, session, values)
+  setup_event_listeners(app_state, emit, input, output, session)
 
   # TEST MODE: Emit test_mode_ready event AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {

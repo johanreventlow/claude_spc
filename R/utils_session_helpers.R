@@ -7,7 +7,7 @@
 
 ## Hovedfunktion for hjælper
 # Opsætter alle hjælper observers og status funktioner
-setup_helper_observers <- function(input, output, session, values, obs_manager = NULL, app_state = NULL) {
+setup_helper_observers <- function(input, output, session, obs_manager = NULL, app_state = NULL) {
   # PHASE 4: Centralized state is now always available
   # Initialiser ikke automatisk tom tabel ved opstart - vent på bruger aktion
   # observe({
