@@ -117,7 +117,7 @@ cleanup_reactive_values <- function(values) {
 #'
 #' @family memory_management
 #' @export
-cleanup_app_state <- function(app_state) {
+cleanup_app_state <- function(app_state, emit = NULL) {
   if (is.null(app_state)) return()
 
   log_debug("Cleaning centralized app state", "MEMORY_MGMT")
@@ -126,6 +126,11 @@ cleanup_app_state <- function(app_state) {
   if (!is.null(app_state$data)) {
     app_state$data$current_data <- NULL
     app_state$data$original_data <- NULL
+
+    # Emit session reset event if emit is available
+    if (!is.null(emit)) {
+      emit$session_reset()
+    }
     app_state$data$updating_table <- FALSE
     app_state$data$table_operation_in_progress <- FALSE
   }
@@ -314,13 +319,13 @@ cleanup_temp_files <- function(temp_dir = tempdir(), pattern = NULL, max_age_hou
 #' Complete app reset utility der clearer all state og memory.
 #' Bruges ved "Start ny session" eller som recovery mechanism.
 #'
-#' @param values ReactiveValues object
-#' @param app_state Centralized app state (optional)
-#' @param session Shiny session object
+#' @param app_state Centralized app state (required)
+#' @param session Shiny session object (optional)
+#' @param emit Event emission API (optional)
 #'
 #' @family memory_management
 #' @export
-reset_app_to_clean_state <- function(values, app_state = NULL, session = NULL) {
+reset_app_to_clean_state <- function(app_state, session = NULL, emit = NULL) {
   log_info("Resetting app to clean state", "MEMORY_MGMT")
 
   # Monitor memory during reset
@@ -336,7 +341,7 @@ reset_app_to_clean_state <- function(values, app_state = NULL, session = NULL) {
   clear_performance_cache()
 
   # PHASE 4: Data reset handled by unified state management
-  # Legacy values$ data assignments removed - unified state handles data lifecycle
+  # Data reset handled by unified state lifecycle management
 
   # PHASE 4B: Legacy assignments removed - reset handled by unified state
   # Session reset managed by unified state architecture in reset_app_to_clean_state

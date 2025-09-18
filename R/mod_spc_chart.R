@@ -559,7 +559,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         shinyjs::hide("spc_plot_actual")
         shinyjs::show("message_overlay")
       }
-    }, priority = 1000)
+    }, priority = OBSERVER_PRIORITIES$medium)
 
     ## Faktisk Plot Rendering
     # Separat renderPlot for det faktiske SPC plot

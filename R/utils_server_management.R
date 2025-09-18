@@ -7,7 +7,7 @@
 
 ## Hovedfunktion for session management
 # Opsætter al server logik relateret til session håndtering
-setup_session_management <- function(input, output, session, waiter_file, app_state) {
+setup_session_management <- function(input, output, session, waiter_file, app_state, emit) {
   cat("DEBUG: [SESSION_MGMT] ===========================================\n")
   cat("DEBUG: [SESSION_MGMT] Initializing session management observers\n")
   cat("DEBUG: [SESSION_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
@@ -94,12 +94,18 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
               # PHASE 4: Unified state assignment only
               app_state$data$current_data <- reconstructed_data
               app_state$data$original_data <- reconstructed_data
+
+              # Emit event to trigger downstream effects
+              emit$data_loaded()
             } else {
               # Fallback for older save format
               # PHASE 4: Unified state assignment only
               fallback_data <- as.data.frame(saved_state$data)
               app_state$data$current_data <- fallback_data
               app_state$data$original_data <- fallback_data
+
+              # Emit event to trigger downstream effects
+              emit$data_loaded()
             }
 
             # PHASE 4B: Unified state assignment only
@@ -347,6 +353,9 @@ reset_to_empty_session <- function(session, app_state, emit) {
   # PHASE 4: Unified state assignment only
   app_state$data$current_data <- standard_data
   cat("DEBUG: [SESSION_RESET] Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), "\n")
+
+  # Emit event to trigger downstream effects
+  emit$data_loaded()
   cat("DEBUG: [SESSION_RESET] app_state hash after:", digest::digest(app_state$data$current_data), "\n")
 
   # UNIFIED EVENTS: Trigger navigation change through event system
@@ -416,7 +425,7 @@ reset_to_empty_session <- function(session, app_state, emit) {
 
     # Kald name-only detection direkte med de nye kolonnenavne
     # NOTE: UI sync is now handled by unified event system
-    name_only_result <- detect_columns_name_only(names(new_data), NULL, session, values, app_state)
+    name_only_result <- detect_columns_name_only(names(new_data), NULL, session, app_state)
 
     cat("DEBUG: [SESSION_RESET] ✅ Name-only detection completed for session reset\n")
   }
@@ -507,7 +516,7 @@ show_clear_confirmation_modal <- function(has_data, has_settings, values) {
 
 ## Hovedfunktion for velkomstside
 # Opsætter alle handlers for velkomstside interaktioner
-setup_welcome_page_handlers <- function(input, output, session, waiter_file, app_state) {
+setup_welcome_page_handlers <- function(input, output, session, waiter_file, app_state, emit) {
   cat("DEBUG: [WELCOME_PAGE_SETUP] Setting up welcome page handlers\n")
   cat("DEBUG: [WELCOME_PAGE_SETUP] app_state provided:", !is.null(app_state), "\n")
 
@@ -527,6 +536,9 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
     app_state$data$current_data <- empty_session_data
     app_state$data$original_data <- empty_session_data
 
+    # Emit event to trigger downstream effects
+    emit$data_loaded()
+
     # REACTIVE WRAPPER FIX: Increment version to trigger reactive navigation
     old_version <- app_state$data$table_version
     app_state$data$table_version <- app_state$data$table_version + 1
@@ -545,7 +557,7 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
 
     # Nulstil konfigurationer
     # Unified state: Reset auto detect for welcome page
-    # PHASE 4B: Legacy values$auto_detect_done assignment removed - using unified state only
+    # Using unified state management for auto-detect status
     app_state$columns$auto_detect$completed <- FALSE
     updateSelectInput(session, "x_column", selected = "")
     updateSelectInput(session, "y_column", selected = "")
@@ -610,14 +622,17 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
           # PHASE 4: Unified state assignment only
           app_state$data$current_data <- demo_data
           app_state$data$original_data <- demo_data
+
+          # Emit event to trigger downstream effects
+          emit$data_loaded()
           # PHASE 4B: Unified state assignment only
           app_state$session$file_uploaded <- TRUE
           # Unified state: Set user started session for demo navigation
           app_state$session$user_started_session <- TRUE
           # Unified state: Reset auto detect for demo
-          # PHASE 4B: Legacy values$auto_detect_done assignment removed - using unified state only # Vil udløse auto-detekt
+          # Using unified state management - will trigger auto-detect
           app_state$columns$auto_detect$completed <- FALSE
-          # PHASE 4B: Legacy values$initial_auto_detect_completed assignment removed - using unified state only # Reset for new data
+          # Using unified state management - reset for new data
           # PHASE 4B: Unified state assignment only
           app_state$ui$hide_anhoej_rules <- FALSE # Vis Anhøj regler for rigtige data
           # Unified state: Set demo file name

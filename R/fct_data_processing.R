@@ -48,130 +48,12 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
   # LEGACY: Column choices update observer moved to unified event system
   # Now handled by emit$data_changed() -> update_column_choices_unified()
-  # observe({
-    log_debug("Column update observer triggered", "COLUMN_MGMT")
+  # CONVERTED: Direct reactive observation removed in favor of event-driven pattern
 
-    # PHASE 4: Use unified state management
-    updating_table_check <- app_state$data$updating_table
-
-    if (updating_table_check) {
-      log_debug("Skipping - table update in progress", "COLUMN_MGMT")
-      return()
-    }
-
-    # Skip hvis auto-detect er i gang for at undgå at overskrive auto-detect resultater
-    # PHASE 4: Use unified state management
-    # PHASE 4: Use unified state management for auto-detect status check
-    auto_detect_active <- if (!is.null(app_state)) app_state$columns$auto_detect$in_progress else FALSE
-
-    if (auto_detect_active) {
-      log_debug("Skipping - auto-detect in progress", "COLUMN_MGMT")
-      return()
-    }
-
-    # Skip hvis UI sync er pending for at undgå race condition
-    if (!is.null(app_state$columns$ui_sync$needed)) {
-      log_debug("Skipping - UI sync pending, would override auto-detect results", "COLUMN_MGMT")
-      return()
-    }
-
-    # Skip hvis UI sync netop er udført (3 sekunder cooling-off periode)
-    if (!is.null(app_state$columns$ui_sync$last_sync_time)) {
-      time_since_sync <- as.numeric(difftime(Sys.time(), app_state$columns$ui_sync$last_sync_time, units = "secs"))
-      if (time_since_sync < 3.0) {
-        cat("DEBUG: [COLUMN_MGMT] Skipping - UI sync completed", round(time_since_sync, 2), "seconds ago, cooling off\n")
-        return()
-      }
-    }
-
-    # PHASE 4: Use unified state management
-    current_data_check <- app_state$data$current_data
-    req(current_data_check)
-    cat("DEBUG: [COLUMN_MGMT] Data available - processing column choices\n")
-
-    data <- current_data_check
-    all_cols <- names(data)
-    cat("DEBUG: [COLUMN_MGMT] Available columns:", paste(all_cols, collapse = ", "), "\n")
-
-    if (length(all_cols) > 0) {
-      cat("DEBUG: [COLUMN_MGMT] Creating column choices for", length(all_cols), "columns\n")
-
-      # Kun "Vælg kolonne..." som første option - selectizeInput kan rydde selv
-      col_choices <- setNames(
-        c("", all_cols),
-        c("Vælg kolonne...", all_cols)
-      )
-
-      isolate({
-        # Bevar nuværende valgte værdier når choices opdateres
-        current_x <- input$x_column
-        current_y <- input$y_column
-        current_n <- input$n_column
-        current_skift <- input$skift_column
-        current_frys <- input$frys_column
-        current_kommentar <- input$kommentar_column
-
-        cat("DEBUG: [COLUMN_MGMT] Current selections before update:\n")
-        cat("DEBUG: [COLUMN_MGMT] - X column:", if(is.null(current_x)) "NULL" else current_x, "\n")
-        cat("DEBUG: [COLUMN_MGMT] - Y column:", if(is.null(current_y)) "NULL" else current_y, "\n")
-        cat("DEBUG: [COLUMN_MGMT] - N column:", if(is.null(current_n)) "NULL" else current_n, "\n")
-
-        # Isolate UI updates to prevent reactive loops during choices update
-        updateSelectizeInput(session, "x_column", choices = col_choices, selected = current_x)
-        updateSelectizeInput(session, "y_column", choices = col_choices, selected = current_y)
-        updateSelectizeInput(session, "n_column", choices = col_choices, selected = current_n)
-        updateSelectizeInput(session, "skift_column", choices = col_choices, selected = current_skift)
-        updateSelectizeInput(session, "frys_column", choices = col_choices, selected = current_frys)
-        updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = current_kommentar)
-
-        cat("DEBUG: [COLUMN_MGMT] ✅ All selectize inputs updated with current selections\n")
-      })
-    } else {
-      cat("DEBUG: [COLUMN_MGMT] ⚠️ No columns available\n")
-    }
-  }, priority = OBSERVER_PRIORITIES$DATA_PROCESSING)
-
-  # Auto-detekterings trigger flag - bruges kun til manuel triggering (ikke test mode)
-  observeEvent({
-    # PHASE 4: Use unified state management
-    app_state$data$current_data
-  },
-    {
-      cat("DEBUG: [AUTO_DETECT] Manual auto-detect observer triggered\n")
-
-      # Skip automatisk auto-detect hvis vi allerede har været igennem det i test mode
-      # PHASE 4B: Use unified state management only
-      auto_detect_completed <- app_state$columns$auto_detect$completed %||% FALSE
-
-      if (auto_detect_completed) {
-        cat("DEBUG: [AUTO_DETECT] Skipping - initial auto-detect already completed\n")
-        return()
-      }
-
-      # PHASE 4: Use unified state management
-      current_data_check <- app_state$data$current_data
-      data_available <- !is.null(current_data_check)
-      x_empty <- is.null(input$x_column) || input$x_column == ""
-      y_empty <- is.null(input$y_column) || input$y_column == ""
-
-      cat("DEBUG: [AUTO_DETECT] Conditions check:\n")
-      cat("DEBUG: [AUTO_DETECT] - Data available:", data_available, "\n")
-      cat("DEBUG: [AUTO_DETECT] - X column empty:", x_empty, "\n")
-      cat("DEBUG: [AUTO_DETECT] - Y column empty:", y_empty, "\n")
-
-      if (data_available && x_empty && y_empty) {
-        cat("DEBUG: [AUTO_DETECT] ✅ Triggering manual auto-detect\n")
-        timestamp <- Sys.time()
-
-        # PHASE 4: Use unified state management
-        app_state$columns$auto_detect$trigger <- timestamp
-        cat("DEBUG: [PHASE4] Synced auto_detect_trigger to centralized state\n")
-      } else {
-        cat("DEBUG: [AUTO_DETECT] ❌ Conditions not met for auto-detect\n")
-      }
-    # },
-    # ignoreInit = TRUE
-  # )
+  # LEGACY: Auto-detection trigger observer removed - now handled by unified event system
+  # Manual auto-detection is triggered via emit$auto_detection_started() in the event system
+  # The observeEvent(app_state$events$data_loaded) -> emit$auto_detection_started() chain
+  # handles all auto-detection triggering automatically through the unified event architecture
 
   # TEST MODE: Now handled by unified event system in utils_event_system.R
   # Legacy test mode observer removed - replaced by emit$test_mode_ready() pattern
@@ -197,7 +79,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
     app_state$columns$auto_detect$in_progress <- TRUE
 
     # PHASE 4: Pass centralized state to auto-detect function - now uses unified events
-    auto_detect_and_update_columns(input, session, values, app_state)
+    auto_detect_and_update_columns(input, session, app_state)
 
     # PHASE 4: Use unified state management
     app_state$columns$auto_detect$completed <- TRUE
@@ -279,12 +161,12 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
   # Redigér kolonnenavne modal
   observeEvent(input$edit_column_names, {
-    show_column_edit_modal(session, values, app_state)
+    show_column_edit_modal(session, app_state)
   })
 
   # Bekræft kolonnenavn ændringer
   observeEvent(input$confirm_column_names, {
-    handle_column_name_changes(input, session, values, app_state)
+    handle_column_name_changes(input, session, app_state, emit)
   })
 
   # Tilføj kolonne
@@ -293,7 +175,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
   })
 
   observeEvent(input$confirm_add_col, {
-    handle_add_column(input, session, values, app_state)
+    handle_add_column(input, session, app_state, emit)
   })
 
   # UNIFIED EVENT SYSTEM: No longer returning autodetect_trigger
@@ -349,15 +231,15 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 #' \dontrun{
 #' # Standard SPC kolonner
 #' cols <- c("Dato", "Tæller", "Nævner", "Skift", "Frys", "Kommentar")
-#' result <- detect_columns_name_only(cols, NULL, session, values)
+#' result <- detect_columns_name_only(cols, NULL, session, app_state)
 #'
 #' # Engelske kolonner
 #' cols_en <- c("Date", "Count", "Total", "Phase", "Comment")
-#' result <- detect_columns_name_only(cols_en, NULL, session, values)
+#' result <- detect_columns_name_only(cols_en, NULL, session, app_state)
 #' }
 #'
 #' @seealso \code{\link{setup_column_management}}, \code{\link{ensure_standard_columns}}
-detect_columns_name_only <- function(col_names, input, session, values, app_state = NULL) {
+detect_columns_name_only <- function(col_names, input, session, app_state = NULL) {
   cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
   cat("DEBUG: [AUTO_DETECT_FUNC] Starting name-only detection\n")
 
@@ -481,7 +363,7 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
     cat("DEBUG: [UI_SYNC_UNIFIED] Results stored in app_state for unified event system\n")
   } else {
     # PHASE 4: Legacy path removed - now using unified state management only
-    cat("DEBUG: [UI_SYNC_TRIGGER] Legacy values$ui_sync_needed assignment skipped (unified state only)\n")
+    cat("DEBUG: [UI_SYNC_TRIGGER] Using unified state management - no legacy values assignment\n")
   }
 
   cat("DEBUG: [AUTO_DETECT_FUNC] ✅ Name-only detection completed\n")
@@ -492,7 +374,7 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
 
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
-auto_detect_and_update_columns <- function(input, session, values, app_state = NULL) {
+auto_detect_and_update_columns <- function(input, session, app_state = NULL) {
   # Get session ID for debugging
   session_id <- if (!is.null(session)) session$token else NULL
 
@@ -545,8 +427,8 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
       cat("DEBUG: [AUTO_DETECT_FUNC] - app_state data cols:", paste(names(app_state$data$current_data), collapse = ", "), "\n")
     }
   } else {
-    # PHASE 4: Legacy values$ access removed - now using unified state only
-    cat("DEBUG: [AUTO_DETECT_FUNC] - Legacy values$current_data access skipped (unified state only)\n")
+    # Using unified state management only
+    cat("DEBUG: [AUTO_DETECT_FUNC] - Using unified state management for data access\n")
   }
 
   autodetect_tracer$step("data_inspection_started")
@@ -588,7 +470,7 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
   # NAME-ONLY DETECTION for tomme datasaet
   if (name_only_mode) {
     autodetect_tracer$step("executing_name_only_detection")
-    result <- detect_columns_name_only(col_names, input, session, values, app_state)
+    result <- detect_columns_name_only(col_names, input, session, app_state)
     autodetect_tracer$complete("auto_detect_name_only_complete")
     return(result)
   }
@@ -758,7 +640,7 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
   }
 
   # POST-PROCESSING: Konverter detekterede datokolonner til Date objekter (med reaktiv loop beskyttelse)
-  # NOTE: values$original_data bevares uændret, kun values$current_data modificeres
+  # NOTE: app_state$data$original_data bevares uændret, kun current_data modificeres
 
   # Sikker dato-konvertering uden at trigger reaktive loops
   tryCatch({
@@ -821,7 +703,7 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
               if (current_rows == converted_rows) {
                 # Safe to assign - dimensions match - PHASE 4: Unified state only
-                # Legacy values$current_data assignment removed
+                # Using unified state management
                 app_state_rows <- nrow(app_state$data$current_data)
                 if (app_state_rows == converted_rows) {
                   app_state$data$current_data[[candidate_name]] <- converted_dates
@@ -976,8 +858,8 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
       duration = 4
     )
 
-    # PHASE 4: Legacy values$auto_detected_columns assignment removed - now using unified state only
-    cat("DEBUG: [PHASE4] Skipping legacy values$auto_detected_columns assignment (unified state handles this)\n")
+    # Using unified state management for auto-detected columns storage
+    cat("DEBUG: [PHASE4] Auto-detected columns handled by unified state management\n")
     # PHASE 4: Sync auto_detected_columns to centralized state - FIX: Use correct path that visualization expects
     app_state$columns$auto_detected_columns <- list(
       x_col = x_col,
@@ -1034,7 +916,6 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
     cat("DEBUG: [AUTO_DETECT] Emitting navigation_changed event\n")
     emit$navigation_changed()
     log_debug("AUTO_DETECT: navigation_changed event emitted", "AUTO_DETECT")
-    }
 
     debug_log("Auto-detect process completed successfully", "AUTO_DETECT_FLOW", level = "INFO",
               context = list(
@@ -1058,7 +939,7 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
 
 ## Vis kolonne-redigeré modal
 # Viser modal dialog for redigering af kolonnenavne
-show_column_edit_modal <- function(session, values, app_state = NULL) {
+show_column_edit_modal <- function(session, app_state = NULL) {
   # PHASE 4: Use unified state management
   current_data_check <- app_state$data$current_data
   req(current_data_check)
@@ -1095,7 +976,7 @@ show_column_edit_modal <- function(session, values, app_state = NULL) {
 
 ## Håndtér kolonnenavn ændringer
 # Behandler ændringer af kolonnenavne fra modal dialog
-handle_column_name_changes <- function(input, session, values, app_state = NULL) {
+handle_column_name_changes <- function(input, session, app_state = NULL, emit = NULL) {
   # PHASE 4: Use unified state management
   current_data_check <- app_state$data$current_data
   req(current_data_check)
@@ -1123,6 +1004,11 @@ handle_column_name_changes <- function(input, session, values, app_state = NULL)
 
   # PHASE 4: Unified state assignment only
   names(app_state$data$current_data) <- new_names
+
+  # Emit event to trigger downstream effects
+  if (!is.null(emit)) {
+    emit$data_changed()
+  }
 
   removeModal()
 
@@ -1161,7 +1047,7 @@ show_add_column_modal <- function() {
 
 ## Håndtér tilføjelse af kolonne
 # Behandler tilføjelse af nye kolonner til data
-handle_add_column <- function(input, session, values, app_state = NULL) {
+handle_add_column <- function(input, session, app_state = NULL, emit = NULL) {
   # PHASE 4: Use unified state management
   current_data_check <- app_state$data$current_data
   req(input$new_col_name, current_data_check)
@@ -1180,6 +1066,11 @@ handle_add_column <- function(input, session, values, app_state = NULL) {
     app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
   }
 
+  # Emit event to trigger downstream effects
+  if (!is.null(emit)) {
+    emit$data_changed()
+  }
+
   removeModal()
   showNotification(paste("Kolonne", new_col_name, "tilføjet"), type = "message")
 }
@@ -1192,7 +1083,7 @@ handle_add_column <- function(input, session, values, app_state = NULL) {
 
 ## Hovedfunktion for datatabel
 # Opsætter al server logik relateret til data-tabel håndtering
-setup_data_table <- function(input, output, session, app_state) {
+setup_data_table <- function(input, output, session, app_state, emit) {
   cat("DEBUG: [DATA_TABLE] ===========================================\n")
   cat("DEBUG: [DATA_TABLE] Setting up data table with unified state\n")
 
@@ -1374,6 +1265,9 @@ setup_data_table <- function(input, output, session, app_state) {
           # PHASE 4: Unified state assignment only
           app_state$data$current_data <- new_df
 
+          # Emit event to trigger downstream effects
+          emit$data_changed()
+
           showNotification("Tabel opdateret", type = "message", duration = 2)
         },
         error = function(e) {
@@ -1405,6 +1299,9 @@ setup_data_table <- function(input, output, session, app_state) {
     # PHASE 4: Unified state assignment only
     app_state$data$current_data <- rbind(app_state$data$current_data, new_row)
 
+    # Emit event to trigger downstream effects
+    emit$data_changed()
+
     showNotification("Ny række tilføjet", type = "message")
 
     # Trigger event-driven cleanup instead of timing-based
@@ -1413,5 +1310,5 @@ setup_data_table <- function(input, output, session, app_state) {
   })
 
   # UNIFIED STATE: Table reset functionality moved to utils_server_management.R
-  # Uses emit$session_reset() events and app_state instead of values$
+  # Uses emit$session_reset() events and unified app_state management
 }
