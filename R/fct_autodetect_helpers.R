@@ -20,11 +20,20 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
 
   date_candidates <- list()
 
-  # Danish date formats - prioritized for SPC context
-  danish_formats <- c("dmy", "dmY", "d/m/Y", "d-m-Y", "d.m.Y", "d m Y")
+  # Danish date formats - prioritized for SPC context with comprehensive coverage
+  danish_formats <- c(
+    "dmy", "dmY", "d/m/Y", "d-m-Y", "d.m.Y", "d m Y",
+    "d/m/y", "d-m-y", "d.m.y",  # Two-digit years
+    "dby", "dbY",  # Month names: "01 jan 2024"
+    "d B Y", "d b Y"  # Full month names: "1 Januar 2024"
+  )
 
-  # International formats - fallback
-  intl_formats <- c("ymd", "mdy", "Ymd", "mdY", "Y-m-d", "m/d/Y")
+  # International formats - fallback with comprehensive coverage
+  intl_formats <- c(
+    "ymd", "mdy", "Ymd", "mdY", "Y-m-d", "m/d/Y",
+    "y-m-d", "m/d/y",  # Two-digit years
+    "Ymd HMS", "ymd HMS"  # With time components
+  )
 
   log_debug_kv(
     analyzing_columns = ncol(data),
@@ -141,32 +150,19 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
 test_date_parsing_format <- function(test_sample, format) {
   if (length(test_sample) == 0) return(0)
 
-  successful_parses <- 0
-  total_attempts <- length(test_sample)
+  tryCatch({
+    # Use enhanced Danish date parsing on entire sample
+    parsed_dates <- parse_danish_dates(test_sample, format)
 
-  for (value in test_sample) {
-    tryCatch({
-      # Use appropriate lubridate function based on format
-      parsed_date <- switch(format,
-        "dmy" = lubridate::dmy(value),
-        "dmY" = lubridate::dmy(value),
-        "ymd" = lubridate::ymd(value),
-        "mdy" = lubridate::mdy(value),
-        "Ymd" = lubridate::ymd(value),
-        "mdY" = lubridate::mdy(value),
-        # For complex formats, use parse_date_time
-        lubridate::parse_date_time(value, format, quiet = TRUE)
-      )
+    # Count successful parses
+    successful_parses <- sum(!is.na(parsed_dates))
+    total_attempts <- length(test_sample)
 
-      if (!is.na(parsed_date)) {
-        successful_parses <- successful_parses + 1
-      }
-    }, error = function(e) {
-      # Parse failed - don't increment successful_parses
-    })
-  }
-
-  return(successful_parses / total_attempts)
+    return(successful_parses / total_attempts)
+  }, error = function(e) {
+    # All parsing failed
+    return(0)
+  })
 }
 
 #' Find Numeric Columns Suitable for Analysis
@@ -446,4 +442,127 @@ score_by_statistical_properties <- function(col_data, role) {
   }
 
   return(min(score, 1.0))  # Cap at 1.0
+}
+
+#' Find Best Date Format for Data Sample
+#'
+#' Tests multiple date formats and returns the one with highest success rate.
+#' Prioritizes Danish formats over international formats.
+#'
+#' @param data_sample Character vector of date strings to test
+#' @param danish_formats Character vector of Danish date formats to test
+#' @param intl_formats Character vector of international date formats to test
+#' @return Best format string, or NULL if none work well
+find_best_format <- function(data_sample, danish_formats, intl_formats) {
+  if (length(data_sample) == 0) return(NULL)
+
+  best_score <- 0
+  best_format <- NULL
+
+  # Test Danish formats first (prioritized)
+  for (format in danish_formats) {
+    score <- test_date_parsing_format(data_sample, format)
+    if (score > best_score) {
+      best_score <- score
+      best_format <- format
+    }
+
+    # Early exit if we find excellent Danish format match
+    if (score >= 0.95) {
+      return(format)
+    }
+  }
+
+  # Test international formats only if Danish formats don't work well
+  if (best_score < 0.8) {
+    for (format in intl_formats) {
+      score <- test_date_parsing_format(data_sample, format)
+      if (score > best_score) {
+        best_score <- score
+        best_format <- format
+      }
+    }
+  }
+
+  # Return best format only if it meets minimum threshold
+  if (best_score >= 0.6) {
+    return(best_format)
+  }
+
+  return(NULL)
+}
+
+#' Enhanced Danish Date Format Support
+#'
+#' Handles special Danish date parsing cases including month names.
+#' Extends lubridate with Danish-specific patterns.
+#'
+#' @param date_strings Character vector of date strings
+#' @param format Format string to attempt
+#' @return Parsed dates or NA for failures
+parse_danish_dates <- function(date_strings, format) {
+  if (length(date_strings) == 0) return(as.Date(character(0)))
+
+  # Preprocess strings for Danish month names
+  processed_strings <- date_strings
+
+  # Handle Danish month abbreviations (case insensitive)
+  danish_months <- c(
+    "jan", "feb", "mar", "apr", "maj", "jun",
+    "jul", "aug", "sep", "okt", "nov", "dec"
+  )
+  english_months <- c(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  )
+
+  # Replace Danish month abbreviations
+  for (i in seq_along(danish_months)) {
+    pattern <- paste0("\\b", danish_months[i], "\\b")
+    processed_strings <- gsub(pattern, english_months[i], processed_strings, ignore.case = TRUE)
+  }
+
+  # Handle Danish full month names
+  danish_month_full <- c(
+    "januar", "februar", "marts", "april", "maj", "juni",
+    "juli", "august", "september", "oktober", "november", "december"
+  )
+  english_month_full <- c(
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  )
+
+  # Replace Danish full month names
+  for (i in seq_along(danish_month_full)) {
+    pattern <- paste0("\\b", danish_month_full[i], "\\b")
+    processed_strings <- gsub(pattern, english_month_full[i], processed_strings, ignore.case = TRUE)
+  }
+
+  # Use appropriate lubridate function with quiet parsing
+  tryCatch({
+    result <- switch(format,
+      "dmy" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+      "dmY" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+      "ymd" = suppressWarnings(lubridate::ymd(processed_strings, quiet = TRUE)),
+      "mdy" = suppressWarnings(lubridate::mdy(processed_strings, quiet = TRUE)),
+      "Ymd" = suppressWarnings(lubridate::ymd(processed_strings, quiet = TRUE)),
+      "mdY" = suppressWarnings(lubridate::mdy(processed_strings, quiet = TRUE)),
+      # For month name formats, try dmy approach
+      "dby" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+      "dbY" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+      "d B Y" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+      "d b Y" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+      # Default: use parse_date_time for complex formats
+      suppressWarnings(lubridate::parse_date_time(processed_strings, format, quiet = TRUE))
+    )
+
+    # Ensure we return a Date vector of correct length
+    if (is.null(result) || length(result) != length(date_strings)) {
+      return(rep(as.Date(NA), length(date_strings)))
+    }
+
+    return(as.Date(result))
+  }, error = function(e) {
+    return(rep(as.Date(NA), length(date_strings)))
+  })
 }
