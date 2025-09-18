@@ -175,16 +175,16 @@ app_server <- function(input, output, session) {
   ## Data tabel logik
   setup_data_table(input, output, session, app_state)
 
-  ## Hjælpe observers (IMPORTANT: Must be set up before visualization for navigation_trigger)
-  navigation_trigger <- setup_helper_observers(input, output, session, obs_manager, app_state)
+  ## Hjælpe observers (IMPORTANT: Must be set up before visualization for unified navigation)
+  app_data_reactive <- setup_helper_observers(input, output, session, obs_manager, app_state)
 
   ## Kolonne management logik
-  # PHASE 4: Pass centralized state to column management and get autodetect trigger
-  autodetect_trigger <- setup_column_management(input, output, session, app_state, emit)
-  cat("DEBUG: [APP_SERVER] Received autodetect_trigger from column management\n")
+  # PHASE 4: Pass centralized state to column management - now uses unified event system
+  setup_column_management(input, output, session, app_state, emit)
+  cat("DEBUG: [APP_SERVER] Column management setup completed with unified event system\n")
 
   ## Visualiserings logik
-  visualization <- setup_visualization(input, output, session, app_state, navigation_trigger)
+  visualization <- setup_visualization(input, output, session, app_state, app_data_reactive)
 
   ## Download handlers
   setup_download_handlers(input, output, session, app_state, visualization)

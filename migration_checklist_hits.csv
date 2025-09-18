@@ -1,0 +1,1156 @@
+file,kind,line,snippet
+archive/app_backup.R,triggers,64,"              console.log('Found saved session data, triggering auto-restore');"
+archive/app_layout_test.R,parallel_state,160,  raw_data <- reactiveVal(NULL)
+archive/app_layout_test.R,parallel_state,435,  plots_initialized <- reactiveVal(FALSE)
+archive/app_layout_test.R,parallel_state,579,  current_index <- reactiveVal(1)
+archive/app_layout_test.R,loose_observers,166,"  observeEvent(input$filvalg, {"
+archive/app_layout_test.R,loose_observers,324,"  observeEvent(input$seneste7, {"
+archive/app_layout_test.R,loose_observers,332,"  observeEvent(input$nulstil, {"
+archive/app_layout_test.R,loose_observers,438,  observe({
+archive/app_layout_test.R,loose_observers,581,"  observeEvent(input$sagstabel_rows_selected, {"
+archive/app_layout_test.R,loose_observers,674,"  observeEvent(input$prev_case, {"
+archive/app_layout_test.R,loose_observers,679,"  observeEvent(input$next_case, {"
+archive/app_layout_test.R,direct_input,166,"  observeEvent(input$filvalg, {"
+archive/app_layout_test.R,direct_input,167,    req(input$filvalg)
+archive/app_layout_test.R,direct_input,168,    ext <- tools::file_ext(input$filvalg$name) |> str_to_lower()
+archive/app_layout_test.R,direct_input,177,"            input$filvalg$datapath,"
+archive/app_layout_test.R,direct_input,182,"          df <- rio::import(input$filvalg$datapath, skip = 3, col_types = ""text"")"
+archive/app_layout_test.R,direct_input,222,  fritekst_debounced <- reactive(input$fritekst) %>% debounce(500)
+archive/app_layout_test.R,direct_input,230,    if (!is.null(input$dato)) {
+archive/app_layout_test.R,direct_input,231,"      df <- df |> filter(opret_dato >= input$dato[1], opret_dato <= input$dato[2])"
+archive/app_layout_test.R,direct_input,236,"      afdeling = input$afdeling,"
+archive/app_layout_test.R,direct_input,237,"      sagsstatus = input$sagsstatus,"
+archive/app_layout_test.R,direct_input,238,"      samlet_alvorlighedskategori = input$samlet_alvorlighedskategori,"
+archive/app_layout_test.R,direct_input,239,      dpsd_hovedgruppe = input$hovedgruppe
+archive/app_layout_test.R,direct_input,324,"  observeEvent(input$seneste7, {"
+archive/app_layout_test.R,direct_input,332,"  observeEvent(input$nulstil, {"
+archive/app_layout_test.R,direct_input,347,"    if (is.null(input$dato)) return(""(Periode ikke valgt)"")"
+archive/app_layout_test.R,direct_input,349,"            format(input$dato[1], ""%d. %b %Y""),"
+archive/app_layout_test.R,direct_input,350,"            format(input$dato[2], ""%d. %b %Y""))"
+archive/app_layout_test.R,direct_input,581,"  observeEvent(input$sagstabel_rows_selected, {"
+archive/app_layout_test.R,direct_input,582,    selected <- input$sagstabel_rows_selected
+archive/app_layout_test.R,direct_input,674,"  observeEvent(input$prev_case, {"
+archive/app_layout_test.R,direct_input,679,"  observeEvent(input$next_case, {"
+archive/DT.R,parallel_state,20,  data_rv <- reactiveVal(
+archive/DT.R,loose_observers,38,"  observeEvent(input$tbl_cell_edit, {"
+archive/DT.R,loose_observers,59,"  observeEvent(input$add_row, {"
+archive/DT.R,loose_observers,66,"  observeEvent(input$del_rows, {"
+archive/DT.R,direct_input,38,"  observeEvent(input$tbl_cell_edit, {"
+archive/DT.R,direct_input,39,    info <- input$tbl_cell_edit
+archive/DT.R,direct_input,59,"  observeEvent(input$add_row, {"
+archive/DT.R,direct_input,66,"  observeEvent(input$del_rows, {"
+archive/DT.R,direct_input,67,    sel <- input$tbl_rows_selected
+archive/DT1.R,parallel_state,41,  rv <- reactiveVal({
+archive/DT1.R,loose_observers,88,"  observeEvent(input$tbl_cell_edit, {"
+archive/DT1.R,direct_input,88,"  observeEvent(input$tbl_cell_edit, {"
+archive/DT1.R,direct_input,89,    info <- input$tbl_cell_edit
+archive/DT1.R,triggers,72,            $(this).blur(); // trigger Shiny update
+archive/DT2.R,parallel_state,85,  rv  <- reactiveVal(df0)
+archive/DT2.R,loose_observers,106,"  observeEvent(input$tbl_cell_edit, {"
+archive/DT2.R,direct_input,106,"  observeEvent(input$tbl_cell_edit, {"
+archive/DT2.R,direct_input,107,    info <- input$tbl_cell_edit
+archive/qic_test.R,qic_calls,6,"qicharts2::qic(data = dat, x = Dato, y = Tæller, n = Nævner, chart = ""run"", print.summary = TRUE)"
+archive/qic_test.R,qic_calls,7,"qic_output <- qicharts2::qic(data = dat, x = Dato, y = Tæller, n = Nævner, chart = ""run"", print.summary = TRUE, return.data = TRUE)"
+archive/qic_test.R,qic_calls,9,"qicharts2::qic(data = dat, x = Dato, y = Tæller, n = Nævner, chart = ""p"", print.summary = TRUE)"
+archive/server_legacy.R,parallel_state,64,          values$current_data <- test_data
+archive/server_legacy.R,parallel_state,65,          values$original_data <- test_data
+archive/server_legacy.R,parallel_state,66,          values$file_uploaded <- TRUE
+archive/server_legacy.R,parallel_state,67,          values$auto_detect_done <- FALSE # Will trigger auto-detect
+archive/server_legacy.R,parallel_state,68,          values$initial_auto_detect_completed <- FALSE # Reset for new data
+archive/server_legacy.R,parallel_state,72,            values$auto_detect_trigger <- Sys.time()
+archive/server_legacy.R,parallel_state,74,          values$hide_anhoej_rules <- FALSE # Show Anhøj rules for real data
+archive/server_legacy.R,loose_observers,130,  observe({
+archive/server_legacy.R,loose_observers,137,  # observe({
+archive/server_legacy.R,triggers,67,          values$auto_detect_done <- FALSE # Will trigger auto-detect
+archive/server_legacy.R,triggers,72,            values$auto_detect_trigger <- Sys.time()
+archive/visualization_module_server_backup.R,parallel_state,70,    values <- reactiveValues(
+archive/visualization_module_server_backup.R,parallel_state,125,      values$is_computing <- FALSE
+archive/visualization_module_server_backup.R,parallel_state,129,        values$plot_ready <- FALSE
+archive/visualization_module_server_backup.R,parallel_state,130,        values$plot_warnings <- character(0)
+archive/visualization_module_server_backup.R,parallel_state,131,        values$anhoej_results <- NULL  # CLEAR Anhøj results when no data
+archive/visualization_module_server_backup.R,parallel_state,140,        values$is_computing <- FALSE
+archive/visualization_module_server_backup.R,parallel_state,143,      values$is_computing <- TRUE
+archive/visualization_module_server_backup.R,parallel_state,144,      values$plot_ready <- FALSE
+archive/visualization_module_server_backup.R,parallel_state,152,        values$plot_warnings <- validation$warnings
+archive/visualization_module_server_backup.R,parallel_state,153,        values$plot_ready <- FALSE
+archive/visualization_module_server_backup.R,parallel_state,154,        values$anhoej_results <- NULL  # CLEAR Anhøj results when validation fails
+archive/visualization_module_server_backup.R,parallel_state,158,      values$plot_warnings <- character(0)
+archive/visualization_module_server_backup.R,parallel_state,178,        values$plot_object <- plot
+archive/visualization_module_server_backup.R,parallel_state,179,        values$plot_ready <- TRUE
+archive/visualization_module_server_backup.R,parallel_state,184,          values$anhoej_results <- list(
+archive/visualization_module_server_backup.R,parallel_state,196,          values$anhoej_results <- NULL
+archive/visualization_module_server_backup.R,parallel_state,203,"        values$plot_warnings <- c(""Graf-generering fejlede:"", e$message)"
+archive/visualization_module_server_backup.R,parallel_state,204,        values$plot_ready <- FALSE
+archive/visualization_module_server_backup.R,parallel_state,205,        values$anhoej_results <- NULL  # CLEAR Anhøj results on error
+archive/visualization_module_server_backup.R,parallel_state,249,        if (length(values$plot_warnings) > 0) {
+archive/visualization_module_server_backup.R,parallel_state,250,"          warning_details <- paste(values$plot_warnings, collapse = "" • "")"
+archive/visualization_module_server_backup.R,parallel_state,253,"          if (any(grepl(""datapunkter"", values$plot_warnings, ignore.case = TRUE)) ||"
+archive/visualization_module_server_backup.R,parallel_state,254,"              any(grepl(""points"", values$plot_warnings, ignore.case = TRUE))) {"
+archive/visualization_module_server_backup.R,parallel_state,259,"          if (any(grepl(""kolonne|column|påkrævet|required"", values$plot_warnings, ignore.case = TRUE))) {"
+archive/visualization_module_server_backup.R,parallel_state,292,      values$plot_ready
+archive/visualization_module_server_backup.R,parallel_state,301,      if (length(values$plot_warnings) > 0) {
+archive/visualization_module_server_backup.R,parallel_state,307,"            lapply(values$plot_warnings, function(warn) tags$li(warn))"
+archive/visualization_module_server_backup.R,parallel_state,310,      } else if (values$plot_ready && !is.null(data_reactive())) {
+archive/visualization_module_server_backup.R,parallel_state,329,      if (values$plot_ready && !is.null(data)) {
+archive/visualization_module_server_backup.R,parallel_state,426,      anhoej <- values$anhoej_results
+archive/visualization_module_server_backup.R,parallel_state,471,        } else if (!(values$plot_ready %||% FALSE)) {
+archive/visualization_module_server_backup.R,parallel_state,599,"        plot = reactive(values$plot_object),"
+archive/visualization_module_server_backup.R,parallel_state,600,"        plot_ready = reactive(values$plot_ready),"
+archive/visualization_module_server_backup.R,parallel_state,601,"        anhoej_results = reactive(values$anhoej_results),"
+archive/visualization_module_server_backup.R,session_couple,67,    ns <- session$ns
+docs/debug_user_scenarios.R,parallel_state,36,"cat(""EXPECTED: Ingen state desync mellem values$ og app_state\n\n"")"
+docs/debug_user_scenarios.R,triggers,32,"cat(""2. Reload browser (trigger session restore)\n"")"
+docs/debug_user_scenarios.R,triggers,51,"cat(""1. Upload fil og trigger auto-detect\n"")"
+global.R,parallel_state,62,    if (!is.null(values$current_data) && !is.null(app_state$data$current_data)) {
+global.R,parallel_state,63,"      if (!identical(values$current_data, app_state$data$current_data)) {"
+global.R,parallel_state,71,    if (!is.null(values$file_uploaded) && !is.null(app_state$session$file_uploaded)) {
+global.R,parallel_state,72,      if (values$file_uploaded != app_state$session$file_uploaded) {
+global.R,parallel_state,558,  app_state$events <- reactiveValues(
+global.R,parallel_state,581,  app_state$data <- reactiveValues(
+global.R,parallel_state,592,  app_state$columns <- reactiveValues(
+global.R,parallel_state,610,  app_state$session <- reactiveValues(
+global.R,parallel_state,620,  app_state$ui <- reactiveValues(
+global.R,parallel_state,625,  app_state$visualization <- reactiveValues(
+global.R,loose_observers,648,"#' app_state$events, triggering any observeEvent() listeners."
+global.R,loose_observers,655,"#' emit$data_loaded()  # Triggers observeEvent(app_state$events$data_loaded, ...)"
+global.R,triggers,556,  # REACTIVE EVENT BUS: Central event system for all triggers
+global.R,triggers,640,#' to trigger specific events throughout the application.
+global.R,triggers,648,"#' app_state$events, triggering any observeEvent() listeners."
+global.R,session_couple,71,    if (!is.null(values$file_uploaded) && !is.null(app_state$session$file_uploaded)) {
+global.R,session_couple,72,      if (values$file_uploaded != app_state$session$file_uploaded) {
+global.R,isolate_usage,44,      is_reactive_context <- isolate({ TRUE })
+global.R,isolate_usage,649,#' Using isolate() ensures the emit functions don't create
+global.R,isolate_usage,661,      isolate({
+global.R,isolate_usage,668,      isolate({
+global.R,isolate_usage,676,      isolate({
+global.R,isolate_usage,683,      isolate({
+global.R,isolate_usage,690,      isolate({
+global.R,isolate_usage,698,      isolate({
+global.R,isolate_usage,705,      isolate({
+global.R,isolate_usage,713,      isolate({
+global.R,isolate_usage,721,      isolate({
+global.R,isolate_usage,728,      isolate({
+R/app_server.R,loose_observers,200,    observe({
+R/app_server.R,loose_observers,217,  observe({
+R/app_server.R,triggers,178,  ## Hjælpe observers (IMPORTANT: Must be set up before visualization for navigation_trigger)
+R/app_server.R,triggers,179,"  navigation_trigger <- setup_helper_observers(input, output, session, values, obs_manager, app_state)"
+R/app_server.R,triggers,182,  # PHASE 4: Pass centralized state to column management and get autodetect trigger
+R/app_server.R,triggers,183,"  autodetect_trigger <- setup_column_management(input, output, session, values, app_state)"
+R/app_server.R,triggers,184,"  cat(""DEBUG: [APP_SERVER] Received autodetect_trigger from column management\n"")"
+R/app_server.R,triggers,187,"  visualization <- setup_visualization(input, output, session, values, app_state, navigation_trigger)"
+R/app_server.R,triggers,210,      # Unified state: Use centralized state for reactive triggers
+R/app_server.R,session_couple,14,"  session_debugger <- debug_session_lifecycle(session$token, session)"
+R/app_server.R,session_couple,19,"  log_debug(paste(""Session ID:"", session$token), ""APP_SERVER"")"
+R/app_server.R,session_couple,22,"            level = ""INFO"", session_id = session$token)"
+R/app_server.R,session_couple,38,"  debug_log(""Creating reactive values"", ""SESSION_LIFECYCLE"", level = ""TRACE"", session_id = session$token)"
+R/app_server.R,session_couple,45,"  debug_log(""Creating centralized app_state"", ""SESSION_LIFECYCLE"", level = ""TRACE"", session_id = session$token)"
+R/app_server.R,session_couple,56,"  initial_snapshot <- debug_state_snapshot(""app_initialization"", app_state, session_id = session$token)"
+R/app_server.R,session_couple,72,            session_id = session$token)
+R/app_server.R,session_couple,76,"    autoload_tracer <- debug_workflow_tracer(""test_mode_auto_load"", app_state, session$token)"
+R/app_server.R,session_couple,120,          app_state$session$file_uploaded <- TRUE
+R/app_server.R,session_couple,122,          app_state$session$user_started_session <- TRUE
+R/app_server.R,session_couple,132,"          debug_state_snapshot(""after_test_data_autoload"", app_state, session_id = session$token)"
+R/app_server.R,session_couple,193,"  debug_log(""All server components setup completed"", ""SESSION_LIFECYCLE"", level = ""INFO"", session_id = session$token)"
+R/app_server.R,session_couple,226,  session$onSessionEnded(function() {
+R/app_server.R,session_couple,228,"    debug_log(""Session cleanup initiated"", ""SESSION_LIFECYCLE"", level = ""INFO"", session_id = session$token)"
+R/app_server.R,session_couple,248,              session_id = session$token)
+R/app_ui.R,triggers,64,"            console.log('Found saved session data, triggering auto-restore');"
+R/fct_chart_helpers.R,qic_calls,160,  # Skift column validation handled by qicharts2::qic() internally
+R/fct_data_processing.R,parallel_state,213,  trigger_needed_watcher <- reactiveVal(FALSE)
+R/fct_data_processing.R,parallel_state,279,  ui_sync_trigger <- reactiveVal(NULL)
+R/fct_data_processing.R,parallel_state,283,  autodetect_trigger <- reactiveVal(NULL)
+R/fct_data_processing.R,parallel_state,670,"    cat(""DEBUG: [UI_SYNC_TRIGGER] Legacy values$ui_sync_needed assignment skipped (unified state only)\n"")"
+R/fct_data_processing.R,parallel_state,734,    # PHASE 4: Legacy values$ access removed - now using unified state only
+R/fct_data_processing.R,parallel_state,735,"    cat(""DEBUG: [AUTO_DETECT_FUNC] - Legacy values$current_data access skipped (unified state only)\n"")"
+R/fct_data_processing.R,parallel_state,947,"  # NOTE: values$original_data bevares uændret, kun values$current_data modificeres"
+R/fct_data_processing.R,parallel_state,1010,                # Legacy values$current_data assignment removed
+R/fct_data_processing.R,parallel_state,1165,    # PHASE 4: Legacy values$auto_detected_columns assignment removed - now using unified state only
+R/fct_data_processing.R,parallel_state,1166,"    cat(""DEBUG: [PHASE4] Skipping legacy values$auto_detected_columns assignment (unified state handles this)\n"")"
+R/fct_data_processing.R,parallel_state,1613,  #   values$updating_table <- TRUE
+R/fct_data_processing.R,parallel_state,1614,  #   values$table_operation_in_progress <- TRUE
+R/fct_data_processing.R,parallel_state,1616,  #   values$current_data <- data.frame(
+R/fct_data_processing.R,parallel_state,1623,  #   values$file_uploaded <- FALSE
+R/fct_data_processing.R,parallel_state,1624,  #   values$original_data <- NULL
+R/fct_data_processing.R,parallel_state,1625,  #   values$auto_detect_done <- FALSE
+R/fct_data_processing.R,parallel_state,1631,  #   values$updating_table <- FALSE
+R/fct_data_processing.R,parallel_state,1635,  #     values$table_operation_in_progress <- FALSE
+R/fct_data_processing.R,loose_observers,50,  observe({
+R/fct_data_processing.R,loose_observers,134,  observeEvent({
+R/fct_data_processing.R,loose_observers,188,"    observeEvent(app_state$test_mode$auto_detect_ready,"
+R/fct_data_processing.R,loose_observers,216,  observe({
+R/fct_data_processing.R,loose_observers,229,"  observeEvent(trigger_needed_watcher(),"
+R/fct_data_processing.R,loose_observers,250,"  observeEvent(autodetect_trigger(),"
+R/fct_data_processing.R,loose_observers,288,  observe({
+R/fct_data_processing.R,loose_observers,308,"  observeEvent(ui_sync_trigger(),"
+R/fct_data_processing.R,loose_observers,381,"  observeEvent(input$auto_detect_columns, {"
+R/fct_data_processing.R,loose_observers,467,"  observeEvent(input$edit_column_names, {"
+R/fct_data_processing.R,loose_observers,472,"  observeEvent(input$confirm_column_names, {"
+R/fct_data_processing.R,loose_observers,477,"  observeEvent(input$add_column, {"
+R/fct_data_processing.R,loose_observers,481,"  observeEvent(input$confirm_add_col, {"
+R/fct_data_processing.R,loose_observers,1396,"  app_data_reactive <- eventReactive(app_state$navigation_trigger(), {"
+R/fct_data_processing.R,loose_observers,1466,"  observeEvent(input$main_data_table,"
+R/fct_data_processing.R,loose_observers,1589,"  observeEvent(input$add_row, {"
+R/fct_data_processing.R,loose_observers,1612,"  # observeEvent(input$reset_table, {"
+R/fct_data_processing.R,direct_input,106,        current_x <- input$x_column
+R/fct_data_processing.R,direct_input,107,        current_y <- input$y_column
+R/fct_data_processing.R,direct_input,108,        current_n <- input$n_column
+R/fct_data_processing.R,direct_input,109,        current_skift <- input$skift_column
+R/fct_data_processing.R,direct_input,110,        current_frys <- input$frys_column
+R/fct_data_processing.R,direct_input,111,        current_kommentar <- input$kommentar_column
+R/fct_data_processing.R,direct_input,153,"      x_empty <- is.null(input$x_column) || input$x_column == """""
+R/fct_data_processing.R,direct_input,154,"      y_empty <- is.null(input$y_column) || input$y_column == """""
+R/fct_data_processing.R,direct_input,381,"  observeEvent(input$auto_detect_columns, {"
+R/fct_data_processing.R,direct_input,401,"    if ((is.null(input$x_column) || input$x_column == """") ||"
+R/fct_data_processing.R,direct_input,402,"      (is.null(input$y_column) || input$y_column == """")) {"
+R/fct_data_processing.R,direct_input,406,"    chart_type <- get_qic_chart_type(if (is.null(input$chart_type)) ""Seriediagram (Run Chart)"" else input$chart_type)"
+R/fct_data_processing.R,direct_input,410,"    if (!is.null(input$y_column) && input$y_column != """" && input$y_column %in% names(current_data_check)) {"
+R/fct_data_processing.R,direct_input,411,      y_data <- current_data_check[[input$y_column]]
+R/fct_data_processing.R,direct_input,415,"          warnings <- c(warnings, paste(""Y-kolonne '"", input$y_column, ""' er ikke numerisk""))"
+R/fct_data_processing.R,direct_input,422,"      if (is.null(input$n_column) || input$n_column == """") {"
+R/fct_data_processing.R,direct_input,424,      } else if (input$n_column %in% names(current_data_check)) {
+R/fct_data_processing.R,direct_input,425,        n_data <- current_data_check[[input$n_column]]
+R/fct_data_processing.R,direct_input,429,"            warnings <- c(warnings, paste(""Nævner-kolonne '"", input$n_column, ""' er ikke numerisk""))"
+R/fct_data_processing.R,direct_input,436,"    selected_cols <- c(input$x_column, input$y_column, input$n_column)"
+R/fct_data_processing.R,direct_input,467,"  observeEvent(input$edit_column_names, {"
+R/fct_data_processing.R,direct_input,472,"  observeEvent(input$confirm_column_names, {"
+R/fct_data_processing.R,direct_input,477,"  observeEvent(input$add_column, {"
+R/fct_data_processing.R,direct_input,481,"  observeEvent(input$confirm_add_col, {"
+R/fct_data_processing.R,direct_input,1363,"  req(input$new_col_name, current_data_check)"
+R/fct_data_processing.R,direct_input,1365,  new_col_name <- input$new_col_name
+R/fct_data_processing.R,direct_input,1366,  new_col_type <- input$new_col_type
+R/fct_data_processing.R,direct_input,1466,"  observeEvent(input$main_data_table,"
+R/fct_data_processing.R,direct_input,1497,          new_data <- input$main_data_table
+R/fct_data_processing.R,direct_input,1589,"  observeEvent(input$add_row, {"
+R/fct_data_processing.R,direct_input,1612,"  # observeEvent(input$reset_table, {"
+R/fct_data_processing.R,triggers,24,#'   \item Auto-detektion trigger ved file upload
+R/fct_data_processing.R,triggers,51,"    log_debug(""Column update observer triggered"", ""COLUMN_MGMT"")"
+R/fct_data_processing.R,triggers,133,  # Auto-detekterings trigger flag - bruges kun til manuel triggering (ikke test mode)
+R/fct_data_processing.R,triggers,139,"      cat(""DEBUG: [AUTO_DETECT] Manual auto-detect observer triggered\n"")"
+R/fct_data_processing.R,triggers,166,        app_state$columns$auto_detect$trigger <- timestamp
+R/fct_data_processing.R,triggers,167,"        cat(""DEBUG: [PHASE4] Synced auto_detect_trigger to centralized state\n"")"
+R/fct_data_processing.R,triggers,175,  # Test mode auto-detect trigger (event-driven instead of later::later)
+R/fct_data_processing.R,triggers,176,  # PHASE 4: Unified state observer for test mode auto-detect trigger
+R/fct_data_processing.R,triggers,182,"      cat(""DEBUG: [TEST_MODE] Flag already set, triggering autodetection immediately\n"")"
+R/fct_data_processing.R,triggers,184,      app_state$columns$auto_detect$trigger <- timestamp
+R/fct_data_processing.R,triggers,185,"      cat(""DEBUG: [PHASE4] Immediate auto_detect_trigger set in centralized state\n"")"
+R/fct_data_processing.R,triggers,190,"        cat(""DEBUG: [TEST_MODE] Test mode auto-detect observer triggered\n"")"
+R/fct_data_processing.R,triggers,195,"          cat(""DEBUG: [TEST_MODE] ❌ auto_detect_ready is NULL, skipping trigger\n"")"
+R/fct_data_processing.R,triggers,199,"        cat(""DEBUG: [TEST_MODE] ✅ Event-driven auto-detect trigger fired!\n"")"
+R/fct_data_processing.R,triggers,203,        app_state$columns$auto_detect$trigger <- timestamp
+R/fct_data_processing.R,triggers,204,"        cat(""DEBUG: [PHASE4] Synced test mode auto_detect_trigger to centralized state:"", as.character(timestamp), ""\n"")"
+R/fct_data_processing.R,triggers,211,  # REACTIVE FIX: Watch for trigger_needed and fire direct reactiveVal
+R/fct_data_processing.R,triggers,212,  # Use a helper reactiveVal to bridge the nested state to direct trigger
+R/fct_data_processing.R,triggers,213,  trigger_needed_watcher <- reactiveVal(FALSE)
+R/fct_data_processing.R,triggers,217,    needed <- if (!is.null(app_state$columns$auto_detect$trigger_needed)) {
+R/fct_data_processing.R,triggers,218,      app_state$columns$auto_detect$trigger_needed
+R/fct_data_processing.R,triggers,222,    if (needed != trigger_needed_watcher()) {
+R/fct_data_processing.R,triggers,223,"      cat(""DEBUG: [TRIGGER_WATCHER] trigger_needed changed to:"", needed, ""\n"")"
+R/fct_data_processing.R,triggers,224,      trigger_needed_watcher(needed)
+R/fct_data_processing.R,triggers,228,  # File upload auto-detect trigger conversion via watcher
+R/fct_data_processing.R,triggers,229,"  observeEvent(trigger_needed_watcher(),"
+R/fct_data_processing.R,triggers,231,"      cat(""DEBUG: [FILE_UPLOAD_TRIGGER] File upload auto-detect observer triggered\n"")"
+R/fct_data_processing.R,triggers,232,      req(trigger_needed_watcher() == TRUE)
+R/fct_data_processing.R,triggers,233,"      cat(""DEBUG: [FILE_UPLOAD_TRIGGER] ✅ Converting trigger_needed to direct autodetect_trigger!\n"")"
+R/fct_data_processing.R,triggers,236,      # Fire the direct reactiveVal trigger
+R/fct_data_processing.R,triggers,237,      autodetect_trigger(timestamp)
+R/fct_data_processing.R,triggers,238,"      cat(""DEBUG: [FILE_UPLOAD_TRIGGER] ✅ Direct autodetect_trigger fired!\n"")"
+R/fct_data_processing.R,triggers,240,      # Reset the trigger_needed flag
+R/fct_data_processing.R,triggers,241,      app_state$columns$auto_detect$trigger_needed <- FALSE
+R/fct_data_processing.R,triggers,242,      trigger_needed_watcher(FALSE)
+R/fct_data_processing.R,triggers,243,"      cat(""DEBUG: [FILE_UPLOAD_TRIGGER] Reset trigger_needed flag\n"")"
+R/fct_data_processing.R,triggers,249,  # REACTIVE FIX: Direct autodetection trigger execution
+R/fct_data_processing.R,triggers,250,"  observeEvent(autodetect_trigger(),"
+R/fct_data_processing.R,triggers,260,      # PHASE 4: Pass centralized state to auto-detect function with UI sync trigger
+R/fct_data_processing.R,triggers,261,"      auto_detect_and_update_columns(input, session, values, app_state, ui_sync_trigger)"
+R/fct_data_processing.R,triggers,274,  # PHASE 4: Legacy auto-detect observer removed - now using direct reactiveVal triggers
+R/fct_data_processing.R,triggers,275,  # See autodetect_trigger implementation for new direct callback pattern
+R/fct_data_processing.R,triggers,277,  # REACTIVE FIX: Create dedicated reactiveVal for UI sync trigger
+R/fct_data_processing.R,triggers,278,"  cat(""DEBUG: [UI_SYNC_SETUP] Creating dedicated UI sync trigger reactiveVal\n"")"
+R/fct_data_processing.R,triggers,279,  ui_sync_trigger <- reactiveVal(NULL)
+R/fct_data_processing.R,triggers,281,  # REACTIVE FIX: Create dedicated reactiveVal for autodetection trigger
+R/fct_data_processing.R,triggers,282,"  cat(""DEBUG: [AUTODETECT_SETUP] Creating dedicated autodetection trigger reactiveVal\n"")"
+R/fct_data_processing.R,triggers,283,  autodetect_trigger <- reactiveVal(NULL)
+R/fct_data_processing.R,triggers,285,  # CRITICAL FIX: Bridge observer between app_state trigger and reactiveVal
+R/fct_data_processing.R,triggers,287,"  cat(""DEBUG: [BRIDGE_SETUP] Creating bridge observer for app_state auto_detect trigger\n"")"
+R/fct_data_processing.R,triggers,289,"    cat(""DEBUG: [BRIDGE] Bridge observer triggered\n"")"
+R/fct_data_processing.R,triggers,291,      trigger_value <- app_state$columns$auto_detect$trigger
+R/fct_data_processing.R,triggers,292,"      cat(""DEBUG: [BRIDGE] Checking trigger_value:"", if(is.null(trigger_value)) ""NULL"" else as.character(trigger_value), ""\n"")"
+R/fct_data_processing.R,triggers,293,      if (!is.null(trigger_value)) {
+R/fct_data_processing.R,triggers,294,"        cat(""DEBUG: [BRIDGE] app_state trigger detected:"", as.character(trigger_value), ""\n"")"
+R/fct_data_processing.R,triggers,295,"        cat(""DEBUG: [BRIDGE] Firing autodetect_trigger reactiveVal\n"")"
+R/fct_data_processing.R,triggers,296,        autodetect_trigger(trigger_value)
+R/fct_data_processing.R,triggers,297,"        cat(""DEBUG: [BRIDGE] ✅ reactiveVal triggered successfully\n"")"
+R/fct_data_processing.R,triggers,299,"        cat(""DEBUG: [BRIDGE] No trigger value available yet\n"")"
+R/fct_data_processing.R,triggers,306,  # Reaktiv UI sync observer med direct reactiveVal trigger
+R/fct_data_processing.R,triggers,307,"  cat(""DEBUG: [UI_SYNC_SETUP] Setting up UI sync observer for ui_sync_trigger\n"")"
+R/fct_data_processing.R,triggers,308,"  observeEvent(ui_sync_trigger(),"
+R/fct_data_processing.R,triggers,311,"      cat(""DEBUG: [UI_SYNC] UI sync observer triggered - CRITICAL for input field updates\n"")"
+R/fct_data_processing.R,triggers,312,"      cat(""DEBUG: [UI_SYNC] 🔄 REACTIVE FIX: Direct trigger fired successfully!\n"")"
+R/fct_data_processing.R,triggers,314,      sync_data <- ui_sync_trigger()
+R/fct_data_processing.R,triggers,317,"      cat(""DEBUG: [UI_SYNC] Direct sync data received from reactiveVal trigger\n"")"
+R/fct_data_processing.R,triggers,323,"      cat(""DEBUG: [UI_SYNC] 🔄 Auto-detect triggered selectize opdateringer\n"")"
+R/fct_data_processing.R,triggers,386,"    auto_detect_and_update_columns(input, session, values, app_state, ui_sync_trigger)"
+R/fct_data_processing.R,triggers,485,  # Return autodetect_trigger so it can be used by file upload
+R/fct_data_processing.R,triggers,486,"  cat(""DEBUG: [COLUMN_MGMT] Returning autodetect_trigger for external use\n"")"
+R/fct_data_processing.R,triggers,487,  return(autodetect_trigger)
+R/fct_data_processing.R,triggers,546,"detect_columns_name_only <- function(col_names, input, session, values, app_state = NULL, ui_sync_trigger = NULL) {"
+R/fct_data_processing.R,triggers,656,    # CRITICAL: Set debounce timestamp BEFORE triggering UI sync to prevent race condition
+R/fct_data_processing.R,triggers,661,    if (!is.null(ui_sync_trigger)) {
+R/fct_data_processing.R,triggers,663,      ui_sync_trigger(ui_sync_data)
+R/fct_data_processing.R,triggers,664,"      cat(""DEBUG: [UI_SYNC_TRIGGER] ✅ Direct trigger fired successfully\n"")"
+R/fct_data_processing.R,triggers,666,"      cat(""DEBUG: [UI_SYNC_TRIGGER] ⚠️ No ui_sync_trigger available - relying on nested observeEvent\n"")"
+R/fct_data_processing.R,triggers,681,"auto_detect_and_update_columns <- function(input, session, values, app_state = NULL, ui_sync_trigger = NULL) {"
+R/fct_data_processing.R,triggers,777,"    result <- detect_columns_name_only(col_names, input, session, values, app_state, ui_sync_trigger)"
+R/fct_data_processing.R,triggers,949,  # Sikker dato-konvertering uden at trigger reaktive loops
+R/fct_data_processing.R,triggers,1002,            # Apply conversion if successful (inside isolate to prevent reactive triggers)
+R/fct_data_processing.R,triggers,1179,    # Trigger UI sync for visual feedback on Kolonnematch tab using reactive trigger
+R/fct_data_processing.R,triggers,1186,    # Use reactive trigger with timestamp to force reactivity
+R/fct_data_processing.R,triggers,1196,      timestamp = as.numeric(Sys.time())  # Force reactivity trigger
+R/fct_data_processing.R,triggers,1202,    # CRITICAL: Set debounce timestamp BEFORE triggering UI sync to prevent race condition
+R/fct_data_processing.R,triggers,1207,    if (!is.null(ui_sync_trigger)) {
+R/fct_data_processing.R,triggers,1209,      ui_sync_trigger(sync_data)
+R/fct_data_processing.R,triggers,1210,"      cat(""DEBUG: [UI_SYNC_TRIGGER] ✅ FULL MODE: Direct trigger fired successfully\n"")"
+R/fct_data_processing.R,triggers,1212,"      cat(""DEBUG: [UI_SYNC_TRIGGER] ⚠️ FULL MODE: No ui_sync_trigger available - relying on nested observeEvent\n"")"
+R/fct_data_processing.R,triggers,1224,    if (!is.null(app_state$navigation_trigger)) {
+R/fct_data_processing.R,triggers,1225,      old_trigger <- app_state$navigation_trigger()
+R/fct_data_processing.R,triggers,1226,      app_state$navigation_trigger(old_trigger + 1)
+R/fct_data_processing.R,triggers,1227,      new_trigger <- app_state$navigation_trigger()
+R/fct_data_processing.R,triggers,1228,"      cat(""DEBUG: [AUTO_DETECT] navigation_trigger incremented from"", old_trigger, ""to"", new_trigger, ""\n"")"
+R/fct_data_processing.R,triggers,1229,"      log_debug(paste(""AUTO_DETECT: navigation_trigger incremented from"", old_trigger, ""to"", new_trigger), ""AUTO_DETECT"")"
+R/fct_data_processing.R,triggers,1231,"      cat(""DEBUG: [AUTO_DETECT] ⚠️ navigation_trigger not available - plots may not update\n"")"
+R/fct_data_processing.R,triggers,1232,"      log_debug(""AUTO_DETECT: navigation_trigger not available - plots may not update"", ""AUTO_DETECT"")"
+R/fct_data_processing.R,triggers,1240,"                ui_sync_triggered = TRUE,"
+R/fct_data_processing.R,triggers,1241,                navigation_trigger_incremented = !is.null(app_state$navigation_trigger)
+R/fct_data_processing.R,triggers,1395,  # NAVIGATION TRIGGER: Create reactive that uses the navigation trigger
+R/fct_data_processing.R,triggers,1396,"  app_data_reactive <- eventReactive(app_state$navigation_trigger(), {"
+R/fct_data_processing.R,triggers,1398,"    debug_reactive_execution(""app_data_reactive"", ""trigger_fired"","
+R/fct_data_processing.R,triggers,1399,"                            list(trigger_value = app_state$navigation_trigger()),"
+R/fct_data_processing.R,triggers,1404,"    cat(""DEBUG: [DATA_TABLE] Table reactive triggered\n"")"
+R/fct_data_processing.R,triggers,1405,"    cat(""DEBUG: [DATA_TABLE] trigger_value:"", app_state$navigation_trigger(), ""\n"")"
+R/fct_data_processing.R,triggers,1427,    version_trigger <- app_state$session$table_version
+R/fct_data_processing.R,session_couple,683,  session_id <- if (!is.null(session)) session$token else NULL
+R/fct_data_processing.R,session_couple,1400,                            session_id = session$token)
+R/fct_data_processing.R,session_couple,1411,                            session_id = session$token)
+R/fct_data_processing.R,session_couple,1427,    version_trigger <- app_state$session$table_version
+R/fct_data_processing.R,session_couple,1472,      restoring_session_check <- app_state$session$restoring_session
+R/fct_data_processing.R,isolate_usage,104,      isolate({
+R/fct_data_processing.R,isolate_usage,331,        isolate({
+R/fct_data_processing.R,isolate_usage,952,    isolate({
+R/fct_data_processing.R,isolate_usage,1148,  isolate({
+R/fct_data_processing.R,isolate_usage,1627,  #   isolate({
+R/fct_file_operations.R,loose_observers,16,"  observeEvent(input$data_file, {"
+R/fct_file_operations.R,direct_input,16,"  observeEvent(input$data_file, {"
+R/fct_file_operations.R,direct_input,19,"                          list(filename = input$data_file$name,"
+R/fct_file_operations.R,direct_input,20,"                               size = input$data_file$size,"
+R/fct_file_operations.R,direct_input,21,"                               type = input$data_file$type),"
+R/fct_file_operations.R,direct_input,25,    req(input$data_file)
+R/fct_file_operations.R,direct_input,32,"    log_debug(paste(""- Name:"", input$data_file$name), ""FILE_UPLOAD"")"
+R/fct_file_operations.R,direct_input,33,"    log_debug(paste(""- Size:"", input$data_file$size, ""bytes""), ""FILE_UPLOAD"")"
+R/fct_file_operations.R,direct_input,34,"    log_debug(paste(""- Type:"", input$data_file$type), ""FILE_UPLOAD"")"
+R/fct_file_operations.R,direct_input,35,"    log_debug(paste(""- Path:"", input$data_file$datapath), ""FILE_UPLOAD"")"
+R/fct_file_operations.R,direct_input,39,"                filename = input$data_file$name,"
+R/fct_file_operations.R,direct_input,40,"                size_bytes = input$data_file$size,"
+R/fct_file_operations.R,direct_input,41,                file_type = input$data_file$type
+R/fct_file_operations.R,direct_input,48,"    validation_result <- validate_uploaded_file(input$data_file, session$token)"
+R/fct_file_operations.R,direct_input,54,                  filename = input$data_file$name
+R/fct_file_operations.R,direct_input,109,    file_path <- input$data_file$datapath
+R/fct_file_operations.R,direct_input,110,    file_ext <- tools::file_ext(input$data_file$name)
+R/fct_file_operations.R,direct_input,151,"        error_result <- handle_upload_error(e, input$data_file, session$token)"
+R/fct_file_operations.R,direct_input,722,"    paste(""• Titel:"", if (is.null(input$indicator_title) || input$indicator_title == """") ""Ikke angivet"" else input$indicator_title),"
+R/fct_file_operations.R,direct_input,724,"    paste(""• Beskrivelse:"", if (is.null(input$indicator_description) || input$indicator_description == """") ""Ikke angivet"" else input$indicat"
+R/fct_file_operations.R,direct_input,727,"    paste(""• Chart Type:"", if (is.null(input$chart_type)) ""Seriediagram (Run Chart)"" else input$chart_type),"
+R/fct_file_operations.R,direct_input,728,"    paste(""• X-akse:"", if (is.null(input$x_column) || input$x_column == """") ""Ikke valgt"" else input$x_column, ""(tid/observation)""),"
+R/fct_file_operations.R,direct_input,729,"    paste(""• Y-akse:"", if (is.null(input$y_column) || input$y_column == """") ""Ikke valgt"" else input$y_column, ""(værdier)""),"
+R/fct_file_operations.R,direct_input,730,"    if (!is.null(input$n_column) && input$n_column != """") paste(""• Nævner:"", input$n_column) else NULL,"
+R/fct_file_operations.R,direct_input,731,"    paste(""• Målsætninger:"", ifelse(if (is.null(input$show_targets)) FALSE else input$show_targets, ""Vist"", ""Skjult"")),"
+R/fct_file_operations.R,direct_input,732,"    paste(""• Faser:"", ifelse(if (is.null(input$show_phases)) FALSE else input$show_phases, ""Vist"", ""Skjult"")),"
+R/fct_file_operations.R,direct_input,744,"    paste(""• Chart Type Code:"", get_qic_chart_type(if (is.null(input$chart_type)) ""Seriediagram (Run Chart)"" else input$chart_type)),"
+R/fct_file_operations.R,triggers,24,"    log_debug(""File upload triggered"", ""FILE_UPLOAD"")"
+R/fct_file_operations.R,triggers,160,  # PHASE 4: Legacy observer removed - auto-detection now uses direct reactiveVal triggers
+R/fct_file_operations.R,triggers,161,  # See setup_column_management() for new autodetect_trigger implementation
+R/fct_file_operations.R,triggers,206,    # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
+R/fct_file_operations.R,triggers,207,    if (!is.null(app_state$navigation_trigger)) {
+R/fct_file_operations.R,triggers,208,      old_trigger <- app_state$navigation_trigger()
+R/fct_file_operations.R,triggers,209,      app_state$navigation_trigger(old_trigger + 1)
+R/fct_file_operations.R,triggers,210,      new_trigger <- app_state$navigation_trigger()
+R/fct_file_operations.R,triggers,211,"      log_debug(paste(""SESSION_RESTORE: navigation_trigger incremented from"", old_trigger, ""to"", new_trigger), ""SESSION_RESTORE"")"
+R/fct_file_operations.R,triggers,243,    # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
+R/fct_file_operations.R,triggers,244,    if (!is.null(app_state$navigation_trigger)) {
+R/fct_file_operations.R,triggers,245,      old_trigger <- app_state$navigation_trigger()
+R/fct_file_operations.R,triggers,246,      app_state$navigation_trigger(old_trigger + 1)
+R/fct_file_operations.R,triggers,247,      new_trigger <- app_state$navigation_trigger()
+R/fct_file_operations.R,triggers,248,"      log_debug(paste(""EXCEL_READ: navigation_trigger incremented from"", old_trigger, ""to"", new_trigger), ""EXCEL_READ"")"
+R/fct_file_operations.R,triggers,258,"      cat(""DEBUG: [EXCEL_UPLOAD] ⚠️ No emit API available - data loaded but no event triggered\n"")"
+R/fct_file_operations.R,triggers,259,"      log_debug(""⚠️ No emit API available for event triggering"", ""EXCEL_READ"")"
+R/fct_file_operations.R,triggers,412,  # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
+R/fct_file_operations.R,triggers,413,  if (!is.null(app_state$navigation_trigger)) {
+R/fct_file_operations.R,triggers,414,    old_trigger <- app_state$navigation_trigger()
+R/fct_file_operations.R,triggers,415,    app_state$navigation_trigger(old_trigger + 1)
+R/fct_file_operations.R,triggers,416,    new_trigger <- app_state$navigation_trigger()
+R/fct_file_operations.R,triggers,417,"    log_debug(paste(""CSV_READ: navigation_trigger incremented from"", old_trigger, ""to"", new_trigger), ""CSV_READ"")"
+R/fct_file_operations.R,triggers,422,  # ROBUST AUTO-DETECT: Enhanced auto-detection triggering with validation
+R/fct_file_operations.R,triggers,423,"  log_debug(""Setting auto-detect trigger with validation..."", ""CSV_READ"")"
+R/fct_file_operations.R,triggers,432,"    cat(""DEBUG: [FILE_UPLOAD] ⚠️ No emit API available - data loaded but no event triggered\n"")"
+R/fct_file_operations.R,triggers,433,"    log_debug(""⚠️ No emit API available for event triggering"", ""CSV_READ"")"
+R/fct_file_operations.R,triggers,984,"  debug_log(""Enhanced error handling triggered"", ""ERROR_HANDLING"", level = ""ERROR"","
+R/fct_file_operations.R,session_couple,22,                          session$token)
+R/fct_file_operations.R,session_couple,28,"    upload_tracer <- debug_workflow_tracer(""file_upload_workflow"", app_state, session$token)"
+R/fct_file_operations.R,session_couple,43,              session_id = session$token)
+R/fct_file_operations.R,session_couple,48,"    validation_result <- validate_uploaded_file(input$data_file, session$token)"
+R/fct_file_operations.R,session_couple,56,                session_id = session$token)
+R/fct_file_operations.R,session_couple,98,              session_id = session$token)
+R/fct_file_operations.R,session_couple,127,"          debug_log(""Starting Excel file processing"", ""FILE_UPLOAD_FLOW"", level = ""INFO"", session_id = session$token)"
+R/fct_file_operations.R,session_couple,133,"          debug_log(""Starting CSV file processing"", ""FILE_UPLOAD_FLOW"", level = ""INFO"", session_id = session$token)"
+R/fct_file_operations.R,session_couple,134,"          handle_csv_upload(file_path, values, app_state, session$token, emit)"
+R/fct_file_operations.R,session_couple,142,"        debug_log(""File upload workflow completed successfully"", ""FILE_UPLOAD_FLOW"", level = ""INFO"", session_id = session$token)"
+R/fct_file_operations.R,session_couple,151,"        error_result <- handle_upload_error(e, input$data_file, session$token)"
+R/fct_file_operations.R,session_couple,200,    app_state$session$file_uploaded <- TRUE
+R/fct_file_operations.R,session_couple,237,    app_state$session$file_uploaded <- TRUE
+R/fct_file_operations.R,session_couple,406,  app_state$session$file_uploaded <- TRUE
+R/fct_file_operations.R,session_couple,739,"    paste(""• Data kilde:"", if (app_state$session$file_uploaded) ""File Upload"" else ""Manuel indtastning""),"
+R/fct_file_operations.R,isolate_usage,216,    isolate({
+R/fct_spc_calculations.R,qic_calls,656,"      # qicharts2::qic(x = Dato, y = `Tæller`, n = `Nævner`, part = c(12), data = data, return.data = TRUE)"
+R/fct_visualization_server.R,parallel_state,74,"  last_valid_config <- reactiveVal(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = ""run""))"
+R/fct_visualization_server.R,loose_observers,16,"  active_data_event <- eventReactive(navigation_trigger(), {"
+R/fct_visualization_server.R,loose_observers,154,  observe({
+R/fct_visualization_server.R,direct_input,98,"      chart_type = get_qic_chart_type(if (is.null(input$chart_type)) ""Seriediagram (Run Chart)"" else input$chart_type)"
+R/fct_visualization_server.R,direct_input,106,"    x_col <- if (!is.null(input$x_column) && input$x_column != """") input$x_column else NULL"
+R/fct_visualization_server.R,direct_input,107,"    y_col <- if (!is.null(input$y_column) && input$y_column != """") input$y_column else NULL"
+R/fct_visualization_server.R,direct_input,108,"    n_col <- if (!is.null(input$n_column) && input$n_column != """") input$n_column else NULL"
+R/fct_visualization_server.R,direct_input,114,"      chart_type = get_qic_chart_type(if (is.null(input$chart_type)) ""Seriediagram (Run Chart)"" else input$chart_type)"
+R/fct_visualization_server.R,direct_input,144,"        chart_type = get_qic_chart_type(if (is.null(input$chart_type)) ""Seriediagram (Run Chart)"" else input$chart_type)"
+R/fct_visualization_server.R,direct_input,169,"      chart_selection <- if (is.null(input$chart_type)) ""Seriediagram (Run Chart)"" else input$chart_type"
+R/fct_visualization_server.R,direct_input,173,"      if (is.null(input$target_value) || input$target_value == """") {"
+R/fct_visualization_server.R,direct_input,184,"        return(parse_danish_target(input$target_value, y_numeric))"
+R/fct_visualization_server.R,direct_input,186,"        return(parse_danish_target(input$target_value, NULL))"
+R/fct_visualization_server.R,direct_input,190,"      if (is.null(input$centerline_value) || input$centerline_value == """") {"
+R/fct_visualization_server.R,direct_input,201,"        return(parse_danish_target(input$centerline_value, y_numeric))"
+R/fct_visualization_server.R,direct_input,203,"        return(parse_danish_target(input$centerline_value, NULL))"
+R/fct_visualization_server.R,direct_input,216,"      skift_col <- if (!is.null(input$skift_column) && input$skift_column != """") {"
+R/fct_visualization_server.R,direct_input,217,        input$skift_column
+R/fct_visualization_server.R,direct_input,246,"      frys_col <- if (!is.null(input$frys_column) && input$frys_column != """") {"
+R/fct_visualization_server.R,direct_input,247,        input$frys_column
+R/fct_visualization_server.R,direct_input,261,"      if (is.null(input$y_axis_unit) || input$y_axis_unit == """") {"
+R/fct_visualization_server.R,direct_input,264,        return(input$y_axis_unit)
+R/fct_visualization_server.R,direct_input,268,"      if (is.null(input$kommentar_column) || input$kommentar_column == """") {"
+R/fct_visualization_server.R,direct_input,271,        return(input$kommentar_column)
+R/fct_visualization_server.R,triggers,10,"setup_visualization <- function(input, output, session, values, app_state = NULL, navigation_trigger = NULL) {"
+R/fct_visualization_server.R,triggers,15,  # NOTE: Use direct navigation_trigger parameter instead of app_state reference
+R/fct_visualization_server.R,triggers,16,"  active_data_event <- eventReactive(navigation_trigger(), {"
+R/fct_visualization_server.R,triggers,18,"    debug_reactive_execution(""active_data_event"", ""visualization_trigger_fired"","
+R/fct_visualization_server.R,triggers,19,"                            list(trigger_value = navigation_trigger()),"
+R/fct_visualization_server.R,triggers,22,"    log_debug(""[PLOT_DATA] Active data reactive triggered"", ""PLOT_DATA"")"
+R/fct_visualization_server.R,triggers,23,"    log_debug(""[PLOT_DATA] Navigation trigger fired"", ""PLOT_DATA"")"
+R/fct_visualization_server.R,triggers,79,"    log_debug(""auto_detected_config reactive triggered"", ""AUTO_DETECTED_CONFIG"")"
+R/fct_visualization_server.R,triggers,121,"    log_debug(""column_config reactive triggered (simplified)"", ""COLUMN_CONFIG"")"
+R/fct_visualization_server.R,triggers,275,    navigation_trigger = navigation_trigger
+R/fct_visualization_server.R,session_couple,20,                            session_id = session$token)
+R/mod_spc_chart.R,parallel_state,169,    cached_data <- reactiveVal(NULL)
+R/mod_spc_chart.R,parallel_state,228,      values <- reactiveValues(
+R/mod_spc_chart.R,parallel_state,311,    plot_cache <- reactiveVal(NULL)
+R/mod_spc_chart.R,parallel_state,312,    plot_cache_key <- reactiveVal(NULL)
+R/mod_spc_chart.R,loose_observers,208,"    module_data_reactive <- eventReactive(navigation_trigger(), {"
+R/mod_spc_chart.R,loose_observers,550,    observe({
+R/mod_spc_chart.R,triggers,152,"visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_valu"
+R/mod_spc_chart.R,triggers,166,"    log_debug(""Creating module-internal data reactive with navigation trigger"", ""MODULE"")"
+R/mod_spc_chart.R,triggers,208,"    module_data_reactive <- eventReactive(navigation_trigger(), {"
+R/mod_spc_chart.R,triggers,209,"      log_debug(""Module data reactive triggered"", ""MODULE_DATA"")"
+R/mod_spc_chart.R,triggers,210,"      log_debug(""Navigation trigger fired"", ""MODULE_DATA"")"
+R/mod_spc_chart.R,triggers,588,"        log_debug(""Plot rendering triggered"", ""RENDER_PLOT"")"
+R/mod_spc_chart.R,triggers,590,        # CRITICAL FIX: Force dependency on column config to trigger render after auto-detection
+R/mod_spc_chart.R,session_couple,157,    ns <- session$ns
+R/mod_spc_chart.R,isolate_usage,725,        data <- isolate(module_data_reactive())
+R/mod_spc_chart.R,isolate_usage,726,"        chart_type <- isolate(chart_type_reactive()) %||% ""ukendt"""
+R/mod_spc_chart.R,isolate_usage,752,        data <- isolate(module_data_reactive())
+R/mod_spc_chart.R,isolate_usage,753,        config <- isolate(chart_config())
+R/mod_spc_chart.R,isolate_usage,754,"        chart_type <- isolate(chart_type_reactive()) %||% ""run"""
+R/utils_advanced_debug.R,triggers,192,        trigger_needed = app_state$columns$auto_detect$trigger_needed %||% FALSE
+R/utils_advanced_debug.R,triggers,326,"#' tracer$step(""auto_detect_triggered"")"
+R/utils_advanced_debug.R,session_couple,181,"        file_uploaded = app_state$session$file_uploaded %||% FALSE,"
+R/utils_advanced_debug.R,session_couple,182,"        user_started_session = app_state$session$user_started_session %||% FALSE,"
+R/utils_advanced_debug.R,session_couple,183,        auto_save_enabled = app_state$session$auto_save_enabled %||% TRUE
+R/utils_end_to_end_debug.R,triggers,82,"debug_state_change <- function(component, state_path, old_value, new_value, trigger = NULL, session_id = NULL) {"
+R/utils_end_to_end_debug.R,triggers,109,  if (!is.null(trigger)) {
+R/utils_end_to_end_debug.R,triggers,110,"    cat(""DEBUG: [STATE_CHANGE] Trigger:"", trigger, ""\n"")"
+R/utils_end_to_end_debug.R,triggers,122,              trigger = trigger
+R/utils_event_system.R,loose_observers,12,#' This function creates observeEvent() handlers for all events
+R/utils_event_system.R,loose_observers,24,"#' in one place, replacing the scattered observeEvent() calls"
+R/utils_event_system.R,loose_observers,35,"  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {"
+R/utils_event_system.R,loose_observers,46,"  observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = 900, {"
+R/utils_event_system.R,loose_observers,63,"  observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = 800, {"
+R/utils_event_system.R,loose_observers,78,"  observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = 700, {"
+R/utils_event_system.R,loose_observers,88,"  observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = 600, {"
+R/utils_event_system.R,loose_observers,99,"  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 500, {"
+R/utils_event_system.R,loose_observers,107,"  observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = 950, {"
+R/utils_event_system.R,loose_observers,118,"  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 400, {"
+R/utils_event_system.R,triggers,16,#' @param emit The emit API for triggering events
+R/utils_event_system.R,triggers,102,    # This will trigger reactive expressions that depend on navigation changes
+R/utils_event_system.R,triggers,136,#' instead of direct reactive triggers.
+R/utils_event_system.R,triggers,139,#' @param emit The emit API for triggering events
+R/utils_local_storage.R,session_couple,44,      session$sendCustomMessage(
+R/utils_local_storage.R,session_couple,63,      session$sendCustomMessage(
+R/utils_local_storage.R,session_couple,78,      session$sendCustomMessage(
+R/utils_memory_management.R,parallel_state,342,  # Legacy values$ data assignments removed - unified state handles data lifecycle
+R/utils_memory_management.R,session_couple,14,  session$onSessionEnded(function() {
+R/utils_memory_management.R,session_couple,138,    app_state$session$file_uploaded <- FALSE
+R/utils_memory_management.R,session_couple,139,    app_state$session$user_started_session <- FALSE
+R/utils_memory_management.R,session_couple,140,    app_state$session$last_save_time <- NULL
+R/utils_performance.R,parallel_state,58,#'   expensive_data_processing(values$current_data)
+R/utils_performance.R,isolate_usage,207,          isolate(r())
+R/utils_reactive_state.R,parallel_state,11,  reactiveValues(
+R/utils_reactive_state.R,triggers,23,"    trigger_auto_detect = FALSE, # NEW: Flag to trigger auto-detect after upload"
+R/utils_server_management.R,parallel_state,552,    # PHASE 4B: Legacy values$auto_detect_done assignment removed - using unified state only
+R/utils_server_management.R,parallel_state,622,          # PHASE 4B: Legacy values$auto_detect_done assignment removed - using unified state only # Vil udløse auto-detekt
+R/utils_server_management.R,parallel_state,624,          # PHASE 4B: Legacy values$initial_auto_detect_completed assignment removed - using unified state only # Reset for new data
+R/utils_server_management.R,loose_observers,18,"  observeEvent(input$auto_restore_data,"
+R/utils_server_management.R,loose_observers,151,"  observeEvent(input$manual_save, {"
+R/utils_server_management.R,loose_observers,165,"  observeEvent(input$clear_saved, {"
+R/utils_server_management.R,loose_observers,170,"  observeEvent(input$show_upload_modal, {"
+R/utils_server_management.R,loose_observers,175,"  observeEvent(input$confirm_clear_saved, {"
+R/utils_server_management.R,loose_observers,186,"  observeEvent(input$confirm_upload, {"
+R/utils_server_management.R,loose_observers,519,"  observeEvent(input$start_new_session, {"
+R/utils_server_management.R,loose_observers,564,"  observeEvent(input$upload_data_welcome, {"
+R/utils_server_management.R,loose_observers,571,"  observeEvent(input$quick_start_demo, {"
+R/utils_server_management.R,direct_input,18,"  observeEvent(input$auto_restore_data,"
+R/utils_server_management.R,direct_input,20,      req(input$auto_restore_data)
+R/utils_server_management.R,direct_input,29,          saved_state <- input$auto_restore_data
+R/utils_server_management.R,direct_input,151,"  observeEvent(input$manual_save, {"
+R/utils_server_management.R,direct_input,165,"  observeEvent(input$clear_saved, {"
+R/utils_server_management.R,direct_input,170,"  observeEvent(input$show_upload_modal, {"
+R/utils_server_management.R,direct_input,175,"  observeEvent(input$confirm_clear_saved, {"
+R/utils_server_management.R,direct_input,181,    !is.null(input$data_file) && !is.null(input$data_file$datapath)
+R/utils_server_management.R,direct_input,186,"  observeEvent(input$confirm_upload, {"
+R/utils_server_management.R,direct_input,277,"      title = input$indicator_title,"
+R/utils_server_management.R,direct_input,278,"      unit_type = input$unit_type,"
+R/utils_server_management.R,direct_input,279,"      unit_select = input$unit_select,"
+R/utils_server_management.R,direct_input,280,"      unit_custom = input$unit_custom,"
+R/utils_server_management.R,direct_input,281,"      description = input$indicator_description,"
+R/utils_server_management.R,direct_input,282,"      x_column = if (is.null(input$x_column) || input$x_column == """") """" else input$x_column,"
+R/utils_server_management.R,direct_input,283,"      y_column = if (is.null(input$y_column) || input$y_column == """") """" else input$y_column,"
+R/utils_server_management.R,direct_input,284,"      n_column = if (is.null(input$n_column) || input$n_column == """") """" else input$n_column,"
+R/utils_server_management.R,direct_input,285,"      skift_column = if (is.null(input$skift_column) || input$skift_column == """") """" else input$skift_column,"
+R/utils_server_management.R,direct_input,286,"      kommentar_column = if (is.null(input$kommentar_column) || input$kommentar_column == """") """" else input$kommentar_column,"
+R/utils_server_management.R,direct_input,287,"      chart_type = input$chart_type,"
+R/utils_server_management.R,direct_input,288,"      target_value = input$target_value,"
+R/utils_server_management.R,direct_input,289,"      centerline_value = input$centerline_value,"
+R/utils_server_management.R,direct_input,290,"      y_axis_unit = if (is.null(input$y_axis_unit) || input$y_axis_unit == """") ""count"" else input$y_axis_unit"
+R/utils_server_management.R,direct_input,302,"  has_settings <- (!is.null(input$indicator_title) && input$indicator_title != """") ||"
+R/utils_server_management.R,direct_input,303,"    (!is.null(input$indicator_description) && input$indicator_description != """") ||"
+R/utils_server_management.R,direct_input,304,"    (!is.null(input$unit_select) && input$unit_select != """") ||"
+R/utils_server_management.R,direct_input,305,"    (!is.null(input$unit_custom) && input$unit_custom != """") ||"
+R/utils_server_management.R,direct_input,519,"  observeEvent(input$start_new_session, {"
+R/utils_server_management.R,direct_input,564,"  observeEvent(input$upload_data_welcome, {"
+R/utils_server_management.R,direct_input,571,"  observeEvent(input$quick_start_demo, {"
+R/utils_server_management.R,triggers,352,  # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
+R/utils_server_management.R,triggers,353,  if (!is.null(app_state$navigation_trigger)) {
+R/utils_server_management.R,triggers,354,    old_trigger <- app_state$navigation_trigger()
+R/utils_server_management.R,triggers,355,    app_state$navigation_trigger(old_trigger + 1)
+R/utils_server_management.R,triggers,356,    new_trigger <- app_state$navigation_trigger()
+R/utils_server_management.R,triggers,357,"    cat(""DEBUG: [SESSION_RESET] navigation_trigger incremented from"", old_trigger, ""to"", new_trigger, ""\n"")"
+R/utils_server_management.R,triggers,422,    # NOTE: ui_sync_trigger parameter is NULL for session reset - UI sync handled separately
+R/utils_server_management.R,triggers,534,    # REACTIVE WRAPPER FIX: Increment version to trigger reactive navigation
+R/utils_server_management.R,session_couple,34,            app_state$session$restoring_session <- TRUE
+R/utils_server_management.R,session_couple,40,            app_state$session$auto_save_enabled <- FALSE
+R/utils_server_management.R,session_couple,48,                app_state$session$restoring_session <- FALSE
+R/utils_server_management.R,session_couple,50,                app_state$session$auto_save_enabled <- TRUE
+R/utils_server_management.R,session_couple,106,            app_state$session$file_uploaded <- TRUE
+R/utils_server_management.R,session_couple,139,          app_state$session$restoring_session <- FALSE
+R/utils_server_management.R,session_couple,141,          app_state$session$auto_save_enabled <- TRUE
+R/utils_server_management.R,session_couple,160,    app_state$session$last_save_time <- Sys.time()
+R/utils_server_management.R,session_couple,191,    app_state$session$user_started_session <- TRUE
+R/utils_server_management.R,session_couple,192,    app_state$session$file_uploaded <- FALSE  # Will be set to TRUE by actual file upload handler
+R/utils_server_management.R,session_couple,201,    last_save_time_check <- app_state$session$last_save_time
+R/utils_server_management.R,session_couple,307,    (!is.null(app_state$session$last_save_time))
+R/utils_server_management.R,session_couple,333,  app_state$session$last_save_time <- NULL
+R/utils_server_management.R,session_couple,361,  app_state$session$file_uploaded <- FALSE
+R/utils_server_management.R,session_couple,363,  app_state$session$user_started_session <- TRUE # NEW: Set flag that user has started
+R/utils_server_management.R,session_couple,492,"        if (!is.null(app_state$session$last_save_time)) tags$li(""Fjerne gemt session fra lokal storage""),"
+R/utils_server_management.R,session_couple,541,    app_state$session$file_uploaded <- FALSE
+R/utils_server_management.R,session_couple,543,    app_state$session$user_started_session <- TRUE
+R/utils_server_management.R,session_couple,548,    app_state$session$file_name <- NULL
+R/utils_server_management.R,session_couple,560,"    cat(""DEBUG: [WELCOME_PAGE] app_state$session$user_started_session set to TRUE\n"")"
+R/utils_server_management.R,session_couple,618,          app_state$session$file_uploaded <- TRUE
+R/utils_server_management.R,session_couple,620,          app_state$session$user_started_session <- TRUE
+R/utils_server_management.R,session_couple,629,"          app_state$session$file_name <- ""Eksempel data (SPC demo)"""
+R/utils_server_management.R,isolate_usage,224,  isolate({
+R/utils_server_management.R,isolate_usage,275,  isolate({
+R/utils_server_management.R,isolate_usage,373,  isolate({
+R/utils_session_helpers.R,parallel_state,14,  #   if (is.null(values$current_data)) {
+R/utils_session_helpers.R,parallel_state,23,  #     values$current_data <- empty_data
+R/utils_session_helpers.R,parallel_state,29,  navigation_trigger <- reactiveVal(0)
+R/utils_session_helpers.R,loose_observers,13,  # observe({
+R/utils_session_helpers.R,loose_observers,35,"  app_data_reactive <- eventReactive(navigation_trigger(), {"
+R/utils_session_helpers.R,loose_observers,204,  obs_data_save <- observe({
+R/utils_session_helpers.R,loose_observers,254,  obs_settings_save <- observe({
+R/utils_session_helpers.R,loose_observers,295,  observe({
+R/utils_session_helpers.R,direct_input,265,"          input$indicator_title,"
+R/utils_session_helpers.R,direct_input,266,"          input$unit_type,"
+R/utils_session_helpers.R,direct_input,267,"          input$unit_select,"
+R/utils_session_helpers.R,direct_input,268,"          input$unit_custom,"
+R/utils_session_helpers.R,direct_input,269,"          input$indicator_description,"
+R/utils_session_helpers.R,direct_input,270,"          input$x_column,"
+R/utils_session_helpers.R,direct_input,271,"          input$y_column,"
+R/utils_session_helpers.R,direct_input,272,"          input$n_column,"
+R/utils_session_helpers.R,direct_input,273,"          input$skift_column,"
+R/utils_session_helpers.R,direct_input,274,"          input$kommentar_column,"
+R/utils_session_helpers.R,direct_input,275,"          input$chart_type,"
+R/utils_session_helpers.R,direct_input,276,"          input$target_value,"
+R/utils_session_helpers.R,direct_input,277,          input$y_axis_unit
+R/utils_session_helpers.R,direct_input,336,"    if (input$unit_type == ""select"") {"
+R/utils_session_helpers.R,direct_input,346,"      selected_unit <- if (is.null(input$unit_select)) """" else input$unit_select"
+R/utils_session_helpers.R,direct_input,353,"      return(if (is.null(input$unit_custom)) """" else input$unit_custom)"
+R/utils_session_helpers.R,direct_input,362,"    base_title <- if (is.null(input$indicator_title) || input$indicator_title == """") ""SPC Analyse"" else input$indicator_title"
+R/utils_session_helpers.R,triggers,28,  # Use reactiveVal for simple signal/trigger mechanism
+R/utils_session_helpers.R,triggers,29,  navigation_trigger <- reactiveVal(0)
+R/utils_session_helpers.R,triggers,31,  # Store navigation trigger in app_state for access from other functions
+R/utils_session_helpers.R,triggers,32,  app_state$navigation_trigger <- navigation_trigger
+R/utils_session_helpers.R,triggers,34,  # This creates a reactive that updates only when navigation_trigger changes
+R/utils_session_helpers.R,triggers,35,"  app_data_reactive <- eventReactive(navigation_trigger(), {"
+R/utils_session_helpers.R,triggers,38,"    cat(""DEBUG: [NAVIGATION_TRIGGER] app_data_reactive triggered\n"")"
+R/utils_session_helpers.R,triggers,39,"    cat(""DEBUG: [NAVIGATION_TRIGGER] trigger_value:"", navigation_trigger(), ""\n"")"
+R/utils_session_helpers.R,triggers,49,    # This now properly triggers when navigation_trigger is incremented
+R/utils_session_helpers.R,triggers,167,  auto_save_trigger <- debounce(reactive({
+R/utils_session_helpers.R,triggers,205,    save_data <- auto_save_trigger()
+R/utils_session_helpers.R,triggers,219,  settings_save_trigger <- debounce(reactive({
+R/utils_session_helpers.R,triggers,255,    save_data <- settings_save_trigger()
+R/utils_session_helpers.R,triggers,284,  table_cleanup_trigger <- debounce(reactive({
+R/utils_session_helpers.R,triggers,289,      Sys.time()  # Return timestamp to trigger cleanup
+R/utils_session_helpers.R,triggers,296,    cleanup_time <- table_cleanup_trigger()
+R/utils_session_helpers.R,triggers,310,  # Return navigation_trigger for use in other functions
+R/utils_session_helpers.R,triggers,311,  return(navigation_trigger)
+R/utils_session_helpers.R,session_couple,79,      file_uploaded_check <- app_state$session$file_uploaded
+R/utils_session_helpers.R,session_couple,82,      user_started_session_check <- app_state$session$user_started_session
+R/utils_session_helpers.R,session_couple,129,    file_uploaded_check <- app_state$session$file_uploaded
+R/utils_session_helpers.R,session_couple,173,    auto_save_enabled_check <- app_state$session$auto_save_enabled
+R/utils_session_helpers.R,session_couple,176,    restoring_session_check <- app_state$session$restoring_session
+R/utils_session_helpers.R,session_couple,210,    app_state$session$last_save_time <- save_data$timestamp
+R/utils_session_helpers.R,session_couple,225,    auto_save_enabled_check <- app_state$session$auto_save_enabled
+R/utils_session_helpers.R,session_couple,228,    restoring_session_check <- app_state$session$restoring_session
+R/utils_session_helpers.R,session_couple,260,    app_state$session$last_save_time <- save_data$timestamp
+tests/testthat/test-cross-component-reactive.R,parallel_state,49,  expect_null(mock_reactive_values$current_data)
+tests/testthat/test-cross-component-reactive.R,parallel_state,50,  expect_false(mock_reactive_values$file_uploaded)
+tests/testthat/test-cross-component-reactive.R,parallel_state,51,  expect_false(mock_reactive_values$auto_detect_done)
+tests/testthat/test-cross-component-reactive.R,parallel_state,77,  values$current_data <- test_data
+tests/testthat/test-cross-component-reactive.R,parallel_state,78,  values$original_data <- test_data
+tests/testthat/test-cross-component-reactive.R,parallel_state,79,  values$file_uploaded <- TRUE
+tests/testthat/test-cross-component-reactive.R,parallel_state,82,  expect_true(!is.null(values$current_data))
+tests/testthat/test-cross-component-reactive.R,parallel_state,83,  expect_true(values$file_uploaded)
+tests/testthat/test-cross-component-reactive.R,parallel_state,84,"  expect_identical(values$current_data, values$original_data)"
+tests/testthat/test-cross-component-reactive.R,parallel_state,87,"  # This would normally be: observeEvent(values$current_data, ...)"
+tests/testthat/test-cross-component-reactive.R,parallel_state,88,  auto_detect_trigger <- !is.null(values$current_data) && values$file_uploaded
+tests/testthat/test-cross-component-reactive.R,parallel_state,105,    values$auto_detected_columns <- detected_columns
+tests/testthat/test-cross-component-reactive.R,parallel_state,106,    values$auto_detect_done <- TRUE
+tests/testthat/test-cross-component-reactive.R,parallel_state,110,  expect_true(!is.null(values$auto_detected_columns))
+tests/testthat/test-cross-component-reactive.R,parallel_state,111,  expect_true(values$auto_detect_done)
+tests/testthat/test-cross-component-reactive.R,parallel_state,112,"  expect_equal(values$auto_detected_columns$x_col, ""Dato"")"
+tests/testthat/test-cross-component-reactive.R,parallel_state,113,"  expect_equal(values$auto_detected_columns$taeller_col, ""Tæller"")"
+tests/testthat/test-cross-component-reactive.R,parallel_state,135,  ui_sync_trigger <- values$auto_detect_done && !is.null(values$auto_detected_columns)
+tests/testthat/test-cross-component-reactive.R,parallel_state,142,"    col_choices <- c(""Vælg kolonne"" = """", setNames(names(values$current_data), names(values$current_data)))"
+tests/testthat/test-cross-component-reactive.R,parallel_state,145,"      x_col = values$auto_detected_columns$x_col,"
+tests/testthat/test-cross-component-reactive.R,parallel_state,146,"      taeller_col = values$auto_detected_columns$taeller_col,"
+tests/testthat/test-cross-component-reactive.R,parallel_state,147,"      naevner_col = values$auto_detected_columns$naevner_col,"
+tests/testthat/test-cross-component-reactive.R,parallel_state,152,    values$ui_sync_needed <- ui_sync_data
+tests/testthat/test-cross-component-reactive.R,parallel_state,156,  expect_true(!is.null(values$ui_sync_needed))
+tests/testthat/test-cross-component-reactive.R,parallel_state,157,"  expect_equal(values$ui_sync_needed$x_col, ""Dato"")"
+tests/testthat/test-cross-component-reactive.R,parallel_state,158,"  expect_true("""" %in% values$ui_sync_needed$col_choices)"
+tests/testthat/test-cross-component-reactive.R,parallel_state,159,"  expect_true(""Dato"" %in% values$ui_sync_needed$col_choices)"
+tests/testthat/test-cross-component-reactive.R,parallel_state,184,    values$file_uploaded <- FALSE
+tests/testthat/test-cross-component-reactive.R,parallel_state,185,    values$user_started_session <- FALSE
+tests/testthat/test-cross-component-reactive.R,parallel_state,186,    values$auto_detect_done <- FALSE
+tests/testthat/test-cross-component-reactive.R,parallel_state,187,    values$auto_detected_columns <- NULL
+tests/testthat/test-cross-component-reactive.R,parallel_state,188,    values$ui_sync_needed <- NULL
+tests/testthat/test-cross-component-reactive.R,parallel_state,189,    values$initial_auto_detect_completed <- FALSE
+tests/testthat/test-cross-component-reactive.R,parallel_state,192,    values$current_data <- create_empty_session_data()
+tests/testthat/test-cross-component-reactive.R,parallel_state,193,    values$original_data <- values$current_data
+tests/testthat/test-cross-component-reactive.R,parallel_state,197,  expect_false(values$file_uploaded)
+tests/testthat/test-cross-component-reactive.R,parallel_state,198,  expect_false(values$user_started_session)
+tests/testthat/test-cross-component-reactive.R,parallel_state,199,  expect_false(values$auto_detect_done)
+tests/testthat/test-cross-component-reactive.R,parallel_state,200,  expect_null(values$auto_detected_columns)
+tests/testthat/test-cross-component-reactive.R,parallel_state,201,  expect_null(values$ui_sync_needed)
+tests/testthat/test-cross-component-reactive.R,parallel_state,204,  expect_true(!is.null(values$current_data))
+tests/testthat/test-cross-component-reactive.R,parallel_state,205,"  expect_true(""Skift"" %in% names(values$current_data))"
+tests/testthat/test-cross-component-reactive.R,parallel_state,206,"  expect_true(""Frys"" %in% names(values$current_data))"
+tests/testthat/test-cross-component-reactive.R,parallel_state,280,      values$current_data <<- processed
+tests/testthat/test-cross-component-reactive.R,parallel_state,281,      values$auto_detect_done <<- TRUE
+tests/testthat/test-cross-component-reactive.R,parallel_state,282,      values$error_state <<- NULL
+tests/testthat/test-cross-component-reactive.R,parallel_state,286,      values$error_state <<- e$message
+tests/testthat/test-cross-component-reactive.R,parallel_state,287,      values$auto_detect_done <<- FALSE
+tests/testthat/test-cross-component-reactive.R,parallel_state,295,  expect_true(!is.null(values$error_state))
+tests/testthat/test-cross-component-reactive.R,parallel_state,296,  expect_false(values$auto_detect_done)
+tests/testthat/test-cross-component-reactive.R,parallel_state,302,"  expect_true(grepl(""empty"", values$error_state))"
+tests/testthat/test-cross-component-reactive.R,parallel_state,308,  expect_null(values$error_state)
+tests/testthat/test-cross-component-reactive.R,parallel_state,309,  expect_true(values$auto_detect_done)
+tests/testthat/test-cross-component-reactive.R,loose_observers,87,"  # This would normally be: observeEvent(values$current_data, ...)"
+tests/testthat/test-cross-component-reactive.R,triggers,86,  # Step 2: Simulate reactive trigger for auto-detection
+tests/testthat/test-cross-component-reactive.R,triggers,88,  auto_detect_trigger <- !is.null(values$current_data) && values$file_uploaded
+tests/testthat/test-cross-component-reactive.R,triggers,90,  # TEST: Auto-detection should trigger
+tests/testthat/test-cross-component-reactive.R,triggers,91,  expect_true(auto_detect_trigger)
+tests/testthat/test-cross-component-reactive.R,triggers,94,  if (auto_detect_trigger) {
+tests/testthat/test-cross-component-reactive.R,triggers,135,  ui_sync_trigger <- values$auto_detect_done && !is.null(values$auto_detected_columns)
+tests/testthat/test-cross-component-reactive.R,triggers,137,  # TEST: UI sync should trigger
+tests/testthat/test-cross-component-reactive.R,triggers,138,  expect_true(ui_sync_trigger)
+tests/testthat/test-cross-component-reactive.R,triggers,141,  if (ui_sync_trigger) {
+tests/testthat/test-cross-component-reactive.R,triggers,180,"  session_reset_trigger <- TRUE  # User clicked ""Start ny session"""
+tests/testthat/test-cross-component-reactive.R,triggers,182,  if (session_reset_trigger) {
+tests/testthat/test-cross-component-reactive.R,triggers,226,"        execution_log <<- c(execution_log, ""auto_detect_triggered"")"
+tests/testthat/test-cross-component-reactive.R,triggers,252,"  expect_equal(execution_log[2], ""auto_detect_triggered"")"
+tests/testthat/test-data-consistency.R,parallel_state,53,      values$current_data
+tests/testthat/test-data-consistency.R,parallel_state,160,  mock_values$current_data <- uploaded_data
+tests/testthat/test-data-consistency.R,parallel_state,161,  mock_values$original_data <- uploaded_data
+tests/testthat/test-data-consistency.R,parallel_state,162,  mock_values$file_uploaded <- TRUE
+tests/testthat/test-data-consistency.R,parallel_state,169,"  expect_identical(mock_values$current_data, mock_app_state$data$current_data)"
+tests/testthat/test-data-consistency.R,parallel_state,170,"  expect_identical(mock_values$original_data, mock_app_state$data$original_data)"
+tests/testthat/test-data-consistency.R,parallel_state,223,  mock_values$current_data <- new_data
+tests/testthat/test-data-consistency.R,parallel_state,225,"  data_snapshots[[""after_load""]] <- names(mock_values$current_data)"
+tests/testthat/test-data-consistency.R,parallel_state,228,  # Mock observeEvent(values$current_data)
+tests/testthat/test-data-consistency.R,parallel_state,229,  if (!is.null(mock_values$current_data)) {
+tests/testthat/test-data-consistency.R,parallel_state,233,    col_names <- names(mock_values$current_data)
+tests/testthat/test-data-consistency.R,parallel_state,237,    if (nrow(mock_values$current_data) > 0) {
+tests/testthat/test-data-consistency.R,parallel_state,248,    mock_values$auto_detect_done <- TRUE
+tests/testthat/test-data-consistency.R,parallel_state,253,  if (mock_values$auto_detect_done) {
+tests/testthat/test-data-consistency.R,parallel_state,254,"    ui_choices <- c("""", names(mock_values$current_data))"
+tests/testthat/test-data-consistency.R,parallel_state,319,"  expect_identical(mock_values$current_data, error_prone_data)"
+tests/testthat/test-data-consistency.R,loose_observers,228,  # Mock observeEvent(values$current_data)
+tests/testthat/test-data-consistency.R,triggers,227,  # Step 2: Auto-detection trigger
+tests/testthat/test-data-consistency.R,triggers,230,"    operations_log <- c(operations_log, ""auto_detect_triggered"")"
+tests/testthat/test-data-consistency.R,triggers,265,"  expect_true(""auto_detect_triggered"" %in% operations_log)"
+tests/testthat/test-data-consistency.R,session_couple,166,  mock_app_state$session$file_uploaded <- TRUE
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,201,    expect_false(isolate(values$file_uploaded))
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,202,    expect_false(isolate(values$auto_detect_done))
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,203,    expect_null(isolate(values$current_data))
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,204,    expect_null(isolate(values$original_data))
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,508,  test_values <- reactiveValues(
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,526,    req(test_values$current_data)
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,527,    test_values$current_data
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,542,      # Skulle ikke udføres da test_values$current_data er NULL
+tests/testthat/test-end-to-end-app-flow.R,parallel_state,548,"  test_values$current_data <- data.frame(x = 1:3, y = 4:6)"
+tests/testthat/test-end-to-end-app-flow.R,direct_input,531,"    req(test_input$x_column, test_input$y_column)"
+tests/testthat/test-end-to-end-app-flow.R,direct_input,533,"      x_column = test_input$x_column,"
+tests/testthat/test-end-to-end-app-flow.R,direct_input,534,"      y_column = test_input$y_column,"
+tests/testthat/test-end-to-end-app-flow.R,direct_input,535,      n_column = test_input$n_column
+tests/testthat/test-end-to-end-app-flow.R,isolate_usage,201,    expect_false(isolate(values$file_uploaded))
+tests/testthat/test-end-to-end-app-flow.R,isolate_usage,202,    expect_false(isolate(values$auto_detect_done))
+tests/testthat/test-end-to-end-app-flow.R,isolate_usage,203,    expect_null(isolate(values$current_data))
+tests/testthat/test-end-to-end-app-flow.R,isolate_usage,204,    expect_null(isolate(values$original_data))
+tests/testthat/test-end-to-end-app-flow.R,isolate_usage,543,"      try(isolate(data_reactive()), silent = TRUE)"
+tests/testthat/test-end-to-end-app-flow.R,isolate_usage,549,"  expect_equal(isolate(data_reactive()), data.frame(x = 1:3, y = 4:6))"
+tests/testthat/test-end-to-end-app-flow.R,isolate_usage,552,  config <- isolate(column_config_reactive())
+tests/testthat/test-end-to-end-app-flow.R,qic_calls,600,      qic_result <- qicharts2::qic(
+tests/testthat/test-event-driven-reactive.R,parallel_state,17,  expect_null(mock_values$test_mode_auto_detect_ready)
+tests/testthat/test-event-driven-reactive.R,parallel_state,18,  expect_null(mock_values$auto_detect_trigger)
+tests/testthat/test-event-driven-reactive.R,parallel_state,19,  expect_null(mock_values$ui_sync_needed)
+tests/testthat/test-event-driven-reactive.R,parallel_state,20,  expect_false(mock_values$auto_detect_in_progress)
+tests/testthat/test-event-driven-reactive.R,parallel_state,24,  mock_values$test_mode_auto_detect_ready <- timestamp
+tests/testthat/test-event-driven-reactive.R,parallel_state,25,"  expect_equal(mock_values$test_mode_auto_detect_ready, timestamp)"
+tests/testthat/test-event-driven-reactive.R,parallel_state,27,  mock_values$auto_detect_in_progress <- TRUE
+tests/testthat/test-event-driven-reactive.R,parallel_state,28,  expect_true(mock_values$auto_detect_in_progress)
+tests/testthat/test-event-driven-reactive.R,parallel_state,37,  mock_values$ui_sync_needed <- sync_data
+tests/testthat/test-event-driven-reactive.R,parallel_state,38,"  expect_equal(mock_values$ui_sync_needed$x_col, ""Dato"")"
+tests/testthat/test-event-driven-reactive.R,parallel_state,39,"  expect_equal(mock_values$ui_sync_needed$taeller_col, ""Tæller"")"
+tests/testthat/test-event-driven-reactive.R,parallel_state,40,"  expect_equal(length(mock_values$ui_sync_needed$col_choices), 3)"
+tests/testthat/test-event-driven-reactive.R,parallel_state,43,  mock_values$ui_sync_needed <- NULL
+tests/testthat/test-event-driven-reactive.R,parallel_state,44,  expect_null(mock_values$ui_sync_needed)
+tests/testthat/test-event-driven-reactive.R,parallel_state,119,    values$auto_detect_in_progress <- TRUE
+tests/testthat/test-event-driven-reactive.R,parallel_state,125,    values$initial_auto_detect_completed <- TRUE
+tests/testthat/test-event-driven-reactive.R,parallel_state,126,"    values$auto_detect_in_progress <- FALSE # Immediate clear, no later::later"
+tests/testthat/test-event-driven-reactive.R,parallel_state,131,  expect_false(values$auto_detect_in_progress)
+tests/testthat/test-event-driven-reactive.R,parallel_state,132,  expect_false(values$initial_auto_detect_completed)
+tests/testthat/test-event-driven-reactive.R,parallel_state,136,  expect_true(values$auto_detect_in_progress)
+tests/testthat/test-event-driven-reactive.R,parallel_state,137,  expect_false(values$initial_auto_detect_completed)
+tests/testthat/test-event-driven-reactive.R,parallel_state,141,  expect_false(values$auto_detect_in_progress) # Immediately cleared
+tests/testthat/test-event-driven-reactive.R,parallel_state,142,  expect_true(values$initial_auto_detect_completed)
+tests/testthat/test-event-driven-reactive.R,parallel_state,146,    !values$initial_auto_detect_completed
+tests/testthat/test-event-driven-reactive.R,parallel_state,204,    values$counter <- values$counter + increment
+tests/testthat/test-event-driven-reactive.R,parallel_state,209,"  expect_equal(values$counter, 0)"
+tests/testthat/test-event-driven-reactive.R,parallel_state,212,"  expect_equal(values$counter, 1)"
+tests/testthat/test-event-driven-reactive.R,parallel_state,215,"  expect_equal(values$counter, 6)"
+tests/testthat/test-event-driven-reactive.R,parallel_state,218,"  expect_equal(values$counter, 4)"
+tests/testthat/test-event-driven-reactive.R,parallel_state,224,"  expect_equal(values$counter, 14) # 4 + 10 = 14"
+tests/testthat/test-event-driven-reactive.R,triggers,11,"    auto_detect_trigger = NULL,"
+tests/testthat/test-event-driven-reactive.R,triggers,18,  expect_null(mock_values$auto_detect_trigger)
+tests/testthat/test-event-driven-reactive.R,triggers,53,  # Step 1: Test mode trigger (fra app_server.R)
+tests/testthat/test-event-driven-reactive.R,triggers,54,  test_mode_trigger <- function() {
+tests/testthat/test-event-driven-reactive.R,triggers,59,  # Step 2: Auto-detect trigger (fra fct_data_processing.R observer)
+tests/testthat/test-event-driven-reactive.R,triggers,60,  auto_detect_trigger <- function(test_mode_ready) {
+tests/testthat/test-event-driven-reactive.R,triggers,62,"      events_log <<- c(events_log, ""auto_detect_triggered"")"
+tests/testthat/test-event-driven-reactive.R,triggers,68,  # Step 3: UI sync trigger (fra auto_detect_and_update_columns)
+tests/testthat/test-event-driven-reactive.R,triggers,69,  ui_sync_trigger <- function(auto_detect_done) {
+tests/testthat/test-event-driven-reactive.R,triggers,93,  step1 <- test_mode_trigger()
+tests/testthat/test-event-driven-reactive.R,triggers,94,  step2 <- auto_detect_trigger(step1)
+tests/testthat/test-event-driven-reactive.R,triggers,95,  step3 <- ui_sync_trigger(step2)
+tests/testthat/test-event-driven-reactive.R,triggers,101,"    ""auto_detect_triggered"","
+tests/testthat/test-event-driven-reactive.R,triggers,199,  # SIMULATE: Multiple rapid triggers (race condition test)
+tests/testthat/test-fase1-refactoring.R,parallel_state,44,    if (!values$auto_save_enabled ||
+tests/testthat/test-fase1-refactoring.R,parallel_state,45,      values$updating_table ||
+tests/testthat/test-fase1-refactoring.R,parallel_state,46,      values$table_operation_in_progress ||
+tests/testthat/test-fase1-refactoring.R,parallel_state,47,      values$restoring_session) {
+tests/testthat/test-fase1-refactoring.R,parallel_state,51,    if (!is.null(values$current_data) &&
+tests/testthat/test-fase1-refactoring.R,parallel_state,52,      nrow(values$current_data) > 0 &&
+tests/testthat/test-fase1-refactoring.R,parallel_state,53,      any(!is.na(values$current_data))) {
+tests/testthat/test-fase1-refactoring.R,parallel_state,55,"        data = values$current_data,"
+tests/testthat/test-fase1-refactoring.R,parallel_state,78,  mock_values$auto_save_enabled <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,83,  mock_values$auto_save_enabled <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,84,  mock_values$updating_table <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,89,  mock_values$updating_table <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,90,  mock_values$table_operation_in_progress <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,95,  mock_values$table_operation_in_progress <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,96,  mock_values$restoring_session <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,133,      values$last_save_time <- save_data$timestamp
+tests/testthat/test-fase1-refactoring.R,parallel_state,144,  expect_false(is.null(mock_values$last_save_time))
+tests/testthat/test-fase1-refactoring.R,parallel_state,145,"  expect_equal(mock_values$last_save_time, save_data$timestamp)"
+tests/testthat/test-fase1-refactoring.R,parallel_state,214,    values$restoring_session <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,215,    values$updating_table <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,216,    values$table_operation_in_progress <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,217,    values$auto_save_enabled <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,224,    values$updating_table <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,225,    values$restoring_session <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,226,    values$auto_save_enabled <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,228,    values$table_operation_cleanup_needed <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,234,    if (!values$table_operation_cleanup_needed) {
+tests/testthat/test-fase1-refactoring.R,parallel_state,239,    values$table_operation_in_progress <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,240,    values$table_operation_cleanup_needed <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,245,  expect_false(mock_values$restoring_session)
+tests/testthat/test-fase1-refactoring.R,parallel_state,246,  expect_false(mock_values$table_operation_in_progress)
+tests/testthat/test-fase1-refactoring.R,parallel_state,247,  expect_false(mock_values$table_operation_cleanup_needed)
+tests/testthat/test-fase1-refactoring.R,parallel_state,251,  expect_true(mock_values$restoring_session)
+tests/testthat/test-fase1-refactoring.R,parallel_state,252,  expect_true(mock_values$table_operation_in_progress)
+tests/testthat/test-fase1-refactoring.R,parallel_state,253,  expect_false(mock_values$auto_save_enabled)
+tests/testthat/test-fase1-refactoring.R,parallel_state,257,  expect_false(mock_values$restoring_session)
+tests/testthat/test-fase1-refactoring.R,parallel_state,258,  expect_false(mock_values$updating_table)
+tests/testthat/test-fase1-refactoring.R,parallel_state,259,  expect_true(mock_values$auto_save_enabled)
+tests/testthat/test-fase1-refactoring.R,parallel_state,260,  expect_true(mock_values$table_operation_cleanup_needed)  # NY FLAG
+tests/testthat/test-fase1-refactoring.R,parallel_state,261,  expect_true(mock_values$table_operation_in_progress)  # Still true - needs cleanup
+tests/testthat/test-fase1-refactoring.R,parallel_state,265,  expect_false(mock_values$table_operation_in_progress)  # NOW cleaned up
+tests/testthat/test-fase1-refactoring.R,parallel_state,266,  expect_false(mock_values$table_operation_cleanup_needed)  # Flag reset
+tests/testthat/test-fase1-refactoring.R,parallel_state,278,    if (values$table_operation_cleanup_needed) {
+tests/testthat/test-fase1-refactoring.R,parallel_state,290,  mock_values$table_operation_cleanup_needed <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,314,    values$updating_table <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,315,    values$table_operation_in_progress <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,318,    values$updating_table <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,321,    values$table_operation_cleanup_needed <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,329,    values$table_operation_in_progress <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,332,    values$table_operation_cleanup_needed <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,338,  expect_false(mock_values$table_operation_in_progress)
+tests/testthat/test-fase1-refactoring.R,parallel_state,339,  expect_false(mock_values$table_operation_cleanup_needed)
+tests/testthat/test-fase1-refactoring.R,parallel_state,343,  expect_false(mock_values$updating_table)  # Cleared immediately
+tests/testthat/test-fase1-refactoring.R,parallel_state,344,  expect_true(mock_values$table_operation_in_progress)  # Still set
+tests/testthat/test-fase1-refactoring.R,parallel_state,345,  expect_true(mock_values$table_operation_cleanup_needed)  # NY flag set
+tests/testthat/test-fase1-refactoring.R,parallel_state,348,  mock_values$table_operation_cleanup_needed <- FALSE  # Reset
+tests/testthat/test-fase1-refactoring.R,parallel_state,351,  expect_true(mock_values$table_operation_in_progress)
+tests/testthat/test-fase1-refactoring.R,parallel_state,352,  expect_true(mock_values$table_operation_cleanup_needed)
+tests/testthat/test-fase1-refactoring.R,parallel_state,355,  if (mock_values$table_operation_cleanup_needed) {
+tests/testthat/test-fase1-refactoring.R,parallel_state,356,    mock_values$table_operation_in_progress <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,357,    mock_values$table_operation_cleanup_needed <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,360,  expect_false(mock_values$table_operation_in_progress)
+tests/testthat/test-fase1-refactoring.R,parallel_state,361,  expect_false(mock_values$table_operation_cleanup_needed)
+tests/testthat/test-fase1-refactoring.R,parallel_state,377,    if (!values$auto_save_enabled ||
+tests/testthat/test-fase1-refactoring.R,parallel_state,378,      values$updating_table ||
+tests/testthat/test-fase1-refactoring.R,parallel_state,379,      values$table_operation_in_progress ||
+tests/testthat/test-fase1-refactoring.R,parallel_state,380,      values$restoring_session) {
+tests/testthat/test-fase1-refactoring.R,parallel_state,384,    if (!is.null(values$current_data) &&
+tests/testthat/test-fase1-refactoring.R,parallel_state,385,      nrow(values$current_data) > 0 &&
+tests/testthat/test-fase1-refactoring.R,parallel_state,386,      any(!is.na(values$current_data))) {
+tests/testthat/test-fase1-refactoring.R,parallel_state,396,  mock_values$table_operation_in_progress <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,400,  mock_values$table_operation_in_progress <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,401,  mock_values$updating_table <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,405,  mock_values$updating_table <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,406,  mock_values$restoring_session <- TRUE
+tests/testthat/test-fase1-refactoring.R,parallel_state,410,  mock_values$restoring_session <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,411,  mock_values$auto_save_enabled <- FALSE
+tests/testthat/test-fase1-refactoring.R,parallel_state,415,  mock_values$auto_save_enabled <- TRUE
+tests/testthat/test-fase1-refactoring.R,direct_input,34,"      title = input$indicator_title,"
+tests/testthat/test-fase1-refactoring.R,direct_input,35,"      description = input$indicator_description,"
+tests/testthat/test-fase1-refactoring.R,direct_input,36,"      chart_type = input$chart_type,"
+tests/testthat/test-fase1-refactoring.R,direct_input,37,      target_value = input$target_value
+tests/testthat/test-fase1-refactoring.R,triggers,7,"test_that(""auto-save debounce trigger struktur er korrekt"", {"
+tests/testthat/test-fase1-refactoring.R,triggers,8,  # TEST: Simuler auto-save trigger data struktur
+tests/testthat/test-fase1-refactoring.R,triggers,41,  # Function to simulate auto_save_trigger reaktiv (ny implementation)
+tests/testthat/test-fase1-refactoring.R,triggers,42,"  simulate_auto_save_trigger <- function(values, input) {"
+tests/testthat/test-fase1-refactoring.R,triggers,65,"  save_data <- simulate_auto_save_trigger(mock_values, mock_input)"
+tests/testthat/test-fase1-refactoring.R,triggers,79,"  save_data_blocked <- simulate_auto_save_trigger(mock_values, mock_input)"
+tests/testthat/test-fase1-refactoring.R,triggers,85,"  save_data_blocked2 <- simulate_auto_save_trigger(mock_values, mock_input)"
+tests/testthat/test-fase1-refactoring.R,triggers,91,"  save_data_blocked3 <- simulate_auto_save_trigger(mock_values, mock_input)"
+tests/testthat/test-fase1-refactoring.R,triggers,97,"  save_data_blocked4 <- simulate_auto_save_trigger(mock_values, mock_input)"
+tests/testthat/test-fase1-refactoring.R,triggers,104,  # SETUP: Mock save data (som ville komme fra debounced trigger)
+tests/testthat/test-fase1-refactoring.R,triggers,166,      # First update - would trigger debounce timer
+tests/testthat/test-fase1-refactoring.R,triggers,269,"test_that(""cleanup trigger debounce logic er event-driven"", {"
+tests/testthat/test-fase1-refactoring.R,triggers,270,  # TEST: Cleanup trigger logic (fra utils_session_helpers.R)
+tests/testthat/test-fase1-refactoring.R,triggers,276,  # Function to simulate table_cleanup_trigger reaktiv (ny implementation)
+tests/testthat/test-fase1-refactoring.R,triggers,277,  simulate_cleanup_trigger <- function(values) {
+tests/testthat/test-fase1-refactoring.R,triggers,279,      return(Sys.time())  # Return timestamp to trigger cleanup
+tests/testthat/test-fase1-refactoring.R,triggers,286,  result <- simulate_cleanup_trigger(mock_values)
+tests/testthat/test-fase1-refactoring.R,triggers,291,  result <- simulate_cleanup_trigger(mock_values)
+tests/testthat/test-fase2-reactive-chains.R,parallel_state,156,"  mock_values$plot_warnings <- c(""Test warning"")"
+tests/testthat/test-fase2-reactive-chains.R,parallel_state,162,  mock_values$plot_warnings <- character(0)
+tests/testthat/test-fase2-reactive-chains.R,parallel_state,163,  mock_values$plot_ready <- TRUE
+tests/testthat/test-fase2-reactive-chains.R,parallel_state,224,  mock_values$plot_ready <- TRUE
+tests/testthat/test-fase2-reactive-chains.R,parallel_state,295,  expect_true(values$plot_ready)
+tests/testthat/test-fase2-reactive-chains.R,parallel_state,296,  expect_false(values$is_computing)
+tests/testthat/test-fase2-reactive-chains.R,parallel_state,297,"  expect_equal(length(values$plot_warnings), 0)"
+tests/testthat/test-fase2-reactive-chains.R,isolate_usage,120,  # TEST: renderUI functions follow event-driven pattern med isolate() for performance
+tests/testthat/test-file-operations.R,parallel_state,59,  expect_true(!is.null(mock_values$current_data))
+tests/testthat/test-file-operations.R,parallel_state,60,  expect_true(is.data.frame(mock_values$current_data))
+tests/testthat/test-file-operations.R,parallel_state,61,"  expect_equal(nrow(mock_values$current_data), 3)"
+tests/testthat/test-file-operations.R,parallel_state,64,"  expect_true(""Skift"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,65,"  expect_true(""Frys"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,68,"  expect_true(""Dato"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,69,"  expect_true(""Tæller"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,70,"  expect_true(""Nævner"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,73,"  expect_equal(mock_values$current_data$Tæller[1], 95)"
+tests/testthat/test-file-operations.R,parallel_state,74,"  expect_equal(mock_values$current_data$Nævner[1], 100)"
+tests/testthat/test-file-operations.R,parallel_state,77,  expect_true(mock_values$file_uploaded)
+tests/testthat/test-file-operations.R,parallel_state,78,  expect_false(mock_values$updating_table)
+tests/testthat/test-file-operations.R,parallel_state,81,"  expect_identical(mock_values$current_data, mock_values$original_data)"
+tests/testthat/test-file-operations.R,parallel_state,101,  expect_null(mock_values$current_data)
+tests/testthat/test-file-operations.R,parallel_state,102,  expect_false(mock_values$file_uploaded)
+tests/testthat/test-file-operations.R,parallel_state,187,"  expect_true(""Måling"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,188,"  expect_true(""Område"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,191,"  expect_true(any(grepl(""ø"", mock_values$current_data$Område, useBytes = FALSE)))"
+tests/testthat/test-file-operations.R,parallel_state,192,"  expect_true(any(grepl(""æ"", mock_values$current_data$Område, useBytes = FALSE)))"
+tests/testthat/test-file-operations.R,parallel_state,230,"  expect_equal(nrow(mock_values$current_data), 300)"
+tests/testthat/test-file-operations.R,parallel_state,231,  expect_true(mock_values$file_uploaded)
+tests/testthat/test-file-operations.R,parallel_state,253,  expect_false(mock_values$file_uploaded)
+tests/testthat/test-file-operations.R,parallel_state,265,"    expect_equal(nrow(mock_values$current_data), 0)"
+tests/testthat/test-file-operations.R,parallel_state,304,  mock_values$original_data <- mock_values$current_data
+tests/testthat/test-file-operations.R,parallel_state,359,  expect_true(mock_values$file_uploaded)
+tests/testthat/test-file-operations.R,parallel_state,362,"  expect_true(""Skift"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,363,"  expect_true(""Frys"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,366,"  expect_true(""Date"" %in% names(mock_values$current_data))"
+tests/testthat/test-file-operations.R,parallel_state,367,"  expect_true(""Count"" %in% names(mock_values$current_data))"
+tests/testthat/test-name-only-detection-fixed.R,parallel_state,33,  expect_true(!is.null(mock_values$ui_sync_needed))
+tests/testthat/test-name-only-detection-fixed.R,parallel_state,34,  ui_sync <- mock_values$ui_sync_needed
+tests/testthat/test-name-only-detection-fixed.R,parallel_state,59,  ui_sync <- mock_values$ui_sync_needed
+tests/testthat/test-name-only-detection-fixed.R,parallel_state,99,  ui_sync <- mock_values$ui_sync_needed
+tests/testthat/test-name-only-detection-working.R,parallel_state,97,  # TEST: Funktionen opdaterer values$auto_detected_columns
+tests/testthat/test-name-only-detection-working.R,parallel_state,106,  expect_true(!is.null(mock_values$auto_detected_columns))
+tests/testthat/test-name-only-detection-working.R,parallel_state,107,"  expect_equal(mock_values$auto_detected_columns$x_col, ""Dato"")"
+tests/testthat/test-name-only-detection-working.R,parallel_state,108,"  expect_equal(mock_values$auto_detected_columns$taeller_col, ""Tæller"")"
+tests/testthat/test-name-only-detection-working.R,parallel_state,121,  expect_true(!is.null(mock_values$ui_sync_needed))
+tests/testthat/test-name-only-detection-working.R,parallel_state,123,  ui_sync <- mock_values$ui_sync_needed
+tests/testthat/test-name-only-detection.R,parallel_state,36,  expect_true(!is.null(mock_values$ui_sync_needed))
+tests/testthat/test-name-only-detection.R,parallel_state,37,  ui_sync <- mock_values$ui_sync_needed
+tests/testthat/test-phase4-centralized-state.R,parallel_state,110,    values$current_data
+tests/testthat/test-phase4-centralized-state.R,parallel_state,123,    values$current_data
+tests/testthat/test-phase4-centralized-state.R,parallel_state,133,    values$hide_anhoej_rules
+tests/testthat/test-phase4-centralized-state.R,parallel_state,144,    values$hide_anhoej_rules
+tests/testthat/test-phase4-centralized-state.R,parallel_state,153,    values$auto_detected_columns
+tests/testthat/test-phase4-centralized-state.R,parallel_state,164,    values$auto_detected_columns
+tests/testthat/test-phase4-centralized-state.R,parallel_state,198,  app_state$data$current_data <- old_values$current_data
+tests/testthat/test-phase4-centralized-state.R,parallel_state,199,  app_state$ui$hide_anhoej_rules <- old_values$hide_anhoej_rules
+tests/testthat/test-phase4-centralized-state.R,parallel_state,200,  app_state$columns$auto_detect$results <- old_values$auto_detected_columns
+tests/testthat/test-phase4-centralized-state.R,parallel_state,201,  app_state$columns$auto_detect$in_progress <- old_values$auto_detect_in_progress
+tests/testthat/test-phase4-centralized-state.R,parallel_state,202,  app_state$columns$auto_detect$completed <- old_values$initial_auto_detect_completed
+tests/testthat/test-phase4-centralized-state.R,triggers,36,"  expect_true(""trigger"" %in% names(app_state$columns$auto_detect))"
+tests/testthat/test-phase4-centralized-state.R,triggers,71,  expect_null(app_state$columns$auto_detect$trigger)
+tests/testthat/test-phase4-centralized-state.R,session_couple,82,  expect_true(app_state$session$auto_save_enabled)
+tests/testthat/test-phase4-centralized-state.R,session_couple,83,  expect_false(app_state$session$restoring_session)
+tests/testthat/test-phase4-centralized-state.R,session_couple,84,  expect_false(app_state$session$file_uploaded)
+tests/testthat/test-phase4-centralized-state.R,session_couple,85,  expect_false(app_state$session$user_started_session)
+tests/testthat/test-phase4-centralized-state.R,session_couple,86,  expect_null(app_state$session$last_save_time)
+tests/testthat/test-phase4-centralized-state.R,session_couple,87,  expect_null(app_state$session$file_name)
+tests/testthat/test-phase4-centralized-state.R,session_couple,250,  expect_true(app_state$session$auto_save_enabled)  # Default
+tests/testthat/test-phase4-centralized-state.R,session_couple,251,  expect_false(app_state$session$restoring_session)
+tests/testthat/test-phase4-centralized-state.R,session_couple,252,  expect_false(app_state$session$file_uploaded)
+tests/testthat/test-phase4-centralized-state.R,session_couple,254,  app_state$session$file_uploaded <- TRUE
+tests/testthat/test-phase4-centralized-state.R,session_couple,255,"  app_state$session$file_name <- ""test_file.csv"""
+tests/testthat/test-phase4-centralized-state.R,session_couple,256,  expect_true(app_state$session$file_uploaded)
+tests/testthat/test-phase4-centralized-state.R,session_couple,257,"  expect_equal(app_state$session$file_name, ""test_file.csv"")"
+tests/testthat/test-qic-calculations.R,qic_calls,20,  qic_p_result <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,43,  qic_run_result <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,56,  qic_u_result <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,242,  p_chart <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,257,  u_chart <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,271,  run_chart <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,294,  p_chart_phases <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,313,  p_chart_freeze <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,341,  p_chart_target <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,357,  run_chart_target <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,386,  same_values_result <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,406,  min_result <- qicharts2::qic(
+tests/testthat/test-qic-calculations.R,qic_calls,424,  extreme_result <- qicharts2::qic(
+tests/testthat/test-recent-functionality.R,parallel_state,272,"        legacy_value = legacy_values$plot_ready,"
+tests/testthat/test-recent-functionality.R,parallel_state,277,      legacy_values$plot_ready <- TRUE
+tests/testthat/test-recent-functionality.R,parallel_state,280,"        legacy_value = legacy_values$plot_ready,"
+tests/testthat/test-recent-functionality.R,triggers,3,# - Direct reactiveVal trigger pattern
+tests/testthat/test-recent-functionality.R,triggers,5,# - UI sync trigger mechanism
+tests/testthat/test-recent-functionality.R,triggers,8,"test_that(""reactiveVal trigger pattern funktionalitet"", {"
+tests/testthat/test-recent-functionality.R,triggers,9,  # TEST: Simulation af reactiveVal trigger pattern som vi implementerede
+tests/testthat/test-recent-functionality.R,triggers,12,  trigger_value <- NULL
+tests/testthat/test-recent-functionality.R,triggers,13,  trigger_function <- function(value = NULL) {
+tests/testthat/test-recent-functionality.R,triggers,15,      trigger_value <<- value
+tests/testthat/test-recent-functionality.R,triggers,18,      return(trigger_value)
+tests/testthat/test-recent-functionality.R,triggers,22,  # Mock autodetect trigger creation
+tests/testthat/test-recent-functionality.R,triggers,23,  create_autodetect_trigger <- function() {
+tests/testthat/test-recent-functionality.R,triggers,24,    return(trigger_function)
+tests/testthat/test-recent-functionality.R,triggers,28,  autodetect_trigger <- create_autodetect_trigger()
+tests/testthat/test-recent-functionality.R,triggers,29,  expect_true(is.function(autodetect_trigger))
+tests/testthat/test-recent-functionality.R,triggers,33,  autodetect_trigger(test_time)
+tests/testthat/test-recent-functionality.R,triggers,35,  retrieved_value <- autodetect_trigger()
+tests/testthat/test-recent-functionality.R,triggers,38,  # TEST: Multiple trigger calls work
+tests/testthat/test-recent-functionality.R,triggers,40,  autodetect_trigger(time1)
+tests/testthat/test-recent-functionality.R,triggers,41,"  expect_equal(autodetect_trigger(), time1)"
+tests/testthat/test-recent-functionality.R,triggers,45,  autodetect_trigger(time2)
+tests/testthat/test-recent-functionality.R,triggers,46,"  expect_equal(autodetect_trigger(), time2)"
+tests/testthat/test-recent-functionality.R,triggers,50,"test_that(""direct trigger callback pattern simulation"", {"
+tests/testthat/test-recent-functionality.R,triggers,57,  mock_autodetect_trigger <- function(value) {
+tests/testthat/test-recent-functionality.R,triggers,63,  # Function to simulate file upload with trigger
+tests/testthat/test-recent-functionality.R,triggers,64,"  simulate_file_upload_with_trigger <- function(file_data, trigger_callback = NULL) {"
+tests/testthat/test-recent-functionality.R,triggers,68,    # Fire trigger if provided (our new pattern)
+tests/testthat/test-recent-functionality.R,triggers,69,    if (!is.null(trigger_callback)) {
+tests/testthat/test-recent-functionality.R,triggers,70,      trigger_time <- Sys.time()
+tests/testthat/test-recent-functionality.R,triggers,71,      trigger_callback(trigger_time)
+tests/testthat/test-recent-functionality.R,triggers,75,"        trigger_fired = TRUE,"
+tests/testthat/test-recent-functionality.R,triggers,76,        trigger_time = trigger_time
+tests/testthat/test-recent-functionality.R,triggers,80,"    return(list(success = TRUE, data = processed_data, trigger_fired = FALSE))"
+tests/testthat/test-recent-functionality.R,triggers,83,  # TEST: Upload without trigger (old behavior)
+tests/testthat/test-recent-functionality.R,triggers,84,  result1 <- simulate_file_upload_with_trigger(data.frame(x = 1:3))
+tests/testthat/test-recent-functionality.R,triggers,86,  expect_false(result1$trigger_fired)
+tests/testthat/test-recent-functionality.R,triggers,93,  # TEST: Upload with trigger (new behavior)
+tests/testthat/test-recent-functionality.R,triggers,94,  result2 <- simulate_file_upload_with_trigger(
+tests/testthat/test-recent-functionality.R,triggers,96,    trigger_callback = mock_autodetect_trigger
+tests/testthat/test-recent-functionality.R,triggers,100,  expect_true(result2$trigger_fired)
+tests/testthat/test-recent-functionality.R,triggers,106,"test_that(""Excel upload trigger fix simulation"", {"
+tests/testthat/test-recent-functionality.R,triggers,107,  # TEST: Simulation af Excel upload fix hvor vi tilføjede autodetect_trigger parameter
+tests/testthat/test-recent-functionality.R,triggers,109,  trigger_calls <- list()
+tests/testthat/test-recent-functionality.R,triggers,111,  mock_trigger <- function(value) {
+tests/testthat/test-recent-functionality.R,triggers,112,"    trigger_calls <<- c(trigger_calls, list(value))"
+tests/testthat/test-recent-functionality.R,triggers,116,  # OLD handle_excel_upload without trigger (before fix)
+tests/testthat/test-recent-functionality.R,triggers,125,      trigger_called = FALSE
+tests/testthat/test-recent-functionality.R,triggers,127,    # NOTE: No autodetect trigger call (the bug we fixed)
+tests/testthat/test-recent-functionality.R,triggers,131,  # NEW handle_excel_upload with trigger (after fix)
+tests/testthat/test-recent-functionality.R,triggers,132,"  handle_excel_upload_new <- function(file_path, autodetect_trigger = NULL) {"
+tests/testthat/test-recent-functionality.R,triggers,140,      trigger_called = FALSE
+tests/testthat/test-recent-functionality.R,triggers,143,    # FIX: Call autodetect trigger for subsequent files
+tests/testthat/test-recent-functionality.R,triggers,144,    if (!is.null(autodetect_trigger)) {
+tests/testthat/test-recent-functionality.R,triggers,145,      autodetect_trigger(Sys.time())
+tests/testthat/test-recent-functionality.R,triggers,146,      result$trigger_called <- TRUE
+tests/testthat/test-recent-functionality.R,triggers,152,  # TEST: Old version doesn't trigger autodetection
+tests/testthat/test-recent-functionality.R,triggers,153,  trigger_calls <- list()
+tests/testthat/test-recent-functionality.R,triggers,157,  expect_false(result1$trigger_called)
+tests/testthat/test-recent-functionality.R,triggers,158,"  expect_equal(length(trigger_calls), 0)  # No trigger called"
+tests/testthat/test-recent-functionality.R,triggers,160,  # TEST: New version triggers autodetection
+tests/testthat/test-recent-functionality.R,triggers,161,  trigger_calls <- list()
+tests/testthat/test-recent-functionality.R,triggers,162,"  result2 <- handle_excel_upload_new(""test.xlsx"", autodetect_trigger = mock_trigger)"
+tests/testthat/test-recent-functionality.R,triggers,165,  expect_true(result2$trigger_called)
+tests/testthat/test-recent-functionality.R,triggers,166,"  expect_equal(length(trigger_calls), 1)  # Trigger was called"
+tests/testthat/test-recent-functionality.R,triggers,167,"  expect_true(inherits(trigger_calls[[1]], ""POSIXct""))"
+tests/testthat/test-recent-functionality.R,triggers,170,"test_that(""UI sync trigger mechanism simulation"", {"
+tests/testthat/test-recent-functionality.R,triggers,171,  # TEST: Simulation af UI sync trigger mechanism
+tests/testthat/test-recent-functionality.R,triggers,175,  # Mock UI sync trigger
+tests/testthat/test-recent-functionality.R,triggers,176,  mock_ui_sync_trigger <- function(sync_data) {
+tests/testthat/test-recent-functionality.R,triggers,196,"  simulate_autodetect_with_ui_sync <- function(data, ui_sync_trigger_func = NULL) {"
+tests/testthat/test-recent-functionality.R,triggers,214,    # Fire UI sync trigger
+tests/testthat/test-recent-functionality.R,triggers,215,    if (!is.null(ui_sync_trigger_func)) {
+tests/testthat/test-recent-functionality.R,triggers,216,      ui_sync_trigger_func(sync_data)
+tests/testthat/test-recent-functionality.R,triggers,236,  # TEST: Auto-detection with UI sync trigger
+tests/testthat/test-recent-functionality.R,triggers,238,"  result2 <- simulate_autodetect_with_ui_sync(test_data, ui_sync_trigger_func = mock_ui_sync_trigger)"
+tests/testthat/test-recent-functionality.R,triggers,315,"test_that(""function signature compatibility for autodetect trigger"", {"
+tests/testthat/test-recent-functionality.R,triggers,316,  # TEST: Function signature changes for autodetect trigger passing
+tests/testthat/test-recent-functionality.R,triggers,323,"      autodetect_trigger_available = FALSE,"
+tests/testthat/test-recent-functionality.R,triggers,329,"  setup_file_upload_new <- function(input, output, session, values, waiter_file, app_state = NULL, autodetect_trigger = NULL) {"
+tests/testthat/test-recent-functionality.R,triggers,331,"      autodetect_trigger_available = !is.null(autodetect_trigger),"
+tests/testthat/test-recent-functionality.R,triggers,332,"      parameters = c(""input"", ""output"", ""session"", ""values"", ""waiter_file"", ""app_state"", ""autodetect_trigger"")"
+tests/testthat/test-recent-functionality.R,triggers,346,  mock_trigger <- function(x) x
+tests/testthat/test-recent-functionality.R,triggers,348,  # TEST: Old signature without trigger
+tests/testthat/test-recent-functionality.R,triggers,350,  expect_false(result_old$autodetect_trigger_available)
+tests/testthat/test-recent-functionality.R,triggers,353,  # TEST: New signature with trigger
+tests/testthat/test-recent-functionality.R,triggers,354,"  mock_args_new <- c(mock_args, list(autodetect_trigger = mock_trigger))"
+tests/testthat/test-recent-functionality.R,triggers,356,  expect_true(result_new$autodetect_trigger_available)
+tests/testthat/test-recent-functionality.R,triggers,359,  # TEST: New signature backward compatible (trigger can be NULL)
+tests/testthat/test-recent-functionality.R,triggers,361,  expect_false(result_new_null$autodetect_trigger_available)
+tests/testthat/test-recent-functionality.R,triggers,365,  # TEST: setup_column_management returning autodetect_trigger pattern
+tests/testthat/test-recent-functionality.R,triggers,367,  # Mock setup_column_management that returns trigger (our new pattern)
+tests/testthat/test-recent-functionality.R,triggers,369,    # Create mock reactiveVal-like trigger
+tests/testthat/test-recent-functionality.R,triggers,370,    trigger_value <- NULL
+tests/testthat/test-recent-functionality.R,triggers,372,    autodetect_trigger <- function(value = NULL) {
+tests/testthat/test-recent-functionality.R,triggers,374,        trigger_value <<- value
+tests/testthat/test-recent-functionality.R,triggers,377,        return(trigger_value)
+tests/testthat/test-recent-functionality.R,triggers,382,    # Return the trigger for use by other functions
+tests/testthat/test-recent-functionality.R,triggers,383,    return(autodetect_trigger)
+tests/testthat/test-recent-functionality.R,triggers,396,    autodetect_trigger <- mock_setup_column_management(
+tests/testthat/test-recent-functionality.R,triggers,400,    # Verify trigger is function
+tests/testthat/test-recent-functionality.R,triggers,401,    expect_true(is.function(autodetect_trigger))
+tests/testthat/test-recent-functionality.R,triggers,403,    # Test trigger functionality
+tests/testthat/test-recent-functionality.R,triggers,405,    autodetect_trigger(test_value)
+tests/testthat/test-recent-functionality.R,triggers,406,"    expect_equal(autodetect_trigger(), test_value)"
+tests/testthat/test-recent-functionality.R,triggers,408,    return(autodetect_trigger)
+tests/testthat/test-recent-functionality.R,triggers,412,  trigger <- simulate_app_server_setup()
+tests/testthat/test-recent-functionality.R,triggers,413,  expect_true(is.function(trigger))
+tests/testthat/test-recent-functionality.R,triggers,416,  file_upload_can_use_trigger <- function(trigger_func) {
+tests/testthat/test-recent-functionality.R,triggers,417,    if (is.function(trigger_func)) {
+tests/testthat/test-recent-functionality.R,triggers,418,      trigger_func(Sys.time())
+tests/testthat/test-recent-functionality.R,triggers,424,  expect_true(file_upload_can_use_trigger(trigger))
+tests/testthat/test-recent-functionality.R,triggers,458,"  event_driven_sync <- function(data, trigger_func = NULL) {"
+tests/testthat/test-recent-functionality.R,triggers,464,    # Fire trigger directly (deterministic)
+tests/testthat/test-recent-functionality.R,triggers,465,    if (!is.null(trigger_func)) {
+tests/testthat/test-recent-functionality.R,triggers,466,"      trigger_func(list(data = data, timestamp = Sys.time()))"
+tests/testthat/test-recent-functionality.R,triggers,482,  trigger_calls <- list()
+tests/testthat/test-recent-functionality.R,triggers,483,  mock_trigger <- function(data) {
+tests/testthat/test-recent-functionality.R,triggers,484,"    trigger_calls <<- c(trigger_calls, list(data))"
+tests/testthat/test-recent-functionality.R,triggers,488,"  event_results <- replicate(5, event_driven_sync(test_data, mock_trigger), simplify = FALSE)"
+tests/testthat/test-recent-functionality.R,triggers,503,"  expect_equal(length(trigger_calls), 5)"
+tests/testthat/test-scoping-debug.R,parallel_state,47,  expect_null(mock_values$auto_detected_columns)
+tests/testthat/test-scoping-debug.R,parallel_state,48,  expect_null(mock_values$ui_sync_needed)
+tests/testthat/test-session-reset-flow.R,parallel_state,60,  expect_false(mock_values$file_uploaded)
+tests/testthat/test-session-reset-flow.R,parallel_state,61,  expect_false(mock_values$user_started_session)
+tests/testthat/test-session-reset-flow.R,parallel_state,62,  expect_false(mock_values$auto_detect_done)
+tests/testthat/test-session-reset-flow.R,parallel_state,63,  expect_false(mock_values$initial_auto_detect_completed)
+tests/testthat/test-session-reset-flow.R,parallel_state,66,  expect_true(!is.null(mock_values$current_data))
+tests/testthat/test-session-reset-flow.R,parallel_state,67,  expect_true(is.data.frame(mock_values$current_data))
+tests/testthat/test-session-reset-flow.R,parallel_state,68,  expect_true(nrow(mock_values$current_data) > 0)  # Ikke tom
+tests/testthat/test-session-reset-flow.R,parallel_state,69,"  expect_true(""Dato"" %in% names(mock_values$current_data))"
+tests/testthat/test-session-reset-flow.R,parallel_state,70,"  expect_true(""Tæller"" %in% names(mock_values$current_data))"
+tests/testthat/test-session-reset-flow.R,parallel_state,104,  mock_values$current_data <- standard_data
+tests/testthat/test-session-reset-flow.R,parallel_state,137,"  expect_identical(mock_values$current_data, mock_values$original_data)"
+tests/testthat/test-session-reset-flow.R,parallel_state,140,"  expect_identical(mock_app_state$data$current_data, mock_values$current_data)"
+tests/testthat/test-session-reset-flow.R,parallel_state,141,"  expect_identical(mock_app_state$data$original_data, mock_values$original_data)"
+tests/testthat/test-session-reset-flow.R,parallel_state,144,  if (!is.null(mock_values$current_data)) {
+tests/testthat/test-session-reset-flow.R,parallel_state,145,    current_cols <- names(mock_values$current_data)
+tests/testthat/test-session-reset-flow.R,parallel_state,237,  mock_values$current_data <- create_empty_session_data()
+tests/testthat/test-session-reset-flow.R,parallel_state,241,  standard_cols <- names(mock_values$current_data)
+tests/testthat/test-session-reset-flow.R,session_couple,73,  expect_false(mock_app_state$session$file_uploaded)
+tests/testthat/test-session-reset-flow.R,session_couple,74,  expect_false(mock_app_state$session$user_started_session)
+tests/testthat/test-ui-synchronization.R,triggers,288,"test_that(""auto-detect UI sync trigger mechanism"", {"
+tests/testthat/test-ui-synchronization.R,triggers,304,  # Function to create UI sync trigger (from auto-detect function)
+tests/testthat/test-ui-synchronization.R,triggers,305,"  create_ui_sync_trigger <- function(detected_cols, choices) {"
+tests/testthat/test-ui-synchronization.R,triggers,318,"  trigger <- create_ui_sync_trigger(auto_detect_results, col_choices)"
+tests/testthat/test-ui-synchronization.R,triggers,324,"    expect_true(field %in% names(trigger), info = paste(""Missing field:"", field))"
+tests/testthat/test-ui-synchronization.R,triggers,328,"  expect_equal(trigger$x_col, ""Dato"")"
+tests/testthat/test-ui-synchronization.R,triggers,329,"  expect_equal(trigger$taeller_col, ""Tæller"")"
+tests/testthat/test-ui-synchronization.R,triggers,330,"  expect_equal(trigger$naevner_col, ""Nævner"")"
+tests/testthat/test-ui-synchronization.R,triggers,331,  expect_null(trigger$skift_col)
+tests/testthat/test-ui-synchronization.R,triggers,332,  expect_null(trigger$frys_col)
+tests/testthat/test-ui-synchronization.R,triggers,333,"  expect_equal(trigger$kommentar_col, ""Kommentarer"")"
+tests/testthat/test-ui-synchronization.R,triggers,336,  expect_true(is.numeric(trigger$timestamp))
+tests/testthat/test-ui-synchronization.R,triggers,337,  expect_true(trigger$timestamp > 0)
+tests/testthat/test-ui-synchronization.R,triggers,340,"  expect_equal(trigger$col_choices, col_choices)"
+tests/testthat/test-ui-synchronization.R,triggers,453,  trigger1 <- add_reactivity_timestamp(base_data)
+tests/testthat/test-ui-synchronization.R,triggers,455,  trigger2 <- add_reactivity_timestamp(base_data)
+tests/testthat/test-ui-synchronization.R,triggers,458,  expect_true(trigger1$timestamp != trigger2$timestamp)
+tests/testthat/test-ui-synchronization.R,triggers,459,  expect_true(trigger2$timestamp > trigger1$timestamp)
+tests/testthat/test-ui-synchronization.R,triggers,462,"  expect_equal(trigger1$x_col, trigger2$x_col)"
+tests/testthat/test-ui-synchronization.R,triggers,463,"  expect_equal(trigger1$taeller_col, trigger2$taeller_col)"
+tests/testthat/test-ui-synchronization.R,triggers,464,"  expect_equal(trigger1$col_choices, trigger2$col_choices)"
+tests/testthat/test-ui-synchronization.R,triggers,497,"  trigger <- handle_empty_detection(empty_results, col_choices)"
+tests/testthat/test-ui-synchronization.R,triggers,500,  expect_true(is.list(trigger))
+tests/testthat/test-ui-synchronization.R,triggers,501,"  expect_true(""col_choices"" %in% names(trigger))"
+tests/testthat/test-ui-synchronization.R,triggers,502,"  expect_true(""timestamp"" %in% names(trigger))"
+tests/testthat/test-ui-synchronization.R,triggers,505,  expect_null(trigger$x_col)
+tests/testthat/test-ui-synchronization.R,triggers,506,  expect_null(trigger$taeller_col)
+tests/testthat/test-ui-synchronization.R,triggers,507,  expect_null(trigger$naevner_col)
+tests/testthat/test-ui-synchronization.R,triggers,508,  expect_null(trigger$skift_col)
+tests/testthat/test-ui-synchronization.R,triggers,509,  expect_null(trigger$frys_col)
+tests/testthat/test-ui-synchronization.R,triggers,510,  expect_null(trigger$kommentar_col)
+tests/testthat/test-ui-synchronization.R,triggers,513,"  expect_equal(trigger$col_choices, col_choices)"
+tests/testthat/test-ui-synchronization.R,triggers,514,  expect_true(is.numeric(trigger$timestamp))
+tests/testthat/test-ui-synchronization.R,triggers,549,  # Step 2: Create UI sync trigger
+tests/testthat/test-ui-synchronization.R,triggers,555,  ui_sync_trigger <- list(
+tests/testthat/test-ui-synchronization.R,triggers,570,"  expect_equal(ui_sync_trigger$x_col, ""Dato"")"
+tests/testthat/test-ui-synchronization.R,triggers,571,"  expect_equal(ui_sync_trigger$taeller_col, ""Tæller"")"
+tests/testthat/test-ui-synchronization.R,triggers,572,"  expect_equal(ui_sync_trigger$naevner_col, ""Nævner"")"
+tests/testthat/test-ui-synchronization.R,triggers,573,"  expect_equal(ui_sync_trigger$kommentar_col, ""Kommentarer"")"
+tests/testthat/test-ui-synchronization.R,triggers,574,  expect_null(ui_sync_trigger$skift_col)
+tests/testthat/test-ui-synchronization.R,triggers,575,  expect_null(ui_sync_trigger$frys_col)
+tests/testthat/test-ui-synchronization.R,triggers,578,  expect_true(!is.null(ui_sync_trigger$col_choices))
+tests/testthat/test-ui-synchronization.R,triggers,579,"  expect_true(length(ui_sync_trigger$col_choices) == 5)  # """" + 4 data columns"
+tests/testthat/test-ui-synchronization.R,triggers,580,  expect_true(is.numeric(ui_sync_trigger$timestamp))

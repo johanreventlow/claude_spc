@@ -7,17 +7,23 @@
 
 ## Hovedfunktion for visualisering
 # Opsætter al server logik relateret til visualisering og data forberedelse
-setup_visualization <- function(input, output, session, app_state, navigation_trigger = NULL) {
+setup_visualization <- function(input, output, session, app_state, app_data_reactive = NULL) {
   log_debug("=======================================", "VISUALIZATION")
   log_debug("Setting up visualization system", "VISUALIZATION")
 
-  # NAVIGATION TRIGGER: Create eventReactive and wrap in reactive for module compatibility
-  # NOTE: Use direct navigation_trigger parameter instead of app_state reference
-  active_data_event <- eventReactive(navigation_trigger(), {
-    # PHASE 8: Enhanced reactive execution tracking
-    debug_reactive_execution("active_data_event", "visualization_trigger_fired",
-                            list(trigger_value = navigation_trigger()),
-                            session_id = session$token)
+  # UNIFIED NAVIGATION: Use passed app_data_reactive or create fallback with unified navigation trigger
+  if (!is.null(app_data_reactive)) {
+    # Use passed reactive from setup_helper_observers
+    active_data_event <- reactive({
+      app_data_reactive()
+    })
+  } else {
+    # Fallback: Create eventReactive using unified navigation trigger
+    active_data_event <- eventReactive(app_state$navigation$trigger, {
+      # PHASE 8: Enhanced reactive execution tracking
+      debug_reactive_execution("active_data_event", "visualization_trigger_fired",
+                              list(trigger_value = app_state$navigation$trigger),
+                              session_id = session$token)
 
     log_debug("[PLOT_DATA] Active data reactive triggered", "PLOT_DATA")
     log_debug("[PLOT_DATA] Navigation trigger fired", "PLOT_DATA")
@@ -63,7 +69,8 @@ setup_visualization <- function(input, output, session, app_state, navigation_tr
       attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
       return(data)
     }
-  }, ignoreNULL = FALSE)
+    }, ignoreNULL = FALSE)
+  }
 
   # MODULE COMPATIBILITY: Pass eventReactive directly to preserve reactive context
   active_data <- active_data_event
@@ -271,8 +278,7 @@ setup_visualization <- function(input, output, session, app_state, navigation_tr
         return(input$kommentar_column)
       }
     }),
-    app_state = app_state,
-    navigation_trigger = navigation_trigger
+    app_state = app_state
   )
 
   # Plot klar tjek

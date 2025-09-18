@@ -105,8 +105,9 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
   observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 500, {
     cat("DEBUG: [EVENT] navigation_changed event received\n")
 
-    # This will trigger reactive expressions that depend on navigation changes
-    # No additional action needed - the reactive expressions will handle updates
+    # Increment navigation trigger to update all eventReactive components
+    app_state$navigation$trigger <- app_state$navigation$trigger + 1L
+    cat("DEBUG: [EVENT] Navigation trigger incremented to:", app_state$navigation$trigger, "\n")
   })
 
   # TEST MODE EVENTS

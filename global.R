@@ -624,6 +624,11 @@ create_app_state <- function() {
     hide_anhoej_rules = FALSE
   )
 
+  # Navigation State - For eventReactive patterns
+  app_state$navigation <- reactiveValues(
+    trigger = 0  # Counter for triggering navigation-dependent reactives
+  )
+
   # Visualization State - Convert to reactiveValues for consistency
   app_state$visualization <- reactiveValues(
     plot_ready = FALSE,

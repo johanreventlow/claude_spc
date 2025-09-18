@@ -193,83 +193,19 @@ setup_column_management <- function(input, output, session, app_state, emit) {
     }
   })
 
-  # File upload auto-detect trigger conversion via watcher
-  observeEvent(trigger_needed_watcher(),
-    {
-      cat("DEBUG: [FILE_UPLOAD_TRIGGER] File upload auto-detect observer triggered\n")
-      req(trigger_needed_watcher() == TRUE)
-      cat("DEBUG: [FILE_UPLOAD_TRIGGER] ✅ Converting trigger_needed to direct autodetect_trigger!\n")
-      timestamp <- Sys.time()
+  # UNIFIED EVENT SYSTEM: File upload triggers are now handled by data_loaded events
+  # The event system automatically handles auto-detection when data is loaded
 
-      # Fire the direct reactiveVal trigger
-      autodetect_trigger(timestamp)
-      cat("DEBUG: [FILE_UPLOAD_TRIGGER] ✅ Direct autodetect_trigger fired!\n")
-
-      # Reset the trigger_needed flag
-      app_state$columns$auto_detect$trigger_needed <- FALSE
-      trigger_needed_watcher(FALSE)
-      cat("DEBUG: [FILE_UPLOAD_TRIGGER] Reset trigger_needed flag\n")
-    },
-    ignoreInit = TRUE,
-    priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT
-  )
-
-  # REACTIVE FIX: Direct autodetection trigger execution
-  observeEvent(autodetect_trigger(),
-    {
-      cat("DEBUG: [AUTO_DETECT_EXEC] Centralized auto-detect execution started\n")
-      cat("DEBUG: [AUTO_DETECT_EXEC] Setting auto_detect_in_progress = TRUE\n")
-
-      # PHASE 4: Use unified state management
-      app_state$columns$auto_detect$in_progress <- TRUE
-      cat("DEBUG: [PHASE4] Synced auto_detect_in_progress TRUE to centralized state\n")
-
-      cat("DEBUG: [AUTO_DETECT_EXEC] Calling auto_detect_and_update_columns...\n")
-      # PHASE 4: Pass centralized state to auto-detect function with UI sync trigger
-      auto_detect_and_update_columns(input, session, values, app_state, ui_sync_trigger)
-
-      cat("DEBUG: [AUTO_DETECT_EXEC] Setting initial_auto_detect_completed = TRUE\n")
-      # PHASE 4: Use unified state management
-      app_state$columns$auto_detect$completed <- TRUE
-      cat("DEBUG: [PHASE4] Synced initial_auto_detect_completed to centralized state\n")
-
-      cat("DEBUG: [AUTO_DETECT_EXEC] ✅ Centralized auto-detect execution completed\n")
-    },
-    ignoreInit = TRUE,
-    priority = OBSERVER_PRIORITIES$AUTO_DETECT
-  )
-
-  # PHASE 4: Legacy auto-detect observer removed - now using direct reactiveVal triggers
-  # See autodetect_trigger implementation for new direct callback pattern
+  # UNIFIED EVENT SYSTEM: Auto-detection is now handled by event listeners in utils_event_system.R
+  # The observeEvent(app_state$events$auto_detection_started) handles all auto-detection logic
 
   # REACTIVE FIX: Create dedicated reactiveVal for UI sync trigger
   cat("DEBUG: [UI_SYNC_SETUP] Creating dedicated UI sync trigger reactiveVal\n")
   ui_sync_trigger <- reactiveVal(NULL)
 
-  # REACTIVE FIX: Create dedicated reactiveVal for autodetection trigger
-  cat("DEBUG: [AUTODETECT_SETUP] Creating dedicated autodetection trigger reactiveVal\n")
-  autodetect_trigger <- reactiveVal(NULL)
-
-  # CRITICAL FIX: Bridge observer between app_state trigger and reactiveVal
-  # This was the missing link that prevented auto-detection at app startup
-  cat("DEBUG: [BRIDGE_SETUP] Creating bridge observer for app_state auto_detect trigger\n")
-  observe({
-    cat("DEBUG: [BRIDGE] Bridge observer triggered\n")
-    if (!is.null(app_state)) {
-      trigger_value <- app_state$columns$auto_detect$trigger
-      cat("DEBUG: [BRIDGE] Checking trigger_value:", if(is.null(trigger_value)) "NULL" else as.character(trigger_value), "\n")
-      if (!is.null(trigger_value)) {
-        cat("DEBUG: [BRIDGE] app_state trigger detected:", as.character(trigger_value), "\n")
-        cat("DEBUG: [BRIDGE] Firing autodetect_trigger reactiveVal\n")
-        autodetect_trigger(trigger_value)
-        cat("DEBUG: [BRIDGE] ✅ reactiveVal triggered successfully\n")
-      } else {
-        cat("DEBUG: [BRIDGE] No trigger value available yet\n")
-      }
-    } else {
-      cat("DEBUG: [BRIDGE] app_state is NULL\n")
-    }
-  })
+  # UNIFIED EVENT SYSTEM: Auto-detection is now handled through events
+  # emit$auto_detection_started() triggers the unified auto-detection system
+  cat("DEBUG: [AUTODETECT_SETUP] Auto-detection handled by unified event system\n")
 
   # Reaktiv UI sync observer med direct reactiveVal trigger
   cat("DEBUG: [UI_SYNC_SETUP] Setting up UI sync observer for ui_sync_trigger\n")
@@ -450,9 +386,9 @@ setup_column_management <- function(input, output, session, app_state, emit) {
     handle_add_column(input, session, values, app_state)
   })
 
-  # Return autodetect_trigger so it can be used by file upload
-  cat("DEBUG: [COLUMN_MGMT] Returning autodetect_trigger for external use\n")
-  return(autodetect_trigger)
+  # UNIFIED EVENT SYSTEM: No longer returning autodetect_trigger
+  # Auto-detection is handled through emit$auto_detection_started() events
+  cat("DEBUG: [COLUMN_MGMT] Auto-detection now handled by unified event system\n")
 }
 
 # AUTO-DETEKTION FUNKTIONER ==================================================
@@ -1200,7 +1136,7 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
                 y_col = if(exists("y_col")) y_col else "unknown",
                 n_col = if(exists("n_col")) n_col else "unknown",
                 ui_sync_triggered = TRUE,
-                navigation_trigger_incremented = !is.null(app_state$navigation_trigger)
+                navigation_events_unified = TRUE
               ),
               session_id = session_id)
 
@@ -1355,16 +1291,16 @@ setup_data_table <- function(input, output, session, app_state) {
   cat("DEBUG: [DATA_TABLE] Setting up data table with unified state\n")
 
   # NAVIGATION TRIGGER: Create reactive that uses the navigation trigger
-  app_data_reactive <- eventReactive(app_state$navigation_trigger(), {
+  app_data_reactive <- eventReactive(app_state$navigation$trigger, {
     # PHASE 8: Enhanced reactive execution tracking
     debug_reactive_execution("app_data_reactive", "trigger_fired",
-                            list(trigger_value = app_state$navigation_trigger()),
+                            list(trigger_value = app_state$navigation$trigger),
                             session_id = session$token)
 
     current_data_value <- app_state$data$current_data
 
     cat("DEBUG: [DATA_TABLE] Table reactive triggered\n")
-    cat("DEBUG: [DATA_TABLE] trigger_value:", app_state$navigation_trigger(), "\n")
+    cat("DEBUG: [DATA_TABLE] trigger_value:", app_state$navigation$trigger, "\n")
     cat("DEBUG: [DATA_TABLE] current_data is null:", is.null(current_data_value), "\n")
 
     # PHASE 8: Enhanced reactive execution tracking

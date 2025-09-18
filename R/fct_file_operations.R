@@ -157,8 +157,8 @@ setup_file_upload <- function(input, output, session, waiter_file, app_state, em
     log_debug("===========================================", "FILE_UPLOAD")
   })
 
-  # PHASE 4: Legacy observer removed - auto-detection now uses direct reactiveVal triggers
-  # See setup_column_management() for new autodetect_trigger implementation
+  # UNIFIED EVENT SYSTEM: Auto-detection is now handled by data_loaded events
+  # The event system automatically triggers auto-detection when new data is loaded
 }
 
 ## Håndter Excel fil upload
@@ -207,13 +207,9 @@ handle_excel_upload <- function(file_path, session, app_state, emit) {
     # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
     app_state$ui$hide_anhoej_rules <- FALSE
 
-    # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
-    if (!is.null(app_state$navigation_trigger)) {
-      old_trigger <- app_state$navigation_trigger()
-      app_state$navigation_trigger(old_trigger + 1)
-      new_trigger <- app_state$navigation_trigger()
-      log_debug(paste("SESSION_RESTORE: navigation_trigger incremented from", old_trigger, "to", new_trigger), "SESSION_RESTORE")
-    }
+    # NAVIGATION TRIGGER: Emit navigation changed event to update reactive components
+    emit$navigation_changed()
+    log_debug("SESSION_RESTORE: navigation_changed event emitted", "SESSION_RESTORE")
 
     # Restore metadata with delay to ensure UI is ready
     invalidateLater(500)
@@ -248,13 +244,9 @@ handle_excel_upload <- function(file_path, session, app_state, emit) {
     # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
     app_state$ui$hide_anhoej_rules <- FALSE
 
-    # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
-    if (!is.null(app_state$navigation_trigger)) {
-      old_trigger <- app_state$navigation_trigger()
-      app_state$navigation_trigger(old_trigger + 1)
-      new_trigger <- app_state$navigation_trigger()
-      log_debug(paste("EXCEL_READ: navigation_trigger incremented from", old_trigger, "to", new_trigger), "EXCEL_READ")
-    }
+    # NAVIGATION TRIGGER: Navigation events are now handled by the unified event system
+    emit$navigation_changed()
+    log_debug("EXCEL_READ: navigation_changed event emitted", "EXCEL_READ")
 
     # EVENT SYSTEM: Emit data_loaded event
     if (!is.null(emit)) {
@@ -421,13 +413,9 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
   app_state$ui$hide_anhoej_rules <- FALSE
 
-  # NAVIGATION TRIGGER: Increment trigger to notify reactive navigation system
-  if (!is.null(app_state$navigation_trigger)) {
-    old_trigger <- app_state$navigation_trigger()
-    app_state$navigation_trigger(old_trigger + 1)
-    new_trigger <- app_state$navigation_trigger()
-    log_debug(paste("CSV_READ: navigation_trigger incremented from", old_trigger, "to", new_trigger), "CSV_READ")
-  }
+  # NAVIGATION TRIGGER: Navigation events are now handled by the unified event system
+  emit$navigation_changed()
+  log_debug("CSV_READ: navigation_changed event emitted", "CSV_READ")
 
   log_debug("✅ Reactive values set successfully", "CSV_READ")
 

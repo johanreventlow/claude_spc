@@ -24,20 +24,14 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   #   }
   # })
 
-  # NAVIGATION TRIGGER: Event-driven reactive pattern following best practices
-  # Use reactiveVal for simple signal/trigger mechanism
-  navigation_trigger <- reactiveVal(0)
-
-  # Store navigation trigger in app_state for access from other functions
-  app_state$navigation_trigger <- navigation_trigger
-
-  # This creates a reactive that updates only when navigation_trigger changes
-  app_data_reactive <- eventReactive(navigation_trigger(), {
+  # UNIFIED NAVIGATION: Event-driven pattern using app_state navigation trigger
+  # This creates a reactive that updates when navigation_changed events are fired
+  app_data_reactive <- eventReactive(app_state$navigation$trigger, {
     current_data_value <- app_state$data$current_data
 
-    cat("DEBUG: [NAVIGATION_TRIGGER] app_data_reactive triggered\n")
-    cat("DEBUG: [NAVIGATION_TRIGGER] trigger_value:", navigation_trigger(), "\n")
-    cat("DEBUG: [NAVIGATION_TRIGGER] current_data is null:", is.null(current_data_value), "\n")
+    cat("DEBUG: [NAVIGATION_UNIFIED] app_data_reactive triggered\n")
+    cat("DEBUG: [NAVIGATION_UNIFIED] trigger_value:", app_state$navigation$trigger, "\n")
+    cat("DEBUG: [NAVIGATION_UNIFIED] current_data is null:", is.null(current_data_value), "\n")
 
     # Return the actual data from unified state
     return(current_data_value)
@@ -46,7 +40,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   # Data indlæsnings status flags - følger BFH UTH mønster
   output$dataLoaded <- renderText({
     # NAVIGATION TRIGGER: Use eventReactive pattern for app_state navigation
-    # This now properly triggers when navigation_trigger is incremented
+    # This now properly triggers when navigation events are emitted
     current_data_check <- app_data_reactive()
 
     cat("DEBUG: [NAVIGATION] Evaluating dataLoaded status\n")
@@ -307,8 +301,9 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     obs_manager$add(obs_settings_save, "settings_auto_save")
   }
 
-  # Return navigation_trigger for use in other functions
-  return(navigation_trigger)
+  # UNIFIED NAVIGATION: Return app_data_reactive for backward compatibility
+  # Navigation is now managed through app_state$navigation$trigger and emit$navigation_changed()
+  return(app_data_reactive)
 }
 
 # HJÆLPEFUNKTIONER ============================================================

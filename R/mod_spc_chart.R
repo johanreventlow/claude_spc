@@ -149,7 +149,7 @@ spc_out_of_control_icon <- HTML('
 #' @param chart_title_reactive Reaktiv chart titel (optional)
 #'
 #' @return Liste med reactive values for plot, status og resultater
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL, navigation_trigger = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL) {
   moduleServer(id, function(input, output, session) {
     log_debug("==========================================", "MODULE")
     log_debug("Initializing visualization module server", "MODULE")
@@ -205,7 +205,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     }
 
     # Primary reactive
-    module_data_reactive <- eventReactive(navigation_trigger(), {
+    module_data_reactive <- eventReactive(app_state$navigation$trigger, {
       log_debug("Module data reactive triggered", "MODULE_DATA")
       log_debug("Navigation trigger fired", "MODULE_DATA")
 
