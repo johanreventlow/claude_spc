@@ -57,8 +57,12 @@ app_server <- function(input, output, session) {
   ui_service <- create_ui_update_service(session, app_state)
   log_debug("✅ UI update service initialized", "APP_SERVER")
 
-  # Take initial state snapshot
-  initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = session$token)
+  # Take initial state snapshot - delay to avoid reactive context issues
+  observe({
+    isolate({
+      initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = session$token)
+    })
+  }, priority = OBSERVER_PRIORITIES$LOW)
 
   # FASE 5: Memory management setup
   log_debug("Setting up memory management...", "APP_SERVER")
