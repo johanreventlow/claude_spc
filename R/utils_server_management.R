@@ -415,8 +415,8 @@ reset_to_empty_session <- function(session, app_state, emit) {
     cat("DEBUG: [SESSION_RESET] Running name-only detection directly...\n")
 
     # Kald name-only detection direkte med de nye kolonnenavne
-    # NOTE: ui_sync_trigger parameter is NULL for session reset - UI sync handled separately
-    name_only_result <- detect_columns_name_only(names(new_data), NULL, session, values, app_state, NULL)
+    # NOTE: UI sync is now handled by unified event system
+    name_only_result <- detect_columns_name_only(names(new_data), NULL, session, values, app_state)
 
     cat("DEBUG: [SESSION_RESET] ✅ Name-only detection completed for session reset\n")
   }

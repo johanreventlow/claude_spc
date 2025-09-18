@@ -176,22 +176,9 @@ setup_column_management <- function(input, output, session, app_state, emit) {
   # TEST MODE: Now handled by unified event system in utils_event_system.R
   # Legacy test mode observer removed - replaced by emit$test_mode_ready() pattern
 
-  # REACTIVE FIX: Watch for trigger_needed and fire direct reactiveVal
-  # Use a helper reactiveVal to bridge the nested state to direct trigger
-  trigger_needed_watcher <- reactiveVal(FALSE)
-
-  # Update the watcher when data changes
-  observe({
-    needed <- if (!is.null(app_state$columns$auto_detect$trigger_needed)) {
-      app_state$columns$auto_detect$trigger_needed
-    } else {
-      FALSE
-    }
-    if (needed != trigger_needed_watcher()) {
-      cat("DEBUG: [TRIGGER_WATCHER] trigger_needed changed to:", needed, "\n")
-      trigger_needed_watcher(needed)
-    }
-  })
+  # UNIFIED EVENT SYSTEM: File upload auto-detection triggers are now handled by data_loaded events
+  # The emit$data_loaded() -> observeEvent(app_state$events$data_loaded) -> emit$auto_detection_started()
+  # chain handles all auto-detection triggering automatically
 
   # UNIFIED EVENT SYSTEM: File upload triggers are now handled by data_loaded events
   # The event system automatically handles auto-detection when data is loaded
@@ -199,95 +186,18 @@ setup_column_management <- function(input, output, session, app_state, emit) {
   # UNIFIED EVENT SYSTEM: Auto-detection is now handled by event listeners in utils_event_system.R
   # The observeEvent(app_state$events$auto_detection_started) handles all auto-detection logic
 
-  # REACTIVE FIX: Create dedicated reactiveVal for UI sync trigger
-  cat("DEBUG: [UI_SYNC_SETUP] Creating dedicated UI sync trigger reactiveVal\n")
-  ui_sync_trigger <- reactiveVal(NULL)
-
-  # UNIFIED EVENT SYSTEM: Auto-detection is now handled through events
-  # emit$auto_detection_started() triggers the unified auto-detection system
-  cat("DEBUG: [AUTODETECT_SETUP] Auto-detection handled by unified event system\n")
-
-  # Reaktiv UI sync observer med direct reactiveVal trigger
-  cat("DEBUG: [UI_SYNC_SETUP] Setting up UI sync observer for ui_sync_trigger\n")
-  observeEvent(ui_sync_trigger(),
-    {
-      cat("DEBUG: [UI_SYNC] =============================================\n")
-      cat("DEBUG: [UI_SYNC] UI sync observer triggered - CRITICAL for input field updates\n")
-      cat("DEBUG: [UI_SYNC] 🔄 REACTIVE FIX: Direct trigger fired successfully!\n")
-
-      sync_data <- ui_sync_trigger()
-      req(sync_data)
-
-      cat("DEBUG: [UI_SYNC] Direct sync data received from reactiveVal trigger\n")
-      cat("DEBUG: [UI_SYNC] Sync data received:\n")
-      cat("DEBUG: [UI_SYNC] - X column suggestion:", if(is.null(sync_data$x_col)) "NULL" else sync_data$x_col, "\n")
-      cat("DEBUG: [UI_SYNC] - Y column suggestion:", if(is.null(sync_data$taeller_col)) "NULL" else sync_data$taeller_col, "\n")
-      cat("DEBUG: [UI_SYNC] - N column suggestion:", if(is.null(sync_data$naevner_col)) "NULL" else sync_data$naevner_col, "\n")
-
-      cat("DEBUG: [UI_SYNC] 🔄 Auto-detect triggered selectize opdateringer\n")
-
-      # Opdater alle selectize inputs med de detekterede kolonner
-      if (!is.null(sync_data$col_choices)) {
-        cat("DEBUG: [UI_SYNC] Column choices available - updating selectize inputs\n")
-        cat("DEBUG: [UI_SYNC] Col choices length:", length(sync_data$col_choices), "\n")
-
-        # Isolate all UI updates to prevent reactive loops
-        isolate({
-          # X-kolonne (dato/tid)
-          x_selection <- sync_data$x_col %||% ""
-          cat("DEBUG: [UI_SYNC] Updating X column to:", x_selection, "\n")
-          updateSelectizeInput(session, "x_column",
-                             choices = sync_data$col_choices,
-                             selected = x_selection)
-
-          # Y-kolonne (tæller/værdi)
-          y_selection <- sync_data$taeller_col %||% ""
-          cat("DEBUG: [UI_SYNC] Updating Y column to:", y_selection, "\n")
-          updateSelectizeInput(session, "y_column",
-                             choices = sync_data$col_choices,
-                             selected = y_selection)
-
-          # N-kolonne (nævner)
-          n_selection <- sync_data$naevner_col %||% ""
-          cat("DEBUG: [UI_SYNC] Updating N column to:", n_selection, "\n")
-          updateSelectizeInput(session, "n_column",
-                             choices = sync_data$col_choices,
-                             selected = n_selection)
-
-          # Skift kolonne
-          updateSelectizeInput(session, "skift_column",
-                             choices = sync_data$col_choices,
-                             selected = sync_data$skift_col %||% "")
-
-          # Frys kolonne
-          updateSelectizeInput(session, "frys_column",
-                             choices = sync_data$col_choices,
-                             selected = sync_data$frys_col %||% "")
-
-          # Kommentar kolonne
-          updateSelectizeInput(session, "kommentar_column",
-                             choices = sync_data$col_choices,
-                             selected = sync_data$kommentar_col %||% "")
-        })
-      }
-
-      # Ryd sync request og sæt timestamp for at forhindre immediate column mgmt override
-      # PHASE 4: Use unified state management
-      app_state$columns$ui_sync$needed <- NULL
-      # NOTE: Timestamp allerede sat i auto-detect for at forhindre race condition
-      cat("DEBUG: [UI_SYNC] ✅ UI sync completed, timestamp was set earlier to prevent race condition\n")
-    },
-    ignoreInit = TRUE, ignoreNULL = TRUE,
-    priority = OBSERVER_PRIORITIES$UI_SYNC
-  )
+  # UNIFIED EVENT SYSTEM: Auto-detection and UI sync are now handled through events
+  # emit$auto_detection_started() triggers auto-detection -> emit$ui_sync_needed() -> sync_ui_with_columns_unified()
+  # The complete UI sync logic is implemented in utils_event_system.R
+  cat("DEBUG: [AUTODETECT_SETUP] Auto-detection and UI sync handled by unified event system\n")
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
     # PHASE 4: Use unified state management
     app_state$columns$auto_detect$in_progress <- TRUE
 
-    # PHASE 4: Pass centralized state to auto-detect function
-    auto_detect_and_update_columns(input, session, values, app_state, ui_sync_trigger)
+    # PHASE 4: Pass centralized state to auto-detect function - now uses unified events
+    auto_detect_and_update_columns(input, session, values, app_state)
 
     # PHASE 4: Use unified state management
     app_state$columns$auto_detect$completed <- TRUE
@@ -447,7 +357,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 #' }
 #'
 #' @seealso \code{\link{setup_column_management}}, \code{\link{ensure_standard_columns}}
-detect_columns_name_only <- function(col_names, input, session, values, app_state = NULL, ui_sync_trigger = NULL) {
+detect_columns_name_only <- function(col_names, input, session, values, app_state = NULL) {
   cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
   cat("DEBUG: [AUTO_DETECT_FUNC] Starting name-only detection\n")
 
@@ -561,14 +471,14 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
     app_state$columns$ui_sync$last_sync_time <- Sys.time()
     cat("DEBUG: [UI_SYNC_TRIGGER] ⏰ Debounce timestamp set BEFORE UI sync (name-only mode) to prevent column mgmt override\n")
 
-    # REACTIVE FIX: Trigger direct reactiveVal if available
-    if (!is.null(ui_sync_trigger)) {
-      cat("DEBUG: [UI_SYNC_TRIGGER] 🔄 Triggering direct reactiveVal for UI sync\n")
-      ui_sync_trigger(ui_sync_data)
-      cat("DEBUG: [UI_SYNC_TRIGGER] ✅ Direct trigger fired successfully\n")
-    } else {
-      cat("DEBUG: [UI_SYNC_TRIGGER] ⚠️ No ui_sync_trigger available - relying on nested observeEvent\n")
-    }
+    # UNIFIED EVENT SYSTEM: UI sync is now handled by events
+    # Store results in app_state and emit ui_sync_needed event
+    app_state$columns$auto_detect_results <- list(
+      x_column = ui_sync_data$x_col,
+      y_column = ui_sync_data$taeller_col,
+      n_column = ui_sync_data$naevner_col
+    )
+    cat("DEBUG: [UI_SYNC_UNIFIED] Results stored in app_state for unified event system\n")
   } else {
     # PHASE 4: Legacy path removed - now using unified state management only
     cat("DEBUG: [UI_SYNC_TRIGGER] Legacy values$ui_sync_needed assignment skipped (unified state only)\n")
@@ -582,7 +492,7 @@ detect_columns_name_only <- function(col_names, input, session, values, app_stat
 
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
-auto_detect_and_update_columns <- function(input, session, values, app_state = NULL, ui_sync_trigger = NULL) {
+auto_detect_and_update_columns <- function(input, session, values, app_state = NULL) {
   # Get session ID for debugging
   session_id <- if (!is.null(session)) session$token else NULL
 
@@ -678,7 +588,7 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
   # NAME-ONLY DETECTION for tomme datasaet
   if (name_only_mode) {
     autodetect_tracer$step("executing_name_only_detection")
-    result <- detect_columns_name_only(col_names, input, session, values, app_state, ui_sync_trigger)
+    result <- detect_columns_name_only(col_names, input, session, values, app_state)
     autodetect_tracer$complete("auto_detect_name_only_complete")
     return(result)
   }
@@ -1107,14 +1017,10 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
     app_state$columns$ui_sync$last_sync_time <- Sys.time()
     cat("DEBUG: [UI_SYNC_TRIGGER] ⏰ Debounce timestamp set BEFORE UI sync to prevent column mgmt override\n")
 
-    # REACTIVE FIX: Trigger direct reactiveVal if available (CRITICAL for UI sync)
-    if (!is.null(ui_sync_trigger)) {
-      cat("DEBUG: [UI_SYNC_TRIGGER] 🔄 FULL MODE: Triggering direct reactiveVal for UI sync\n")
-      ui_sync_trigger(sync_data)
-      cat("DEBUG: [UI_SYNC_TRIGGER] ✅ FULL MODE: Direct trigger fired successfully\n")
-    } else {
-      cat("DEBUG: [UI_SYNC_TRIGGER] ⚠️ FULL MODE: No ui_sync_trigger available - relying on nested observeEvent\n")
-    }
+    # UNIFIED EVENT SYSTEM: UI sync is now handled by events (CRITICAL for UI sync)
+    # Store results in app_state for unified event system access
+    app_state$columns$auto_detect_results <- sync_data
+    cat("DEBUG: [UI_SYNC_UNIFIED] FULL MODE: Results stored in app_state for unified event system\n")
 
     cat("DEBUG: [AUTO_DETECT_FUNC] ✅ Auto-detect completed successfully\n")
     cat("DEBUG: [AUTO_DETECT_FUNC] ========================================\n")
