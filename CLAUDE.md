@@ -76,22 +76,51 @@ cat("DEBUG: [COMPONENT] ✅ Success message\n")
 
 ### 3.1 Shiny Best Practices
 
-**Event-Driven Architecture:**
-* **Reactive events over timing** - Use observeEvent() and reactive triggers instead of setTimeout/later()
-* **Debounced operations** - Use `debounce()` for expensive operations that shouldn't run on every input change
-* **Observer priorities** - Implement priority-based execution: `OBSERVER_PRIORITIES$HIGH/MEDIUM/LOW`
-* **Race condition prevention** - Guard against conflicting state updates through proper sequencing
+**Unified Event Architecture (OBLIGATORISK for al ny udvikling):**
+```r
+# ✅ CORRECT: Brug unified reactive event-bus
+emit$data_loaded()
+emit$columns_detected()
+emit$ui_sync_needed()
+
+observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+  # Your logic here
+})
+
+# ❌ WRONG: Ad-hoc reactiveVal triggers
+my_trigger <- reactiveVal(NULL)
+observeEvent(old_system$trigger, { new_system$trigger(value) })
+```
+
+**Event Architecture Pattern:**
+* **Data Change** → **Emit Event** → **Centralized Listeners** → **State Update** → **Cascade Events**
+* **Events**: Add to `app_state$events` i `global.R`
+* **Emit functions**: Add to `create_emit_api()` i `global.R`
+* **Listeners**: Add to `setup_event_listeners()` i `utils_event_system.R`
+
+**Unified State Management (OBLIGATORISK for al data):**
+```r
+# ✅ CORRECT: Brug centralized app_state
+app_state$data$current_data <- new_data
+app_state$columns$x_column <- detected_column
+app_state$session$file_uploaded <- TRUE
+
+# ❌ WRONG: Scattered reactive values
+values$some_data <- data
+local_reactive <- reactiveVal(value)
+```
 
 **State Management Patterns:**
-* **Centralized state** - Single source of truth through structured state schemas
-* **Immutable updates** - Avoid direct mutation, create new state objects
-* **Migration-safe patterns** - Dual-state synchronization during architecture changes
-* **Scope-safe access** - Use `exists()` guards for robust variable access
+* **Single source of truth** - Alt data i `app_state` structure
+* **Reactive consistency** - Brug `reactiveValues()` for proper Shiny reactivity
+* **Event-driven updates** - State changes trigger events, ikke direkte observere
+* **Environment-based sharing** - By-reference sharing via `new.env()` for scope safety
 
 **Reactive Programming Patterns:**
+* **Event-based triggers** - Use event-bus instead of direct reactive dependencies
+* **Priority-based execution** - `priority = OBSERVER_PRIORITIES$HIGH/MEDIUM/LOW`
 * **Explicit dependencies** - Use `req()` guards for conditional execution
 * **Dependency isolation** - Use `isolate()` for breaking reactive dependencies when needed
-* **Lazy evaluation** - Only compute what's actually needed
 * **Error boundaries** - Wrap reactive expressions in error handling
 
 ### 3.2 R Code Quality
@@ -344,43 +373,85 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ### 10.1 State Management Patterns
 
-**Centralized State Schema:**
+**Unified State Architecture Schema:**
 ```r
-app_state <- list(
-  # Data Management
-  data = list(
-    current_data = NULL,
-    file_info = NULL,
-    updating_table = FALSE,
-    table_operation_in_progress = FALSE
-  ),
-  # Session Management
-  session = list(
-    auto_save_enabled = TRUE,
-    file_uploaded = FALSE,
-    user_started_session = FALSE
-  ),
-  # UI State
-  ui = list(
-    hide_anhoej_rules = FALSE
-  )
+# Created via create_app_state() function
+app_state <- new.env(parent = emptyenv())  # Environment for by-reference sharing
+
+# Reactive Event Bus - Central event system for all triggers
+app_state$events <- reactiveValues(
+  data_loaded = 0L,
+  auto_detection_started = 0L,
+  auto_detection_completed = 0L,
+  columns_detected = 0L,
+  ui_sync_needed = 0L,
+  ui_sync_completed = 0L,
+  navigation_changed = 0L,
+  session_reset = 0L,
+  test_mode_ready = 0L
+)
+
+# Data Management - ReactiveValues for proper Shiny reactivity
+app_state$data <- reactiveValues(
+  current_data = NULL,
+  original_data = NULL,
+  file_info = NULL,
+  updating_table = FALSE,
+  table_operation_in_progress = FALSE,
+  table_version = 0
+)
+
+# Column Management - ReactiveValues for consistency
+app_state$columns <- reactiveValues(
+  auto_detect_in_progress = FALSE,
+  auto_detect_completed = FALSE,
+  auto_detect_results = NULL,
+  x_column = NULL,
+  y_column = NULL,
+  n_column = NULL,
+  cl_column = NULL
+)
+
+# Session Management
+app_state$session <- reactiveValues(
+  auto_save_enabled = TRUE,
+  restoring_session = FALSE,
+  file_uploaded = FALSE,
+  user_started_session = FALSE,
+  last_save_time = NULL,
+  file_name = NULL
 )
 ```
 
-**Migration-Safe State Access Pattern:**
+**Event-Driven State Update Pattern:**
 ```r
-# Safe state access during architecture transitions
-variable_check <- if (exists("use_new_system") && use_new_system && exists("centralized_state")) {
-  centralized_state$section$variable
-} else {
-  legacy_values$variable  # Fallback to old system
+# ✅ CORRECT: Event-driven state updates
+handle_data_upload <- function(new_data) {
+  # 1. Update state
+  app_state$data$current_data <- new_data
+  app_state$data$file_info <- attr(new_data, "file_info")
+
+  # 2. Emit event to trigger downstream effects
+  emit$data_loaded()  # This triggers auto-detection, UI sync, etc.
 }
 
-# Dual-state synchronization for backwards compatibility
-legacy_values$variable <- new_value
-if (exists("use_new_system") && use_new_system && exists("centralized_state")) {
-  centralized_state$section$variable <- new_value
-}
+# ✅ CORRECT: Event listeners with proper priorities
+observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+  if (!is.null(app_state$data$current_data)) {
+    emit$auto_detection_started()
+  }
+})
+
+observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = 800, {
+  if (!is.null(app_state$columns$auto_detect_results)) {
+    emit$ui_sync_needed()
+  }
+})
+
+# ❌ WRONG: Direct state observation (creates tight coupling)
+observeEvent(app_state$data$current_data, {
+  # Direct reactive dependency - avoid this pattern
+})
 ```
 
 ### 10.2 Performance Optimization Patterns

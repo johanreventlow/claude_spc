@@ -553,8 +553,32 @@ create_app_state <- function() {
 
   cat("DEBUG: [CREATE_APP_STATE] Environment created with address:", capture.output(print(app_state)), "\n")
 
-  # Data Management
-  app_state$data <- list(
+  # REACTIVE EVENT BUS: Central event system for all triggers
+  # Using reactiveValues for proper Shiny reactivity
+  app_state$events <- reactiveValues(
+    # Data lifecycle events
+    data_loaded = 0L,
+    data_changed = 0L,
+
+    # Column detection events
+    auto_detection_started = 0L,
+    auto_detection_completed = 0L,
+    columns_detected = 0L,
+
+    # UI synchronization events
+    ui_sync_needed = 0L,
+    ui_sync_completed = 0L,
+
+    # Navigation events
+    navigation_changed = 0L,
+
+    # Session lifecycle events
+    session_reset = 0L,
+    test_mode_ready = 0L
+  )
+
+  # Data Management - Convert to reactiveValues for consistency
+  app_state$data <- reactiveValues(
     current_data = NULL,
     original_data = NULL,
     file_info = NULL,
@@ -564,38 +588,26 @@ create_app_state <- function() {
     table_version = 0
   )
 
-  # Column Management - centraliseret
-  app_state$columns <- list(
+  # Column Management - Convert to reactiveValues for consistency
+  app_state$columns <- reactiveValues(
     # Auto-detection state
-    auto_detect = list(
-      in_progress = FALSE,
-      completed = FALSE,
-      trigger = NULL,
-      results = NULL
-    ),
+    auto_detect_in_progress = FALSE,
+    auto_detect_completed = FALSE,
+    auto_detect_results = NULL,
 
     # Column mappings
-    mappings = list(
-      x_column = NULL,
-      y_column = NULL,
-      n_column = NULL,
-      cl_column = NULL
-    ),
+    x_column = NULL,
+    y_column = NULL,
+    n_column = NULL,
+    cl_column = NULL,
 
     # UI sync state
-    ui_sync = list(
-      needed = NULL,
-      last_sync_time = NULL
-    )
+    ui_sync_needed = FALSE,
+    ui_sync_last_time = NULL
   )
 
-  # Test Mode
-  app_state$test_mode <- list(
-    auto_detect_ready = FALSE
-  )
-
-  # Session Management
-  app_state$session <- list(
+  # Session Management - Convert to reactiveValues for consistency
+  app_state$session <- reactiveValues(
     auto_save_enabled = TRUE,
     restoring_session = FALSE,
     file_uploaded = FALSE,
@@ -604,13 +616,13 @@ create_app_state <- function() {
     file_name = NULL
   )
 
-  # UI State
-  app_state$ui <- list(
+  # UI State - Convert to reactiveValues for consistency
+  app_state$ui <- reactiveValues(
     hide_anhoej_rules = FALSE
   )
 
-  # Visualization State - PHASE 4: For unified plot and QIC management
-  app_state$visualization <- list(
+  # Visualization State - Convert to reactiveValues for consistency
+  app_state$visualization <- reactiveValues(
     plot_ready = FALSE,
     plot_warnings = character(0),
     anhoej_results = NULL,
@@ -619,6 +631,106 @@ create_app_state <- function() {
   )
 
   return(app_state)
+}
+
+#' Create Event Emit API
+#'
+#' Creates a clean API for emitting events to the app_state event bus.
+#' This function returns a list of emit functions that can be called
+#' to trigger specific events throughout the application.
+#'
+#' @param app_state The app state object with reactive event bus
+#'
+#' @return List of emit functions
+#'
+#' @details
+#' Each emit function increments the corresponding event counter in
+#' app_state$events, triggering any observeEvent() listeners.
+#' Using isolate() ensures the emit functions don't create
+#' unintended reactive dependencies.
+#'
+#' @examples
+#' \dontrun{
+#' emit <- create_emit_api(app_state)
+#' emit$data_loaded()  # Triggers observeEvent(app_state$events$data_loaded, ...)
+#' }
+create_emit_api <- function(app_state) {
+  list(
+    # Data lifecycle events
+    data_loaded = function() {
+      isolate({
+        app_state$events$data_loaded <- app_state$events$data_loaded + 1L
+        cat("DEBUG: [EVENT] data_loaded emitted:", app_state$events$data_loaded, "\n")
+      })
+    },
+
+    data_changed = function() {
+      isolate({
+        app_state$events$data_changed <- app_state$events$data_changed + 1L
+        cat("DEBUG: [EVENT] data_changed emitted:", app_state$events$data_changed, "\n")
+      })
+    },
+
+    # Column detection events
+    auto_detection_started = function() {
+      isolate({
+        app_state$events$auto_detection_started <- app_state$events$auto_detection_started + 1L
+        cat("DEBUG: [EVENT] auto_detection_started emitted:", app_state$events$auto_detection_started, "\n")
+      })
+    },
+
+    auto_detection_completed = function() {
+      isolate({
+        app_state$events$auto_detection_completed <- app_state$events$auto_detection_completed + 1L
+        cat("DEBUG: [EVENT] auto_detection_completed emitted:", app_state$events$auto_detection_completed, "\n")
+      })
+    },
+
+    columns_detected = function() {
+      isolate({
+        app_state$events$columns_detected <- app_state$events$columns_detected + 1L
+        cat("DEBUG: [EVENT] columns_detected emitted:", app_state$events$columns_detected, "\n")
+      })
+    },
+
+    # UI synchronization events
+    ui_sync_needed = function() {
+      isolate({
+        app_state$events$ui_sync_needed <- app_state$events$ui_sync_needed + 1L
+        cat("DEBUG: [EVENT] ui_sync_needed emitted:", app_state$events$ui_sync_needed, "\n")
+      })
+    },
+
+    ui_sync_completed = function() {
+      isolate({
+        app_state$events$ui_sync_completed <- app_state$events$ui_sync_completed + 1L
+        cat("DEBUG: [EVENT] ui_sync_completed emitted:", app_state$events$ui_sync_completed, "\n")
+      })
+    },
+
+    # Navigation events
+    navigation_changed = function() {
+      isolate({
+        app_state$events$navigation_changed <- app_state$events$navigation_changed + 1L
+        cat("DEBUG: [EVENT] navigation_changed emitted:", app_state$events$navigation_changed, "\n")
+      })
+    },
+
+    # Session lifecycle events
+    session_reset = function() {
+      isolate({
+        app_state$events$session_reset <- app_state$events$session_reset + 1L
+        cat("DEBUG: [EVENT] session_reset emitted:", app_state$events$session_reset, "\n")
+      })
+    },
+
+    test_mode_ready = function() {
+      isolate({
+        app_state$events$test_mode_ready <- app_state$events$test_mode_ready + 1L
+        cat("DEBUG: [EVENT] test_mode_ready emitted:", app_state$events$test_mode_ready, "\n")
+      })
+    }
+  )
 }
 
 ## Dato kolonnevalidering -----

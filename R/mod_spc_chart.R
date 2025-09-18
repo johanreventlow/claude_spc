@@ -690,9 +690,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           print(ggplot2::ggplot() + ggplot2::theme_void())
         }
       },
-      res = 96,
-      width = 800,
-      height = 600
+      # res = 96,
+      # width = 800,
+      # height = 600
     )
 
     # Status og Information ---------------------------------------------------

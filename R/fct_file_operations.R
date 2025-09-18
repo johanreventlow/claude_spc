@@ -7,7 +7,7 @@
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
-setup_file_upload <- function(input, output, session, values, waiter_file, app_state = NULL, autodetect_trigger = NULL) {
+setup_file_upload <- function(input, output, session, values, waiter_file, app_state = NULL, emit = NULL) {
   # Unified state: App state is always available
   log_debug("===========================================", "FILE_UPLOAD")
   log_debug("Setting up file upload handlers", "FILE_UPLOAD")
@@ -125,13 +125,13 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
         if (file_ext %in% c("xlsx", "xls")) {
           log_debug("📊 Processing Excel file...", "FILE_UPLOAD")
           debug_log("Starting Excel file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
-          handle_excel_upload(file_path, session, values, app_state, autodetect_trigger)
+          handle_excel_upload(file_path, session, values, app_state, emit)
           log_debug("✅ Excel file processed successfully", "FILE_UPLOAD")
           upload_tracer$step("excel_processing_complete")
         } else {
           log_debug("📄 Processing CSV file...", "FILE_UPLOAD")
           debug_log("Starting CSV file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
-          handle_csv_upload(file_path, values, app_state, session$token)
+          handle_csv_upload(file_path, values, app_state, session$token, emit)
           log_debug("✅ CSV file processed successfully", "FILE_UPLOAD")
           upload_tracer$step("csv_processing_complete")
         }
@@ -162,7 +162,7 @@ setup_file_upload <- function(input, output, session, values, waiter_file, app_s
 }
 
 ## Håndter Excel fil upload
-handle_excel_upload <- function(file_path, session, values, app_state = NULL, autodetect_trigger = NULL) {
+handle_excel_upload <- function(file_path, session, values, app_state = NULL, emit = NULL) {
   log_debug("========================================", "EXCEL_READ")
   log_debug("Starting Excel file processing", "EXCEL_READ")
   log_debug(paste("File path:", file_path), "EXCEL_READ")
@@ -248,23 +248,15 @@ handle_excel_upload <- function(file_path, session, values, app_state = NULL, au
       log_debug(paste("EXCEL_READ: navigation_trigger incremented from", old_trigger, "to", new_trigger), "EXCEL_READ")
     }
 
-    # Validate data suitability for auto-detection (for standard Excel files)
-    auto_detect_suitable <- validate_data_for_auto_detect(data, session$token)
-    if (auto_detect_suitable$suitable) {
-      # DIRECT TRIGGER: Call autodetect_trigger reactiveVal directly
-      if (!is.null(autodetect_trigger)) {
-        cat("DEBUG: [EXCEL_UPLOAD] 🔥 DIRECT TRIGGER: Firing autodetect_trigger reactiveVal!\n")
-        autodetect_trigger(Sys.time())
-        cat("DEBUG: [EXCEL_UPLOAD] ✅ Direct autodetect trigger fired successfully\n")
-      } else {
-        # Fallback to old method for backwards compatibility
-        app_state$columns$auto_detect$trigger_needed <- TRUE
-        cat("DEBUG: [EXCEL_UPLOAD] ⚠️ Using fallback trigger_needed method\n")
-      }
-      log_debug("✅ Data suitable for auto-detection - trigger set", "EXCEL_READ")
+    # EVENT SYSTEM: Emit data_loaded event
+    if (!is.null(emit)) {
+      cat("DEBUG: [EXCEL_UPLOAD] 🔥 EVENT SYSTEM: Emitting data_loaded event\n")
+      emit$data_loaded()
+      cat("DEBUG: [EXCEL_UPLOAD] ✅ data_loaded event emitted successfully\n")
+      log_debug("✅ Data loaded event emitted", "EXCEL_READ")
     } else {
-      log_debug("⚠️ Data not suitable for auto-detection", "EXCEL_READ")
-      app_state$columns$auto_detect$trigger_needed <- FALSE
+      cat("DEBUG: [EXCEL_UPLOAD] ⚠️ No emit API available - data loaded but no event triggered\n")
+      log_debug("⚠️ No emit API available for event triggering", "EXCEL_READ")
     }
 
     showNotification(
@@ -316,7 +308,7 @@ handle_excel_upload <- function(file_path, session, values, app_state = NULL, au
 #' }
 #'
 #' @seealso \code{\link{handle_excel_upload}}, \code{\link{ensure_standard_columns}}
-handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = NULL) {
+handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = NULL, emit = NULL) {
   log_debug("==========================================", "CSV_READ")
   log_debug("Starting CSV file processing", "CSV_READ")
   log_debug(paste("File path:", file_path), "CSV_READ")
@@ -430,47 +422,24 @@ handle_csv_upload <- function(file_path, values, app_state = NULL, session_id = 
   # ROBUST AUTO-DETECT: Enhanced auto-detection triggering with validation
   log_debug("Setting auto-detect trigger with validation...", "CSV_READ")
 
-  # Validate data suitability for auto-detection
-  auto_detect_suitable <- validate_data_for_auto_detect(data, session_id)
-  if (auto_detect_suitable$suitable) {
-    # DIRECT TRIGGER: Call autodetect_trigger reactiveVal directly
-    if (!is.null(autodetect_trigger)) {
-      cat("DEBUG: [FILE_UPLOAD] 🔥 DIRECT TRIGGER: Firing autodetect_trigger reactiveVal!\n")
-      autodetect_trigger(Sys.time())
-      cat("DEBUG: [FILE_UPLOAD] ✅ Direct autodetect trigger fired successfully\n")
-    } else {
-      # Fallback to old method for backwards compatibility
-      app_state$columns$auto_detect$trigger_needed <- TRUE
-      cat("DEBUG: [FILE_UPLOAD] ⚠️ Using fallback trigger_needed method\n")
-    }
-    log_debug("✅ Data suitable for auto-detection - trigger set", "CSV_READ")
-
-    debug_log("Auto-detection trigger set successfully", "FILE_UPLOAD_FLOW", level = "INFO",
-              context = list(
-                data_validation = auto_detect_suitable$validation_results,
-                rows = nrow(data),
-                columns = ncol(data)
-              ),
-              session_id = session_id)
+  # EVENT SYSTEM: Emit data_loaded event
+  if (!is.null(emit)) {
+    cat("DEBUG: [FILE_UPLOAD] 🔥 EVENT SYSTEM: Emitting data_loaded event\n")
+    emit$data_loaded()
+    cat("DEBUG: [FILE_UPLOAD] ✅ data_loaded event emitted successfully\n")
+    log_debug("✅ Data loaded event emitted", "CSV_READ")
   } else {
-    log_debug("⚠️ Data not suitable for auto-detection", "CSV_READ")
-    app_state$columns$auto_detect$trigger_needed <- FALSE
-
-    debug_log("Auto-detection skipped due to data validation", "FILE_UPLOAD_FLOW", level = "WARNING",
-              context = list(
-                validation_issues = auto_detect_suitable$issues,
-                rows = nrow(data),
-                columns = ncol(data)
-              ),
-              session_id = session_id)
-
-    # Show user notification about auto-detection skip
-    showNotification(
-      paste("Auto-detection skipped:", paste(auto_detect_suitable$issues, collapse = "; ")),
-      type = "warning",
-      duration = 8
-    )
+    cat("DEBUG: [FILE_UPLOAD] ⚠️ No emit API available - data loaded but no event triggered\n")
+    log_debug("⚠️ No emit API available for event triggering", "CSV_READ")
   }
+
+  debug_log("Data loaded event emitted successfully", "FILE_UPLOAD_FLOW", level = "INFO",
+            context = list(
+              rows = nrow(data),
+              columns = ncol(data),
+              event_system = "unified_event_bus"
+            ),
+            session_id = session_id)
 
   # Take state snapshot after all state is set
   if (!is.null(app_state)) {

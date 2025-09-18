@@ -1,0 +1,250 @@
+#' Event System Utilities
+#'
+#' This file contains utilities for the unified reactive event system.
+#' It provides centralized event listeners and handlers for the application.
+#'
+#' @name utils_event_system
+NULL
+
+#' Setup Event Listeners
+#'
+#' Sets up all reactive event listeners for the application.
+#' This function creates observeEvent() handlers for all events
+#' in the app_state$events reactive values.
+#'
+#' @param app_state The centralized app state
+#' @param emit The emit API for triggering events
+#' @param input Shiny input
+#' @param output Shiny output
+#' @param session Shiny session
+#' @param values Legacy reactive values (for compatibility)
+#'
+#' @details
+#' This function consolidates all event-driven reactive patterns
+#' in one place, replacing the scattered observeEvent() calls
+#' and bridge observers that were previously spread across
+#' multiple files.
+#'
+#' All observers use ignoreInit = TRUE to prevent firing at startup
+#' and appropriate priorities to ensure correct execution order.
+#'
+setup_event_listeners <- function(app_state, emit, input, output, session, values) {
+  cat("DEBUG: [EVENT_SYSTEM] Setting up unified event listeners\n")
+
+  # DATA LIFECYCLE EVENTS
+  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+    cat("DEBUG: [EVENT] data_loaded event received\n")
+
+    # Trigger auto-detection after data is loaded
+    if (!is.null(app_state$data$current_data)) {
+      cat("DEBUG: [EVENT] Data available, emitting auto_detection_started\n")
+      emit$auto_detection_started()
+    }
+  })
+
+  # AUTO-DETECTION EVENTS
+  observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = 900, {
+    cat("DEBUG: [EVENT] auto_detection_started event received\n")
+
+    # Set auto-detection in progress
+    app_state$columns$auto_detect_in_progress <- TRUE
+
+    # Perform auto-detection
+    tryCatch({
+      if (!is.null(app_state$data$current_data)) {
+        auto_detect_and_update_columns_unified(app_state, emit)
+      }
+    }, error = function(e) {
+      cat("DEBUG: [EVENT] Auto-detection error:", e$message, "\n")
+      app_state$columns$auto_detect_in_progress <- FALSE
+    })
+  })
+
+  observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = 800, {
+    cat("DEBUG: [EVENT] auto_detection_completed event received\n")
+
+    # Update state
+    app_state$columns$auto_detect_in_progress <- FALSE
+    app_state$columns$auto_detect_completed <- TRUE
+
+    # Trigger UI sync if columns were detected
+    if (!is.null(app_state$columns$auto_detect_results)) {
+      cat("DEBUG: [EVENT] Auto-detection results available, emitting ui_sync_needed\n")
+      emit$ui_sync_needed()
+    }
+  })
+
+  # UI SYNCHRONIZATION EVENTS
+  observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = 700, {
+    cat("DEBUG: [EVENT] ui_sync_needed event received\n")
+
+    # Perform UI synchronization
+    sync_ui_with_columns_unified(app_state, input, output, session)
+
+    # Mark sync as completed
+    emit$ui_sync_completed()
+  })
+
+  observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = 600, {
+    cat("DEBUG: [EVENT] ui_sync_completed event received\n")
+
+    # Update timestamp
+    app_state$columns$ui_sync_last_time <- Sys.time()
+
+    # Trigger navigation change to update plots
+    emit$navigation_changed()
+  })
+
+  # NAVIGATION EVENTS
+  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 500, {
+    cat("DEBUG: [EVENT] navigation_changed event received\n")
+
+    # This will trigger reactive expressions that depend on navigation changes
+    # No additional action needed - the reactive expressions will handle updates
+  })
+
+  # TEST MODE EVENTS
+  observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = 950, {
+    cat("DEBUG: [EVENT] test_mode_ready event received\n")
+
+    # In test mode, immediately start auto-detection
+    if (!is.null(app_state$data$current_data)) {
+      cat("DEBUG: [EVENT] Test mode: emitting auto_detection_started\n")
+      emit$auto_detection_started()
+    }
+  })
+
+  # SESSION LIFECYCLE EVENTS
+  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 400, {
+    cat("DEBUG: [EVENT] session_reset event received\n")
+
+    # Reset all state to initial values
+    app_state$data$current_data <- NULL
+    app_state$columns$auto_detect_in_progress <- FALSE
+    app_state$columns$auto_detect_completed <- FALSE
+    app_state$columns$auto_detect_results <- NULL
+
+    cat("DEBUG: [EVENT] Session state reset completed\n")
+  })
+
+  cat("DEBUG: [EVENT_SYSTEM] ✅ All event listeners registered\n")
+}
+
+#' Auto-detect and update columns (Unified Event Version)
+#'
+#' Unified version of auto-detection that uses the event system
+#' instead of direct reactive triggers.
+#'
+#' @param app_state The centralized app state
+#' @param emit The emit API for triggering events
+#'
+auto_detect_and_update_columns_unified <- function(app_state, emit) {
+  cat("DEBUG: [AUTO_DETECT_UNIFIED] Starting column auto-detection\n")
+
+  if (is.null(app_state$data$current_data)) {
+    cat("DEBUG: [AUTO_DETECT_UNIFIED] No data available\n")
+    return()
+  }
+
+  data <- app_state$data$current_data
+  col_names <- names(data)
+
+  cat("DEBUG: [AUTO_DETECT_UNIFIED] Analyzing columns:", paste(col_names, collapse = ", "), "\n")
+
+  # Simplified column detection logic
+  results <- list(
+    x_column = NULL,
+    y_column = NULL,
+    n_column = NULL,
+    cl_column = NULL
+  )
+
+  # Basic auto-detection patterns
+  for (col in col_names) {
+    col_lower <- tolower(col)
+
+    # Date column detection
+    if (is.null(results$x_column) && any(grepl("dato|date|tid|time", col_lower))) {
+      results$x_column <- col
+      cat("DEBUG: [AUTO_DETECT_UNIFIED] Found x_column:", col, "\n")
+    }
+
+    # Count column detection
+    if (is.null(results$y_column) && any(grepl("antal|count|værdi|value", col_lower))) {
+      results$y_column <- col
+      cat("DEBUG: [AUTO_DETECT_UNIFIED] Found y_column:", col, "\n")
+    }
+
+    # Denominator column detection
+    if (is.null(results$n_column) && any(grepl("nævner|denom|total", col_lower))) {
+      results$n_column <- col
+      cat("DEBUG: [AUTO_DETECT_UNIFIED] Found n_column:", col, "\n")
+    }
+  }
+
+  # Store results
+  app_state$columns$auto_detect_results <- results
+
+  # Update individual column mappings
+  if (!is.null(results$x_column)) app_state$columns$x_column <- results$x_column
+  if (!is.null(results$y_column)) app_state$columns$y_column <- results$y_column
+  if (!is.null(results$n_column)) app_state$columns$n_column <- results$n_column
+  if (!is.null(results$cl_column)) app_state$columns$cl_column <- results$cl_column
+
+  cat("DEBUG: [AUTO_DETECT_UNIFIED] ✅ Auto-detection completed\n")
+
+  # Emit completion event
+  emit$auto_detection_completed()
+}
+
+#' Sync UI with columns (Unified Event Version)
+#'
+#' Unified version of UI synchronization that updates UI controls
+#' based on detected columns.
+#'
+#' @param app_state The centralized app state
+#' @param input Shiny input
+#' @param output Shiny output
+#' @param session Shiny session
+#'
+sync_ui_with_columns_unified <- function(app_state, input, output, session) {
+  cat("DEBUG: [UI_SYNC_UNIFIED] Starting UI synchronization\n")
+
+  if (is.null(app_state$data$current_data)) {
+    cat("DEBUG: [UI_SYNC_UNIFIED] No data available for UI sync\n")
+    return()
+  }
+
+  data <- app_state$data$current_data
+  col_names <- names(data)
+  results <- app_state$columns$auto_detect_results
+
+  # Update UI controls with detected columns
+  tryCatch({
+    if (!is.null(results$x_column)) {
+      updateSelectInput(session, "x_column",
+                       choices = col_names,
+                       selected = results$x_column)
+      cat("DEBUG: [UI_SYNC_UNIFIED] Updated x_column UI:", results$x_column, "\n")
+    }
+
+    if (!is.null(results$y_column)) {
+      updateSelectInput(session, "y_column",
+                       choices = col_names,
+                       selected = results$y_column)
+      cat("DEBUG: [UI_SYNC_UNIFIED] Updated y_column UI:", results$y_column, "\n")
+    }
+
+    if (!is.null(results$n_column)) {
+      updateSelectInput(session, "n_column",
+                       choices = c("Ingen" = "", col_names),
+                       selected = results$n_column)
+      cat("DEBUG: [UI_SYNC_UNIFIED] Updated n_column UI:", results$n_column, "\n")
+    }
+
+    cat("DEBUG: [UI_SYNC_UNIFIED] ✅ UI synchronization completed\n")
+
+  }, error = function(e) {
+    cat("DEBUG: [UI_SYNC_UNIFIED] UI sync error:", e$message, "\n")
+  })
+}

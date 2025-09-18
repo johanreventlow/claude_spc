@@ -47,6 +47,11 @@ app_server <- function(input, output, session) {
   log_debug("✅ Centralized state initialized", "APP_SERVER")
   session_debugger$event("centralized_state_initialized")
 
+  # EVENT SYSTEM: Initialize reactive event bus
+  log_debug("Creating event emit API...", "APP_SERVER")
+  emit <- create_emit_api(app_state)
+  log_debug("✅ Event system initialized", "APP_SERVER")
+
   # Take initial state snapshot
   initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = session$token)
 
@@ -165,7 +170,7 @@ app_server <- function(input, output, session) {
   setup_session_management(input, output, session, values, waiter_file, app_state)
 
   ## Fil upload logik
-  setup_file_upload(input, output, session, values, waiter_file, app_state, autodetect_trigger)
+  setup_file_upload(input, output, session, values, waiter_file, app_state, emit)
 
   ## Data tabel logik
   setup_data_table(input, output, session, values, app_state)
@@ -187,19 +192,19 @@ app_server <- function(input, output, session) {
   session_debugger$event("server_setup_complete")
   debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
 
-  # TEST MODE: Set auto-detect trigger flag AFTER all observers are set up
+  # EVENT SYSTEM: Set up reactive event listeners
+  setup_event_listeners(app_state, emit, input, output, session, values)
+
+  # TEST MODE: Emit test_mode_ready event AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {
     observe({
       # Unified state: Use centralized state as primary data source
       current_data_check <- app_state$data$current_data
 
       if (!is.null(current_data_check)) {
-        log_debug("Setting test_mode_auto_detect_ready flag after setup", "TEST_MODE")
-        timestamp <- Sys.time()
-
-        # PHASE 4B: Unified state assignment only
-        app_state$test_mode$auto_detect_ready <- timestamp
-        log_debug("Synced test_mode_auto_detect_ready to both systems", "UNIFIED_STATE")
+        log_debug("Test data loaded, emitting test_mode_ready event", "TEST_MODE")
+        emit$test_mode_ready()
+        log_debug("✅ Test mode ready event emitted", "TEST_MODE")
       }
     }) %>% bindEvent({
       # Unified state: Use centralized state for reactive triggers
