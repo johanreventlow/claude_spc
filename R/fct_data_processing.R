@@ -74,14 +74,9 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
-    # UNIFIED AUTODETECT ENGINE: Manual trigger always works, even when frozen
+    # FASE 3: Use event-driven manual trigger for consistency
     tryCatch({
-      autodetect_engine(
-        data = app_state$data$current_data,
-        trigger_type = "manual",  # Manual trigger overrides frozen state
-        app_state = app_state,
-        emit = emit
-      )
+      emit$manual_autodetect_button()  # This triggers the event listener with frozen state bypass
     }, error = function(e) {
       log_debug("Manual auto-detection error:", e$message, .context = "MANUAL_AUTODETECT")
       showNotification("Auto-detektering fejlede. Prøv igen eller vælg kolonner manuelt.", type = "error")

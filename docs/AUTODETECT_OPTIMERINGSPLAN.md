@@ -108,20 +108,26 @@ Refaktorering af autodetekteringssystemet til en **unified, event-driven engine*
 ---
 
 ### **FASE 3: EVENT-DRIVEN STATE MACHINE** ⏱️ 1 dag
-**Status:** ❌ IKKE STARTET
+**Status:** ✅ AFSLUTTET (2025-09-18)
 
 #### **3.1 Clean trigger system**
-- [ ] **Fjern:** Alle legacy trigger patterns
-- [ ] **Implementer:** 3 præcise triggers:
+- [x] **Fjern:** Alle legacy trigger patterns
+- [x] **Implementer:** 3 præcise triggers:
   - `session_started` → name-only detection
   - `data_loaded` → full analysis
   - `manual_autodetect_button` → forced re-run
-- [ ] **Test:** Trigger isolation og event flow
+- [x] **Test:** Trigger isolation og event flow
 
 #### **3.2 Frozen state management**
-- [ ] **Implementer:** `app_state$autodetect$frozen_until_next_trigger`
-- [ ] **Logic:** Prevent re-running mellem triggers
-- [ ] **Override:** Manual trigger bypasses frozen state
+- [x] **Implementer:** `app_state$autodetect$frozen_until_next_trigger`
+- [x] **Logic:** Prevent re-running mellem triggers
+- [x] **Override:** Manual trigger bypasses frozen state
+
+#### **3.3 Event listeners implementation**
+- [x] **Added:** Event listeners for new triggers in `utils_event_system.R`
+- [x] **Integration:** Session startup trigger in `app_server.R`
+- [x] **Unfreezing:** Automatic unfreeze on `data_loaded` events
+- [x] **Metadata:** Enhanced frozen state logging with timestamps and data info
 
 ---
 

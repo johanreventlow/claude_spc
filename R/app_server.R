@@ -226,6 +226,13 @@ app_server <- function(input, output, session) {
   # EVENT SYSTEM: Set up reactive event listeners
   setup_event_listeners(app_state, emit, input, output, session, ui_service)
 
+  # FASE 3: Emit session_started event for name-only detection
+  observe({
+    log_debug("Session started, emitting session_started event", "SESSION_LIFECYCLE")
+    emit$session_started()
+    log_debug("✅ Session started event emitted", "SESSION_LIFECYCLE")
+  }, once = TRUE)
+
   # TEST MODE: Emit test_mode_ready event AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {
     observe({

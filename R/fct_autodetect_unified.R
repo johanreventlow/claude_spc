@@ -45,12 +45,12 @@ autodetect_engine <- function(data = NULL,
   log_debug_kv(
     trigger_type = trigger_type,
     data_available = !is.null(data),
-    frozen_state = app_state$autodetect$frozen_until_next_trigger %||% FALSE,
+    frozen_state = isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE,
     .context = "UNIFIED_AUTODETECT"
   )
 
   # 1. TRIGGER VALIDATION - frozen state check
-  frozen_state <- app_state$autodetect$frozen_until_next_trigger %||% FALSE
+  frozen_state <- isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
   if (frozen_state && trigger_type != "manual") {
     log_debug("Autodetect skipped - system frozen until next trigger (use manual to override)",
               .context = "UNIFIED_AUTODETECT")
@@ -87,20 +87,29 @@ autodetect_engine <- function(data = NULL,
   app_state$autodetect$last_run <- list(
     trigger = trigger_type,
     timestamp = Sys.time(),
+    data_rows = if (!is.null(data)) nrow(data) else 0,
+    data_cols = if (!is.null(data)) ncol(data) else 0,
     results_summary = list(
       x_column = results$x_col,
       y_column = results$y_col,
-      n_column = results$n_col
+      n_column = results$n_col,
+      cl_column = results$cl_col
     )
   )
 
+  log_debug_kv(
+    frozen_state = "TRUE",
+    trigger_type = trigger_type,
+    timestamp = as.character(Sys.time()),
+    .context = "UNIFIED_AUTODETECT"
+  )
   log_debug("✅ Autodetect frozen until next trigger", .context = "UNIFIED_AUTODETECT")
 
   # 4. UI SYNC & LOGGING
   log_autodetect_decisions(results, trigger_type, session_id)
 
   # Emit completion event for UI updates
-  emit$autodetection_completed()
+  emit$auto_detection_completed()
 
   log_debug("✅ Unified autodetect engine completed", .context = "UNIFIED_AUTODETECT")
 

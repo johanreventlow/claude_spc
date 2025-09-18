@@ -635,7 +635,9 @@ create_app_state <- function() {
     navigation_changed = 0L,
 
     # Session lifecycle events
+    session_started = 0L,              # FASE 3: Session start trigger (name-only detection)
     session_reset = 0L,
+    manual_autodetect_button = 0L,     # FASE 3: Manual trigger (bypasses frozen state)
     test_mode_ready = 0L,
 
     # Error handling events
@@ -817,10 +819,24 @@ create_emit_api <- function(app_state) {
     },
 
     # Session lifecycle events
+    session_started = function() {
+      isolate({
+        app_state$events$session_started <- app_state$events$session_started + 1L
+        cat("DEBUG: [EVENT] session_started emitted:", app_state$events$session_started, "\n")
+      })
+    },
+
     session_reset = function() {
       isolate({
         app_state$events$session_reset <- app_state$events$session_reset + 1L
         cat("DEBUG: [EVENT] session_reset emitted:", app_state$events$session_reset, "\n")
+      })
+    },
+
+    manual_autodetect_button = function() {
+      isolate({
+        app_state$events$manual_autodetect_button <- app_state$events$manual_autodetect_button + 1L
+        cat("DEBUG: [EVENT] manual_autodetect_button emitted:", app_state$events$manual_autodetect_button, "\n")
       })
     },
 

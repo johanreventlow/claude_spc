@@ -34,6 +34,12 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
     log_debug("data_loaded event received", .context = "EVENT")
 
+    # FASE 3: Unfreeze autodetect system when new data is loaded
+    if (!is.null(app_state$autodetect)) {
+      app_state$autodetect$frozen_until_next_trigger <- FALSE
+      log_debug("Autodetect system unfrozen due to new data", .context = "EVENT")
+    }
+
     # Trigger auto-detection after data is loaded
     if (!is.null(app_state$data$current_data)) {
       log_debug("Data available, emitting auto_detection_started", .context = "EVENT")
@@ -136,6 +142,30 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # SESSION LIFECYCLE EVENTS
+  observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+    log_debug("session_started event received", .context = "EVENT")
+
+    # FASE 3: Session start trigger for name-only detection
+    autodetect_engine(
+      data = NULL,  # No data available at session start
+      trigger_type = "session_start",
+      app_state = app_state,
+      emit = emit
+    )
+  })
+
+  observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+    log_debug("manual_autodetect_button event received", .context = "EVENT")
+
+    # FASE 3: Manual trigger always runs, bypassing frozen state
+    autodetect_engine(
+      data = app_state$data$current_data,
+      trigger_type = "manual",  # This bypasses frozen state check
+      app_state = app_state,
+      emit = emit
+    )
+  })
+
   observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
     log_debug("session_reset event received", .context = "EVENT")
 
@@ -144,6 +174,10 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     app_state$columns$auto_detect_in_progress <- FALSE
     app_state$columns$auto_detect_completed <- FALSE
     app_state$columns$auto_detect_results <- NULL
+
+    # FASE 3: Reset frozen state
+    app_state$autodetect$frozen_until_next_trigger <- FALSE
+    app_state$autodetect$last_run <- NULL
 
     log_debug("Session state reset completed", .context = "EVENT")
   })
