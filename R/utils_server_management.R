@@ -7,7 +7,7 @@
 
 ## Hovedfunktion for session management
 # Opsætter al server logik relateret til session håndtering
-setup_session_management <- function(input, output, session, waiter_file, app_state, emit) {
+setup_session_management <- function(input, output, session, waiter_file, app_state, emit, ui_service = NULL) {
   cat("DEBUG: [SESSION_MGMT] ===========================================\n")
   cat("DEBUG: [SESSION_MGMT] Initializing session management observers\n")
   cat("DEBUG: [SESSION_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
@@ -179,7 +179,7 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
 
   # Confirm clear saved handler
   observeEvent(input$confirm_clear_saved, {
-    handle_confirm_clear_saved(session, values, app_state)
+    handle_confirm_clear_saved(session, app_state, emit, ui_service)
   })
 
   # Track file selection for modal
@@ -222,57 +222,64 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
 }
 
 # Helper functions for session management
-restore_metadata <- function(session, metadata) {
+restore_metadata <- function(session, metadata, ui_service = NULL) {
   log_debug("===================================", "METADATA_RESTORE")
   log_debug("Starting metadata restoration", "METADATA_RESTORE")
   log_debug(paste("Metadata keys:", paste(names(metadata), collapse = ", ")), "METADATA_RESTORE")
 
   isolate({
-    if (!is.null(metadata$title)) {
-      updateTextInput(session, "indicator_title", value = metadata$title)
-    }
-    if (!is.null(metadata$unit_type)) {
-      updateRadioButtons(session, "unit_type", selected = metadata$unit_type)
-    }
-    if (!is.null(metadata$unit_select)) {
-      log_debug(paste("Updating unit_select to:", metadata$unit_select), "METADATA_RESTORE")
-      updateSelectizeInput(session, "unit_select", selected = metadata$unit_select)
-      log_debug("✅ unit_select updated", "METADATA_RESTORE")
-    }
-    if (!is.null(metadata$unit_custom)) {
-      updateTextInput(session, "unit_custom", value = metadata$unit_custom)
-    }
-    if (!is.null(metadata$description)) {
-      updateTextAreaInput(session, "indicator_description", value = metadata$description)
-    }
-    if (!is.null(metadata$chart_type)) {
-      log_debug(paste("Updating chart_type to:", metadata$chart_type), "METADATA_RESTORE")
-      updateSelectizeInput(session, "chart_type", selected = metadata$chart_type)
-      log_debug("✅ chart_type updated", "METADATA_RESTORE")
-    }
-    if (!is.null(metadata$x_column)) {
-      log_debug(paste("Updating x_column to:", metadata$x_column), "METADATA_RESTORE")
-      updateSelectizeInput(session, "x_column", selected = metadata$x_column)
-      log_debug("✅ x_column updated", "METADATA_RESTORE")
-    }
-    if (!is.null(metadata$y_column)) {
-      log_debug(paste("Updating y_column to:", metadata$y_column), "METADATA_RESTORE")
-      updateSelectizeInput(session, "y_column", selected = metadata$y_column)
-      log_debug("✅ y_column updated", "METADATA_RESTORE")
-    }
-    if (!is.null(metadata$n_column)) {
-      log_debug(paste("Updating n_column to:", metadata$n_column), "METADATA_RESTORE")
-      updateSelectizeInput(session, "n_column", selected = metadata$n_column)
-      log_debug("✅ n_column updated", "METADATA_RESTORE")
-    }
-    if (!is.null(metadata$target_value)) {
-      updateTextInput(session, "target_value", value = metadata$target_value)
-    }
-    if (!is.null(metadata$centerline_value)) {
-      updateTextInput(session, "centerline_value", value = metadata$centerline_value)
-    }
-    if (!is.null(metadata$y_axis_unit)) {
-      updateSelectizeInput(session, "y_axis_unit", selected = metadata$y_axis_unit)
+    if (!is.null(ui_service)) {
+      # Use centralized UI service for metadata restoration
+      ui_service$update_form_fields(metadata)
+      log_debug("✅ Used centralized ui_service for metadata restore", "METADATA_RESTORE")
+    } else {
+      # Fallback to direct updates
+      if (!is.null(metadata$title)) {
+        updateTextInput(session, "indicator_title", value = metadata$title)
+      }
+      if (!is.null(metadata$unit_type)) {
+        updateRadioButtons(session, "unit_type", selected = metadata$unit_type)
+      }
+      if (!is.null(metadata$unit_select)) {
+        log_debug(paste("Updating unit_select to:", metadata$unit_select), "METADATA_RESTORE")
+        updateSelectizeInput(session, "unit_select", selected = metadata$unit_select)
+        log_debug("✅ unit_select updated", "METADATA_RESTORE")
+      }
+      if (!is.null(metadata$unit_custom)) {
+        updateTextInput(session, "unit_custom", value = metadata$unit_custom)
+      }
+      if (!is.null(metadata$description)) {
+        updateTextAreaInput(session, "indicator_description", value = metadata$description)
+      }
+      if (!is.null(metadata$chart_type)) {
+        log_debug(paste("Updating chart_type to:", metadata$chart_type), "METADATA_RESTORE")
+        updateSelectizeInput(session, "chart_type", selected = metadata$chart_type)
+        log_debug("✅ chart_type updated", "METADATA_RESTORE")
+      }
+      if (!is.null(metadata$x_column)) {
+        log_debug(paste("Updating x_column to:", metadata$x_column), "METADATA_RESTORE")
+        updateSelectizeInput(session, "x_column", selected = metadata$x_column)
+        log_debug("✅ x_column updated", "METADATA_RESTORE")
+      }
+      if (!is.null(metadata$y_column)) {
+        log_debug(paste("Updating y_column to:", metadata$y_column), "METADATA_RESTORE")
+        updateSelectizeInput(session, "y_column", selected = metadata$y_column)
+        log_debug("✅ y_column updated", "METADATA_RESTORE")
+      }
+      if (!is.null(metadata$n_column)) {
+        log_debug(paste("Updating n_column to:", metadata$n_column), "METADATA_RESTORE")
+        updateSelectizeInput(session, "n_column", selected = metadata$n_column)
+        log_debug("✅ n_column updated", "METADATA_RESTORE")
+      }
+      if (!is.null(metadata$target_value)) {
+        updateTextInput(session, "target_value", value = metadata$target_value)
+      }
+      if (!is.null(metadata$centerline_value)) {
+        updateTextInput(session, "centerline_value", value = metadata$centerline_value)
+      }
+      if (!is.null(metadata$y_axis_unit)) {
+        updateSelectizeInput(session, "y_axis_unit", selected = metadata$y_axis_unit)
+      }
     }
   })
 }
@@ -314,7 +321,7 @@ handle_clear_saved_request <- function(input, session, app_state, emit) {
 
   # If no data or settings, start new session directly
   if (!has_data && !has_settings) {
-    reset_to_empty_session(session, app_state, emit)
+    reset_to_empty_session(session, app_state, emit, ui_service)
     showNotification("Ny session startet", type = "message", duration = 2)
     return()
   }
@@ -323,13 +330,13 @@ handle_clear_saved_request <- function(input, session, app_state, emit) {
   show_clear_confirmation_modal(has_data, has_settings, values)
 }
 
-handle_confirm_clear_saved <- function(session, app_state, emit) {
-  reset_to_empty_session(session, app_state, emit)
+handle_confirm_clear_saved <- function(session, app_state, emit, ui_service = NULL) {
+  reset_to_empty_session(session, app_state, emit, ui_service)
   removeModal()
   showNotification("Ny session startet - alt data og indstillinger nulstillet", type = "message", duration = 4)
 }
 
-reset_to_empty_session <- function(session, app_state, emit) {
+reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) {
   # Unified state: App state is always available
   use_centralized_state <- !is.null(app_state)
   cat("DEBUG: [SESSION_RESET] Session reset started, centralized state available:", use_centralized_state, "\n")
@@ -374,43 +381,50 @@ reset_to_empty_session <- function(session, app_state, emit) {
   # Unified state: Get new standard session data
   new_data <- app_state$data$current_data
 
-  # Reset UI inputs
+  # Reset UI inputs using centralized service
   isolate({
-    updateTextInput(session, "indicator_title", value = "")
-    updateRadioButtons(session, "unit_type", selected = "select")
-    updateSelectizeInput(session, "unit_select", selected = "")
-    updateTextInput(session, "unit_custom", value = "")
-    updateTextAreaInput(session, "indicator_description", value = "")
-    updateSelectizeInput(session, "chart_type", selected = "run")
-
-    # Opdater kolonnevalg med nye standardkolonner fra empty session data
-
-    if (!is.null(new_data) && ncol(new_data) > 0) {
-      new_col_names <- names(new_data)
-      col_choices <- setNames(new_col_names, new_col_names)
-      col_choices <- c("Vælg kolonne" = "", col_choices)
-
-      cat("DEBUG: [SESSION_RESET] Opdaterer selectizeInput med nye kolonner:", paste(new_col_names, collapse = ", "), "\n")
-
-      updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
-      updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
-      updateSelectizeInput(session, "n_column", choices = col_choices, selected = "")
-      updateSelectizeInput(session, "skift_column", choices = col_choices, selected = "")
-      updateSelectizeInput(session, "frys_column", choices = col_choices, selected = "")
-      updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = "")
+    if (!is.null(ui_service)) {
+      # Use centralized UI service for all form resets
+      ui_service$reset_form_fields()
+      cat("DEBUG: [SESSION_RESET] ✅ Used centralized ui_service for form reset\n")
     } else {
-      # Fallback til tomme choices
-      updateSelectizeInput(session, "x_column", choices = c("Vælg kolonne" = ""), selected = "")
-      updateSelectizeInput(session, "y_column", choices = c("Vælg kolonne" = ""), selected = "")
-      updateSelectizeInput(session, "n_column", choices = c("Vælg kolonne" = ""), selected = "")
-      updateSelectizeInput(session, "skift_column", choices = c("Vælg kolonne" = ""), selected = "")
-      updateSelectizeInput(session, "frys_column", choices = c("Vælg kolonne" = ""), selected = "")
-      updateSelectizeInput(session, "kommentar_column", choices = c("Vælg kolonne" = ""), selected = "")
+      # Fallback to direct updates
+      updateTextInput(session, "indicator_title", value = "")
+      updateRadioButtons(session, "unit_type", selected = "select")
+      updateSelectizeInput(session, "unit_select", selected = "")
+      updateTextInput(session, "unit_custom", value = "")
+      updateTextAreaInput(session, "indicator_description", value = "")
+      updateSelectizeInput(session, "chart_type", selected = "run")
+      updateSelectizeInput(session, "y_axis_unit", selected = "count")
+
+      # Opdater kolonnevalg med nye standardkolonner fra empty session data
+      if (!is.null(new_data) && ncol(new_data) > 0) {
+        new_col_names <- names(new_data)
+        col_choices <- setNames(new_col_names, new_col_names)
+        col_choices <- c("Vælg kolonne" = "", col_choices)
+
+        cat("DEBUG: [SESSION_RESET] Opdaterer selectizeInput med nye kolonner:", paste(new_col_names, collapse = ", "), "\n")
+
+        updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
+        updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
+        updateSelectizeInput(session, "n_column", choices = col_choices, selected = "")
+        updateSelectizeInput(session, "skift_column", choices = col_choices, selected = "")
+        updateSelectizeInput(session, "frys_column", choices = col_choices, selected = "")
+        updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = "")
+      } else {
+        # Fallback til tomme choices
+        updateSelectizeInput(session, "x_column", choices = c("Vælg kolonne" = ""), selected = "")
+        updateSelectizeInput(session, "y_column", choices = c("Vælg kolonne" = ""), selected = "")
+        updateSelectizeInput(session, "n_column", choices = c("Vælg kolonne" = ""), selected = "")
+        updateSelectizeInput(session, "skift_column", choices = c("Vælg kolonne" = ""), selected = "")
+        updateSelectizeInput(session, "frys_column", choices = c("Vælg kolonne" = ""), selected = "")
+        updateSelectizeInput(session, "kommentar_column", choices = c("Vælg kolonne" = ""), selected = "")
+      }
+
+      updateTextInput(session, "target_value", value = "")
+      updateTextInput(session, "centerline_value", value = "")
     }
 
-    updateTextInput(session, "target_value", value = "")
-    updateTextInput(session, "centerline_value", value = "")
-    updateSelectizeInput(session, "y_axis_unit", selected = "count")
     shinyjs::reset("data_file")
   })
 
@@ -516,7 +530,7 @@ show_clear_confirmation_modal <- function(has_data, has_settings, values) {
 
 ## Hovedfunktion for velkomstside
 # Opsætter alle handlers for velkomstside interaktioner
-setup_welcome_page_handlers <- function(input, output, session, waiter_file, app_state, emit) {
+setup_welcome_page_handlers <- function(input, output, session, waiter_file, app_state, emit, ui_service = NULL) {
   cat("DEBUG: [WELCOME_PAGE_SETUP] Setting up welcome page handlers\n")
   cat("DEBUG: [WELCOME_PAGE_SETUP] app_state provided:", !is.null(app_state), "\n")
 
@@ -559,9 +573,16 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
     # Unified state: Reset auto detect for welcome page
     # Using unified state management for auto-detect status
     app_state$columns$auto_detect$completed <- FALSE
-    updateSelectInput(session, "x_column", selected = "")
-    updateSelectInput(session, "y_column", selected = "")
-    updateSelectInput(session, "n_column", selected = "")
+
+    # Use centralized UI service for column resets
+    if (!is.null(ui_service)) {
+      ui_service$update_column_choices(clear_selections = TRUE)
+    } else {
+      # Fallback to direct updates
+      updateSelectInput(session, "x_column", selected = "")
+      updateSelectInput(session, "y_column", selected = "")
+      updateSelectInput(session, "n_column", selected = "")
+    }
 
     cat("DEBUG: [WELCOME_PAGE] New empty session created\n")
     cat("DEBUG: [WELCOME_PAGE] app_state$data$current_data set with", nrow(empty_session_data), "rows\n")

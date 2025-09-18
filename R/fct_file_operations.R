@@ -7,7 +7,7 @@
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
-setup_file_upload <- function(input, output, session, waiter_file, app_state, emit) {
+setup_file_upload <- function(input, output, session, waiter_file, app_state, emit, ui_service = NULL) {
   # Unified state: App state is always available
   log_debug("===========================================", "FILE_UPLOAD")
   log_debug("Setting up file upload handlers", "FILE_UPLOAD")
@@ -210,7 +210,7 @@ handle_excel_upload <- function(file_path, session, app_state, emit) {
     # Restore metadata with delay to ensure UI is ready
     invalidateLater(500)
     isolate({
-      restore_metadata(session, metadata)
+      restore_metadata(session, metadata, ui_service)
     })
 
     showNotification(

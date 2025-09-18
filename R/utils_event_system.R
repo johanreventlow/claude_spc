@@ -27,7 +27,7 @@ NULL
 #' All observers use ignoreInit = TRUE to prevent firing at startup
 #' and appropriate priorities to ensure correct execution order.
 #'
-setup_event_listeners <- function(app_state, emit, input, output, session) {
+setup_event_listeners <- function(app_state, emit, input, output, session, ui_service = NULL) {
   cat("DEBUG: [EVENT_SYSTEM] Setting up unified event listeners\n")
 
   # DATA LIFECYCLE EVENTS
@@ -45,7 +45,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
     cat("DEBUG: [EVENT] data_changed event received\n")
 
     # Update column choices when data changes
-    update_column_choices_unified(app_state, input, output, session)
+    update_column_choices_unified(app_state, input, output, session, ui_service)
   })
 
   # AUTO-DETECTION EVENTS
@@ -85,7 +85,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
     cat("DEBUG: [EVENT] ui_sync_needed event received\n")
 
     # Perform UI synchronization
-    sync_ui_with_columns_unified(app_state, input, output, session)
+    sync_ui_with_columns_unified(app_state, input, output, session, ui_service)
 
     # Mark sync as completed
     emit$ui_sync_completed()
@@ -211,7 +211,57 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
               session_id = if(!is.null(session)) session$token else NULL)
   })
 
-  cat("DEBUG: [EVENT_SYSTEM] ✅ All event listeners registered (including error handling)\n")
+  # UI UPDATE EVENTS ========================================================
+
+  # Column choices changed event listener
+  observeEvent(app_state$events$column_choices_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+    cat("DEBUG: [UI_EVENT] Column choices changed event received\n")
+
+    if (!is.null(ui_service)) {
+      ui_service$update_column_choices()
+    } else {
+      cat("DEBUG: [UI_EVENT] No UI service available for column choices update\n")
+    }
+  })
+
+  # Form reset needed event listener
+  observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+    cat("DEBUG: [UI_EVENT] Form reset needed event received\n")
+
+    if (!is.null(ui_service)) {
+      ui_service$reset_form_fields()
+    } else {
+      cat("DEBUG: [UI_EVENT] No UI service available for form reset\n")
+    }
+  })
+
+  # Form restore needed event listener
+  observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+    cat("DEBUG: [UI_EVENT] Form restore needed event received\n")
+
+    # For form restore, we need metadata from app_state
+    # This could be triggered by session restore events
+    if (!is.null(ui_service) && !is.null(app_state$session$restore_metadata)) {
+      ui_service$update_form_fields(app_state$session$restore_metadata)
+    } else {
+      cat("DEBUG: [UI_EVENT] No UI service or metadata available for form restore\n")
+    }
+  })
+
+  # General UI update needed event listener
+  observeEvent(app_state$events$ui_update_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+    cat("DEBUG: [UI_EVENT] General UI update needed event received\n")
+
+    # This could trigger multiple UI updates
+    if (!is.null(ui_service)) {
+      # Update column choices if data is available
+      if (!is.null(app_state$data$current_data)) {
+        ui_service$update_column_choices()
+      }
+    }
+  })
+
+  cat("DEBUG: [EVENT_SYSTEM] ✅ All event listeners registered (including error handling and UI updates)\n")
 }
 
 #' Auto-detect and update columns (Unified Event Version)
@@ -292,7 +342,7 @@ auto_detect_and_update_columns_unified <- function(app_state, emit) {
 #' @param output Shiny output
 #' @param session Shiny session
 #'
-sync_ui_with_columns_unified <- function(app_state, input, output, session) {
+sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_service = NULL) {
   cat("DEBUG: [UI_SYNC_UNIFIED] Starting UI synchronization\n")
 
   if (is.null(app_state$data$current_data)) {
@@ -304,30 +354,45 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session) {
   col_names <- names(data)
   results <- app_state$columns$auto_detect_results
 
-  # Update UI controls with detected columns
+  # Update UI controls with detected columns using centralized service
   tryCatch({
-    if (!is.null(results$x_column)) {
-      updateSelectInput(session, "x_column",
-                       choices = col_names,
-                       selected = results$x_column)
-      cat("DEBUG: [UI_SYNC_UNIFIED] Updated x_column UI:", results$x_column, "\n")
-    }
+    if (!is.null(ui_service)) {
+      # Use centralized UI service with detected selections
+      col_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
+      selected_columns <- list(
+        x_column = results$x_column %||% "",
+        y_column = results$y_column %||% "",
+        n_column = results$n_column %||% "",
+        cl_column = results$cl_column %||% ""
+      )
 
-    if (!is.null(results$y_column)) {
-      updateSelectInput(session, "y_column",
-                       choices = col_names,
-                       selected = results$y_column)
-      cat("DEBUG: [UI_SYNC_UNIFIED] Updated y_column UI:", results$y_column, "\n")
-    }
+      ui_service$update_column_choices(choices = col_choices, selected = selected_columns)
+      cat("DEBUG: [UI_SYNC_UNIFIED] ✅ Used centralized ui_service for column sync\n")
+    } else {
+      # Fallback to direct updates
+      if (!is.null(results$x_column)) {
+        updateSelectInput(session, "x_column",
+                         choices = col_names,
+                         selected = results$x_column)
+        cat("DEBUG: [UI_SYNC_UNIFIED] Updated x_column UI:", results$x_column, "\n")
+      }
 
-    if (!is.null(results$n_column)) {
-      updateSelectInput(session, "n_column",
-                       choices = c("Ingen" = "", col_names),
-                       selected = results$n_column)
-      cat("DEBUG: [UI_SYNC_UNIFIED] Updated n_column UI:", results$n_column, "\n")
-    }
+      if (!is.null(results$y_column)) {
+        updateSelectInput(session, "y_column",
+                         choices = col_names,
+                         selected = results$y_column)
+        cat("DEBUG: [UI_SYNC_UNIFIED] Updated y_column UI:", results$y_column, "\n")
+      }
 
-    cat("DEBUG: [UI_SYNC_UNIFIED] ✅ UI synchronization completed\n")
+      if (!is.null(results$n_column)) {
+        updateSelectInput(session, "n_column",
+                         choices = c("Ingen" = "", col_names),
+                         selected = results$n_column)
+        cat("DEBUG: [UI_SYNC_UNIFIED] Updated n_column UI:", results$n_column, "\n")
+      }
+
+      cat("DEBUG: [UI_SYNC_UNIFIED] ✅ UI synchronization completed\n")
+    }
 
   }, error = function(e) {
     cat("DEBUG: [UI_SYNC_UNIFIED] UI sync error:", e$message, "\n")
@@ -344,7 +409,7 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session) {
 #' @param output Shiny output
 #' @param session Shiny session
 #'
-update_column_choices_unified <- function(app_state, input, output, session) {
+update_column_choices_unified <- function(app_state, input, output, session, ui_service = NULL) {
   cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Starting column choices update\n")
 
   # Check if we should skip during table operations
@@ -382,14 +447,20 @@ update_column_choices_unified <- function(app_state, input, output, session) {
       c("Vælg kolonne...", all_cols)
     )
 
-    # Update UI controls
+    # Update UI controls using centralized service
     tryCatch({
-      updateSelectizeInput(session, "x_column", choices = col_choices)
-      updateSelectizeInput(session, "y_column", choices = col_choices)
-      updateSelectizeInput(session, "n_column", choices = col_choices)
-      updateSelectizeInput(session, "cl_column", choices = col_choices)
+      if (!is.null(ui_service)) {
+        ui_service$update_column_choices(choices = col_choices)
+        cat("DEBUG: [COLUMN_CHOICES_UNIFIED] ✅ Used centralized ui_service for column choices\n")
+      } else {
+        # Fallback to direct updates
+        updateSelectizeInput(session, "x_column", choices = col_choices)
+        updateSelectizeInput(session, "y_column", choices = col_choices)
+        updateSelectizeInput(session, "n_column", choices = col_choices)
+        updateSelectizeInput(session, "cl_column", choices = col_choices)
 
-      cat("DEBUG: [COLUMN_CHOICES_UNIFIED] ✅ Column choices updated\n")
+        cat("DEBUG: [COLUMN_CHOICES_UNIFIED] ✅ Column choices updated\n")
+      }
 
     }, error = function(e) {
       cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Error updating UI:", e$message, "\n")

@@ -115,6 +115,7 @@ SHINY_DEBUG_MODE <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
 source("R/utils_danish_locale.R")
 source("R/utils_ui_helpers.R")
 source("R/utils_ui_components.R")
+source("R/utils_ui_updates.R")
 source("R/utils_server_management.R")
 source("R/utils_performance.R")
 source("R/utils_memory_management.R")
@@ -634,7 +635,13 @@ create_app_state <- function() {
     validation_error = 0L,         # Input validation errors
     processing_error = 0L,         # Data processing errors
     network_error = 0L,           # File I/O and network errors
-    recovery_completed = 0L       # Successful error recovery
+    recovery_completed = 0L,      # Successful error recovery
+
+    # UI update events
+    ui_update_needed = 0L,        # General UI update trigger
+    column_choices_changed = 0L,  # Column choices need update
+    form_reset_needed = 0L,       # Form fields need reset
+    form_restore_needed = 0L      # Form fields need restore from metadata
   )
 
   # Data Management - Convert to reactiveValues for consistency
@@ -841,6 +848,35 @@ create_emit_api <- function(app_state) {
       isolate({
         app_state$events$recovery_completed <- app_state$events$recovery_completed + 1L
         cat("DEBUG: [EVENT] recovery_completed emitted:", app_state$events$recovery_completed, "\n")
+      })
+    },
+
+    # UI update events
+    ui_update_needed = function() {
+      isolate({
+        app_state$events$ui_update_needed <- app_state$events$ui_update_needed + 1L
+        cat("DEBUG: [EVENT] ui_update_needed emitted:", app_state$events$ui_update_needed, "\n")
+      })
+    },
+
+    column_choices_changed = function() {
+      isolate({
+        app_state$events$column_choices_changed <- app_state$events$column_choices_changed + 1L
+        cat("DEBUG: [EVENT] column_choices_changed emitted:", app_state$events$column_choices_changed, "\n")
+      })
+    },
+
+    form_reset_needed = function() {
+      isolate({
+        app_state$events$form_reset_needed <- app_state$events$form_reset_needed + 1L
+        cat("DEBUG: [EVENT] form_reset_needed emitted:", app_state$events$form_reset_needed, "\n")
+      })
+    },
+
+    form_restore_needed = function() {
+      isolate({
+        app_state$events$form_restore_needed <- app_state$events$form_restore_needed + 1L
+        cat("DEBUG: [EVENT] form_restore_needed emitted:", app_state$events$form_restore_needed, "\n")
       })
     }
   )

@@ -52,6 +52,11 @@ app_server <- function(input, output, session) {
   emit <- create_emit_api(app_state)
   log_debug("✅ Event system initialized", "APP_SERVER")
 
+  # UI SERVICE: Initialize centralized UI update service
+  log_debug("Creating UI update service...", "APP_SERVER")
+  ui_service <- create_ui_update_service(session, app_state)
+  log_debug("✅ UI update service initialized", "APP_SERVER")
+
   # Take initial state snapshot
   initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = session$token)
 
@@ -116,6 +121,9 @@ app_server <- function(input, output, session) {
           app_state$data$original_data <- test_data
           # Unified state: Set data and flags in both legacy and centralized state
           app_state$data$current_data <- test_data
+
+          # Emit event to trigger downstream effects
+          emit$data_loaded()
           # PHASE 4B: Unified state assignment only
           app_state$session$file_uploaded <- TRUE
           # PHASE 4B: Unified state assignment only
@@ -164,16 +172,16 @@ app_server <- function(input, output, session) {
   # Opsæt alle server-komponenter
 
   ## Velkomstside interaktioner
-  setup_welcome_page_handlers(input, output, session, waiter_file, app_state)
+  setup_welcome_page_handlers(input, output, session, waiter_file, app_state, emit, ui_service)
 
   ## Session management logik
-  setup_session_management(input, output, session, waiter_file, app_state)
+  setup_session_management(input, output, session, waiter_file, app_state, emit, ui_service)
 
   ## Fil upload logik
-  setup_file_upload(input, output, session, waiter_file, app_state, emit)
+  setup_file_upload(input, output, session, waiter_file, app_state, emit, ui_service)
 
   ## Data tabel logik
-  setup_data_table(input, output, session, app_state)
+  setup_data_table(input, output, session, app_state, emit)
 
   ## Hjælpe observers (IMPORTANT: Must be set up before visualization for unified navigation)
   app_data_reactive <- setup_helper_observers(input, output, session, obs_manager, app_state)
@@ -186,14 +194,14 @@ app_server <- function(input, output, session) {
   ## Visualiserings logik
   visualization <- setup_visualization(input, output, session, app_state, app_data_reactive)
 
-  ## Download handlers
-  setup_download_handlers(input, output, session, app_state, visualization)
+  ## Download handlers (REMOVED - to be reimplemented later)
+  # setup_download_handlers(input, output, session, app_state, visualization)
 
   session_debugger$event("server_setup_complete")
   debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
 
   # EVENT SYSTEM: Set up reactive event listeners
-  setup_event_listeners(app_state, emit, input, output, session)
+  setup_event_listeners(app_state, emit, input, output, session, ui_service)
 
   # TEST MODE: Emit test_mode_ready event AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {
