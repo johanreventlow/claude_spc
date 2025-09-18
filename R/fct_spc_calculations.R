@@ -746,10 +746,23 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             cat("qic_args structure:\n")
             str(qic_args)
           }
+          
+          log_debug(qic_args, "QIC")
 
           qic_data <- do.call(qicharts2::qic, qic_args)
           log_debug(paste("QIC call successful, returned data dimensions:", nrow(qic_data), "x", ncol(qic_data)), "QIC_CALL")
 
+          # DEBUG: Show complete qic_data structure and content
+          cat("DEBUG: [QIC_DATA] ===========================================\n")
+          cat("DEBUG: [QIC_DATA] qic_data structure:\n")
+          str(qic_data)
+          cat("DEBUG: [QIC_DATA] qic_data column names:", paste(names(qic_data), collapse = ", "), "\n")
+          cat("DEBUG: [QIC_DATA] qic_data head (first 10 rows):\n")
+          print(head(qic_data, 10))
+          cat("DEBUG: [QIC_DATA] ===========================================\n")
+
+          log_debug(qic_data, "QIC")
+          
           # Convert proportions to percentages for run charts with rate data
           if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
             qic_data$y <- qic_data$y * 100

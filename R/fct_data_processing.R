@@ -1219,12 +1219,26 @@ auto_detect_and_update_columns <- function(input, session, values, app_state = N
     autodetect_tracer$step("ui_sync_data_created")
     autodetect_tracer$complete("auto_detect_full_workflow_complete")
 
+    # CRITICAL: Trigger navigation update efter autodetect completion
+    # Dette sikrer at alle eventReactive komponenter (inklusive generateSPCPlot) re-evalueres
+    if (!is.null(app_state$navigation_trigger)) {
+      old_trigger <- app_state$navigation_trigger()
+      app_state$navigation_trigger(old_trigger + 1)
+      new_trigger <- app_state$navigation_trigger()
+      cat("DEBUG: [AUTO_DETECT] navigation_trigger incremented from", old_trigger, "to", new_trigger, "\n")
+      log_debug(paste("AUTO_DETECT: navigation_trigger incremented from", old_trigger, "to", new_trigger), "AUTO_DETECT")
+    } else {
+      cat("DEBUG: [AUTO_DETECT] ⚠️ navigation_trigger not available - plots may not update\n")
+      log_debug("AUTO_DETECT: navigation_trigger not available - plots may not update", "AUTO_DETECT")
+    }
+
     debug_log("Auto-detect process completed successfully", "AUTO_DETECT_FLOW", level = "INFO",
               context = list(
                 x_col = if(exists("x_col")) x_col else "unknown",
                 y_col = if(exists("y_col")) y_col else "unknown",
                 n_col = if(exists("n_col")) n_col else "unknown",
-                ui_sync_triggered = TRUE
+                ui_sync_triggered = TRUE,
+                navigation_trigger_incremented = !is.null(app_state$navigation_trigger)
               ),
               session_id = session_id)
 
