@@ -9,20 +9,7 @@
 # Opsætter alle hjælper observers og status funktioner
 setup_helper_observers <- function(input, output, session, obs_manager = NULL, app_state = NULL) {
   # PHASE 4: Centralized state is now always available
-  # Initialiser ikke automatisk tom tabel ved opstart - vent på bruger aktion
-  # observe({
-  #   if (is.null(values$current_data)) {
-  #     empty_data <- data.frame(
-  #       Skift = rep(FALSE, 5),
-  #       Dato = rep(NA_character_, 5),
-  #       Tæller = rep(NA_real_, 5),
-  #       Nævner = rep(NA_real_, 5),
-  #       Kommentar = rep(NA_character_, 5),
-  #       stringsAsFactors = FALSE
-  #     )
-  #     values$current_data <- empty_data
-  #   }
-  # })
+  # UNIFIED STATE: Empty table initialization now handled through session management events
 
   # UNIFIED NAVIGATION: Event-driven pattern using app_state navigation trigger
   # This creates a reactive that updates when navigation_changed events are fired

@@ -31,7 +31,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
   cat("DEBUG: [EVENT_SYSTEM] Setting up unified event listeners\n")
 
   # DATA LIFECYCLE EVENTS
-  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
     cat("DEBUG: [EVENT] data_loaded event received\n")
 
     # Trigger auto-detection after data is loaded
@@ -41,7 +41,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
     }
   })
 
-  observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = 990, {
+  observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
     cat("DEBUG: [EVENT] data_changed event received\n")
 
     # Update column choices when data changes
@@ -49,7 +49,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
   })
 
   # AUTO-DETECTION EVENTS
-  observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = 900, {
+  observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     cat("DEBUG: [EVENT] auto_detection_started event received\n")
 
     # Set auto-detection in progress
@@ -66,7 +66,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
     })
   })
 
-  observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = 800, {
+  observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     cat("DEBUG: [EVENT] auto_detection_completed event received\n")
 
     # Update state
@@ -81,7 +81,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
   })
 
   # UI SYNCHRONIZATION EVENTS
-  observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = 700, {
+  observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
     cat("DEBUG: [EVENT] ui_sync_needed event received\n")
 
     # Perform UI synchronization
@@ -91,7 +91,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
     emit$ui_sync_completed()
   })
 
-  observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = 600, {
+  observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
     cat("DEBUG: [EVENT] ui_sync_completed event received\n")
 
     # Update timestamp
@@ -102,7 +102,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
   })
 
   # NAVIGATION EVENTS
-  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 500, {
+  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
     cat("DEBUG: [EVENT] navigation_changed event received\n")
 
     # Increment navigation trigger to update all eventReactive components
@@ -111,7 +111,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
   })
 
   # TEST MODE EVENTS
-  observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = 950, {
+  observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     cat("DEBUG: [EVENT] test_mode_ready event received\n")
 
     # In test mode, immediately start auto-detection
@@ -122,7 +122,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session) {
   })
 
   # SESSION LIFECYCLE EVENTS
-  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 400, {
+  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
     cat("DEBUG: [EVENT] session_reset event received\n")
 
     # Reset all state to initial values

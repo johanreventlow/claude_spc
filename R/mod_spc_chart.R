@@ -219,37 +219,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       return(result_data)
     }, ignoreNULL = FALSE)
 
-    use_unified_state <- !is.null(app_state)
-    if (use_unified_state) {
-      log_debug("Using unified app_state for visualization state", "MODULE")
-      cat("DEBUG: [MODULE] Using app_state$visualization for plot state management\n")
-    } else {
-      log_debug("Using local reactiveValues for visualization state", "MODULE")
-      values <- reactiveValues(
-        plot_object = NULL,
-        plot_ready = FALSE,
-        anhoej_results = NULL,
-        plot_warnings = character(0),
-        is_computing = FALSE
-      )
-    }
+    # UNIFIED STATE: Always use app_state for visualization state management
+    log_debug("Using unified app_state for visualization state", "MODULE")
+    cat("DEBUG: [MODULE] Using app_state$visualization for plot state management\n")
     log_debug("✅ State management initialized", "MODULE")
 
-    # PHASE 4: Helper function for dual-state assignment
+    # UNIFIED STATE: Helper functions for app_state visualization management
     set_plot_state <- function(key, value) {
-      if (use_unified_state) {
-        app_state$visualization[[key]] <- value
-      } else {
-        values[[key]] <- value
-      }
+      app_state$visualization[[key]] <- value
     }
 
     get_plot_state <- function(key) {
-      if (use_unified_state) {
-        return(app_state$visualization[[key]])
-      } else {
-        return(values[[key]])
-      }
+      return(app_state$visualization[[key]])
     }
 
     # Waiter til plot loading feedback
