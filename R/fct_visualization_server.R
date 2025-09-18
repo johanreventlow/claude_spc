@@ -7,73 +7,13 @@
 
 ## Hovedfunktion for visualisering
 # Opsætter al server logik relateret til visualisering og data forberedelse
-setup_visualization <- function(input, output, session, app_state, app_data_reactive = NULL) {
+setup_visualization <- function(input, output, session, app_state) {
   log_debug("=======================================", "VISUALIZATION")
   log_debug("Setting up visualization system", "VISUALIZATION")
 
-  # UNIFIED NAVIGATION: Use passed app_data_reactive or create fallback with unified navigation trigger
-  if (!is.null(app_data_reactive)) {
-    # Use passed reactive from setup_helper_observers
-    active_data_event <- reactive({
-      app_data_reactive()
-    })
-  } else {
-    # Fallback: Create eventReactive using unified navigation trigger
-    active_data_event <- eventReactive(app_state$navigation$trigger, {
-      # PHASE 8: Enhanced reactive execution tracking
-      debug_reactive_execution("active_data_event", "visualization_trigger_fired",
-                              list(trigger_value = app_state$navigation$trigger),
-                              session_id = session$token)
-
-    log_debug("[PLOT_DATA] Active data reactive triggered", "PLOT_DATA")
-    log_debug("[PLOT_DATA] Navigation trigger fired", "PLOT_DATA")
-
-    # PHASE 4: Use unified state management
-    current_data_check <- app_state$data$current_data
-
-    req(current_data_check)
-    log_debug("Current data available, processing...", "PLOT_DATA")
-
-    data <- current_data_check
-    log_debug(paste("Data dimensions:", nrow(data), "x", ncol(data)), "PLOT_DATA")
-    log_debug(paste("Column names:", paste(names(data), collapse = ", ")), "PLOT_DATA")
-
-    # Tilføj hide_anhoej_rules flag som attribut til data
-    # PHASE 4: Use unified state management
-    hide_anhoej_rules_check <- app_state$ui$hide_anhoej_rules
-
-    attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
-    log_debug(paste("Hide Anhøj rules flag:", hide_anhoej_rules_check), "PLOT_DATA")
-
-    # Tjek om dette er den tomme standard tabel fra session reset
-    if (nrow(data) == 5 && all(c("Skift", "Dato", "Tæller", "Nævner", "Kommentar") %in% names(data))) {
-      if (all(is.na(data$Dato)) && all(is.na(data$Tæller)) && all(is.na(data$Nævner))) {
-        log_debug("⚠️ Detected empty standard table - returning with flag", "PLOT_DATA")
-        # Dette er tom standard tabel men vi skal stadig videregive hide flag
-        attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
-        return(data) # Retur nér data med flag i stedet for NULL
-      }
-    }
-
-    non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
-    log_debug(paste("Non-empty rows:", sum(non_empty_rows), "out of", nrow(data)), "PLOT_DATA")
-
-    if (any(non_empty_rows)) {
-      filtered_data <- data[non_empty_rows, ]
-      attr(filtered_data, "hide_anhoej_rules") <- hide_anhoej_rules_check
-      log_debug(paste("✅ Returning filtered data:", nrow(filtered_data), "rows"), "PLOT_DATA")
-      return(filtered_data)
-    } else {
-      log_debug("⚠️ No meaningful data found - returning original with flag", "PLOT_DATA")
-      # Selv når ingen meningsfuld data, videregiv flaget
-      attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
-      return(data)
-    }
-    }, ignoreNULL = FALSE)
-  }
-
-  # MODULE COMPATIBILITY: Pass eventReactive directly to preserve reactive context
-  active_data <- active_data_event
+  # UNIFIED EVENT SYSTEM: Direct access to app_state data instead of reactive dependencies
+  # No need for app_data_reactive - visualization module uses its own event-driven data access
+  log_debug("Visualization setup - using unified event system", "VISUALIZATION")
 
   # Kolonne konfiguration til visualisering
   # Store last valid config to avoid NULL during input updates
@@ -170,7 +110,7 @@ setup_visualization <- function(input, output, session, app_state, app_data_reac
   log_debug("Initializing visualization module server", "VISUALIZATION")
   visualization <- visualizationModuleServer(
     "visualization",
-    data_reactive = active_data,
+    data_reactive = NULL,  # Module uses its own event-driven data access
     column_config_reactive = column_config,
     chart_type_reactive = reactive({
       chart_selection <- if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type
@@ -182,7 +122,7 @@ setup_visualization <- function(input, output, session, app_state, app_data_reac
       }
 
       # Hent y-akse data til smart konvertering
-      data <- active_data()
+      data <- app_state$data$current_data
       config <- column_config()
 
       if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
@@ -199,7 +139,7 @@ setup_visualization <- function(input, output, session, app_state, app_data_reac
       }
 
       # Hent y-akse data til smart konvertering
-      data <- active_data()
+      data <- app_state$data$current_data
       config <- column_config()
 
       if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
@@ -212,7 +152,7 @@ setup_visualization <- function(input, output, session, app_state, app_data_reac
     }),
     skift_config_reactive = reactive({
       # Bestem om vi skal vise faser baseret på Skift kolonne valg og data
-      data <- active_data()
+      data <- app_state$data$current_data
       config <- column_config()
 
       if (is.null(data) || is.null(config)) {
@@ -242,7 +182,7 @@ setup_visualization <- function(input, output, session, app_state, app_data_reac
     }),
     frys_config_reactive = reactive({
       # Bestem frys kolonne for baseline freeze
-      data <- active_data()
+      data <- app_state$data$current_data
       config <- column_config()
 
       if (is.null(data) || is.null(config)) {

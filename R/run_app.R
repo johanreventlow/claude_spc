@@ -9,7 +9,7 @@
 #'
 #' @export
 run_app <- function(#port = 3838,
-                    port = NULL, 
+                    port = NULL,
                     launch_browser = NULL, ...) {
   # Ensure global configuration is loaded
   if (!exists("HOSPITAL_NAME", envir = .GlobalEnv)) {
@@ -44,7 +44,7 @@ run_app <- function(#port = 3838,
   # Run the app
   runApp(
     app,
-    port = port,
+    # port = port,
     launch.browser = browser_option
   )
 }

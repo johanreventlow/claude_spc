@@ -297,36 +297,23 @@ auto_detect_and_update_columns_unified <- function(app_state, emit) {
     .context = "AUTO_DETECT_UNIFIED"
   )
 
-  # Simplified column detection logic
+  # Use the correct detect_columns_name_only function instead of simplified logic
+  detection_result <- detect_columns_name_only(col_names, NULL, NULL, app_state)
+
+  # FIXED: detect_columns_name_only returns direct list, not nested under $detected
   results <- list(
-    x_column = NULL,
-    y_column = NULL,
-    n_column = NULL,
-    cl_column = NULL
+    x_column = detection_result$x_col,
+    y_column = detection_result$y_col,
+    n_column = detection_result$n_col,
+    cl_column = NULL  # Not detected by detect_columns_name_only
   )
 
-  # Basic auto-detection patterns
-  for (col in col_names) {
-    col_lower <- tolower(col)
-
-    # Date column detection
-    if (is.null(results$x_column) && any(grepl("dato|date|tid|time", col_lower))) {
-      results$x_column <- col
-      log_debug_kv(found_x_column = col, .context = "AUTO_DETECT_UNIFIED")
-    }
-
-    # Count column detection
-    if (is.null(results$y_column) && any(grepl("antal|count|værdi|value", col_lower))) {
-      results$y_column <- col
-      log_debug_kv(found_y_column = col, .context = "AUTO_DETECT_UNIFIED")
-    }
-
-    # Denominator column detection
-    if (is.null(results$n_column) && any(grepl("nævner|denom|total", col_lower))) {
-      results$n_column <- col
-      log_debug_kv(found_n_column = col, .context = "AUTO_DETECT_UNIFIED")
-    }
-  }
+  log_debug_kv(
+    detected_x = ifelse(is.null(results$x_column), "NULL", results$x_column),
+    detected_y = ifelse(is.null(results$y_column), "NULL", results$y_column),
+    detected_n = ifelse(is.null(results$n_column), "NULL", results$n_column),
+    .context = "AUTO_DETECT_UNIFIED"
+  )
 
   # Store results in both locations for consistency during transition
   app_state$columns$auto_detect_results <- results

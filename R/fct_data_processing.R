@@ -74,17 +74,11 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
-    # PHASE 4: Use unified state management
-    app_state$columns$auto_detect$in_progress <- TRUE
+    # UNIFIED EVENT SYSTEM: Use event-driven auto-detection instead of direct function call
+    app_state$columns$auto_detect_in_progress <- TRUE
 
-    # PHASE 4: Pass centralized state to auto-detect function - now uses unified events
-    auto_detect_and_update_columns(input, session, app_state, emit)
-
-    # PHASE 4: Use unified state management
-    app_state$columns$auto_detect$completed <- TRUE
-
-    # PHASE 4: Use unified state management
-    app_state$columns$auto_detect$in_progress <- FALSE
+    # Emit auto-detection started event - this triggers auto_detect_and_update_columns_unified
+    emit$auto_detection_started()
   })
 
   # Kolonnevaliderings output
@@ -309,11 +303,11 @@ detect_columns_name_only <- function(col_names, input, session, app_state = NULL
   # Opdater UI ligesom normal auto-detection
   use_centralized_state <- !is.null(app_state)
 
-  # Gem resultater
+  # Gem resultater - use standard field names that visualization expects
   auto_detected_columns <- list(
     x_col = x_col,
-    taeller_col = taeller_col,
-    naevner_col = naevner_col,
+    y_col = taeller_col,  # Map taeller_col to y_col
+    n_col = naevner_col,  # Map naevner_col to n_col
     skift_col = skift_col,
     frys_col = frys_col,
     kommentar_col = kommentar_col
@@ -1100,35 +1094,13 @@ handle_add_column <- function(input, session, app_state = NULL, emit = NULL) {
 setup_data_table <- function(input, output, session, app_state, emit) {
   log_debug_block("DATA_TABLE", "Setting up data table with unified state")
 
-  # NAVIGATION TRIGGER: Create reactive that uses the navigation trigger
-  app_data_reactive <- eventReactive(app_state$navigation$trigger, {
-    # PHASE 8: Enhanced reactive execution tracking
-    debug_reactive_execution("app_data_reactive", "trigger_fired",
-                            list(trigger_value = app_state$navigation$trigger),
-                            session_id = session$token)
-
-    current_data_value <- app_state$data$current_data
-
-    log_debug("Table reactive triggered", .context = "DATA_TABLE")
-    log_debug_kv(
-      trigger_value = app_state$navigation$trigger,
-      current_data_is_null = is.null(current_data_value),
-      .context = "DATA_TABLE"
-    )
-
-    # PHASE 8: Enhanced reactive execution tracking
-    debug_reactive_execution("app_data_reactive", "data_retrieved",
-                            output_value = current_data_value,
-                            session_id = session$token)
-
-    # Return the actual data from unified state
-    return(current_data_value)
-  }, ignoreNULL = FALSE)
+  # UNIFIED EVENT SYSTEM: Direct access to app_state data instead of reactive pattern
+  log_debug("Using unified event system for data table setup", .context = "DATA_TABLE")
 
   # Hovedtabel rendering med excelR
   output$main_data_table <- excelR::renderExcel({
-    # NAVIGATION TRIGGER: Use eventReactive pattern for consistent behavior
-    current_data_check <- app_data_reactive()
+    # UNIFIED EVENT SYSTEM: Direct access to current data
+    current_data_check <- app_state$data$current_data
     req(current_data_check)
 
     log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
@@ -1299,8 +1271,8 @@ setup_data_table <- function(input, output, session, app_state, emit) {
 
   # Tilføj række
   observeEvent(input$add_row, {
-    # NAVIGATION TRIGGER: Use eventReactive pattern for consistent behavior
-    current_data_check <- app_data_reactive()
+    # UNIFIED EVENT SYSTEM: Direct access to current data
+    current_data_check <- app_state$data$current_data
     req(current_data_check)
 
     # Sæt vedvarende flag for at forhindre auto-save interferens

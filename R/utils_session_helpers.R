@@ -11,33 +11,18 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   # PHASE 4: Centralized state is now always available
   # UNIFIED STATE: Empty table initialization now handled through session management events
 
-  # UNIFIED NAVIGATION: Event-driven pattern using app_state navigation trigger
-  # This creates a reactive that updates when navigation_changed events are fired
-  app_data_reactive <- eventReactive(app_state$navigation$trigger, {
-    current_data_value <- app_state$data$current_data
+  # UNIFIED EVENT SYSTEM: Reactive value to track dataLoaded status
+  dataLoaded_status <- reactiveVal("FALSE")
 
-    log_debug_kv(
-      app_data_reactive_triggered = TRUE,
-      trigger_value = app_state$navigation$trigger,
-      current_data_is_null = is.null(current_data_value),
-      .context = "NAVIGATION_UNIFIED"
-    )
+  # Helper function to evaluate dataLoaded status
+  evaluate_dataLoaded_status <- function() {
+    current_data_check <- app_state$data$current_data
 
-    # Return the actual data from unified state
-    return(current_data_value)
-  }, ignoreNULL = FALSE)
-
-  # Data indlæsnings status flags - følger BFH UTH mønster
-  output$dataLoaded <- renderText({
-    # NAVIGATION TRIGGER: Use eventReactive pattern for app_state navigation
-    # This now properly triggers when navigation events are emitted
-    current_data_check <- app_data_reactive()
-
-    log_debug("Evaluating dataLoaded status", .context = "NAVIGATION")
-    log_debug("current_data_check is null:", is.null(current_data_check), .context = "NAVIGATION")
+    log_debug("Evaluating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+    log_debug("current_data_check is null:", is.null(current_data_check), .context = "NAVIGATION_UNIFIED")
 
     result <- if (is.null(current_data_check)) {
-      log_debug("No current data - showing welcome screen", .context = "NAVIGATION")
+      log_debug("No current data - showing welcome screen", .context = "NAVIGATION_UNIFIED")
       "FALSE"
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
@@ -72,21 +57,52 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
         file_uploaded_check = file_uploaded_check,
         user_started_session_check = user_started_session_check,
         user_has_started = user_has_started,
-        .context = "NAVIGATION"
+        .context = "NAVIGATION_UNIFIED"
       )
 
       final_result <- if (meaningful_data || user_has_started) "TRUE" else "FALSE"
-      log_debug("Final dataLoaded result:", final_result, .context = "NAVIGATION")
+      log_debug("Final dataLoaded result:", final_result, .context = "NAVIGATION_UNIFIED")
       final_result
     }
-    log_debug("Returning dataLoaded:", result, .context = "NAVIGATION")
-    result
+    log_debug("Returning dataLoaded:", result, .context = "NAVIGATION_UNIFIED")
+    return(result)
+  }
+
+  # UNIFIED EVENT LISTENERS: Update dataLoaded status when relevant events occur
+  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+    log_debug("data_loaded event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+    new_status <- evaluate_dataLoaded_status()
+    dataLoaded_status(new_status)
+    log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  })
+
+  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
+    log_debug("session_reset event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+    new_status <- evaluate_dataLoaded_status()
+    dataLoaded_status(new_status)
+    log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  })
+
+  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
+    log_debug("navigation_changed event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+    new_status <- evaluate_dataLoaded_status()
+    dataLoaded_status(new_status)
+    log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  })
+
+  # Data indlæsnings status flags - følger BFH UTH mønster
+  output$dataLoaded <- renderText({
+    # UNIFIED EVENT SYSTEM: Simply return the reactive value
+    dataLoaded_status()
   })
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
 
-  output$has_data <- renderText({
-    # NAVIGATION TRIGGER: Use eventReactive pattern for consistent behavior
-    current_data_check <- app_data_reactive()
+  # UNIFIED EVENT SYSTEM: Reactive value to track has_data status
+  has_data_status <- reactiveVal("false")
+
+  # Helper function to evaluate has_data status
+  evaluate_has_data_status <- function() {
+    current_data_check <- app_state$data$current_data
 
     if (is.null(current_data_check)) {
       "false"
@@ -106,6 +122,39 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
       }))
       if (meaningful_data) "true" else "false"
     }
+  }
+
+  # UNIFIED EVENT LISTENERS: Update has_data status when relevant events occur
+  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+    new_status <- evaluate_has_data_status()
+    has_data_status(new_status)
+    log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  })
+
+  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
+    new_status <- evaluate_has_data_status()
+    has_data_status(new_status)
+    log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  })
+
+  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
+    new_status <- evaluate_has_data_status()
+    has_data_status(new_status)
+    log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  })
+
+  # Initial evaluation to set correct startup state
+  observe({
+    initial_dataLoaded <- evaluate_dataLoaded_status()
+    initial_has_data <- evaluate_has_data_status()
+    dataLoaded_status(initial_dataLoaded)
+    has_data_status(initial_has_data)
+    log_debug("Initial status set - dataLoaded:", initial_dataLoaded, "has_data:", initial_has_data, .context = "NAVIGATION_UNIFIED")
+  }, priority = 2000)  # High priority to run early
+
+  output$has_data <- renderText({
+    # UNIFIED EVENT SYSTEM: Simply return the reactive value
+    has_data_status()
   })
   outputOptions(output, "has_data", suspendWhenHidden = FALSE)
 
@@ -115,8 +164,8 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     # PHASE 4: Use unified state management
     file_uploaded_check <- app_state$session$file_uploaded
 
-    # NAVIGATION TRIGGER: Use eventReactive pattern for consistent behavior
-    current_data_check <- app_data_reactive()
+    # UNIFIED EVENT SYSTEM: Direct access to current data
+    current_data_check <- app_state$data$current_data
 
     if (is.null(current_data_check)) {
       div(
@@ -294,9 +343,9 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     obs_manager$add(obs_settings_save, "settings_auto_save")
   }
 
-  # UNIFIED NAVIGATION: Return app_data_reactive for backward compatibility
-  # Navigation is now managed through app_state$navigation$trigger and emit$navigation_changed()
-  return(app_data_reactive)
+  # UNIFIED EVENT SYSTEM: No return value needed - all navigation handled via events
+  # Navigation is now managed through unified event system with dataLoaded_status and has_data_status
+  return(NULL)
 }
 
 # HJÆLPEFUNKTIONER ============================================================

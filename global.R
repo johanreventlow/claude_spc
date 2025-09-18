@@ -27,6 +27,7 @@ library(later) # Til forsinket udførelse
 
 # SOURCE UTILITIES --------------------------------
 source("R/utils_logging.R")
+# source("R/utils_app_setup.R")  # App setup - temporarily disabled due to logging dependency issue
 source("R/utils_shinylogs_config.R")  # Advanced web-based logging with shinylogs
 source("R/utils_advanced_debug.R")  # Advanced debug infrastructure
 source("R/utils_end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing

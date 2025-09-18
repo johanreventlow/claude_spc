@@ -168,12 +168,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Cached data storage
     cached_data <- reactiveVal(NULL)
 
-    # Create a pure data function that works in any context
+    # Create a reactive-safe data function
     get_module_data <- function() {
-      log_debug("get_module_data() called - pure function approach", "MODULE_DATA")
+      log_debug("get_module_data() called - reactive-safe approach", "MODULE_DATA")
 
-      # Direct access to app_state (not reactive)
-      current_data_check <- app_state$data$current_data
+      # Use isolate() to safely access reactive values
+      current_data_check <- isolate(app_state$data$current_data)
       if (is.null(current_data_check)) {
         log_debug("get_module_data: No current data available", "MODULE_DATA")
         return(NULL)
@@ -184,7 +184,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       log_debug(paste("get_module_data: Data dimensions:", nrow(data), "x", ncol(data)), "MODULE_DATA")
 
       # Add hide_anhoej_rules flag as attribute
-      hide_anhoej_rules_check <- app_state$ui$hide_anhoej_rules
+      hide_anhoej_rules_check <- isolate(app_state$ui$hide_anhoej_rules)
       attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
       log_debug(paste("get_module_data: Hide Anhøj rules flag:", hide_anhoej_rules_check), "MODULE_DATA")
 
@@ -204,20 +204,47 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     }
 
-    # Primary reactive
-    module_data_reactive <- eventReactive(app_state$navigation$trigger, {
-      log_debug("Module data reactive triggered", "MODULE_DATA")
-      log_debug("Navigation trigger fired", "MODULE_DATA")
+    # UNIFIED EVENT SYSTEM: Event-driven data reactive
+    module_data_cache <- reactiveVal(NULL)
+
+    module_data_reactive <- reactive({
+      return(module_data_cache())
+    })
+
+    # UNIFIED EVENT SYSTEM: Update data cache when relevant events occur
+    observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
+      log_debug("Module data update triggered by navigation_changed event", "MODULE_DATA")
 
       # Use the pure function to get data
       result_data <- get_module_data()
 
-      # Cache the result for renderPlot access
+      # Update cache
+      module_data_cache(result_data)
       cached_data(result_data)
       log_debug("✅ Data cached for renderPlot access via pure function", "MODULE_DATA")
+    })
 
-      return(result_data)
-    }, ignoreNULL = FALSE)
+    # UNIFIED EVENT SYSTEM: Also update when data changes
+    observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+      log_debug("Module data update triggered by data_loaded event", "MODULE_DATA")
+
+      # Use the pure function to get data
+      result_data <- get_module_data()
+
+      # Update cache
+      module_data_cache(result_data)
+      cached_data(result_data)
+      log_debug("✅ Data cached for data_loaded event", "MODULE_DATA")
+    })
+
+    # UNIFIED EVENT SYSTEM: Initialize data at startup if available
+    if (!is.null(isolate(app_state$data$current_data))) {
+      log_debug("Initializing module data at startup", "MODULE_DATA")
+      initial_data <- get_module_data()
+      module_data_cache(initial_data)
+      cached_data(initial_data)
+      log_debug("✅ Initial data cached", "MODULE_DATA")
+    }
 
     # UNIFIED STATE: Always use app_state for visualization state management
     log_debug("Using unified app_state for visualization state", "MODULE")
@@ -672,9 +699,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           print(ggplot2::ggplot() + ggplot2::theme_void())
         }
       },
-      # res = 96,
-      # width = 800,
-      # height = 600
+      res = 96,
+      width = 800,
+      height = 600
     )
 
     # Status og Information ---------------------------------------------------
@@ -822,12 +849,22 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Anhøj rules som value boxes - ALTID SYNLIGE
     # Viser serielængde og antal kryds for alle chart typer
     output$anhoej_rules_boxes <- renderUI({
+      log_debug("============================= VALUE_BOXES", "VALUEBOX_RENDER")
+      log_debug("anhoej_rules_boxes renderUI triggered", "VALUEBOX_RENDER")
+
       data <- module_data_reactive()
+      log_debug(paste("Data available:", !is.null(data)), "VALUEBOX_RENDER")
+      if (!is.null(data)) {
+        log_debug(paste("Data dimensions:", nrow(data), "x", ncol(data)), "VALUEBOX_RENDER")
+      }
 
       # Smart indhold baseret på nuværende status - ALTID vis boxes
       config <- chart_config()
+      log_debug(paste("Config available:", !is.null(config)), "VALUEBOX_RENDER")
       chart_type <- chart_type_reactive() %||% "run"
+      log_debug(paste("Chart type:", chart_type), "VALUEBOX_RENDER")
       anhoej <- get_plot_state("anhoej_results")
+      log_debug(paste("Anhoej results available:", !is.null(anhoej)), "VALUEBOX_RENDER")
 
       # Simplificeret logik - hvis vi har data med meningsfuldt indhold, er vi klar
       has_meaningful_data <- !is.null(data) && nrow(data) > 0 &&

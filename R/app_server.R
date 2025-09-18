@@ -207,7 +207,7 @@ app_server <- function(input, output, session) {
   setup_data_table(input, output, session, app_state, emit)
 
   ## Hjælpe observers (IMPORTANT: Must be set up before visualization for unified navigation)
-  app_data_reactive <- setup_helper_observers(input, output, session, obs_manager, app_state)
+  setup_helper_observers(input, output, session, obs_manager, app_state)
 
   ## Kolonne management logik
   # PHASE 4: Pass centralized state to column management - now uses unified event system
@@ -215,7 +215,7 @@ app_server <- function(input, output, session) {
   log_debug("Column management setup completed with unified event system", .context = "APP_SERVER")
 
   ## Visualiserings logik
-  visualization <- setup_visualization(input, output, session, app_state, app_data_reactive)
+  visualization <- setup_visualization(input, output, session, app_state)
 
   ## Download handlers (REMOVED - to be reimplemented later)
   # setup_download_handlers(input, output, session, app_state, visualization)
