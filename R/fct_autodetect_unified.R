@@ -151,9 +151,11 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
 
   col_names_lower <- tolower(col_names)
 
-  # X-column (date/time detection) - enhanced patterns
+  # X-column (date/time detection) - FASE 4: Enhanced tidsspecifikke patterns
   dato_patterns <- c("dato", "date", "tid", "time", "år", "year", "måned", "month",
-                     "uge", "week", "dag", "day", "periode", "period")
+                     "uge", "week", "dag", "day", "periode", "period", "kvartal", "quarter",
+                     "jan", "feb", "mar", "apr", "maj", "jun",
+                     "jul", "aug", "sep", "okt", "nov", "dec")
   for (pattern in dato_patterns) {
     dato_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
     if (length(dato_idx) > 0) {

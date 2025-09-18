@@ -278,12 +278,27 @@ score_column_candidates <- function(data, numeric_candidates, role = c("y_column
   # Sort by score (descending)
   scores <- sort(scores, decreasing = TRUE)
 
-  log_debug_kv(
-    role = role,
-    best_candidate = if (length(scores) > 0) names(scores)[1] else "none",
-    best_score = if (length(scores) > 0) round(scores[1], 3) else 0,
-    .context = "COLUMN_SCORING"
-  )
+  # FASE 4: Enhanced ranked logging for debugging
+  if (length(scores) > 0) {
+    # Log top 3 candidates with scores
+    top_candidates <- head(scores, 3)
+    candidates_info <- paste(names(top_candidates), " (", round(top_candidates, 3), ")", sep = "", collapse = ", ")
+
+    log_debug_kv(
+      role = role,
+      primary_choice = names(scores)[1],
+      primary_score = round(scores[1], 3),
+      top_candidates = candidates_info,
+      total_candidates = length(scores),
+      .context = "COLUMN_SCORING"
+    )
+  } else {
+    log_debug_kv(
+      role = role,
+      result = "no_candidates_found",
+      .context = "COLUMN_SCORING"
+    )
+  }
 
   return(scores)
 }
@@ -307,8 +322,16 @@ score_by_name_patterns <- function(col_name, role) {
       }
     }
 
+    # FASE 4: Enhanced rate/procent patterns
+    rate_patterns <- c("rate", "procent", "pct", "%", "andel", "del_af", "per_100", "per_1000", "ratio")
+    for (pattern in rate_patterns) {
+      if (grepl(pattern, col_lower)) {
+        return(0.8)  # High match for rate data
+      }
+    }
+
     # Partial matches
-    partial_patterns <- c("sum", "total", "rate", "procent", "pct")
+    partial_patterns <- c("sum", "total")
     for (pattern in partial_patterns) {
       if (grepl(pattern, col_lower)) {
         return(0.7)  # Good match
@@ -380,9 +403,13 @@ score_by_data_characteristics <- function(col_data, role) {
     }
   } else if (role == "n_column") {
     # N columns might be more stable
-    cv <- sd(clean_data) / mean(clean_data)
-    if (cv < 0.5) {  # Lower coefficient of variation
-      score <- score + 0.2
+    # FASE 4: Fix CV division-by-zero bug
+    mean_val <- mean(clean_data)
+    if (mean_val > 0) {  # Prevent division by zero
+      cv <- sd(clean_data) / mean_val
+      if (cv < 0.5) {  # Lower coefficient of variation
+        score <- score + 0.2
+      }
     }
   }
 
@@ -419,7 +446,7 @@ score_by_statistical_properties <- function(col_data, role) {
   if (sd_val > 0) score <- score + 0.2
 
   # Reasonable distribution (not too skewed)
-  if (length(clean_data) >= 5) {
+  if (length(clean_data) >= 5 && sd_val > 0) {  # FASE 4: Prevent division by zero
     # Simple skewness check
     median_val <- median(clean_data)
     if (abs(mean_val - median_val) / sd_val < 1) {  # Not too skewed
@@ -430,9 +457,12 @@ score_by_statistical_properties <- function(col_data, role) {
   # Role-specific properties
   if (role == "y_column") {
     # Y columns should have some variability for meaningful SPC
-    cv <- sd_val / mean_val
-    if (cv > 0.1 && cv < 2) {  # Reasonable coefficient of variation
-      score <- score + 0.3
+    # FASE 4: Fix CV division-by-zero bug
+    if (mean_val > 0) {  # Prevent division by zero
+      cv <- sd_val / mean_val
+      if (cv > 0.1 && cv < 2) {  # Reasonable coefficient of variation
+        score <- score + 0.3
+      }
     }
   } else if (role == "n_column") {
     # N columns often larger than Y columns (for rates)

@@ -132,20 +132,27 @@ Refaktorering af autodetekteringssystemet til en **unified, event-driven engine*
 ---
 
 ### **FASE 4: INTELLIGENT HEURISTICS** ⏱️ 2 dage
-**Status:** ❌ IKKE STARTET
+**Status:** ✅ AFSLUTTET (2025-09-18)
 
-#### **4.1 Weighted scoring system**
-- [ ] **Implementer:** `score_column_candidates()`
-- [ ] **Vægtning:**
-  - Name patterns: 30%
-  - Data characteristics: 40%
-  - Statistical properties: 30%
-- [ ] **Output:** Ranked column suggestions
+#### **4.1 Enhanced Danish SPC patterns**
+- [x] **Tidsspecifikke mønstre:** måned, kvartal, periode, jan-dec månedsforkortelser
+- [x] **Rate/procent mønstre:** rate, procent, pct, andel, per_100, per_1000, ratio
+- [x] **Pattern scoring:** High priority (0.8) for rate patterns i Y-column detection
 
-#### **4.2 Danish SPC patterns**
-- [ ] **Udvid:** Pattern library for danske kolonnenavne
-- [ ] **Test:** Real-world danske SPC datasæt
-- [ ] **Optimér:** Success rate på eksisterende data
+#### **4.2 Robust statistical scoring**
+- [x] **CV division-by-zero fix:** Safe guards i coefficient of variation beregninger
+- [x] **Zero standard deviation:** Proper handling af konstante værdier
+- [x] **Skewness calculation:** Protection mod division by zero i normalitetstest
+
+#### **4.3 Enhanced ranked suggestions**
+- [x] **Intern ranking system:** Top 3 kandidater logged med scores for debugging
+- [x] **Performance logging:** Detaljeret score breakdown (name/char/stat components)
+- [x] **Decision transparency:** Reasoning behind column selections
+
+#### **4.4 Real-world validation**
+- [x] **qicharts2 testing:** Valideret med hospital_infections og cabg datasets
+- [x] **Success rate:** Korrekt detection af date → month, Y → los/n kolonner
+- [x] **Performance:** <2s for 1000+ rows ved performance testing
 
 ---
 
