@@ -12,6 +12,7 @@ data/*.xlsx
 data/*.rds
 # Logs
 *.log
+logs/
 # OS specific
 .DS_Store
 Thumbs.db

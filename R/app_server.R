@@ -57,6 +57,25 @@ app_server <- function(input, output, session) {
   ui_service <- create_ui_update_service(session, app_state)
   log_debug("✅ UI update service initialized", "APP_SERVER")
 
+  # SHINYLOGS: Setup advanced web-based logging (if enabled)
+  if (should_enable_shinylogs()) {
+    log_debug("Setting up shinylogs advanced logging...", "APP_SERVER")
+    setup_shinylogs(
+      enable_tracking = TRUE,
+      enable_errors = TRUE,
+      enable_performances = TRUE,
+      log_directory = "logs/"
+    )
+    initialize_shinylogs_tracking(
+      session = session,
+      app_name = "SPC_Analysis_Tool"
+    )
+    # integrate_shinylogs_with_logging(session)  # Disabled - causes conflicts
+    log_info("✅ shinylogs advanced logging activated", "APP_SERVER")
+  } else {
+    log_debug("shinylogs disabled via environment variable", "APP_SERVER")
+  }
+
   # Take initial state snapshot - delay to avoid reactive context issues
   observe({
     isolate({
