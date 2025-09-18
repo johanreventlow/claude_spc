@@ -115,9 +115,6 @@ log_msg <- function(message, level = "INFO", component = NULL) {
 log_debug <- function(..., .context = NULL) {
   tryCatch({
     msg <- paste(..., collapse = " ")
-    if (!is.null(.context)) {
-      msg <- paste0("[", .context, "] ", msg)
-    }
     log_msg(msg, "DEBUG", component = .context)
   }, error = function(e) {
     # Fejlsikker fallback - aldrig crash renderPlot
@@ -166,4 +163,72 @@ log_warn <- function(message, component = NULL) {
 #' log_error("Kunne ikke læse fil", "FILE_UPLOAD")
 log_error <- function(message, component = NULL) {
   log_msg(message, "ERROR", component)
+}
+
+#' Log debug block start/stop med separator linjer
+#'
+#' @description Helper funktion til logging af debug blokke med visuelt adskilte
+#' start/stop sektioner. Erstatter hardcodede separator linjer i koden.
+#'
+#' @param context Kontekst tag for blokken (f.eks. "COLUMN_MGMT", "AUTO_DETECT")
+#' @param action Beskrivelse af handlingen (f.eks. "Starting column management", "Processing data")
+#' @param type Type af separator: "start", "stop", eller "both" (default)
+#' @export
+#'
+#' @examples
+#' log_debug_block("COLUMN_MGMT", "Starting column detection")
+#' # Kode her...
+#' log_debug_block("COLUMN_MGMT", "Column detection completed", type = "stop")
+log_debug_block <- function(context, action, type = "start") {
+  separator_line <- paste(rep("=", 43), collapse = "")
+
+  if (type %in% c("start", "both")) {
+    log_debug(separator_line, .context = context)
+    log_debug(action, .context = context)
+  }
+
+  if (type == "stop") {
+    log_debug(paste(action, "- completed"), .context = context)
+    log_debug(separator_line, .context = context)
+  }
+
+  if (type == "both") {
+    log_debug(separator_line, .context = context)
+  }
+}
+
+#' Log key-value pairs struktureret
+#'
+#' @description Helper funktion til logging af strukturerede key-value data.
+#' Understøtter både navngivne argumenter og lister.
+#'
+#' @param ... Navngivne argumenter der skal logges som key-value pairs
+#' @param .context Kontekst tag (f.eks. "DATA_PROC", "AUTO_DETECT")
+#' @param .list_data Optional liste med key-value data
+#' @export
+#'
+#' @examples
+#' log_debug_kv(trigger_value = 1, status = "active", .context = "DATA_TABLE")
+#' log_debug_kv(.list_data = list(rows = 100, cols = 5), .context = "DATA_PROC")
+log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
+  # Handle named arguments
+  named_args <- list(...)
+  if (length(named_args) > 0) {
+    for (key in names(named_args)) {
+      if (!is.null(key) && key != "") {
+        value <- named_args[[key]]
+        log_debug(paste0(key, ": ", as.character(value)), .context = .context)
+      }
+    }
+  }
+
+  # Handle list data
+  if (!is.null(.list_data) && is.list(.list_data)) {
+    for (key in names(.list_data)) {
+      if (!is.null(key) && key != "") {
+        value <- .list_data[[key]]
+        log_debug(paste0(key, ": ", as.character(value)), .context = .context)
+      }
+    }
+  }
 }

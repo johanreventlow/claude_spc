@@ -92,7 +92,7 @@ test_that("log level filtering virker korrekt", {
   expect_output(log_error("Error message", "TEST"), "ERROR.*TEST.*Error message")
   expect_output(log_warn("Warning message", "TEST"), "WARN.*TEST.*Warning message")
   expect_output(log_info("Info message", "TEST"), "INFO.*TEST.*Info message")
-  expect_output(log_debug("Debug message", "TEST"), "DEBUG.*TEST.*Debug message")
+  expect_output(log_debug("Debug message", .context = "TEST"), "DEBUG.*\\[TEST\\].*Debug message")
 
   # Gendan original level
   if (original_level == "") {
@@ -107,7 +107,7 @@ test_that("komponens-baseret tagging fungerer", {
   Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
 
   # Test med forskellige komponenter
-  expect_output(log_debug("Test message", "DATA_PROC"), "DEBUG.*\\[DATA_PROC\\].*Test message")
+  expect_output(log_debug("Test message", .context = "DATA_PROC"), "DEBUG.*\\[DATA_PROC\\].*Test message")
   expect_output(log_info("Test message", "AUTO_DETECT"), "INFO.*\\[AUTO_DETECT\\].*Test message")
   expect_output(log_warn("Test message", "FILE_UPLOAD"), "WARN.*\\[FILE_UPLOAD\\].*Test message")
   expect_output(log_error("Test message", "ERROR_HANDLING"), "ERROR.*\\[ERROR_HANDLING\\].*Test message")
@@ -187,4 +187,80 @@ test_that("logging system edge cases", {
   } else {
     Sys.setenv(SPC_LOG_LEVEL = original_level)
   }
+})
+
+test_that("log_debug_block funktionalitet", {
+  original_level <- Sys.getenv("SPC_LOG_LEVEL", "")
+  Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+
+  # Test start block
+  expect_output(log_debug_block("TEST_CONTEXT", "Starting test operation"),
+                "DEBUG.*\\[TEST_CONTEXT\\].*=====")
+  expect_output(log_debug_block("TEST_CONTEXT", "Starting test operation"),
+                "DEBUG.*\\[TEST_CONTEXT\\].*Starting test operation")
+
+  # Test stop block
+  expect_output(log_debug_block("TEST_CONTEXT", "Test operation", type = "stop"),
+                "DEBUG.*\\[TEST_CONTEXT\\].*Test operation - completed")
+
+  # Test both type
+  output <- capture.output(log_debug_block("TEST_CONTEXT", "Full test operation", type = "both"))
+  expect_true(length(output) == 3)  # Should have 3 lines: separator, action, separator
+  expect_match(output[1], "DEBUG.*\\[TEST_CONTEXT\\].*=====")
+  expect_match(output[2], "DEBUG.*\\[TEST_CONTEXT\\].*Full test operation")
+  expect_match(output[3], "DEBUG.*\\[TEST_CONTEXT\\].*=====")
+
+  # Gendan original level
+  if (original_level == "") {
+    Sys.unsetenv("SPC_LOG_LEVEL")
+  } else {
+    Sys.setenv(SPC_LOG_LEVEL = original_level)
+  }
+})
+
+test_that("log_debug_kv funktionalitet", {
+  original_level <- Sys.getenv("SPC_LOG_LEVEL", "")
+  Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+
+  # Test navngivne argumenter
+  expect_output(log_debug_kv(trigger_value = 1, status = "active", .context = "TEST"),
+                "DEBUG.*\\[TEST\\].*trigger_value: 1")
+  expect_output(log_debug_kv(trigger_value = 1, status = "active", .context = "TEST"),
+                "DEBUG.*\\[TEST\\].*status: active")
+
+  # Test liste data
+  test_list <- list(rows = 100, cols = 5, type = "data.frame")
+  expect_output(log_debug_kv(.list_data = test_list, .context = "TEST"),
+                "DEBUG.*\\[TEST\\].*rows: 100")
+  expect_output(log_debug_kv(.list_data = test_list, .context = "TEST"),
+                "DEBUG.*\\[TEST\\].*cols: 5")
+
+  # Test kombineret usage
+  output <- capture.output(log_debug_kv(direct_arg = "value", .list_data = list(list_arg = "list_value"), .context = "TEST"))
+  expect_true(length(output) == 2)  # Should have 2 lines
+  expect_match(output[1], "DEBUG.*\\[TEST\\].*direct_arg: value")
+  expect_match(output[2], "DEBUG.*\\[TEST\\].*list_arg: list_value")
+
+  # Test uden kontekst
+  expect_output(log_debug_kv(test_key = "test_value"), "DEBUG.*test_key: test_value")
+
+  # Test tomme argumenter (skal ikke crashe)
+  expect_silent(log_debug_kv(.context = "TEST"))
+
+  # Gendan original level
+  if (original_level == "") {
+    Sys.unsetenv("SPC_LOG_LEVEL")
+  } else {
+    Sys.setenv(SPC_LOG_LEVEL = original_level)
+  }
+})
+
+test_that("helper funktioner eksisterer og er tilgængelige", {
+  # Test at nye helper funktioner eksisterer
+  expect_true(exists("log_debug_block"))
+  expect_true(exists("log_debug_kv"))
+
+  # Test at de er funktioner
+  expect_type(log_debug_block, "closure")
+  expect_type(log_debug_kv, "closure")
 })

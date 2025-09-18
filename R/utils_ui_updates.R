@@ -31,7 +31,7 @@ create_ui_update_service <- function(session, app_state) {
   #' @param clear_selections If TRUE, clear all selections
   #'
   update_column_choices <- function(choices = NULL, selected = NULL, columns = c("x_column", "y_column", "n_column", "cl_column"), clear_selections = FALSE) {
-    cat("DEBUG: [UI_SERVICE] Updating column choices for:", paste(columns, collapse = ", "), "\n")
+    log_debug("Updating column choices for:", paste(columns, collapse = ", "), .context = "UI_SERVICE")
 
     # Generate choices from current data if not provided
     if (is.null(choices)) {
@@ -42,17 +42,17 @@ create_ui_update_service <- function(session, app_state) {
           c("", all_cols),
           c("Vælg kolonne...", all_cols)
         )
-        cat("DEBUG: [UI_SERVICE] Generated", length(all_cols), "column choices from current data\n")
+        log_debug("Generated", length(all_cols), "column choices from current data", .context = "UI_SERVICE")
       } else {
         choices <- setNames("", "Vælg kolonne...")
-        cat("DEBUG: [UI_SERVICE] No current data available, using empty choices\n")
+        log_debug("No current data available, using empty choices", .context = "UI_SERVICE")
       }
     }
 
     # Handle selections
     if (clear_selections) {
       selected <- setNames(rep("", length(columns)), columns)
-      cat("DEBUG: [UI_SERVICE] Clearing all selections\n")
+      log_debug("Clearing all selections", .context = "UI_SERVICE")
     }
 
     # Update each column input
@@ -60,11 +60,11 @@ create_ui_update_service <- function(session, app_state) {
       for (col in columns) {
         selected_value <- if (!is.null(selected) && col %in% names(selected)) selected[[col]] else ""
         updateSelectizeInput(session, col, choices = choices, selected = selected_value)
-        cat("DEBUG: [UI_SERVICE] Updated", col, "with selected:", selected_value, "\n")
+        log_debug("Updated", col, "with selected:", selected_value, .context = "UI_SERVICE")
       }
-      cat("DEBUG: [UI_SERVICE] ✅ Column choices updated successfully\n")
+      log_debug("✅ Column choices updated successfully", .context = "UI_SERVICE")
     }, error = function(e) {
-      cat("DEBUG: [UI_SERVICE] ❌ Error updating column choices:", e$message, "\n")
+      log_error("Error updating column choices:", e$message, "UI_SERVICE")
     })
   }
 
@@ -77,7 +77,7 @@ create_ui_update_service <- function(session, app_state) {
   #' @param fields Vector of field names to update. If NULL, updates all available fields
   #'
   update_form_fields <- function(metadata, fields = NULL) {
-    cat("DEBUG: [UI_SERVICE] Updating form fields from metadata\n")
+    log_debug("Updating form fields from metadata", .context = "UI_SERVICE")
 
     if (is.null(fields)) {
       # Default fields to update
@@ -103,12 +103,12 @@ create_ui_update_service <- function(session, app_state) {
             } else if (field %in% c("unit_select", "chart_type", "x_column", "y_column", "n_column", "y_axis_unit")) {
               updateSelectizeInput(session, field, selected = metadata[[field]])
             }
-            cat("DEBUG: [UI_SERVICE] Updated", field, "to:", metadata[[field]], "\n")
+            log_debug("Updated", field, "to:", metadata[[field]], .context = "UI_SERVICE")
           }
         }
-        cat("DEBUG: [UI_SERVICE] ✅ Form fields updated successfully\n")
+        log_debug("✅ Form fields updated successfully", .context = "UI_SERVICE")
       }, error = function(e) {
-        cat("DEBUG: [UI_SERVICE] ❌ Error updating form fields:", e$message, "\n")
+        log_error("Error updating form fields:", e$message, "UI_SERVICE")
       })
     })
   }
@@ -119,7 +119,7 @@ create_ui_update_service <- function(session, app_state) {
   #' Used for "Start ny session" and similar reset operations.
   #'
   reset_form_fields <- function() {
-    cat("DEBUG: [UI_SERVICE] Resetting form fields to defaults\n")
+    log_debug("Resetting form fields to defaults", .context = "UI_SERVICE")
 
     isolate({
       tryCatch({
@@ -137,9 +137,9 @@ create_ui_update_service <- function(session, app_state) {
         # Reset column choices (will be empty until data is loaded)
         update_column_choices(clear_selections = TRUE)
 
-        cat("DEBUG: [UI_SERVICE] ✅ Form fields reset successfully\n")
+        log_debug("✅ Form fields reset successfully", .context = "UI_SERVICE")
       }, error = function(e) {
-        cat("DEBUG: [UI_SERVICE] ❌ Error resetting form fields:", e$message, "\n")
+        log_error("Error resetting form fields:", e$message, "UI_SERVICE")
       })
     })
   }
@@ -155,13 +155,13 @@ create_ui_update_service <- function(session, app_state) {
     tryCatch({
       if (show) {
         shinyjs::show(element_id)
-        cat("DEBUG: [UI_SERVICE] Showed element:", element_id, "\n")
+        log_debug("Showed element:", element_id, .context = "UI_SERVICE")
       } else {
         shinyjs::hide(element_id)
-        cat("DEBUG: [UI_SERVICE] Hid element:", element_id, "\n")
+        log_debug("Hid element:", element_id, .context = "UI_SERVICE")
       }
     }, error = function(e) {
-      cat("DEBUG: [UI_SERVICE] ❌ Error toggling element", element_id, ":", e$message, "\n")
+      log_error("Error toggling element", element_id, ":", e$message, "UI_SERVICE")
     })
   }
 
@@ -173,7 +173,7 @@ create_ui_update_service <- function(session, app_state) {
   #' @param show_feedback Whether to show validation feedback to the user
   #'
   validate_form_fields <- function(field_rules, show_feedback = TRUE) {
-    cat("DEBUG: [UI_SERVICE] Validating form fields\n")
+    log_debug("Validating form fields", .context = "UI_SERVICE")
 
     validation_results <- list(valid = TRUE, errors = list())
 
@@ -223,10 +223,10 @@ create_ui_update_service <- function(session, app_state) {
         }
       }
 
-      cat("DEBUG: [UI_SERVICE] Form validation completed, valid:", validation_results$valid, "\n")
+      log_debug("Form validation completed, valid:", validation_results$valid, .context = "UI_SERVICE")
 
     }, error = function(e) {
-      cat("DEBUG: [UI_SERVICE] ❌ Error during form validation:", e$message, "\n")
+      log_error("Error during form validation:", e$message, "UI_SERVICE")
       validation_results$valid <- FALSE
       validation_results$errors[["general"]] <- "Validationsfejl"
     })
@@ -244,7 +244,7 @@ create_ui_update_service <- function(session, app_state) {
   #' @param modal Whether to show as modal dialog instead of notification
   #'
   show_user_feedback <- function(message, type = "info", duration = 3, modal = FALSE) {
-    cat("DEBUG: [UI_SERVICE] Showing user feedback:", type, "-", message, "\n")
+    log_debug("Showing user feedback:", type, "-", message, .context = "UI_SERVICE")
 
     tryCatch({
       if (modal) {
@@ -272,10 +272,10 @@ create_ui_update_service <- function(session, app_state) {
         showNotification(message, type = shiny_type, duration = duration)
       }
 
-      cat("DEBUG: [UI_SERVICE] ✅ User feedback shown successfully\n")
+      log_debug("✅ User feedback shown successfully", .context = "UI_SERVICE")
 
     }, error = function(e) {
-      cat("DEBUG: [UI_SERVICE] ❌ Error showing user feedback:", e$message, "\n")
+      log_error("Error showing user feedback:", e$message, "UI_SERVICE")
     })
   }
 
@@ -286,7 +286,7 @@ create_ui_update_service <- function(session, app_state) {
   #' @param conditions Named list of conditions and corresponding UI updates
   #'
   update_ui_conditionally <- function(conditions) {
-    cat("DEBUG: [UI_SERVICE] Updating UI conditionally based on", length(conditions), "conditions\n")
+    log_debug("Updating UI conditionally based on", length(conditions), "conditions", .context = "UI_SERVICE")
 
     tryCatch({
       for (condition_name in names(conditions)) {
@@ -299,7 +299,7 @@ create_ui_update_service <- function(session, app_state) {
           condition_spec$condition
         }
 
-        cat("DEBUG: [UI_SERVICE] Condition", condition_name, ":", condition_met, "\n")
+        log_debug("Condition", condition_name, ":", condition_met, .context = "UI_SERVICE")
 
         if (condition_met) {
           # Execute actions for true condition
@@ -335,10 +335,10 @@ create_ui_update_service <- function(session, app_state) {
         }
       }
 
-      cat("DEBUG: [UI_SERVICE] ✅ Conditional UI updates completed\n")
+      log_debug("✅ Conditional UI updates completed", .context = "UI_SERVICE")
 
     }, error = function(e) {
-      cat("DEBUG: [UI_SERVICE] ❌ Error in conditional UI updates:", e$message, "\n")
+      log_error("Error in conditional UI updates:", e$message, "UI_SERVICE")
     })
   }
 
@@ -368,7 +368,7 @@ add_ui_update_events <- function(app_state) {
   app_state$events$form_reset_needed <- 0L
   app_state$events$form_restore_needed <- 0L
 
-  cat("DEBUG: [UI_SERVICE] UI update events added to app_state\n")
+  log_debug("UI update events added to app_state", .context = "UI_SERVICE")
   return(app_state)
 }
 
@@ -384,31 +384,31 @@ add_ui_update_emit_functions <- function(emit, app_state) {
   emit$ui_update_needed <- function() {
     isolate({
       app_state$events$ui_update_needed <- app_state$events$ui_update_needed + 1L
-      cat("DEBUG: [EVENT] ui_update_needed emitted:", app_state$events$ui_update_needed, "\n")
+      log_debug("ui_update_needed emitted:", app_state$events$ui_update_needed, .context = "EVENT")
     })
   }
 
   emit$column_choices_changed <- function() {
     isolate({
       app_state$events$column_choices_changed <- app_state$events$column_choices_changed + 1L
-      cat("DEBUG: [EVENT] column_choices_changed emitted:", app_state$events$column_choices_changed, "\n")
+      log_debug("column_choices_changed emitted:", app_state$events$column_choices_changed, .context = "EVENT")
     })
   }
 
   emit$form_reset_needed <- function() {
     isolate({
       app_state$events$form_reset_needed <- app_state$events$form_reset_needed + 1L
-      cat("DEBUG: [EVENT] form_reset_needed emitted:", app_state$events$form_reset_needed, "\n")
+      log_debug("form_reset_needed emitted:", app_state$events$form_reset_needed, .context = "EVENT")
     })
   }
 
   emit$form_restore_needed <- function() {
     isolate({
       app_state$events$form_restore_needed <- app_state$events$form_restore_needed + 1L
-      cat("DEBUG: [EVENT] form_restore_needed emitted:", app_state$events$form_restore_needed, "\n")
+      log_debug("form_restore_needed emitted:", app_state$events$form_restore_needed, .context = "EVENT")
     })
   }
 
-  cat("DEBUG: [UI_SERVICE] UI update emit functions added\n")
+  log_debug("UI update emit functions added", .context = "UI_SERVICE")
   return(emit)
 }

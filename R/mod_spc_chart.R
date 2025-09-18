@@ -221,7 +221,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # UNIFIED STATE: Always use app_state for visualization state management
     log_debug("Using unified app_state for visualization state", "MODULE")
-    cat("DEBUG: [MODULE] Using app_state$visualization for plot state management\n")
+    log_debug("Using app_state$visualization for plot state management", .context = "MODULE")
     log_debug("✅ State management initialized", "MODULE")
 
     # UNIFIED STATE: Helper functions for app_state visualization management
@@ -315,11 +315,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Check if we can use cached plot
       if (!is.null(plot_cache()) && !is.null(plot_cache_key()) &&
           plot_cache_key() == current_cache_key) {
-        cat("DEBUG: [PLOT_CACHE] Using cached plot\n")
+        log_debug("Using cached plot", .context = "PLOT_CACHE")
         return(plot_cache())
       }
 
-      cat("DEBUG: [PLOT_CACHE] Cache miss - generating new plot\n")
+      log_debug("Cache miss - generating new plot", .context = "PLOT_CACHE")
 
       # Clean state management - only set computing when actually needed
       # PHASE 4: Unified state assignment using helper functions
@@ -430,7 +430,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           # Cache the plot with current key
           plot_cache(plot)
           plot_cache_key(current_cache_key)
-          cat("DEBUG: [PLOT_CACHE] Plot cached with key:", substr(current_cache_key, 1, 8), "\n")
+          log_debug("Plot cached with key:", substr(current_cache_key, 1, 8), .context = "PLOT_CACHE")
 
           return(plot)
         },
@@ -442,7 +442,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           # Invalidate cache on error
           plot_cache(NULL)
           plot_cache_key(NULL)
-          cat("DEBUG: [PLOT_CACHE] Cache invalidated due to error\n")
+          log_debug("Cache invalidated due to error", .context = "PLOT_CACHE")
 
           return(NULL)
         }
@@ -454,8 +454,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     ## Plot Messages Logic
     # Simple messages function for overlay display
     output$plot_messages <- renderUI({
-      cat("DEBUG: [PLOT_VISIBILITY] ===========================================\n")
-      cat("DEBUG: [PLOT_VISIBILITY] Rendering plot messages\n")
+      log_debug_block("PLOT_VISIBILITY", "Rendering plot messages")
 
       # Safe data access - don't use req() here as we need to handle NULL states
       data <- module_data_reactive()
@@ -463,14 +462,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       plot <- spc_plot()
       plot_ready <- get_plot_state("plot_ready")
 
-      cat("DEBUG: [PLOT_VISIBILITY] Data is null:", is.null(data), "\n")
-      cat("DEBUG: [PLOT_VISIBILITY] Config is null:", is.null(config), "\n")
-      cat("DEBUG: [PLOT_VISIBILITY] Plot is null:", is.null(plot), "\n")
-      cat("DEBUG: [PLOT_VISIBILITY] Plot ready:", plot_ready, "\n")
+      log_debug_kv(
+        data_is_null = is.null(data),
+        config_is_null = is.null(config),
+        plot_is_null = is.null(plot),
+        .context = "PLOT_VISIBILITY"
+      )
+      log_debug_kv(plot_ready = plot_ready, .context = "PLOT_VISIBILITY")
 
       # Smart besked logik baseret på app tilstand
       if (is.null(data) || nrow(data) == 0) {
-        cat("DEBUG: [PLOT_VISIBILITY] Showing welcome message\n")
+        log_debug("Showing welcome message", .context = "PLOT_VISIBILITY")
         return(createPlotMessage("welcome"))
       }
 
@@ -482,17 +484,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       # Hvis tabel er helt tom (alle NA undtagen Skift kolonne), vis velkomst besked
       if (!has_meaningful_data) {
-        cat("DEBUG: [PLOT_VISIBILITY] No meaningful data, showing welcome\n")
+        log_debug("No meaningful data, showing welcome", .context = "PLOT_VISIBILITY")
         return(createPlotMessage("welcome"))
       }
 
       if (is.null(config) || is.null(config$y_col)) {
-        cat("DEBUG: [PLOT_VISIBILITY] Config needed\n")
+        log_debug("Config needed", .context = "PLOT_VISIBILITY")
         return(createPlotMessage("config_needed"))
       }
 
       if (is.null(plot)) {
-        cat("DEBUG: [PLOT_VISIBILITY] Plot is null, showing error message\n")
+        log_debug("Plot is null, showing error message", .context = "PLOT_VISIBILITY")
         # Bestem specifik fejl type
         plot_warnings <- get_plot_state("plot_warnings")
         if (length(plot_warnings) > 0) {
@@ -517,20 +519,19 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
 
       if (!inherits(plot, "ggplot")) {
-        cat("DEBUG: [PLOT_VISIBILITY] Invalid plot object\n")
+        log_debug("Invalid plot object", .context = "PLOT_VISIBILITY")
         return(createPlotMessage("technical_error"))
       }
 
       # If we get here, we should show the plot, so return NULL (no message)
-      cat("DEBUG: [PLOT_VISIBILITY] Plot ready, returning NULL (no message)\n")
+      log_debug("Plot ready, returning NULL (no message)", .context = "PLOT_VISIBILITY")
       return(NULL)
     })
 
     ## Plot Visibility Control
     # Control visibility of plot vs. message overlay
     observe({
-      cat("DEBUG: [PLOT_VISIBILITY] ===========================================\n")
-      cat("DEBUG: [PLOT_VISIBILITY] Checking plot visibility conditions\n")
+      log_debug_block("PLOT_VISIBILITY", "Checking plot visibility conditions")
 
       # Get current state
       data <- module_data_reactive()
@@ -547,15 +548,15 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                    inherits(plot, "ggplot") &&
                    plot_ready
 
-      cat("DEBUG: [PLOT_VISIBILITY] Show plot condition:", show_plot, "\n")
+      log_debug_kv(show_plot_condition = show_plot, .context = "PLOT_VISIBILITY")
 
       # Toggle visibility using shinyjs
       if (show_plot) {
-        cat("DEBUG: [PLOT_VISIBILITY] ✅ Showing plot, hiding messages\n")
+        log_debug("✅ Showing plot, hiding messages", .context = "PLOT_VISIBILITY")
         shinyjs::show("spc_plot_actual")
         shinyjs::hide("message_overlay")
       } else {
-        cat("DEBUG: [PLOT_VISIBILITY] ❌ Hiding plot, showing messages\n")
+        log_debug("❌ Hiding plot, showing messages", .context = "PLOT_VISIBILITY")
         shinyjs::hide("spc_plot_actual")
         shinyjs::show("message_overlay")
       }

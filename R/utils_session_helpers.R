@@ -16,9 +16,12 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   app_data_reactive <- eventReactive(app_state$navigation$trigger, {
     current_data_value <- app_state$data$current_data
 
-    cat("DEBUG: [NAVIGATION_UNIFIED] app_data_reactive triggered\n")
-    cat("DEBUG: [NAVIGATION_UNIFIED] trigger_value:", app_state$navigation$trigger, "\n")
-    cat("DEBUG: [NAVIGATION_UNIFIED] current_data is null:", is.null(current_data_value), "\n")
+    log_debug_kv(
+      app_data_reactive_triggered = TRUE,
+      trigger_value = app_state$navigation$trigger,
+      current_data_is_null = is.null(current_data_value),
+      .context = "NAVIGATION_UNIFIED"
+    )
 
     # Return the actual data from unified state
     return(current_data_value)
@@ -30,11 +33,11 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     # This now properly triggers when navigation events are emitted
     current_data_check <- app_data_reactive()
 
-    cat("DEBUG: [NAVIGATION] Evaluating dataLoaded status\n")
-    cat("DEBUG: [NAVIGATION] current_data_check is null:", is.null(current_data_check), "\n")
+    log_debug("Evaluating dataLoaded status", .context = "NAVIGATION")
+    log_debug("current_data_check is null:", is.null(current_data_check), .context = "NAVIGATION")
 
     result <- if (is.null(current_data_check)) {
-      cat("DEBUG: [NAVIGATION] No current data - showing welcome screen\n")
+      log_debug("No current data - showing welcome screen", .context = "NAVIGATION")
       "FALSE"
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
@@ -64,16 +67,19 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
 
       user_has_started <- file_uploaded_check || user_started_session_check %||% FALSE
 
-      cat("DEBUG: [NAVIGATION] meaningful_data:", meaningful_data, "\n")
-      cat("DEBUG: [NAVIGATION] file_uploaded_check:", file_uploaded_check, "\n")
-      cat("DEBUG: [NAVIGATION] user_started_session_check:", user_started_session_check, "\n")
-      cat("DEBUG: [NAVIGATION] user_has_started:", user_has_started, "\n")
+      log_debug_kv(
+        meaningful_data = meaningful_data,
+        file_uploaded_check = file_uploaded_check,
+        user_started_session_check = user_started_session_check,
+        user_has_started = user_has_started,
+        .context = "NAVIGATION"
+      )
 
       final_result <- if (meaningful_data || user_has_started) "TRUE" else "FALSE"
-      cat("DEBUG: [NAVIGATION] Final dataLoaded result:", final_result, "\n")
+      log_debug("Final dataLoaded result:", final_result, .context = "NAVIGATION")
       final_result
     }
-    cat("DEBUG: [NAVIGATION] Returning dataLoaded:", result, "\n")
+    log_debug("Returning dataLoaded:", result, .context = "NAVIGATION")
     result
   })
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)

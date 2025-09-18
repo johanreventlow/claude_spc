@@ -28,21 +28,21 @@ NULL
 #' and appropriate priorities to ensure correct execution order.
 #'
 setup_event_listeners <- function(app_state, emit, input, output, session, ui_service = NULL) {
-  cat("DEBUG: [EVENT_SYSTEM] Setting up unified event listeners\n")
+  log_debug("Setting up unified event listeners", .context = "EVENT_SYSTEM")
 
   # DATA LIFECYCLE EVENTS
   observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
-    cat("DEBUG: [EVENT] data_loaded event received\n")
+    log_debug("data_loaded event received", .context = "EVENT")
 
     # Trigger auto-detection after data is loaded
     if (!is.null(app_state$data$current_data)) {
-      cat("DEBUG: [EVENT] Data available, emitting auto_detection_started\n")
+      log_debug("Data available, emitting auto_detection_started", .context = "EVENT")
       emit$auto_detection_started()
     }
   })
 
   observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
-    cat("DEBUG: [EVENT] data_changed event received\n")
+    log_debug("data_changed event received", .context = "EVENT")
 
     # Update column choices when data changes
     update_column_choices_unified(app_state, input, output, session, ui_service)
@@ -50,7 +50,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # AUTO-DETECTION EVENTS
   observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-    cat("DEBUG: [EVENT] auto_detection_started event received\n")
+    log_debug("auto_detection_started event received", .context = "EVENT")
 
     # Set auto-detection in progress
     app_state$columns$auto_detect_in_progress <- TRUE
@@ -61,13 +61,13 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         auto_detect_and_update_columns_unified(app_state, emit)
       }
     }, error = function(e) {
-      cat("DEBUG: [EVENT] Auto-detection error:", e$message, "\n")
+      log_debug("Auto-detection error:", e$message, .context = "EVENT")
       app_state$columns$auto_detect_in_progress <- FALSE
     })
   })
 
   observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-    cat("DEBUG: [EVENT] auto_detection_completed event received\n")
+    log_debug("auto_detection_completed event received", .context = "EVENT")
 
     # Update state
     app_state$columns$auto_detect_in_progress <- FALSE
@@ -75,14 +75,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
     # Trigger UI sync if columns were detected
     if (!is.null(app_state$columns$auto_detect_results)) {
-      cat("DEBUG: [EVENT] Auto-detection results available, emitting ui_sync_needed\n")
+      log_debug("Auto-detection results available, emitting ui_sync_needed", .context = "EVENT")
       emit$ui_sync_needed()
     }
   })
 
   # UI SYNCHRONIZATION EVENTS
   observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
-    cat("DEBUG: [EVENT] ui_sync_needed event received\n")
+    log_debug("ui_sync_needed event received", .context = "EVENT")
 
     # Perform UI synchronization
     sync_ui_with_columns_unified(app_state, input, output, session, ui_service)
@@ -92,7 +92,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
-    cat("DEBUG: [EVENT] ui_sync_completed event received\n")
+    log_debug("ui_sync_completed event received", .context = "EVENT")
 
     # Update timestamp
     app_state$columns$ui_sync_last_time <- Sys.time()
@@ -103,27 +103,27 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # NAVIGATION EVENTS
   observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
-    cat("DEBUG: [EVENT] navigation_changed event received\n")
+    log_debug("navigation_changed event received", .context = "EVENT")
 
     # Increment navigation trigger to update all eventReactive components
     app_state$navigation$trigger <- app_state$navigation$trigger + 1L
-    cat("DEBUG: [EVENT] Navigation trigger incremented to:", app_state$navigation$trigger, "\n")
+    log_debug("Navigation trigger incremented to:", app_state$navigation$trigger, .context = "EVENT")
   })
 
   # TEST MODE EVENTS
   observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-    cat("DEBUG: [EVENT] test_mode_ready event received\n")
+    log_debug("test_mode_ready event received", .context = "EVENT")
 
     # In test mode, immediately start auto-detection
     if (!is.null(app_state$data$current_data)) {
-      cat("DEBUG: [EVENT] Test mode: emitting auto_detection_started\n")
+      log_debug("Test mode: emitting auto_detection_started", .context = "EVENT")
       emit$auto_detection_started()
     }
   })
 
   # SESSION LIFECYCLE EVENTS
   observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
-    cat("DEBUG: [EVENT] session_reset event received\n")
+    log_debug("session_reset event received", .context = "EVENT")
 
     # Reset all state to initial values
     app_state$data$current_data <- NULL
@@ -131,7 +131,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     app_state$columns$auto_detect_completed <- FALSE
     app_state$columns$auto_detect_results <- NULL
 
-    cat("DEBUG: [EVENT] Session state reset completed\n")
+    log_debug("Session state reset completed", .context = "EVENT")
   })
 
   # ERROR HANDLING EVENTS ===================================================
@@ -140,12 +140,18 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$highest, {
     error_info <- app_state$errors$last_error
 
-    cat("DEBUG: [ERROR_EVENT] General error event received\n")
+    log_debug("General error event received", .context = "ERROR_EVENT")
 
     # Centralized error logging with context
-    debug_log("Error event triggered", "ERROR_SYSTEM", level = "ERROR",
-              context = error_info,
-              session_id = if(!is.null(session)) session$token else NULL)
+    log_error("Error event triggered", .context = "ERROR_SYSTEM")
+    if (!is.null(error_info)) {
+      log_debug_kv(
+        error_type = error_info$type %||% "unknown",
+        error_message = error_info$message %||% "no message",
+        session_id = if(!is.null(session)) session$token else "no session",
+        .context = "ERROR_SYSTEM"
+      )
+    }
 
     # Emit recovery attempts if appropriate
     if (!is.null(error_info) && !is.null(emit)) {
@@ -160,12 +166,12 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   observeEvent(app_state$events$processing_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
     error_info <- app_state$errors$last_error
 
-    cat("DEBUG: [ERROR_EVENT] Processing error event received\n")
+    log_debug("Processing error event received", .context = "ERROR_EVENT")
 
     # For processing errors, we might want to trigger data validation
     if (!is.null(error_info) && !is.null(emit)) {
       if (grepl("data|processing|convert", error_info$message, ignore.case = TRUE)) {
-        cat("DEBUG: [ERROR_RECOVERY] Suggesting data validation after processing error\n")
+        log_debug("Suggesting data validation after processing error", .context = "ERROR_RECOVERY")
         # Could emit validation_needed event if we had one
       }
     }
@@ -175,11 +181,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   observeEvent(app_state$events$validation_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
     error_info <- app_state$errors$last_error
 
-    cat("DEBUG: [ERROR_EVENT] Validation error event received\n")
+    log_debug("Validation error event received", .context = "ERROR_EVENT")
 
     # For validation errors, clear problematic state
     if (!is.null(error_info) && !is.null(app_state)) {
-      cat("DEBUG: [ERROR_RECOVERY] Clearing validation state after error\n")
+      log_debug("Clearing validation state after error", .context = "ERROR_RECOVERY")
       # Reset validation-related state if needed
     }
   })
@@ -188,11 +194,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   observeEvent(app_state$events$network_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$medium, {
     error_info <- app_state$errors$last_error
 
-    cat("DEBUG: [ERROR_EVENT] Network error event received\n")
+    log_debug("Network error event received", .context = "ERROR_EVENT")
 
     # For network errors (file I/O), we might want to retry or suggest file check
     if (!is.null(error_info) && !is.null(emit)) {
-      cat("DEBUG: [ERROR_RECOVERY] Network error suggests file operation issue\n")
+      log_debug("Network error suggests file operation issue", .context = "ERROR_RECOVERY")
     }
   })
 
@@ -200,57 +206,60 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
     error_info <- app_state$errors$last_error
 
-    cat("DEBUG: [ERROR_EVENT] Recovery completed event received\n")
+    log_debug("Recovery completed event received", .context = "ERROR_EVENT")
 
     # Update recovery timestamp
     app_state$errors$last_recovery_time <- Sys.time()
 
     # Log successful recovery
-    debug_log("Error recovery completed", "ERROR_SYSTEM", level = "INFO",
-              context = list(recovery_time = Sys.time()),
-              session_id = if(!is.null(session)) session$token else NULL)
+    log_info("Error recovery completed", .context = "ERROR_SYSTEM")
+    log_debug_kv(
+      recovery_time = as.character(Sys.time()),
+      session_id = if(!is.null(session)) session$token else "no session",
+      .context = "ERROR_SYSTEM"
+    )
   })
 
   # UI UPDATE EVENTS ========================================================
 
   # Column choices changed event listener
   observeEvent(app_state$events$column_choices_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-    cat("DEBUG: [UI_EVENT] Column choices changed event received\n")
+    log_debug("Column choices changed event received", .context = "UI_EVENT")
 
     if (!is.null(ui_service)) {
       ui_service$update_column_choices()
     } else {
-      cat("DEBUG: [UI_EVENT] No UI service available for column choices update\n")
+      log_debug("No UI service available for column choices update", .context = "UI_EVENT")
     }
   })
 
   # Form reset needed event listener
   observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-    cat("DEBUG: [UI_EVENT] Form reset needed event received\n")
+    log_debug("Form reset needed event received", .context = "UI_EVENT")
 
     if (!is.null(ui_service)) {
       ui_service$reset_form_fields()
     } else {
-      cat("DEBUG: [UI_EVENT] No UI service available for form reset\n")
+      log_debug("No UI service available for form reset", .context = "UI_EVENT")
     }
   })
 
   # Form restore needed event listener
   observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-    cat("DEBUG: [UI_EVENT] Form restore needed event received\n")
+    log_debug("Form restore needed event received", .context = "UI_EVENT")
 
     # For form restore, we need metadata from app_state
     # This could be triggered by session restore events
     if (!is.null(ui_service) && !is.null(app_state$session$restore_metadata)) {
       ui_service$update_form_fields(app_state$session$restore_metadata)
     } else {
-      cat("DEBUG: [UI_EVENT] No UI service or metadata available for form restore\n")
+      log_debug("No UI service or metadata available for form restore", .context = "UI_EVENT")
     }
   })
 
   # General UI update needed event listener
   observeEvent(app_state$events$ui_update_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-    cat("DEBUG: [UI_EVENT] General UI update needed event received\n")
+    log_debug("General UI update needed event received", .context = "UI_EVENT")
 
     # This could trigger multiple UI updates
     if (!is.null(ui_service)) {
@@ -261,7 +270,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
   })
 
-  cat("DEBUG: [EVENT_SYSTEM] ✅ All event listeners registered (including error handling and UI updates)\n")
+  log_debug("✅ All event listeners registered (including error handling and UI updates)", .context = "EVENT_SYSTEM")
 }
 
 #' Auto-detect and update columns (Unified Event Version)
@@ -273,17 +282,20 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 #' @param emit The emit API for triggering events
 #'
 auto_detect_and_update_columns_unified <- function(app_state, emit) {
-  cat("DEBUG: [AUTO_DETECT_UNIFIED] Starting column auto-detection\n")
+  log_debug_block("AUTO_DETECT_UNIFIED", "Starting column auto-detection")
 
   if (is.null(app_state$data$current_data)) {
-    cat("DEBUG: [AUTO_DETECT_UNIFIED] No data available\n")
+    log_debug("No data available", .context = "AUTO_DETECT_UNIFIED")
     return()
   }
 
   data <- app_state$data$current_data
   col_names <- names(data)
 
-  cat("DEBUG: [AUTO_DETECT_UNIFIED] Analyzing columns:", paste(col_names, collapse = ", "), "\n")
+  log_debug_kv(
+    analyzing_columns = paste(col_names, collapse = ", "),
+    .context = "AUTO_DETECT_UNIFIED"
+  )
 
   # Simplified column detection logic
   results <- list(
@@ -300,19 +312,19 @@ auto_detect_and_update_columns_unified <- function(app_state, emit) {
     # Date column detection
     if (is.null(results$x_column) && any(grepl("dato|date|tid|time", col_lower))) {
       results$x_column <- col
-      cat("DEBUG: [AUTO_DETECT_UNIFIED] Found x_column:", col, "\n")
+      log_debug_kv(found_x_column = col, .context = "AUTO_DETECT_UNIFIED")
     }
 
     # Count column detection
     if (is.null(results$y_column) && any(grepl("antal|count|værdi|value", col_lower))) {
       results$y_column <- col
-      cat("DEBUG: [AUTO_DETECT_UNIFIED] Found y_column:", col, "\n")
+      log_debug_kv(found_y_column = col, .context = "AUTO_DETECT_UNIFIED")
     }
 
     # Denominator column detection
     if (is.null(results$n_column) && any(grepl("nævner|denom|total", col_lower))) {
       results$n_column <- col
-      cat("DEBUG: [AUTO_DETECT_UNIFIED] Found n_column:", col, "\n")
+      log_debug_kv(found_n_column = col, .context = "AUTO_DETECT_UNIFIED")
     }
   }
 
@@ -326,7 +338,7 @@ auto_detect_and_update_columns_unified <- function(app_state, emit) {
   if (!is.null(results$n_column)) app_state$columns$n_column <- results$n_column
   if (!is.null(results$cl_column)) app_state$columns$cl_column <- results$cl_column
 
-  cat("DEBUG: [AUTO_DETECT_UNIFIED] ✅ Auto-detection completed\n")
+  log_debug("✅ Auto-detection completed", .context = "AUTO_DETECT_UNIFIED")
 
   # Emit completion event
   emit$auto_detection_completed()
@@ -343,10 +355,10 @@ auto_detect_and_update_columns_unified <- function(app_state, emit) {
 #' @param session Shiny session
 #'
 sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_service = NULL) {
-  cat("DEBUG: [UI_SYNC_UNIFIED] Starting UI synchronization\n")
+  log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
 
   if (is.null(app_state$data$current_data)) {
-    cat("DEBUG: [UI_SYNC_UNIFIED] No data available for UI sync\n")
+    log_debug("No data available for UI sync", .context = "UI_SYNC_UNIFIED")
     return()
   }
 
@@ -367,35 +379,36 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
       )
 
       ui_service$update_column_choices(choices = col_choices, selected = selected_columns)
-      cat("DEBUG: [UI_SYNC_UNIFIED] ✅ Used centralized ui_service for column sync\n")
+      log_debug("✅ Used centralized ui_service for column sync", .context = "UI_SYNC_UNIFIED")
     } else {
       # Fallback to direct updates
       if (!is.null(results$x_column)) {
         updateSelectInput(session, "x_column",
                          choices = col_names,
                          selected = results$x_column)
-        cat("DEBUG: [UI_SYNC_UNIFIED] Updated x_column UI:", results$x_column, "\n")
+        log_debug_kv(updated_x_column_ui = results$x_column, .context = "UI_SYNC_UNIFIED")
       }
 
       if (!is.null(results$y_column)) {
         updateSelectInput(session, "y_column",
                          choices = col_names,
                          selected = results$y_column)
-        cat("DEBUG: [UI_SYNC_UNIFIED] Updated y_column UI:", results$y_column, "\n")
+        log_debug_kv(updated_y_column_ui = results$y_column, .context = "UI_SYNC_UNIFIED")
       }
 
       if (!is.null(results$n_column)) {
         updateSelectInput(session, "n_column",
                          choices = c("Ingen" = "", col_names),
                          selected = results$n_column)
-        cat("DEBUG: [UI_SYNC_UNIFIED] Updated n_column UI:", results$n_column, "\n")
+        log_debug_kv(updated_n_column_ui = results$n_column, .context = "UI_SYNC_UNIFIED")
       }
 
-      cat("DEBUG: [UI_SYNC_UNIFIED] ✅ UI synchronization completed\n")
+      log_debug("✅ UI synchronization completed", .context = "UI_SYNC_UNIFIED")
     }
 
   }, error = function(e) {
-    cat("DEBUG: [UI_SYNC_UNIFIED] UI sync error:", e$message, "\n")
+    log_error("UI sync error", .context = "UI_SYNC_UNIFIED")
+    log_debug_kv(error_message = e$message, .context = "UI_SYNC_UNIFIED")
   })
 }
 
@@ -410,35 +423,38 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
 #' @param session Shiny session
 #'
 update_column_choices_unified <- function(app_state, input, output, session, ui_service = NULL) {
-  cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Starting column choices update\n")
+  log_debug_block("COLUMN_CHOICES_UNIFIED", "Starting column choices update")
 
   # Check if we should skip during table operations
   if (app_state$data$updating_table) {
-    cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Skipping - table update in progress\n")
+    log_debug("Skipping - table update in progress", .context = "COLUMN_CHOICES_UNIFIED")
     return()
   }
 
   # Skip if auto-detect is in progress
   if (app_state$columns$auto_detect_in_progress) {
-    cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Skipping - auto-detect in progress\n")
+    log_debug("Skipping - auto-detect in progress", .context = "COLUMN_CHOICES_UNIFIED")
     return()
   }
 
   # Skip if UI sync is needed (to avoid race conditions)
   if (app_state$columns$ui_sync_needed) {
-    cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Skipping - UI sync pending\n")
+    log_debug("Skipping - UI sync pending", .context = "COLUMN_CHOICES_UNIFIED")
     return()
   }
 
   # Get current data
   if (is.null(app_state$data$current_data)) {
-    cat("DEBUG: [COLUMN_CHOICES_UNIFIED] No data available\n")
+    log_debug("No data available", .context = "COLUMN_CHOICES_UNIFIED")
     return()
   }
 
   data <- app_state$data$current_data
   all_cols <- names(data)
-  cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Available columns:", paste(all_cols, collapse = ", "), "\n")
+  log_debug_kv(
+    available_columns = paste(all_cols, collapse = ", "),
+    .context = "COLUMN_CHOICES_UNIFIED"
+  )
 
   if (length(all_cols) > 0) {
     # Create column choices
@@ -451,7 +467,7 @@ update_column_choices_unified <- function(app_state, input, output, session, ui_
     tryCatch({
       if (!is.null(ui_service)) {
         ui_service$update_column_choices(choices = col_choices)
-        cat("DEBUG: [COLUMN_CHOICES_UNIFIED] ✅ Used centralized ui_service for column choices\n")
+        log_debug("✅ Used centralized ui_service for column choices", .context = "COLUMN_CHOICES_UNIFIED")
       } else {
         # Fallback to direct updates
         updateSelectizeInput(session, "x_column", choices = col_choices)
@@ -459,11 +475,12 @@ update_column_choices_unified <- function(app_state, input, output, session, ui_
         updateSelectizeInput(session, "n_column", choices = col_choices)
         updateSelectizeInput(session, "cl_column", choices = col_choices)
 
-        cat("DEBUG: [COLUMN_CHOICES_UNIFIED] ✅ Column choices updated\n")
+        log_debug("✅ Column choices updated", .context = "COLUMN_CHOICES_UNIFIED")
       }
 
     }, error = function(e) {
-      cat("DEBUG: [COLUMN_CHOICES_UNIFIED] Error updating UI:", e$message, "\n")
+      log_error("Error updating UI", .context = "COLUMN_CHOICES_UNIFIED")
+      log_debug_kv(error_message = e$message, .context = "COLUMN_CHOICES_UNIFIED")
     })
   }
 }

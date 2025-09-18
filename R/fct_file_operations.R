@@ -246,12 +246,12 @@ handle_excel_upload <- function(file_path, session, app_state, emit) {
 
     # EVENT SYSTEM: Emit data_loaded event
     if (!is.null(emit)) {
-      cat("DEBUG: [EXCEL_UPLOAD] 🔥 EVENT SYSTEM: Emitting data_loaded event\n")
+      log_debug("🔥 EVENT SYSTEM: Emitting data_loaded event", .context = "EXCEL_UPLOAD")
       emit$data_loaded()
-      cat("DEBUG: [EXCEL_UPLOAD] ✅ data_loaded event emitted successfully\n")
+      log_debug("✅ data_loaded event emitted successfully", .context = "EXCEL_UPLOAD")
       log_debug("✅ Data loaded event emitted", "EXCEL_READ")
     } else {
-      cat("DEBUG: [EXCEL_UPLOAD] ⚠️ No emit API available - data loaded but no event triggered\n")
+      log_debug("⚠️ No emit API available - data loaded but no event triggered", .context = "EXCEL_UPLOAD")
       log_debug("⚠️ No emit API available for event triggering", "EXCEL_READ")
     }
 
@@ -420,12 +420,12 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
 
   # EVENT SYSTEM: Emit data_loaded event
   if (!is.null(emit)) {
-    cat("DEBUG: [FILE_UPLOAD] 🔥 EVENT SYSTEM: Emitting data_loaded event\n")
+    log_debug("🔥 EVENT SYSTEM: Emitting data_loaded event", .context = "FILE_UPLOAD")
     emit$data_loaded()
-    cat("DEBUG: [FILE_UPLOAD] ✅ data_loaded event emitted successfully\n")
+    log_debug("✅ data_loaded event emitted successfully", .context = "FILE_UPLOAD")
     log_debug("✅ Data loaded event emitted", "CSV_READ")
   } else {
-    cat("DEBUG: [FILE_UPLOAD] ⚠️ No emit API available - data loaded but no event triggered\n")
+    log_debug("⚠️ No emit API available - data loaded but no event triggered", .context = "FILE_UPLOAD")
     log_debug("⚠️ No emit API available for event triggering", "CSV_READ")
   }
 

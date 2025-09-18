@@ -10,7 +10,7 @@ test_that("log_error fungerer korrekt", {
   expect_output(log_error("Test besked", "TEST"), "ERROR.*TEST.*Test besked")
   expect_output(log_info("Test info", "TEST"), "INFO.*TEST.*Test info")
   expect_output(log_warn("Test warning", "TEST"), "WARN.*TEST.*Test warning")
-  expect_output(log_debug("Test debug", "TEST"), "DEBUG.*TEST.*Test debug")
+  expect_output(log_debug("Test debug", .context = "TEST"), "DEBUG.*\\[TEST\\].*Test debug")
 
   # Restore original log level
   if (old_level == "") {

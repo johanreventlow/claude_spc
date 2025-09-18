@@ -197,7 +197,7 @@ inject_dependencies <- function(func, deps, ...) {
 
 create_column_detection_service <- function() {
   list(
-    detect_by_name = function(column_names) detect_columns_name_only(column_names, NULL, NULL, NULL),
+    detect_by_name = function(column_names) detect_columns_name_only(column_names, NULL, NULL),
     detect_by_data = function(data) detect_columns_with_data(data),
     validate_detection = function(detection_result) validate_column_detection(detection_result)
   )

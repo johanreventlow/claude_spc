@@ -8,9 +8,8 @@
 ## Hovedfunktion for session management
 # Opsætter al server logik relateret til session håndtering
 setup_session_management <- function(input, output, session, waiter_file, app_state, emit, ui_service = NULL) {
-  cat("DEBUG: [SESSION_MGMT] ===========================================\n")
-  cat("DEBUG: [SESSION_MGMT] Initializing session management observers\n")
-  cat("DEBUG: [SESSION_MGMT] Received app_state environment address:", capture.output(print(app_state)), "\n")
+  log_debug_block("SESSION_MGMT", "Initializing session management observers")
+  log_debug("Received app_state environment address:", capture.output(print(app_state)), .context = "SESSION_MGMT")
 
   # PHASE 4: Check if centralized state is available
   use_centralized_state <- !is.null(app_state)
@@ -190,14 +189,14 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
 
   # Confirm upload handler
   observeEvent(input$confirm_upload, {
-    cat("DEBUG: [UPLOAD_MODAL] Confirm upload clicked\n")
+    log_debug("Confirm upload clicked", .context = "UPLOAD_MODAL")
 
     # Set navigation flags for file upload flow
     # PHASE 4: Use unified state management
     app_state$session$user_started_session <- TRUE
     app_state$session$file_uploaded <- FALSE  # Will be set to TRUE by actual file upload handler
 
-    cat("DEBUG: [UPLOAD_MODAL] Navigation flags set, closing modal\n")
+    log_debug("Navigation flags set, closing modal", .context = "UPLOAD_MODAL")
     removeModal()
   })
 
@@ -339,8 +338,12 @@ handle_confirm_clear_saved <- function(session, app_state, emit, ui_service = NU
 reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) {
   # Unified state: App state is always available
   use_centralized_state <- !is.null(app_state)
-  cat("DEBUG: [SESSION_RESET] Session reset started, centralized state available:", use_centralized_state, "\n")
-  cat("DEBUG: [SESSION_RESET] app_state hash before:", if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL", "\n")
+  log_debug_kv(
+    session_reset_started = TRUE,
+    centralized_state_available = use_centralized_state,
+    app_state_hash_before = if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL",
+    .context = "SESSION_RESET"
+  )
   clearDataLocally(session)
   # PHASE 4B: Unified state assignment only
   app_state$session$last_save_time <- NULL
@@ -359,14 +362,14 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
 
   # PHASE 4: Unified state assignment only
   app_state$data$current_data <- standard_data
-  cat("DEBUG: [SESSION_RESET] Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), "\n")
+  log_debug("Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), .context = "SESSION_RESET")
 
   # Emit event to trigger downstream effects
   emit$data_loaded()
-  cat("DEBUG: [SESSION_RESET] app_state hash after:", digest::digest(app_state$data$current_data), "\n")
+  log_debug("app_state hash after:", digest::digest(app_state$data$current_data), .context = "SESSION_RESET")
 
   # UNIFIED EVENTS: Trigger navigation change through event system
-  cat("DEBUG: [SESSION_RESET] Emitting navigation_changed event\n")
+  log_debug("Emitting navigation_changed event", .context = "SESSION_RESET")
   emit$navigation_changed()
 
   # PHASE 4B: Unified state assignment only
@@ -386,7 +389,7 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
     if (!is.null(ui_service)) {
       # Use centralized UI service for all form resets
       ui_service$reset_form_fields()
-      cat("DEBUG: [SESSION_RESET] ✅ Used centralized ui_service for form reset\n")
+      log_debug("✅ Used centralized ui_service for form reset", .context = "SESSION_RESET")
     } else {
       # Fallback to direct updates
       updateTextInput(session, "indicator_title", value = "")
@@ -403,7 +406,7 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
         col_choices <- setNames(new_col_names, new_col_names)
         col_choices <- c("Vælg kolonne" = "", col_choices)
 
-        cat("DEBUG: [SESSION_RESET] Opdaterer selectizeInput med nye kolonner:", paste(new_col_names, collapse = ", "), "\n")
+        log_debug("Opdaterer selectizeInput med nye kolonner:", paste(new_col_names, collapse = ", "), .context = "SESSION_RESET")
 
         updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
         updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
@@ -430,18 +433,21 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
 
   # Force name-only detection på de nye standardkolonner efter UI opdatering
   if (!is.null(new_data) && ncol(new_data) > 0) {
-    cat("DEBUG: [SESSION_RESET] Force name-only detection:\n")
-    cat("DEBUG: [SESSION_RESET] - New data dimensions:", dim(new_data), "\n")
-    cat("DEBUG: [SESSION_RESET] - New data columns:", paste(names(new_data), collapse = ", "), "\n")
+    log_debug("Force name-only detection:", .context = "SESSION_RESET")
+    log_debug_kv(
+      new_data_dimensions = paste(dim(new_data), collapse = "x"),
+      new_data_columns = paste(names(new_data), collapse = ", "),
+      .context = "SESSION_RESET"
+    )
 
     # Kør name-only detection direkte i stedet for normal auto-detection
-    cat("DEBUG: [SESSION_RESET] Running name-only detection directly...\n")
+    log_debug("Running name-only detection directly...", .context = "SESSION_RESET")
 
     # Kald name-only detection direkte med de nye kolonnenavne
     # NOTE: UI sync is now handled by unified event system
     name_only_result <- detect_columns_name_only(names(new_data), NULL, session, app_state)
 
-    cat("DEBUG: [SESSION_RESET] ✅ Name-only detection completed for session reset\n")
+    log_debug("✅ Name-only detection completed for session reset", .context = "SESSION_RESET")
   }
 
   # PHASE 4C: Unified state only
@@ -531,16 +537,16 @@ show_clear_confirmation_modal <- function(has_data, has_settings, values) {
 ## Hovedfunktion for velkomstside
 # Opsætter alle handlers for velkomstside interaktioner
 setup_welcome_page_handlers <- function(input, output, session, waiter_file, app_state, emit, ui_service = NULL) {
-  cat("DEBUG: [WELCOME_PAGE_SETUP] Setting up welcome page handlers\n")
-  cat("DEBUG: [WELCOME_PAGE_SETUP] app_state provided:", !is.null(app_state), "\n")
+  log_debug("Setting up welcome page handlers", .context = "WELCOME_PAGE_SETUP")
+  log_debug("app_state provided:", !is.null(app_state), .context = "WELCOME_PAGE_SETUP")
 
   # Håndtér "Start ny analyse" knap fra velkomstsiden
   observeEvent(input$start_new_session, {
-    cat("DEBUG: [WELCOME_PAGE] Start new session clicked\n")
-    cat("DEBUG: [WELCOME_PAGE] app_state available:", !is.null(app_state), "\n")
+    log_debug("Start new session clicked", .context = "WELCOME_PAGE")
+    log_debug("app_state available:", !is.null(app_state), .context = "WELCOME_PAGE")
 
     if (is.null(app_state)) {
-      cat("ERROR: [WELCOME_PAGE] app_state is NULL - navigation will not work properly\n")
+      log_error("app_state is NULL - navigation will not work properly", "WELCOME_PAGE")
       return()
     }
 
@@ -557,7 +563,7 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
     old_version <- app_state$data$table_version
     app_state$data$table_version <- app_state$data$table_version + 1
     new_version <- app_state$data$table_version
-    cat("DEBUG: [WELCOME_PAGE] table_version incremented from", old_version, "to", new_version, "\n")
+    log_debug("table_version incremented from", old_version, "to", new_version, .context = "WELCOME_PAGE")
 
     # PHASE 4B: Unified state assignment only - FALSE for manual session
     app_state$session$file_uploaded <- FALSE
@@ -584,9 +590,12 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
       updateSelectInput(session, "n_column", selected = "")
     }
 
-    cat("DEBUG: [WELCOME_PAGE] New empty session created\n")
-    cat("DEBUG: [WELCOME_PAGE] app_state$data$current_data set with", nrow(empty_session_data), "rows\n")
-    cat("DEBUG: [WELCOME_PAGE] app_state$session$user_started_session set to TRUE\n")
+    log_debug("New empty session created", .context = "WELCOME_PAGE")
+    log_debug_kv(
+      current_data_rows = nrow(empty_session_data),
+      user_started_session = TRUE,
+      .context = "WELCOME_PAGE"
+    )
   })
 
   # Håndtér "Upload data" knap fra velkomstsiden
@@ -675,8 +684,8 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
           )
         },
         error = function(e) {
-          cat("ERROR: Failed to load demo data:", e$message, "\n")
-          cat("ERROR: Stacktrace:", "\n")
+          log_error("Failed to load demo data:", e$message, "DEMO_DATA")
+          log_error("Stacktrace:", "DEMO_DATA")
           traceback()
 
           waiter_file$hide()
@@ -690,7 +699,7 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
         }
       )
     } else {
-      cat("WARNING: Demo data file not found at:", test_file_path, "\n")
+      log_warn("Demo data file not found at:", test_file_path, "DEMO_DATA")
       showNotification(
         "Eksempel data ikke tilgængelig. Prøv at uploade dine egne data.",
         type = "warning",

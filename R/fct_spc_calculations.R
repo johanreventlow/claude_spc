@@ -753,13 +753,12 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           log_debug(paste("QIC call successful, returned data dimensions:", nrow(qic_data), "x", ncol(qic_data)), "QIC_CALL")
 
           # DEBUG: Show complete qic_data structure and content
-          cat("DEBUG: [QIC_DATA] ===========================================\n")
-          cat("DEBUG: [QIC_DATA] qic_data structure:\n")
+          log_debug_block("QIC_DATA", "qic_data structure")
           str(qic_data)
-          cat("DEBUG: [QIC_DATA] qic_data column names:", paste(names(qic_data), collapse = ", "), "\n")
-          cat("DEBUG: [QIC_DATA] qic_data head (first 10 rows):\n")
+          log_debug("qic_data column names:", paste(names(qic_data), collapse = ", "), .context = "QIC_DATA")
+          log_debug("qic_data head (first 10 rows):", .context = "QIC_DATA")
           print(head(qic_data, 10))
-          cat("DEBUG: [QIC_DATA] ===========================================\n")
+          log_debug_block("QIC_DATA", "qic_data structure completed", type = "stop")
 
           log_debug(qic_data, "QIC")
           

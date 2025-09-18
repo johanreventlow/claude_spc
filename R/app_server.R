@@ -189,7 +189,7 @@ app_server <- function(input, output, session) {
   ## Kolonne management logik
   # PHASE 4: Pass centralized state to column management - now uses unified event system
   setup_column_management(input, output, session, app_state, emit)
-  cat("DEBUG: [APP_SERVER] Column management setup completed with unified event system\n")
+  log_debug("Column management setup completed with unified event system", .context = "APP_SERVER")
 
   ## Visualiserings logik
   visualization <- setup_visualization(input, output, session, app_state, app_data_reactive)

@@ -68,7 +68,7 @@ detectChartConfiguration <- function(data, chart_type) {
             },
             error = function(e) {
               # Skip this column if parsing fails
-              cat("WARNING: Date parsing failed for column", col_name, ":", e$message, "\n")
+              log_warn("Date parsing failed for column", col_name, ":", e$message, "DATE_DETECTION")
             }
           )
         }
