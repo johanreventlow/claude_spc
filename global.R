@@ -124,6 +124,10 @@ source("R/utils_server_management.R")
 source("R/utils_performance.R")
 source("R/utils_memory_management.R")
 
+# UNIFIED AUTODETECT ENGINE
+source("R/fct_autodetect_unified.R")    # Main unified autodetect engine
+source("R/fct_autodetect_helpers.R")    # Supporting functions for robust detection
+
 # HOSPITAL BRANDING ================================
 
 ## Brand.yml konfiguration -----
@@ -693,6 +697,14 @@ create_app_state <- function() {
   # UI State - Convert to reactiveValues for consistency
   app_state$ui <- reactiveValues(
     hide_anhoej_rules = FALSE
+  )
+
+  # Autodetect State - Unified autodetect engine state management
+  app_state$autodetect <- reactiveValues(
+    frozen_until_next_trigger = FALSE,
+    last_run = NULL,
+    in_progress = FALSE,
+    completed = FALSE
   )
 
   # Navigation State - For eventReactive patterns

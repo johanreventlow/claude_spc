@@ -55,10 +55,24 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     # Set auto-detection in progress
     app_state$columns$auto_detect_in_progress <- TRUE
 
-    # Perform auto-detection
+    # Perform auto-detection using unified engine
     tryCatch({
       if (!is.null(app_state$data$current_data)) {
-        auto_detect_and_update_columns_unified(app_state, emit)
+        # Use unified autodetect engine - data available, so full analysis
+        autodetect_engine(
+          data = app_state$data$current_data,
+          trigger_type = "file_upload",  # This event is triggered by data uploads
+          app_state = app_state,
+          emit = emit
+        )
+      } else {
+        # No data available - session start scenario (name-only)
+        autodetect_engine(
+          data = NULL,
+          trigger_type = "session_start",
+          app_state = app_state,
+          emit = emit
+        )
       }
     }, error = function(e) {
       log_debug("Auto-detection error:", e$message, .context = "EVENT")
@@ -273,63 +287,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   log_debug("✅ All event listeners registered (including error handling and UI updates)", .context = "EVENT_SYSTEM")
 }
 
-#' Auto-detect and update columns (Unified Event Version)
-#'
-#' Unified version of auto-detection that uses the event system
-#' instead of direct reactive triggers.
-#'
-#' @param app_state The centralized app state
-#' @param emit The emit API for triggering events
-#'
-auto_detect_and_update_columns_unified <- function(app_state, emit) {
-  log_debug_block("AUTO_DETECT_UNIFIED", "Starting column auto-detection")
-
-  if (is.null(app_state$data$current_data)) {
-    log_debug("No data available", .context = "AUTO_DETECT_UNIFIED")
-    return()
-  }
-
-  data <- app_state$data$current_data
-  col_names <- names(data)
-
-  log_debug_kv(
-    analyzing_columns = paste(col_names, collapse = ", "),
-    .context = "AUTO_DETECT_UNIFIED"
-  )
-
-  # Use the correct detect_columns_name_only function instead of simplified logic
-  detection_result <- detect_columns_name_only(col_names, NULL, NULL, app_state)
-
-  # FIXED: detect_columns_name_only returns direct list, not nested under $detected
-  results <- list(
-    x_column = detection_result$x_col,
-    y_column = detection_result$y_col,
-    n_column = detection_result$n_col,
-    cl_column = NULL  # Not detected by detect_columns_name_only
-  )
-
-  log_debug_kv(
-    detected_x = ifelse(is.null(results$x_column), "NULL", results$x_column),
-    detected_y = ifelse(is.null(results$y_column), "NULL", results$y_column),
-    detected_n = ifelse(is.null(results$n_column), "NULL", results$n_column),
-    .context = "AUTO_DETECT_UNIFIED"
-  )
-
-  # Store results in both locations for consistency during transition
-  app_state$columns$auto_detect_results <- results
-  app_state$columns$auto_detected_columns <- results
-
-  # Update individual column mappings
-  if (!is.null(results$x_column)) app_state$columns$x_column <- results$x_column
-  if (!is.null(results$y_column)) app_state$columns$y_column <- results$y_column
-  if (!is.null(results$n_column)) app_state$columns$n_column <- results$n_column
-  if (!is.null(results$cl_column)) app_state$columns$cl_column <- results$cl_column
-
-  log_debug("✅ Auto-detection completed", .context = "AUTO_DETECT_UNIFIED")
-
-  # Emit completion event
-  emit$auto_detection_completed()
-}
+# NOTE: auto_detect_and_update_columns_unified REMOVED
+# Replaced with unified autodetect_engine() for consistency and better functionality
 
 #' Sync UI with columns (Unified Event Version)
 #'
