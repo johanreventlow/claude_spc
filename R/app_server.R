@@ -153,12 +153,18 @@ app_server <- function(input, output, session) {
         }
 
         log_debug("🧹 Running scheduled comprehensive system cleanup", "BACKGROUND_CLEANUP")
-        tryCatch({
-          comprehensive_system_cleanup(app_state)
-          log_debug("✅ Scheduled cleanup completed successfully", "BACKGROUND_CLEANUP")
-        }, error = function(e) {
-          log_error(paste("Background cleanup error:", e$message), "BACKGROUND_CLEANUP")
-        })
+        safe_operation(
+          "Scheduled system cleanup",
+          code = {
+            comprehensive_system_cleanup(app_state)
+            log_debug("✅ Scheduled cleanup completed successfully", "BACKGROUND_CLEANUP")
+          },
+          fallback = NULL,
+          session = session,
+          error_type = "processing",
+          emit = emit,
+          app_state = app_state
+        )
 
         # Schedule next cleanup only if session is still active
         if (app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active) {
@@ -188,21 +194,26 @@ app_server <- function(input, output, session) {
         }
 
         log_debug("📊 Generating periodic performance report", "PERFORMANCE_MONITOR")
-        tryCatch({
-          report <- get_performance_report(app_state)
-          log_debug("=== PERIODIC PERFORMANCE REPORT ===", "PERFORMANCE_MONITOR")
-          log_debug(report$formatted_text, "PERFORMANCE_MONITOR")
+        safe_operation(
+          "Performance report generation",
+          code = {
+            report <- get_performance_report(app_state)
+            log_debug("=== PERIODIC PERFORMANCE REPORT ===", "PERFORMANCE_MONITOR")
+            log_debug(report$formatted_text, "PERFORMANCE_MONITOR")
 
-          # Check if system needs attention
-          if (report$health_status == "WARNING") {
-            log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
-          } else if (report$health_status == "CAUTION") {
-            log_debug(paste("System health CAUTION - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
-          }
-
-        }, error = function(e) {
-          log_error(paste("Performance reporting error:", e$message), "PERFORMANCE_MONITOR")
-        })
+            # Check if system needs attention
+            if (report$health_status == "WARNING") {
+              log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
+            } else if (report$health_status == "CAUTION") {
+              log_debug(paste("System health CAUTION - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
+            }
+          },
+          fallback = NULL,
+          session = session,
+          error_type = "processing",
+          emit = emit,
+          app_state = app_state
+        )
 
         # Schedule next report only if session is still active
         if (app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active) {
