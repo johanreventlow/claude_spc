@@ -31,14 +31,14 @@ create_ui_update_service <- function(session, app_state) {
   #' @param clear_selections If TRUE, clear all selections
   #'
   update_column_choices <- function(choices = NULL, selected = NULL, columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column"), clear_selections = FALSE) {
-    log_debug("DROPDOWN_DEBUG: update_column_choices called for:", paste(columns, collapse = ", "), .context = "DROPDOWN_DEBUG")
-    log_debug(paste("DROPDOWN_DEBUG: Parameters - choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
+    cat("DROPDOWN_DEBUG: update_column_choices called for:", paste(columns, collapse = ", "), "\n")
+    cat(paste("DROPDOWN_DEBUG: Parameters - choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
                    "selected:", if(!is.null(selected)) paste0("[", length(selected), " items]") else "NULL",
-                   "clear_selections:", clear_selections), .context = "DROPDOWN_DEBUG")
+                   "clear_selections:", clear_selections, "\n"))
 
     if (!is.null(selected)) {
       for (col in names(selected)) {
-        log_debug(paste("DROPDOWN_DEBUG: Selected value for", col, ":", selected[[col]]), .context = "DROPDOWN_DEBUG")
+        cat(paste("DROPDOWN_DEBUG: Selected value for", col, ":", selected[[col]], "\n"))
       }
     }
 
@@ -517,18 +517,16 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
     # DROPDOWN DEBUGGING: Wrap updateSelectizeInput to log all dropdown updates
     original_updateSelectizeInput <- updateSelectizeInput
     updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
-      log_debug(paste("DROPDOWN_DEBUG: Updating", inputId,
+      cat(paste("DROPDOWN_DEBUG: Updating", inputId,
                      "with choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
-                     "selected:", if(!is.null(selected)) paste0("'", selected, "'") else "NULL"),
-               .context = "DROPDOWN_DEBUG")
+                     "selected:", if(!is.null(selected)) paste0("'", selected, "'") else "NULL", "\n"))
 
       if (!is.null(choices) && length(choices) > 0) {
-        log_debug(paste("DROPDOWN_DEBUG: Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", ")),
-                 .context = "DROPDOWN_DEBUG")
+        cat(paste("DROPDOWN_DEBUG: Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", "), "\n"))
       }
 
       result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
-      log_debug(paste("DROPDOWN_DEBUG: updateSelectizeInput completed for", inputId), .context = "DROPDOWN_DEBUG")
+      cat(paste("DROPDOWN_DEBUG: updateSelectizeInput completed for", inputId, "\n"))
       return(result)
     }
 
