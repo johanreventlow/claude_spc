@@ -77,9 +77,11 @@ test_that("safe_programmatic_ui_update registrerer tokens for programatiske inpu
     delay_ms = 0
   )
 
-  pending <- app_state$ui$pending_programmatic_inputs
-  expect_setequal(names(pending), c("x_column", "y_column"))
-  expect_true(all(vapply(pending, function(x) grepl("token_", x$token), logical(1))))
+  pending_env <- app_state$ui$pending_programmatic_inputs
+  pending_names <- ls(pending_env, all.names = TRUE)
+  expect_setequal(pending_names, c("x_column", "y_column"))
+  pending_values <- lapply(pending_names, function(name) pending_env[[name]])
+  expect_true(all(vapply(pending_values, function(x) grepl("token_", x$token), logical(1))))
 
   recorded <- recorder$data()
   expect_equal(length(recorded), 2L)

@@ -266,44 +266,54 @@ run_e2e_test_scenario <- function(scenario_name, test_steps, session_id = NULL) 
     errors = list()
   )
 
-  tryCatch({
-    for (i in seq_along(test_steps)) {
-      step <- test_steps[[i]]
-      step_name <- names(test_steps)[i]
+  safe_operation(
+    paste("E2E scenario execution:", scenario_name),
+    code = {
+      for (i in seq_along(test_steps)) {
+        step <- test_steps[[i]]
+        step_name <- names(test_steps)[i]
 
-      log_debug("Step", i, ":", step_name, .context = "E2E_SCENARIO")
+        log_debug("Step", i, ":", step_name, .context = "E2E_SCENARIO")
 
-      step_start <- Sys.time()
-      step_result <- tryCatch({
-        step()
-        list(success = TRUE, error = NULL)
-      }, error = function(e) {
-        debug_error_boundary(paste("E2E step:", step_name), e, session_id = session_id)
-        list(success = FALSE, error = e$message)
-      })
+        step_start <- Sys.time()
+        step_result <- safe_operation(
+          paste("E2E test step:", step_name),
+          code = {
+            step()
+            list(success = TRUE, error = NULL)
+          },
+          fallback = function(e) {
+            debug_error_boundary(paste("E2E step:", step_name), e, session_id = session_id)
+            list(success = FALSE, error = e$message)
+          },
+          error_type = "processing"
+        )
 
-      step_duration <- as.numeric(Sys.time() - step_start, units = "secs")
+        step_duration <- as.numeric(Sys.time() - step_start, units = "secs")
 
-      scenario_result$steps[[step_name]] <- list(
-        success = step_result$success,
-        duration = step_duration,
-        error = step_result$error
-      )
+        scenario_result$steps[[step_name]] <- list(
+          success = step_result$success,
+          duration = step_duration,
+          error = step_result$error
+        )
 
-      if (!step_result$success) {
-        scenario_result$success <- FALSE
-        scenario_result$errors[[step_name]] <- step_result$error
-        log_debug("❌ Step failed:", step_name, .context = "E2E_SCENARIO")
-        break
-      } else {
-        log_debug("✅ Step completed:", step_name, "(", round(step_duration, 3), "s )", .context = "E2E_SCENARIO")
+        if (!step_result$success) {
+          scenario_result$success <- FALSE
+          scenario_result$errors[[step_name]] <- step_result$error
+          log_debug("❌ Step failed:", step_name, .context = "E2E_SCENARIO")
+          break
+        } else {
+          log_debug("✅ Step completed:", step_name, "(", round(step_duration, 3), "s )", .context = "E2E_SCENARIO")
+        }
       }
-    }
-  }, error = function(e) {
-    debug_error_boundary(paste("E2E scenario:", scenario_name), e, session_id = session_id)
-    scenario_result$success <- FALSE
-    scenario_result$errors[["scenario_level"]] <- e$message
-  })
+    },
+    fallback = {
+      debug_error_boundary(paste("E2E scenario:", scenario_name), e, session_id = session_id)
+      scenario_result$success <- FALSE
+      scenario_result$errors[["scenario_level"]] <- e$message
+    },
+    error_type = "processing"
+  )
 
   total_duration <- as.numeric(Sys.time() - start_time, units = "secs")
   scenario_result$total_duration <- total_duration

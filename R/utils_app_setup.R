@@ -30,13 +30,13 @@ if (length(missing_packages) > 0) {
 
 # Load all required packages and report any errors
 for (pkg in required_packages) {
-  tryCatch(
-    {
+  safe_operation(
+    paste("Load required package:", pkg),
+    code = {
       library(pkg, character.only = TRUE)
       # Package loaded successfully
     },
-    error = function(e) {
-      # Silent error - package failed to load
-    }
+    fallback = NULL,
+    error_type = "general"
   )
 }
