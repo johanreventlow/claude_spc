@@ -21,7 +21,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     log_debug("Namespace function created", "MODULE")
 
     # State Management --------------------------------------------------------
-    # PHASE 4: Use unified state management if available, fallback to local reactiveValues
+    # Use unified state management if available, fallback to local reactiveValues
     log_debug("Setting up state management", "MODULE")
 
     # MODULE-INTERNAL DATA REACTIVE ==========================================
@@ -212,7 +212,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       log_debug("Cache miss - generating new plot", .context = "PLOT_CACHE")
 
       # Clean state management - only set computing when actually needed
-      # PHASE 4: Unified state assignment using helper functions
+      # Unified state assignment using helper functions
       set_plot_state("plot_ready", FALSE)
       set_plot_state("plot_warnings", character(0))
       set_plot_state("anhoej_results", NULL)
@@ -222,7 +222,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       on.exit(
         {
           waiter_plot$hide()
-          # PHASE 4: Unified state assignment using helper function
+          # Unified state assignment using helper function
           set_plot_state("is_computing", FALSE)
         },
         add = TRUE

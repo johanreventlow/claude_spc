@@ -343,10 +343,10 @@ reset_app_to_clean_state <- function(app_state, session = NULL, emit = NULL) {
   # Clear performance caches
   clear_performance_cache()
 
-  # PHASE 4: Data reset handled by unified state management
+  # Data reset handled by unified state management
   # Data reset handled by unified state lifecycle management
 
-  # PHASE 4B: Legacy assignments removed - reset handled by unified state
+  # Legacy assignments removed - reset handled by unified state
   # Session reset managed by unified state architecture in reset_app_to_clean_state
 
   # Clean temp files

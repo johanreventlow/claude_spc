@@ -90,7 +90,7 @@ setup_file_upload <- function(input, output, session, waiter_file, app_state, em
     log_debug("Setting updating_table flag...", "FILE_UPLOAD")
     upload_tracer$step("state_management_setup")
 
-    # PHASE 4B: Unified state assignment only - Set table updating flag
+    # Unified state assignment only - Set table updating flag
     app_state$data$updating_table <- TRUE
 
     debug_log("File upload state flags set", "FILE_UPLOAD_FLOW", level = "TRACE",
@@ -99,7 +99,7 @@ setup_file_upload <- function(input, output, session, waiter_file, app_state, em
     on.exit(
       {
         log_debug("Clearing updating_table flag on exit...", "FILE_UPLOAD")
-        # PHASE 4B: Unified state assignment only - Clear table updating flag
+        # Unified state assignment only - Clear table updating flag
         app_state$data$updating_table <- FALSE
         log_debug("✅ updating_table flag cleared", "FILE_UPLOAD")
       },
@@ -188,7 +188,7 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     metadata <- parse_session_metadata(session_lines, names(data))
 
     # Load data
-    # PHASE 4: Dual-state sync during migration - session restore
+    # Dual-state sync during migration - session restore
     data_frame <- as.data.frame(data)
     set_current_data(app_state, data_frame)
     app_state$data$original_data <- data_frame
@@ -196,11 +196,11 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     # Emit data_loaded event to trigger unified event system
     emit$data_loaded()
 
-    # PHASE 4B: Unified state assignment only - Set file uploaded flag
+    # Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
-    # PHASE 4B: Unified state assignment only - Set auto detect completed (skip since we have session info)
+    # Unified state assignment only - Set auto detect completed (skip since we have session info)
     app_state$columns$auto_detect$completed <- TRUE
-    # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
+    # Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
     app_state$ui$hide_anhoej_rules <- FALSE
 
     # NAVIGATION TRIGGER: Emit navigation changed event to update reactive components
@@ -229,7 +229,7 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     # Ensure standard columns are present and in correct order
     data <- ensure_standard_columns(data)
 
-    # PHASE 4: Dual-state sync during migration - Excel file loading
+    # Dual-state sync during migration - Excel file loading
     data_frame <- as.data.frame(data)
     set_current_data(app_state, data_frame)
     app_state$data$original_data <- data_frame
@@ -237,11 +237,11 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     # Emit data_loaded event to trigger unified event system
     emit$data_loaded()
 
-    # PHASE 4B: Unified state assignment only - Set file uploaded flag
+    # Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
-    # PHASE 4B: Unified state assignment only - Set auto detect flag
+    # Unified state assignment only - Set auto detect flag
     app_state$columns$auto_detect$completed <- FALSE
-    # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
+    # Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
     app_state$ui$hide_anhoej_rules <- FALSE
 
     # NAVIGATION TRIGGER: Navigation events are now handled by the unified event system
@@ -391,7 +391,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
     debug_state_snapshot("before_csv_data_assignment", app_state, session_id = session_id)
   }
 
-  # PHASE 4: Unified state assignment only - CSV file loading
+  # Unified state assignment only - CSV file loading
   data_frame <- as.data.frame(data)
 
   # Enhanced debugging: Data structure analysis before assignment

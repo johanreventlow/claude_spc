@@ -27,7 +27,7 @@ setup_visualization <- function(input, output, session, app_state) {
     log_debug("======================================", "AUTO_DETECTED_CONFIG")
     log_debug("auto_detected_config reactive triggered", "AUTO_DETECTED_CONFIG")
 
-    # PHASE 4: Use unified state management - CORRECTED PATH
+    # Use unified state management - CORRECTED PATH
     auto_columns <- app_state$columns$auto_detected_columns
     log_debug(paste("Auto columns state (auto_detected_columns):", if(is.null(auto_columns)) "NULL" else "PRESENT"), "AUTO_DETECTED_CONFIG")
 
