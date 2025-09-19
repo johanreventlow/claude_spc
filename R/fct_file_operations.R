@@ -390,15 +390,37 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   # PHASE 4: Unified state assignment only - CSV file loading
   data_frame <- as.data.frame(data)
 
+  # Enhanced debugging: Data structure analysis before assignment
+  log_debug("======================================", "DATA_ASSIGNMENT")
+  log_debug("Preparing data for state assignment", "DATA_ASSIGNMENT")
+  log_debug(paste("Final data dimensions:", nrow(data_frame), "x", ncol(data_frame)), "DATA_ASSIGNMENT")
+  log_debug(paste("Column names:", paste(names(data_frame), collapse = ", ")), "DATA_ASSIGNMENT")
+  log_debug(paste("Column types:", paste(sapply(data_frame, class), collapse = ", ")), "DATA_ASSIGNMENT")
+
+  # Sample data preview for debugging
+  if (nrow(data_frame) > 0) {
+    log_debug("First 3 rows preview:", "DATA_ASSIGNMENT")
+    for (i in 1:min(3, nrow(data_frame))) {
+      log_debug(paste("Row", i, ":", paste(data_frame[i, 1:min(5, ncol(data_frame))], collapse = " | ")), "DATA_ASSIGNMENT")
+    }
+  }
+
   # PHASE 8: Enhanced state change tracking
   debug_state_change("CSV_UPLOAD", "app_state$data$current_data",
                     app_state$data$current_data, data_frame,
                     "file_upload_processing", session_id)
 
   app_state$data$current_data <- data_frame
-  log_debug("✅ Set current_data to unified state", "CSV_READ")
+  log_debug("✅ Set current_data to unified state", "DATA_ASSIGNMENT")
   app_state$data$original_data <- data_frame
-  log_debug("✅ Set original_data to unified state", "CSV_READ")
+  log_debug("✅ Set original_data to unified state", "DATA_ASSIGNMENT")
+
+  # Verify state assignment success
+  if (!is.null(app_state$data$current_data)) {
+    log_debug(paste("✅ State verification: current_data has", nrow(app_state$data$current_data), "rows"), "DATA_ASSIGNMENT")
+  } else {
+    log_debug("❌ State verification: current_data is NULL after assignment", "DATA_ASSIGNMENT")
+  }
 
   # Emit data_loaded event to trigger unified event system
   emit$data_loaded()
@@ -902,10 +924,20 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
 
 ## Enhanced data cleaning and preprocessing
 preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
+  log_debug("======================================", "DATA_PREPROCESSING")
   log_debug("Starting data preprocessing...", "DATA_PREPROCESSING")
+  log_debug(paste("Input dimensions:", nrow(data), "x", ncol(data)), "DATA_PREPROCESSING")
+  log_debug(paste("Input column names:", paste(names(data), collapse = ", ")), "DATA_PREPROCESSING")
 
   original_dims <- c(nrow(data), ncol(data))
   cleaning_log <- list()
+
+  # Data quality analysis before preprocessing
+  log_debug("Analyzing data quality before preprocessing...", "DATA_PREPROCESSING")
+  na_counts <- sapply(data, function(col) sum(is.na(col)))
+  empty_counts <- sapply(data, function(col) sum(col == "" | col == " ", na.rm = TRUE))
+  log_debug(paste("NA counts per column:", paste(names(na_counts), na_counts, sep="=", collapse=", ")), "DATA_PREPROCESSING")
+  log_debug(paste("Empty string counts per column:", paste(names(empty_counts), empty_counts, sep="=", collapse=", ")), "DATA_PREPROCESSING")
 
   # Handle completely empty rows
   if (nrow(data) > 0) {
@@ -953,6 +985,45 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
     final = final_dims
   )
 
+  # Enhanced final analysis and logging
+  log_debug("Preprocessing results summary:", "DATA_PREPROCESSING")
+  log_debug(paste("✅ Final dimensions:", final_dims[1], "x", final_dims[2]), "DATA_PREPROCESSING")
+  log_debug(paste("✅ Final column names:", paste(names(data), collapse = ", ")), "DATA_PREPROCESSING")
+
+  # Log changes made during preprocessing
+  if (length(cleaning_log) > 0) {
+    log_debug("Changes made during preprocessing:", "DATA_PREPROCESSING")
+    if (!is.null(cleaning_log$empty_rows_removed)) {
+      log_debug(paste("- Removed", cleaning_log$empty_rows_removed, "empty rows"), "DATA_PREPROCESSING")
+    }
+    if (!is.null(cleaning_log$column_names_cleaned) && cleaning_log$column_names_cleaned) {
+      log_debug("- Cleaned column names for R compatibility", "DATA_PREPROCESSING")
+    }
+  } else {
+    log_debug("- No cleaning required", "DATA_PREPROCESSING")
+  }
+
+  # Data quality check after preprocessing
+  log_debug("Final data quality check:", "DATA_PREPROCESSING")
+  if (nrow(data) > 0 && ncol(data) > 0) {
+    # Check for columns with all NA values
+    all_na_cols <- sapply(data, function(col) all(is.na(col)))
+    if (any(all_na_cols)) {
+      log_debug(paste("⚠️ Columns with all NA values:", paste(names(data)[all_na_cols], collapse = ", ")), "DATA_PREPROCESSING")
+    }
+
+    # Check for potential numeric columns
+    potential_numeric <- sapply(data, function(col) {
+      if (is.character(col)) {
+        numeric_values <- suppressWarnings(as.numeric(col))
+        sum(!is.na(numeric_values)) > 0
+      } else {
+        is.numeric(col)
+      }
+    })
+    log_debug(paste("Potential numeric columns:", paste(names(data)[potential_numeric], collapse = ", ")), "DATA_PREPROCESSING")
+  }
+
   # Log preprocessing results
   debug_log("Data preprocessing completed", "FILE_UPLOAD_FLOW", level = "INFO",
             context = list(
@@ -963,7 +1034,7 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
             ),
             session_id = session_id)
 
-  log_debug(paste("Data preprocessing completed - dimensions:", final_dims[1], "x", final_dims[2]), "DATA_PREPROCESSING")
+  log_debug("✅ Data preprocessing completed successfully", "DATA_PREPROCESSING")
 
   return(list(
     data = data,

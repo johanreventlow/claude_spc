@@ -159,8 +159,8 @@ setup_visualization <- function(input, output, session, app_state) {
         return(list(show_phases = FALSE, skift_column = NULL))
       }
 
-      # Tjek om bruger har valgt en Skift kolonne
-      skift_col <- if (!is.null(input$skift_column) && input$skift_column != "") {
+      # Tjek om bruger har valgt en Skift kolonne - normalisér character(0) til NULL
+      skift_col <- if (!is.null(input$skift_column) && length(input$skift_column) > 0 && input$skift_column != "") {
         input$skift_column
       } else {
         NULL
@@ -189,8 +189,8 @@ setup_visualization <- function(input, output, session, app_state) {
         return(NULL)
       }
 
-      # Tjek om bruger har valgt en Frys kolonne
-      frys_col <- if (!is.null(input$frys_column) && input$frys_column != "") {
+      # Tjek om bruger har valgt en Frys kolonne - normalisér character(0) til NULL
+      frys_col <- if (!is.null(input$frys_column) && length(input$frys_column) > 0 && input$frys_column != "") {
         input$frys_column
       } else {
         NULL

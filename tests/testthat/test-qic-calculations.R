@@ -527,3 +527,115 @@ test_that("generateSPCPlot config validation works", {
     expect_true(chart %in% valid_chart_types)
   }
 })
+
+test_that("generateSPCPlot handles character(0) column inputs correctly", {
+  # REGRESSION TEST: character(0) edge cases that caused "argument is of length zero"
+  # This test addresses the specific bug where Shiny inputs reset to character(0)
+  # and caused failures in generateSPCPlot guards
+
+  # SETUP: Valid test data
+  test_data <- data.frame(
+    Dato = as.Date(c("2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05")),
+    Tæller = c(45, 43, 48, 46, 47),
+    Nævner = c(50, 50, 50, 50, 50),
+    Skift = c(FALSE, FALSE, TRUE, FALSE, FALSE),
+    Frys = c(FALSE, TRUE, FALSE, FALSE, FALSE),
+    stringsAsFactors = FALSE
+  )
+
+  valid_config <- list(
+    x_col = "Dato",
+    y_col = "Tæller",
+    n_col = "Nævner"
+  )
+
+  # TEST 1: character(0) for skift_column parameter
+  expect_no_error({
+    result <- generateSPCPlot(
+      data = test_data,
+      config = valid_config,
+      chart_type = "p",
+      target_value = NULL,
+      centerline_value = NULL,
+      show_phases = TRUE,
+      skift_column = character(0), # This should not cause "argument is of length zero"
+      frys_column = NULL
+    )
+  })
+
+  # TEST 2: character(0) for frys_column parameter
+  expect_no_error({
+    result <- generateSPCPlot(
+      data = test_data,
+      config = valid_config,
+      chart_type = "p",
+      target_value = NULL,
+      centerline_value = NULL,
+      show_phases = FALSE,
+      skift_column = NULL,
+      frys_column = character(0) # This should not cause "argument is of length zero"
+    )
+  })
+
+  # TEST 3: Both parameters as character(0)
+  expect_no_error({
+    result <- generateSPCPlot(
+      data = test_data,
+      config = valid_config,
+      chart_type = "p",
+      target_value = NULL,
+      centerline_value = NULL,
+      show_phases = TRUE,
+      skift_column = character(0),
+      frys_column = character(0)
+    )
+  })
+
+  # TEST 4: Verify that the function still produces valid output
+  result <- generateSPCPlot(
+    data = test_data,
+    config = valid_config,
+    chart_type = "p",
+    target_value = NULL,
+    centerline_value = NULL,
+    show_phases = TRUE,
+    skift_column = character(0),
+    frys_column = character(0)
+  )
+
+  expect_true(is.list(result))
+  expect_true("plot" %in% names(result))
+  expect_true("qic_data" %in% names(result))
+  expect_true(inherits(result$plot, "ggplot"))
+  expect_true(is.data.frame(result$qic_data))
+
+  # TEST 5: Verify that valid column names still work after fix
+  result_with_valid_columns <- generateSPCPlot(
+    data = test_data,
+    config = valid_config,
+    chart_type = "p",
+    target_value = NULL,
+    centerline_value = NULL,
+    show_phases = TRUE,
+    skift_column = "Skift",
+    frys_column = "Frys"
+  )
+
+  expect_true(is.list(result_with_valid_columns))
+  expect_true("plot" %in% names(result_with_valid_columns))
+  expect_true(inherits(result_with_valid_columns$plot, "ggplot"))
+
+  # TEST 6: Test edge case with empty string (different from character(0))
+  expect_no_error({
+    result_empty_string <- generateSPCPlot(
+      data = test_data,
+      config = valid_config,
+      chart_type = "p",
+      target_value = NULL,
+      centerline_value = NULL,
+      show_phases = TRUE,
+      skift_column = "",
+      frys_column = ""
+    )
+  })
+})

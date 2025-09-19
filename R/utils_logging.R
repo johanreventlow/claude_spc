@@ -47,7 +47,8 @@ LOG_LEVELS <- list(
 #' Sys.setenv(SPC_LOG_LEVEL = "DEBUG"); get_log_level()
 #' Sys.setenv(SPC_LOG_LEVEL = "1");     get_log_level()
 get_log_level <- function() {
-  env_raw <- Sys.getenv("SPC_LOG_LEVEL", "INFO")
+  # env_raw <- Sys.getenv("SPC_LOG_LEVEL", "INFO")
+  env_raw <- Sys.getenv("SPC_LOG_LEVEL", "DEBUG")
   env_val <- trimws(toupper(as.character(env_raw)))
   
   lvl_num <-
