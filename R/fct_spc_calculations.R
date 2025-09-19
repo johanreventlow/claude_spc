@@ -347,6 +347,145 @@ get_optimal_formatting <- function(interval_info, debug = TRUE) {
 
 # SPC PLOT GENERERING =========================================================
 
+#' Process chart title for SPC plot
+#'
+#' @param chart_title_reactive Reactive function for chart title
+#' @param config Chart configuration with y_col
+#' @return Character string with processed title
+process_chart_title <- function(chart_title_reactive, config) {
+  log_debug("Processing chart title...", "SPC_CALC_DEBUG")
+
+  custom_title <- tryCatch({
+    if (!is.null(chart_title_reactive) && is.function(chart_title_reactive)) {
+      log_debug("Calling chart_title_reactive function...", "SPC_CALC_DEBUG")
+      title <- chart_title_reactive()
+      log_debug(paste("chart_title_reactive returned:", if(is.null(title)) "NULL" else paste("'", title, "'", sep="")), "SPC_CALC_DEBUG")
+      if (!is.null(title) && title != "" && title != "SPC Analyse") {
+        log_debug("Using custom title", "SPC_CALC_DEBUG")
+        title
+      } else {
+        log_debug("Using default title (custom title empty or default)", "SPC_CALC_DEBUG")
+        NULL
+      }
+    } else {
+      log_debug("No chart_title_reactive function provided", "SPC_CALC_DEBUG")
+      NULL
+    }
+  }, error = function(e) {
+    log_debug(paste("ERROR in chart_title_reactive:", e$message), "SPC_CALC_DEBUG")
+    NULL
+  })
+
+  log_debug(paste("Final custom_title result:", if(is.null(custom_title)) "NULL" else paste("'", custom_title, "'", sep="")), "SPC_CALC_DEBUG")
+
+  if (!is.null(custom_title)) {
+    custom_title
+  } else {
+    paste("SPC Chart -", config$y_col)
+  }
+}
+
+#' Validate input parameters for SPC plot generation
+#'
+#' @param data Input data frame
+#' @param config Chart configuration
+validate_spc_inputs <- function(data, config) {
+  if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
+    stop("Ingen gyldig data at visualisere")
+  }
+
+  if (is.null(config$y_col) || !config$y_col %in% names(data)) {
+    stop("Y-kolonne ikke fundet i data")
+  }
+}
+
+#' Process phase and freeze configuration
+#'
+#' @param data Input data frame
+#' @param show_phases Logical indicating if phases should be shown
+#' @param skift_column Column name for phase shifts
+#' @param frys_column Column name for baseline freeze
+#' @return List with part_positions and freeze_position
+process_phase_freeze_config <- function(data, show_phases, skift_column, frys_column) {
+  log_debug("Processing skift_column for phases...", "SPC_CALC_DEBUG")
+  log_debug(paste("show_phases:", show_phases), "SPC_CALC_DEBUG")
+  log_debug(paste("skift_column value:", if(is.null(skift_column)) "NULL" else paste("'", skift_column, "' (length:", length(skift_column), ")", sep="")), "SPC_CALC_DEBUG")
+
+  part_positions <- NULL
+  if (show_phases && !is.null(skift_column)) {
+    log_debug("Checking if skift_column exists in data...", "SPC_CALC_DEBUG")
+    # DEFENSIVE: Check for character(0) before using %in%
+    if (length(skift_column) == 0 || identical(skift_column, character(0))) {
+      log_debug("⚠️ skift_column is character(0) - skipping phase processing", "SPC_CALC_DEBUG")
+    } else if (skift_column %in% names(data)) {
+      log_debug(paste("✓ skift_column", skift_column, "found in data"), "SPC_CALC_DEBUG")
+      skift_data <- data[[skift_column]]
+
+      # Convert to logical if needed
+      if (!is.logical(skift_data)) {
+        skift_data <- as.logical(skift_data)
+      }
+
+      # Get positions where TRUE values occur (these are where new phases start)
+      skift_points <- which(skift_data == TRUE)
+      log_debug(paste("Skift points found:", length(skift_points), "positions:", paste(skift_points, collapse=", ")), "SPC_CALC_DEBUG")
+
+      if (length(skift_points) > 0) {
+        # qic() expects integer vector of positions where new phases start
+        part_positions <- sort(skift_points)
+        log_debug(paste("Final part_positions:", paste(part_positions, collapse=", ")), "SPC_CALC_DEBUG")
+      }
+    } else {
+      log_debug(paste("⚠️ skift_column", skift_column, "not found in data columns:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
+    }
+  } else {
+    log_debug("Skipping phase processing (show_phases=FALSE or skift_column=NULL)", "SPC_CALC_DEBUG")
+  }
+
+  # Handle baseline freeze from selected Frys column
+  log_debug("Processing frys_column for baseline freeze...", "SPC_CALC_DEBUG")
+  log_debug(paste("frys_column value:", if(is.null(frys_column)) "NULL" else paste("'", frys_column, "' (length:", length(frys_column), ")", sep="")), "SPC_CALC_DEBUG")
+
+  freeze_position <- NULL
+  if (!is.null(frys_column)) {
+    log_debug("Checking if frys_column exists in data...", "SPC_CALC_DEBUG")
+    # DEFENSIVE: Check for character(0) before using %in%
+    if (length(frys_column) == 0 || identical(frys_column, character(0))) {
+      log_debug("⚠️ frys_column is character(0) - skipping freeze processing", "SPC_CALC_DEBUG")
+    } else if (frys_column %in% names(data)) {
+      log_debug(paste("✓ frys_column", frys_column, "found in data"), "SPC_CALC_DEBUG")
+      frys_data <- data[[frys_column]]
+
+      # Convert to logical if needed
+      if (!is.logical(frys_data)) {
+        frys_data <- as.logical(frys_data)
+      }
+
+      # Get positions where TRUE values occur (baseline freeze points)
+      frys_points <- which(frys_data == TRUE)
+      log_debug(paste("Frys points found:", length(frys_points), "positions:", paste(frys_points, collapse=", ")), "SPC_CALC_DEBUG")
+
+      if (length(frys_points) > 0) {
+        # Use the last TRUE position as freeze point (baseline up to this point)
+        freeze_position <- max(frys_points)
+        log_debug(paste("Final freeze_position:", freeze_position), "SPC_CALC_DEBUG")
+      }
+    } else {
+      log_debug(paste("⚠️ frys_column", frys_column, "not found in data columns:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
+    }
+  } else {
+    log_debug("Skipping freeze processing (frys_column=NULL)", "SPC_CALC_DEBUG")
+  }
+
+  log_debug(paste("Final part_positions result:", if(is.null(part_positions)) "NULL" else paste(part_positions, collapse=", ")), "SPC_CALC_DEBUG")
+  log_debug(paste("Final freeze_position result:", if(is.null(freeze_position)) "NULL" else freeze_position), "SPC_CALC_DEBUG")
+
+  list(
+    part_positions = part_positions,
+    freeze_position = freeze_position
+  )
+}
+
 ## Generér SPC plot med tilpasset styling
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
   # DEBUG: Comprehensive input parameter logging
@@ -363,47 +502,11 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   log_debug(paste("Column names:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
   log_debug("======================================", "SPC_CALC_DEBUG")
 
-  # Safety checks
-  if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
-    stop("Ingen gyldig data at visualisere")
-  }
-
-  if (is.null(config$y_col) || !config$y_col %in% names(data)) {
-    stop("Y-kolonne ikke fundet i data")
-  }
+  # Input validation
+  validate_spc_inputs(data, config)
 
   # Get title with detailed debugging
-  log_debug("Processing chart title...", "SPC_CALC_DEBUG")
-  custom_title <- tryCatch(
-    {
-      if (!is.null(chart_title_reactive) && is.function(chart_title_reactive)) {
-        log_debug("Calling chart_title_reactive function...", "SPC_CALC_DEBUG")
-        title <- chart_title_reactive()
-        log_debug(paste("chart_title_reactive returned:", if(is.null(title)) "NULL" else paste("'", title, "'", sep="")), "SPC_CALC_DEBUG")
-        if (!is.null(title) && title != "" && title != "SPC Analyse") {
-          log_debug("Using custom title", "SPC_CALC_DEBUG")
-          title
-        } else {
-          log_debug("Using default title (custom title empty or default)", "SPC_CALC_DEBUG")
-          NULL
-        }
-      } else {
-        log_debug("No chart_title_reactive function provided", "SPC_CALC_DEBUG")
-        NULL
-      }
-    },
-    error = function(e) {
-      log_debug(paste("ERROR in chart_title_reactive:", e$message), "SPC_CALC_DEBUG")
-      NULL
-    }
-  )
-  log_debug(paste("Final custom_title result:", if(is.null(custom_title)) "NULL" else paste("'", custom_title, "'", sep="")), "SPC_CALC_DEBUG")
-
-  title_text <- if (!is.null(custom_title)) {
-    custom_title
-  } else {
-    paste("SPC Chart -", config$y_col)
-  }
+  title_text <- process_chart_title(chart_title_reactive, config)
 
   # Prepare data with defensive checking
   log_debug("Preparing data variables...", "SPC_CALC_DEBUG")
@@ -634,78 +737,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # DEBUG: Log x-validation results
   log_debug(paste("=== X-VALIDATION DEBUG ===\nx_col:", config$x_col, "\nx_data class:", class(x_data)[1], "\nx_data sample:", paste(head(x_data, 3), collapse = ", "), "\nis_date:", x_validation$is_date, "\nx.period:", x_validation$x.period, "\nx.format:", x_validation$x.format, "\n========================"), "X_VALIDATION")
 
-  # Handle phases from selected Skift column
-  log_debug("Processing skift_column for phases...", "SPC_CALC_DEBUG")
-  log_debug(paste("show_phases:", show_phases), "SPC_CALC_DEBUG")
-  log_debug(paste("skift_column value:", if(is.null(skift_column)) "NULL" else paste("'", skift_column, "' (length:", length(skift_column), ")", sep="")), "SPC_CALC_DEBUG")
-
-  part_positions <- NULL
-  if (show_phases && !is.null(skift_column)) {
-    log_debug("Checking if skift_column exists in data...", "SPC_CALC_DEBUG")
-    # DEFENSIVE: Check for character(0) before using %in%
-    if (length(skift_column) == 0 || identical(skift_column, character(0))) {
-      log_debug("⚠️ skift_column is character(0) - skipping phase processing", "SPC_CALC_DEBUG")
-    } else if (skift_column %in% names(data)) {
-      log_debug(paste("✓ skift_column", skift_column, "found in data"), "SPC_CALC_DEBUG")
-      skift_data <- data[[skift_column]]
-
-      # Convert to logical if needed
-      if (!is.logical(skift_data)) {
-        skift_data <- as.logical(skift_data)
-      }
-
-      # Get positions where TRUE values occur (these are where new phases start)
-      skift_points <- which(skift_data == TRUE)
-      log_debug(paste("Skift points found:", length(skift_points), "positions:", paste(skift_points, collapse=", ")), "SPC_CALC_DEBUG")
-
-      if (length(skift_points) > 0) {
-        # qic() expects integer vector of positions where new phases start
-        part_positions <- sort(skift_points)
-        log_debug(paste("Final part_positions:", paste(part_positions, collapse=", ")), "SPC_CALC_DEBUG")
-      }
-    } else {
-      log_debug(paste("⚠️ skift_column", skift_column, "not found in data columns:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
-    }
-  } else {
-    log_debug("Skipping phase processing (show_phases=FALSE or skift_column=NULL)", "SPC_CALC_DEBUG")
-  }
-  log_debug(paste("Final part_positions result:", if(is.null(part_positions)) "NULL" else paste(part_positions, collapse=", ")), "SPC_CALC_DEBUG")
-
-  # Handle baseline freeze from selected Frys column
-  log_debug("Processing frys_column for baseline freeze...", "SPC_CALC_DEBUG")
-  log_debug(paste("frys_column value:", if(is.null(frys_column)) "NULL" else paste("'", frys_column, "' (length:", length(frys_column), ")", sep="")), "SPC_CALC_DEBUG")
-
-  freeze_position <- NULL
-  if (!is.null(frys_column)) {
-    log_debug("Checking if frys_column exists in data...", "SPC_CALC_DEBUG")
-    # DEFENSIVE: Check for character(0) before using %in%
-    if (length(frys_column) == 0 || identical(frys_column, character(0))) {
-      log_debug("⚠️ frys_column is character(0) - skipping freeze processing", "SPC_CALC_DEBUG")
-    } else if (frys_column %in% names(data)) {
-      log_debug(paste("✓ frys_column", frys_column, "found in data"), "SPC_CALC_DEBUG")
-      frys_data <- data[[frys_column]]
-
-      # Convert to logical if needed
-      if (!is.logical(frys_data)) {
-        frys_data <- as.logical(frys_data)
-      }
-
-      # Get positions where TRUE values occur (baseline freeze points)
-      frys_points <- which(frys_data == TRUE)
-      log_debug(paste("Frys points found:", length(frys_points), "positions:", paste(frys_points, collapse=", ")), "SPC_CALC_DEBUG")
-
-      if (length(frys_points) > 0) {
-        # Use the last TRUE position as freeze point (baseline up to this point)
-        freeze_position <- max(frys_points)
-        log_debug(paste("Final freeze_position:", freeze_position), "SPC_CALC_DEBUG")
-      }
-    } else {
-      log_debug(paste("⚠️ frys_column", frys_column, "not found in data columns:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
-    }
-  } else {
-    log_debug("Skipping freeze processing (frys_column=NULL)", "SPC_CALC_DEBUG")
-  }
-  log_debug(paste("Final freeze_position result:", if(is.null(freeze_position)) "NULL" else freeze_position), "SPC_CALC_DEBUG")
+  # Handle phases and freeze configuration
+  phase_freeze_config <- process_phase_freeze_config(data, show_phases, skift_column, frys_column)
+  part_positions <- phase_freeze_config$part_positions
+  freeze_position <- phase_freeze_config$freeze_position
 
   # Build qic call arguments dynamically
   call_args <- list(
