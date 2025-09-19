@@ -291,16 +291,20 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # UI UPDATE EVENTS ========================================================
 
-  # Column choices changed event listener
-  observeEvent(app_state$events$column_choices_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-    log_debug("Column choices changed event received", .context = "UI_EVENT")
+  # DISABLED: Column choices changed event listener - problematisk da den clearer dropdowns
+  # Dette event system kaldte update_column_choices() uden parametre, hvilket resulterede i
+  # choices=NULL og selected=NULL, og dermed clearede alle dropdown værdier efter autodetect.
+  # UI sync håndteres allerede korrekt via ui_sync_needed event systemet.
 
-    if (!is.null(ui_service)) {
-      ui_service$update_column_choices()
-    } else {
-      log_debug("No UI service available for column choices update", .context = "UI_EVENT")
-    }
-  })
+  # observeEvent(app_state$events$column_choices_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  #   log_debug("Column choices changed event received", .context = "UI_EVENT")
+  #
+  #   if (!is.null(ui_service)) {
+  #     ui_service$update_column_choices()  # <-- PROBLEM: Ingen parametre resulterer i NULL choices/selected
+  #   } else {
+  #     log_debug("No UI service available for column choices update", .context = "UI_EVENT")
+  #   }
+  # })
 
   # Form reset needed event listener
   observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {

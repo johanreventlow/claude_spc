@@ -1,134 +1,197 @@
 # utils_logging.R
-# Konfigurerbart logging system til SPC App
+# Konfigurerbart logging system til SPC App (Shiny-sikkert)
 
 #' Log levels liste til SPC App logging system
 #'
 #' @description
-#' Definerer numeriske værdier for forskellige log niveauer til brug i det
-#' konfigurerede logging system. Lavere værdier betyder højere prioritet.
+#' Definerer numeriske værdier for forskellige log-niveauer til brug i det
+#' konfigurerede logging-system. **Lavere tal betyder højere prioritet.**
 #'
 #' @details
 #' Log levels:
-#' - DEBUG (1): Detaljeret debug information
-#' - INFO (2): Generel information
-#' - WARN (3): Advarsler
-#' - ERROR (4): Fejl beskeder
+#' - DEBUG (1): Detaljeret debug-information
+#' - INFO  (2): Generel information
+#' - WARN  (3): Advarsler
+#' - ERROR (4): Fejlbeskeder
 #'
 #' @format Liste med 4 elementer
 #' @export
 LOG_LEVELS <- list(
-  DEBUG = 1,
-  INFO = 2,
-  WARN = 3,
-  ERROR = 4
+  DEBUG = 1L,
+  INFO  = 2L,
+  WARN  = 3L,
+  ERROR = 4L
 )
 
-#' Hent aktuel log level fra environment variable
+# intern hjælper (ikke-eksporteret)
+.level_name <- function(x) {
+  inv <- setNames(names(LOG_LEVELS), unlist(LOG_LEVELS, use.names = FALSE))
+  inv[as.character(x)] %||% "INFO"
+}
+
+# intern hjælper (ikke-eksporteret)
+`%||%` <- function(a, b) if (is.null(a) || is.na(a) || identical(a, "")) b else a
+
+#' Hent aktuel log level fra environment variabel
 #'
 #' @description
-#' Læser SPC_LOG_LEVEL environment variablen og returnerer den tilsvarende
-#' numeriske værdi. Falder tilbage til INFO hvis variablen ikke er sat eller
-#' indeholder en ugyldig værdi.
+#' Læser `SPC_LOG_LEVEL` fra environment og returnerer tilsvarende numeriske værdi.
+#' Understøtter både navne (f.eks. `"DEBUG"`) og tal (f.eks. `"1"`).
+#' Fald tilbage til `INFO` ved ugyldig værdi.
 #'
-#' @return Numerisk værdi svarende til log level (se LOG_LEVELS)
+#' @return Heltalsværdi svarende til log-niveau (se `LOG_LEVELS`)
 #' @export
 #'
 #' @examples
-#' # Standard opførsel (INFO level)
 #' get_log_level()
-#'
-#' # Med DEBUG environment variable
-#' Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
-#' get_log_level()  # Returns 1
+#' Sys.setenv(SPC_LOG_LEVEL = "DEBUG"); get_log_level()
+#' Sys.setenv(SPC_LOG_LEVEL = "1");     get_log_level()
 get_log_level <- function() {
-  env_level <- Sys.getenv("SPC_LOG_LEVEL", "INFO")
-  level_num <- LOG_LEVELS[[toupper(env_level)]]
-  if (is.null(level_num)) {
-    return(LOG_LEVELS$INFO)
-  }
-  return(level_num)
+  env_raw <- Sys.getenv("SPC_LOG_LEVEL", "INFO")
+  env_val <- trimws(toupper(as.character(env_raw)))
+  
+  lvl_num <-
+    if (nzchar(env_val) && !is.na(suppressWarnings(as.integer(env_val)))) {
+      as.integer(env_val)
+    } else {
+      LOG_LEVELS[[env_val]]
+    }
+  
+  if (is.null(lvl_num) || is.na(lvl_num)) LOG_LEVELS$INFO else lvl_num
 }
 
-#' Primær logging funktion med konfigureret level filtering
+# intern hjælper (ikke-eksporteret)
+.should_log <- function(level_chr) {
+  lvl <- LOG_LEVELS[[toupper(level_chr)]]
+  if (is.null(lvl)) return(FALSE)
+  cur <- get_log_level()
+  lvl >= cur
+}
+
+# intern hjælper (ikke-eksporteret)
+.safe_format <- function(x) {
+  tryCatch({
+    if (is.null(x))               return("NULL")
+    if (is.character(x))          return(paste(x, collapse = " "))
+    if (is.atomic(x)) {
+      if (length(x) > 10) {
+        return(paste0(
+          paste(utils::head(x, 10), collapse = " "),
+          " … (n=", length(x), ")"
+        ))
+      } else {
+        return(paste(x, collapse = " "))
+      }
+    }
+    if (is.data.frame(x)) {
+      return(sprintf("<data.frame: %d x %d> cols=[%s%s]",
+                     nrow(x), ncol(x),
+                     paste(utils::head(names(x), 6), collapse = ", "),
+                     if (ncol(x) > 6) ", …" else ""))
+    }
+    if (is.list(x)) {
+      nms <- names(x) %||% rep("", length(x))
+      shown <- utils::head(seq_along(x), 6)
+      keys <- ifelse(nchar(nms[shown]) > 0, nms[shown], shown)
+      return(sprintf("<list: %d> [%s%s]",
+                     length(x),
+                     paste(keys, collapse = ", "),
+                     if (length(x) > 6) ", …" else ""))
+    }
+    paste(capture.output(utils::str(x, max.level = 1, vec.len = 10, give.attr = FALSE)),
+          collapse = " ")
+  }, error = function(e) "<FORMAT_ERROR>")
+}
+
+# intern hjælper (ikke-eksporteret)
+.safe_collapse <- function(args_list) {
+  parts <- lapply(args_list, .safe_format)
+  paste(unlist(parts, use.names = FALSE), collapse = " ")
+}
+
+# intern hjælper (ikke-eksporteret)
+.component_or_fallback <- function(x) x %||% "UNSPECIFIED"
+
+# intern hjælper (ikke-eksporteret)
+.timestamp <- function() format(Sys.time(), "%H:%M:%S")
+
+#' Primær logging-funktion med level-filtering
 #'
 #' @description
-#' Central logging funktion der håndterer alle log beskeder med automatisk
-#' level filtering baseret på SPC_LOG_LEVEL environment variabel.
+#' Central logging-funktion der håndterer alle log-beskeder med automatisk
+#' level-filtering baseret på `SPC_LOG_LEVEL`.
 #'
-#' @param message Besked der skal logges (karakter string)
-#' @param level Log level som string. Gyldige værdier: "DEBUG", "INFO", "WARN", "ERROR"
-#' @param component Valgfri komponent tag for organisering (f.eks. "AUTO_DETECT", "FILE_UPLOAD")
+#' @param message Besked (karakter/string) der skal logges
+#' @param level Log-niveau som string. Gyldige værdier: `"DEBUG"`, `"INFO"`, `"WARN"`, `"ERROR"`
+#' @param component Valgfrit komponent-tag for organisering (f.eks. `"AUTO_DETECT"`, `"FILE_UPLOAD"`)
 #'
-#' @return Returnerer invisible(NULL). Beskeder skrives til console hvis level er tilstrækkelig høj
+#' @return `invisible(NULL)`. Beskeder skrives til konsol hvis niveauet tillader det.
 #' @export
 #'
-#' @details
-#' Funktionen checker den aktuelle log level (fra SPC_LOG_LEVEL environment variable)
-#' og viser kun beskeder hvis deres level er høj nok. Beskeder formateres med
-#' timestamp, level og valgfri komponent tag.
-#'
 #' @examples
-#' # Grundlæggende brug
 #' log_msg("System startet", "INFO")
-#'
-#' # Med komponent tag
-#' log_msg("Data læst succesfuldt", "INFO", "FILE_UPLOAD")
-#'
-#' # Debug besked (kun vist hvis SPC_LOG_LEVEL=DEBUG)
-#' log_msg("Processerer række 42", "DEBUG", "DATA_PROC")
+#' log_msg("Data læst", "INFO", "FILE_UPLOAD")
+#' Sys.setenv(SPC_LOG_LEVEL = "DEBUG"); log_msg("Detaljer", "DEBUG", "DATA_PROC")
 log_msg <- function(message, level = "INFO", component = NULL) {
-  current_level <- get_log_level()
-  msg_level <- LOG_LEVELS[[toupper(level)]]
-
-  if (is.null(msg_level) || msg_level < current_level) {
-    return(invisible(NULL))
-  }
-
-  timestamp <- format(Sys.time(), "%H:%M:%S")
-  component_str <- if (!is.null(component)) paste0("[", component, "] ") else ""
-
+  if (!.should_log(level)) return(invisible(NULL))
+  
+  ts <- .timestamp()
+  comp <- .component_or_fallback(component)
+  comp_str <- if (!is.null(component)) paste0("[", comp, "] ") else ""
+  
   cat(sprintf("[%s] %s: %s%s\n",
-              timestamp,
+              ts,
               toupper(level),
-              component_str,
-              message))
-}
-
-#' Log debug besked (kun vist ved DEBUG log level) - Variadisk og fejlsikker
-#'
-#' @description Convenience funktion til logging af debug beskeder. Accepterer
-#' variable antal argumenter og er fejlsikker for at undgå renderPlot crashes.
-#'
-#' @param ... Variable argumenter der skal sammenkædes til debug besked
-#' @param .context Valgfri kontekst tag (f.eks. "RENDER_PLOT", "AUTO_DETECT")
-#' @export
-#'
-#' @examples
-#' # Basis brug
-#' log_debug("Processerer data række")
-#'
-#' # Med kontekst
-#' log_debug("Column config check:", TRUE, .context = "RENDER_PLOT")
-#'
-#' # Multiple argumenter
-#' log_debug("Status:", status_var, "for fil:", filename)
-log_debug <- function(..., .context = NULL) {
-  tryCatch({
-    msg <- paste(..., collapse = " ")
-    log_msg(msg, "DEBUG", component = .context)
-  }, error = function(e) {
-    # Fejlsikker fallback - aldrig crash renderPlot
-    try(cat("DEBUG: [LOGGING_ERROR] Could not format debug message\n"), silent = TRUE)
-  })
+              comp_str,
+              as.character(message)))
   invisible(NULL)
 }
 
-#' Log information besked
+#' Log debug-besked (variadisk og Shiny-sikker)
 #'
-#' @description Convenience funktion til logging af information beskeder.
+#' @description
+#' Convenience-funktion til logging af DEBUG-beskeder.
+#' Accepterer vilkårligt antal argumenter (`...`) og formaterer dem robust
+#' (tåler lister, data.frames m.m.) uden at crashe i Shiny renderers.
 #'
-#' @param message Information besked der skal logges
-#' @param component Valgfri komponent tag (f.eks. "FILE_UPLOAD")
+#' @param ... Variable argumenter der sammenkædes til en debug-besked
+#' @param .context Valgfri kontekst-tag (f.eks. `"RENDER_PLOT"`, `"AUTO_DETECT"`)
+#'
+#' @return `invisible(NULL)`.
+#' @export
+#'
+#' @examples
+#' log_debug("Status:", TRUE, .context = "RENDER_PLOT")
+#' log_debug("Række:", 42, list(a = 1), .context = "DATA_PROC")
+log_debug <- function(..., .context = NULL) {
+  if (!.should_log("DEBUG")) return(invisible(NULL))
+  
+  component <- .component_or_fallback(.context)
+  
+  tryCatch({
+    msg <- .safe_collapse(list(...))
+    if (exists("log_msg", mode = "function")) {
+      log_msg(msg, "DEBUG", component = component)
+    } else {
+      cat(sprintf("[%s] DEBUG: [%s] %s\n", .timestamp(), component, msg))
+    }
+  }, error = function(e) {
+    # Fejlsikker fallback – må ALDRIG vælte Shiny-renderers
+    try(cat("DEBUG: [LOGGING_ERROR] Could not format debug message\n"), silent = TRUE)
+  })
+  
+  invisible(NULL)
+}
+
+#' Log information-besked
+#'
+#' @description
+#' Convenience-funktion til logging af INFO-beskeder.
+#'
+#' @param message Besked der skal logges
+#' @param component Valgfri komponent-tag (f.eks. `"FILE_UPLOAD"`)
+#'
+#' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
@@ -137,12 +200,15 @@ log_info <- function(message, component = NULL) {
   log_msg(message, "INFO", component)
 }
 
-#' Log warning besked
+#' Log warning-besked
 #'
-#' @description Convenience funktion til logging af advarsels beskeder.
+#' @description
+#' Convenience-funktion til logging af WARN-beskeder.
 #'
-#' @param message Warning besked der skal logges
-#' @param component Valgfri komponent tag (f.eks. "DATA_VALIDATION")
+#' @param message Besked der skal logges
+#' @param component Valgfri komponent-tag (f.eks. `"DATA_VALIDATION"`)
+#'
+#' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
@@ -151,84 +217,105 @@ log_warn <- function(message, component = NULL) {
   log_msg(message, "WARN", component)
 }
 
-#' Log error besked
+#' Log error-besked
 #'
-#' @description Convenience funktion til logging af fejl beskeder.
+#' @description
+#' Convenience-funktion til logging af ERROR-beskeder. Accepterer også en
+#' `condition` direkte (beskeden udtrækkes med `conditionMessage()`).
 #'
-#' @param message Error besked der skal logges
-#' @param component Valgfri komponent tag (f.eks. "ERROR_HANDLING")
+#' @param message Besked eller condition der skal logges
+#' @param component Valgfri komponent-tag (f.eks. `"ERROR_HANDLING"`)
+#'
+#' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
 #' log_error("Kunne ikke læse fil", "FILE_UPLOAD")
+#' \dontrun{
+#'   tryCatch(stop("Boom"), error = function(e) log_error(e, "PIPELINE"))
+#' }
 log_error <- function(message, component = NULL) {
-  log_msg(message, "ERROR", component)
+  msg <- if (inherits(message, "condition")) conditionMessage(message) else message
+  log_msg(msg, "ERROR", component)
 }
 
-#' Log debug block start/stop med separator linjer
+#' Log afgrænsede debug-blokke (start/stop)
 #'
-#' @description Helper funktion til logging af debug blokke med visuelt adskilte
-#' start/stop sektioner. Erstatter hardcodede separator linjer i koden.
+#' @description
+#' Helper-funktion til logging af visuelt afgrænsede debug-blokke
+#' med separatorlinjer. Erstatter hardcodede separatorer i koden.
 #'
-#' @param context Kontekst tag for blokken (f.eks. "COLUMN_MGMT", "AUTO_DETECT")
-#' @param action Beskrivelse af handlingen (f.eks. "Starting column management", "Processing data")
-#' @param type Type af separator: "start", "stop", eller "both" (default)
+#' @param context Kontekst-tag for blokken (f.eks. `"COLUMN_MGMT"`, `"AUTO_DETECT"`)
+#' @param action Beskrivelse af handlingen (f.eks. `"Starting column detection"`)
+#' @param type Type af markering: `"start"`, `"stop"`, eller `"both"` (default `"start"`)
+#'
+#' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
 #' log_debug_block("COLUMN_MGMT", "Starting column detection")
-#' # Kode her...
+#' # ... kode ...
 #' log_debug_block("COLUMN_MGMT", "Column detection completed", type = "stop")
 log_debug_block <- function(context, action, type = "start") {
-  separator_line <- paste(rep("=", 43), collapse = "")
-
-  if (type %in% c("start", "both")) {
-    log_debug(separator_line, .context = context)
-    log_debug(action, .context = context)
+  if (!.should_log("DEBUG")) return(invisible(NULL))
+  
+  sep <- paste(rep("=", 50), collapse = "")
+  
+  ctx <- .component_or_fallback(context)
+  t <- match.arg(type, choices = c("start", "stop", "both"))
+  
+  if (t %in% c("start", "both")) {
+    log_debug(sep, .context = ctx)
+    log_debug(action, .context = ctx)
   }
-
-  if (type == "stop") {
-    log_debug(paste(action, "- completed"), .context = context)
-    log_debug(separator_line, .context = context)
+  if (t %in% c("stop", "both")) {
+    log_debug(paste0(action, " - completed"), .context = ctx)
+    log_debug(sep, .context = ctx)
   }
-
-  if (type == "both") {
-    log_debug(separator_line, .context = context)
-  }
+  
+  invisible(NULL)
 }
 
-#' Log key-value pairs struktureret
+#' Log strukturerede key-value par (kompakt)
 #'
-#' @description Helper funktion til logging af strukturerede key-value data.
-#' Understøtter både navngivne argumenter og lister.
+#' @description
+#' Helper-funktion til logging af strukturerede key-value data.
+#' Understøtter både navngivne `...`-argumenter og en liste via `.list_data`.
+#' Værdier formatteres robust (tåler komplekse objekter) uden at crashe i Shiny.
 #'
-#' @param ... Navngivne argumenter der skal logges som key-value pairs
-#' @param .context Kontekst tag (f.eks. "DATA_PROC", "AUTO_DETECT")
-#' @param .list_data Optional liste med key-value data
+#' @param ... Navngivne argumenter der logges som key-value (`navn = værdi`)
+#' @param .context Kontekst-tag (f.eks. `"DATA_PROC"`, `"AUTO_DETECT"`)
+#' @param .list_data Valgfri liste med key-value data
+#'
+#' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
 #' log_debug_kv(trigger_value = 1, status = "active", .context = "DATA_TABLE")
 #' log_debug_kv(.list_data = list(rows = 100, cols = 5), .context = "DATA_PROC")
 log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
-  # Handle named arguments
-  named_args <- list(...)
-  if (length(named_args) > 0) {
-    for (key in names(named_args)) {
-      if (!is.null(key) && key != "") {
-        value <- named_args[[key]]
-        log_debug(paste0(key, ": ", as.character(value)), .context = .context)
-      }
+  if (!.should_log("DEBUG")) return(invisible(NULL))
+  
+  ctx <- .component_or_fallback(.context)
+  
+  dots <- list(...)
+  if (length(dots) > 0) {
+    nms <- names(dots) %||% rep("", length(dots))
+    for (i in seq_along(dots)) {
+      key <- nms[[i]] %||% paste0("..", i)
+      val <- .safe_format(dots[[i]])
+      log_debug(paste0(key, ": ", val), .context = ctx)
     }
   }
-
-  # Handle list data
+  
   if (!is.null(.list_data) && is.list(.list_data)) {
-    for (key in names(.list_data)) {
-      if (!is.null(key) && key != "") {
-        value <- .list_data[[key]]
-        log_debug(paste0(key, ": ", as.character(value)), .context = .context)
-      }
+    nms <- names(.list_data) %||% rep("", length(.list_data))
+    for (i in seq_along(.list_data)) {
+      key <- nms[[i]] %||% paste0("..", i)
+      val <- .safe_format(.list_data[[i]])
+      log_debug(paste0(key, ": ", val), .context = ctx)
     }
   }
+  
+  invisible(NULL)
 }
