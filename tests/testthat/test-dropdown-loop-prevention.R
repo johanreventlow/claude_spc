@@ -194,11 +194,17 @@ test_that("UI service update med loop protection", {
     mock_input[[inputId]] <<- selected
   }
 
-  # Override updateSelectizeInput
-  env <- environment()
-  env$updateSelectizeInput <- mock_updateSelectizeInput
+  # Override updateSelectizeInput in globalenv for the test
+  original_updateSelectizeInput <- get("updateSelectizeInput", envir = globalenv())
+  assign("updateSelectizeInput", mock_updateSelectizeInput, envir = globalenv())
 
-  # SETUP: Create UI service
+  # Ensure cleanup after test
+  on.exit({
+    assign("updateSelectizeInput", original_updateSelectizeInput, envir = globalenv())
+  })
+
+  # SETUP: Create UI service with mock session that looks valid
+  mock_session <- structure(list(), class = "ShinySession")  # Make it look like a ShinySession
   ui_service <- create_ui_update_service(mock_session, app_state)
 
   # TEST: Update column choices
