@@ -70,37 +70,42 @@ get_log_level <- function() {
 
 # intern hjælper (ikke-eksporteret)
 .safe_format <- function(x) {
-  tryCatch({
-    if (is.null(x))               return("NULL")
-    if (is.character(x))          return(paste(x, collapse = " "))
-    if (is.atomic(x)) {
-      if (length(x) > 10) {
-        return(paste0(
-          paste(utils::head(x, 10), collapse = " "),
-          " … (n=", length(x), ")"
-        ))
-      } else {
-        return(paste(x, collapse = " "))
+  safe_operation(
+    "Format object for logging",
+    code = {
+      if (is.null(x))               return("NULL")
+      if (is.character(x))          return(paste(x, collapse = " "))
+      if (is.atomic(x)) {
+        if (length(x) > 10) {
+          return(paste0(
+            paste(utils::head(x, 10), collapse = " "),
+            " … (n=", length(x), ")"
+          ))
+        } else {
+          return(paste(x, collapse = " "))
+        }
       }
-    }
-    if (is.data.frame(x)) {
-      return(sprintf("<data.frame: %d x %d> cols=[%s%s]",
-                     nrow(x), ncol(x),
-                     paste(utils::head(names(x), 6), collapse = ", "),
-                     if (ncol(x) > 6) ", …" else ""))
-    }
-    if (is.list(x)) {
-      nms <- names(x) %||% rep("", length(x))
-      shown <- utils::head(seq_along(x), 6)
-      keys <- ifelse(nchar(nms[shown]) > 0, nms[shown], shown)
-      return(sprintf("<list: %d> [%s%s]",
-                     length(x),
-                     paste(keys, collapse = ", "),
-                     if (length(x) > 6) ", …" else ""))
-    }
-    paste(capture.output(utils::str(x, max.level = 1, vec.len = 10, give.attr = FALSE)),
-          collapse = " ")
-  }, error = function(e) "<FORMAT_ERROR>")
+      if (is.data.frame(x)) {
+        return(sprintf("<data.frame: %d x %d> cols=[%s%s]",
+                       nrow(x), ncol(x),
+                       paste(utils::head(names(x), 6), collapse = ", "),
+                       if (ncol(x) > 6) ", …" else ""))
+      }
+      if (is.list(x)) {
+        nms <- names(x) %||% rep("", length(x))
+        shown <- utils::head(seq_along(x), 6)
+        keys <- ifelse(nchar(nms[shown]) > 0, nms[shown], shown)
+        return(sprintf("<list: %d> [%s%s]",
+                       length(x),
+                       paste(keys, collapse = ", "),
+                       if (length(x) > 6) ", …" else ""))
+      }
+      paste(capture.output(utils::str(x, max.level = 1, vec.len = 10, give.attr = FALSE)),
+            collapse = " ")
+    },
+    fallback = function(e) "<FORMAT_ERROR>",
+    error_type = "processing"
+  )
 }
 
 # intern hjælper (ikke-eksporteret)
@@ -168,17 +173,22 @@ log_debug <- function(..., .context = NULL) {
   
   component <- .component_or_fallback(.context)
   
-  tryCatch({
-    msg <- .safe_collapse(list(...))
-    if (exists("log_msg", mode = "function")) {
-      log_msg(msg, "DEBUG", component = component)
-    } else {
-      cat(sprintf("[%s] DEBUG: [%s] %s\n", .timestamp(), component, msg))
-    }
-  }, error = function(e) {
-    # Fejlsikker fallback – må ALDRIG vælte Shiny-renderers
-    try(message("[LOGGING_ERROR] Could not format debug message"), silent = TRUE)
-  })
+  safe_operation(
+    "Log debug message",
+    code = {
+      msg <- .safe_collapse(list(...))
+      if (exists("log_msg", mode = "function")) {
+        log_msg(msg, "DEBUG", component = component)
+      } else {
+        cat(sprintf("[%s] DEBUG: [%s] %s\n", .timestamp(), component, msg))
+      }
+    },
+    fallback = function(e) {
+      # Fejlsikker fallback – må ALDRIG vælte Shiny-renderers
+      try(message("[LOGGING_ERROR] Could not format debug message"), silent = TRUE)
+    },
+    error_type = "processing"
+  )
   
   invisible(NULL)
 }
