@@ -681,6 +681,11 @@ create_app_state <- function() {
     n_column = NULL,
     cl_column = NULL,
 
+    # Control columns
+    skift_column = NULL,
+    frys_column = NULL,
+    kommentar_column = NULL,
+
     # UI sync state
     ui_sync_needed = FALSE,
     ui_sync_last_time = NULL
@@ -698,7 +703,9 @@ create_app_state <- function() {
 
   # UI State - Convert to reactiveValues for consistency
   app_state$ui <- reactiveValues(
-    hide_anhoej_rules = FALSE
+    hide_anhoej_rules = FALSE,
+    updating_programmatically = FALSE,    # LOOP PROTECTION: Flag to prevent circular events during UI updates
+    last_programmatic_update = NULL       # LOOP PROTECTION: Timestamp of last programmatic update
   )
 
   # Autodetect State - Unified autodetect engine state management

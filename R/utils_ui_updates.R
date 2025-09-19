@@ -30,7 +30,7 @@ create_ui_update_service <- function(session, app_state) {
   #' @param columns Vector of column input IDs to update
   #' @param clear_selections If TRUE, clear all selections
   #'
-  update_column_choices <- function(choices = NULL, selected = NULL, columns = c("x_column", "y_column", "n_column", "cl_column"), clear_selections = FALSE) {
+  update_column_choices <- function(choices = NULL, selected = NULL, columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column"), clear_selections = FALSE) {
     log_debug("Updating column choices for:", paste(columns, collapse = ", "), .context = "UI_SERVICE")
 
     # Generate choices from current data if not provided
@@ -53,18 +53,40 @@ create_ui_update_service <- function(session, app_state) {
     if (clear_selections) {
       selected <- setNames(rep("", length(columns)), columns)
       log_debug("Clearing all selections", .context = "UI_SERVICE")
+    } else if (is.null(selected)) {
+      # AUTO-READ FROM APP_STATE: When no selections provided, read current values from app_state
+      selected <- list()
+      for (col in columns) {
+        # Priority: input[[col]] > app_state$columns[[col]] > ""
+        current_val <- tryCatch({
+          if (!is.null(input[[col]]) && input[[col]] != "") {
+            input[[col]]
+          } else if (!is.null(isolate(app_state$columns[[col]]))) {
+            isolate(app_state$columns[[col]])
+          } else {
+            ""
+          }
+        }, error = function(e) {
+          log_debug(paste("Error reading", col, "from app_state:", e$message), .context = "UI_SERVICE")
+          ""
+        })
+        selected[[col]] <- current_val
+        log_debug(paste("Auto-read selection for", col, ":", current_val), .context = "UI_SERVICE")
+      }
     }
 
-    # Update each column input
-    tryCatch({
-      for (col in columns) {
-        selected_value <- if (!is.null(selected) && col %in% names(selected)) selected[[col]] else ""
-        updateSelectizeInput(session, col, choices = choices, selected = selected_value)
-        log_debug("Updated", col, "with selected:", selected_value, .context = "UI_SERVICE")
-      }
-      log_debug("✅ Column choices updated successfully", .context = "UI_SERVICE")
-    }, error = function(e) {
-      log_error("Error updating column choices:", e$message, "UI_SERVICE")
+    # Update each column input using safe wrapper to prevent loops
+    safe_programmatic_ui_update(session, app_state, function() {
+      tryCatch({
+        for (col in columns) {
+          selected_value <- if (!is.null(selected) && col %in% names(selected)) selected[[col]] else ""
+          updateSelectizeInput(session, col, choices = choices, selected = selected_value)
+          log_debug("Updated", col, "with selected:", selected_value, .context = "UI_SERVICE")
+        }
+        log_debug("✅ Column choices updated successfully", .context = "UI_SERVICE")
+      }, error = function(e) {
+        log_error(paste("Error updating column choices:", e$message), "UI_SERVICE")
+      })
     })
   }
 
@@ -411,4 +433,60 @@ add_ui_update_emit_functions <- function(emit, app_state) {
 
   log_debug("UI update emit functions added", .context = "UI_SERVICE")
   return(emit)
+}
+
+#' Safe Programmatic UI Update Wrapper
+#'
+#' Wrapper function that prevents circular event loops during programmatic UI updates.
+#' Sets protection flag before updates and clears it afterwards to prevent input observers
+#' from triggering new events during programmatic changes.
+#'
+#' @param session Shiny session object
+#' @param app_state Centralized app state with UI protection flags
+#' @param update_function Function to execute with protection (should contain updateSelectizeInput calls)
+#' @param delay_ms Delay in milliseconds before clearing protection flag (default: 100ms)
+#'
+#' @examples
+#' \dontrun{
+#' safe_programmatic_ui_update(session, app_state, function() {
+#'   updateSelectizeInput(session, "x_column", choices = choices, selected = "Dato")
+#'   updateSelectizeInput(session, "y_column", choices = choices, selected = "Tæller")
+#' })
+#' }
+#'
+#' @export
+safe_programmatic_ui_update <- function(session, app_state, update_function, delay_ms = 200) {
+  log_debug("Starting safe programmatic UI update", .context = "LOOP_PROTECTION")
+
+  tryCatch({
+    # Set protection flag to prevent input observers from firing
+    app_state$ui$updating_programmatically <- TRUE
+    app_state$ui$last_programmatic_update <- Sys.time()
+
+    log_debug("Protection flag set - programmatic updates active", .context = "LOOP_PROTECTION")
+
+    # Execute the UI updates
+    update_function()
+
+    log_debug("UI updates completed, scheduling protection flag clear", .context = "LOOP_PROTECTION")
+
+    # Clear protection flag after short delay to ensure all reactive chains complete
+    if (requireNamespace("later", quietly = TRUE)) {
+      later::later(function() {
+        app_state$ui$updating_programmatically <- FALSE
+        log_debug("Protection flag cleared - programmatic updates complete", .context = "LOOP_PROTECTION")
+      }, delay = delay_ms / 1000)
+    } else {
+      # Fallback if later package not available
+      Sys.sleep(delay_ms / 1000)
+      app_state$ui$updating_programmatically <- FALSE
+      log_debug("Protection flag cleared (fallback) - programmatic updates complete", .context = "LOOP_PROTECTION")
+    }
+
+  }, error = function(e) {
+    # Ensure protection flag is cleared even on error
+    app_state$ui$updating_programmatically <- FALSE
+    log_error(paste("Error in safe programmatic UI update:", e$message), "LOOP_PROTECTION")
+    stop(e)
+  })
 }

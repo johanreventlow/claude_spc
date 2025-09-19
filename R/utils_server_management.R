@@ -440,12 +440,14 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
       .context = "SESSION_RESET"
     )
 
-    # Kør name-only detection direkte i stedet for normal auto-detection
-    log_debug("Running name-only detection directly...", .context = "SESSION_RESET")
-
-    # Kald name-only detection direkte med de nye kolonnenavne
-    # NOTE: UI sync is now handled by unified event system
-    name_only_result <- detect_columns_name_only(names(new_data), NULL, session, app_state)
+    # Kør name-only detection via unified engine
+    log_debug("Running name-only detection via autodetect_engine...", .context = "SESSION_RESET")
+    autodetect_engine(
+      data = new_data,
+      trigger_type = "session_start",
+      app_state = app_state,
+      emit = emit
+    )
 
     log_debug("✅ Name-only detection completed for session reset", .context = "SESSION_RESET")
   }
@@ -584,10 +586,13 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
     if (!is.null(ui_service)) {
       ui_service$update_column_choices(clear_selections = TRUE)
     } else {
-      # Fallback to direct updates
-      updateSelectInput(session, "x_column", selected = "")
-      updateSelectInput(session, "y_column", selected = "")
-      updateSelectInput(session, "n_column", selected = "")
+      # Fallback to direct updates - use updateSelectizeInput for consistency
+      updateSelectizeInput(session, "x_column", selected = "")
+      updateSelectizeInput(session, "y_column", selected = "")
+      updateSelectizeInput(session, "n_column", selected = "")
+      updateSelectizeInput(session, "skift_column", selected = "")
+      updateSelectizeInput(session, "frys_column", selected = "")
+      updateSelectizeInput(session, "kommentar_column", selected = "")
     }
 
     log_debug("New empty session created", .context = "WELCOME_PAGE")

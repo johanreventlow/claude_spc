@@ -7,6 +7,12 @@
 #' 
 #' @noRd
 app_server <- function(input, output, session) {
+  cat("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n")
+  cat("🚀🚀🚀 APP_SERVER FUNCTION CALLED!!! SESSION START!!! 🚀🚀🚀\n")
+  cat("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n")
+  log_debug("🚀🚀🚀 APP_SERVER FUNCTION CALLED 🚀🚀🚀", "APP_SERVER")
+  log_debug("===========================================", "APP_SERVER")
+
   # Initialize advanced debug system
   initialize_advanced_debug(enable_history = TRUE, max_history_entries = 1000)
 
@@ -44,18 +50,26 @@ app_server <- function(input, output, session) {
   log_debug("Initializing centralized app state...", "APP_SERVER")
   debug_log("Creating centralized app_state", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
   app_state <- create_app_state()
+  cat("⭐⭐⭐ create_app_state() COMPLETED SUCCESSFULLY ⭐⭐⭐\n")
   log_debug("✅ Centralized state initialized", "APP_SERVER")
   session_debugger$event("centralized_state_initialized")
+  cat("⭐⭐⭐ session_debugger event COMPLETED ⭐⭐⭐\n")
 
   # EVENT SYSTEM: Initialize reactive event bus
+  log_debug("==========================================", "APP_SERVER")
   log_debug("Creating event emit API...", "APP_SERVER")
+  log_debug("About to create emit API", "APP_SERVER")
   emit <- create_emit_api(app_state)
+  log_debug("✅ Emit API created successfully", "APP_SERVER")
   log_debug("✅ Event system initialized", "APP_SERVER")
 
   # UI SERVICE: Initialize centralized UI update service
   log_debug("Creating UI update service...", "APP_SERVER")
+  log_debug("About to create UI service", "APP_SERVER")
   ui_service <- create_ui_update_service(session, app_state)
+  log_debug("✅ UI service created successfully", "APP_SERVER")
   log_debug("✅ UI update service initialized", "APP_SERVER")
+
 
   # SHINYLOGS: Setup advanced web-based logging (if enabled)
   if (should_enable_shinylogs()) {
@@ -76,12 +90,46 @@ app_server <- function(input, output, session) {
     log_debug("shinylogs disabled via environment variable", "APP_SERVER")
   }
 
+  # EVENT SYSTEM: Set up reactive event listeners AFTER shinylogs setup
+  # SESSION FLAG: Prevent duplicate event listener registration
+  event_listeners_setup <- FALSE
+
+  log_debug("==========================================", "APP_SERVER")
+  log_debug("About to set up event listeners AFTER shinylogs", "APP_SERVER")
+  log_debug("Setting up event listeners with all required dependencies...", "APP_SERVER")
+  tryCatch({
+    log_debug("Calling setup_event_listeners...", "APP_SERVER")
+    setup_event_listeners(app_state, emit, input, output, session, ui_service)
+    event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
+    log_debug("✅ setup_event_listeners returned successfully", "APP_SERVER")
+    log_debug("✅ Event listeners setup completed successfully", "APP_SERVER")
+  }, error = function(e) {
+    log_debug(paste("❌ ERROR in setup_event_listeners:", e$message), "APP_SERVER")
+    print(paste("Full error details:", e))
+  })
+
+  # EMERGENCY FIX: Setup event listeners in observer ONLY if direct call failed
+  observeEvent(reactive(TRUE), {
+    if (!event_listeners_setup) {
+      log_debug("🚨 EMERGENCY: Setting up event listeners in observer (direct call failed)", "APP_SERVER")
+      tryCatch({
+        setup_event_listeners(app_state, emit, input, output, session, ui_service)
+        event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
+        log_debug("🚨 EMERGENCY: Event listeners setup SUCCESS", "APP_SERVER")
+      }, error = function(e) {
+        log_debug(paste("🚨 EMERGENCY ERROR:", e$message), "APP_SERVER")
+      })
+    } else {
+      log_debug("✅ Event listeners already setup - skipping emergency observer", "APP_SERVER")
+    }
+  }, once = TRUE, priority = OBSERVER_PRIORITIES$HIGH, ignoreInit = FALSE)
+
   # Take initial state snapshot - delay to avoid reactive context issues
-  observe({
+  observeEvent(reactive(TRUE), {
     isolate({
       initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = session$token)
     })
-  }, priority = OBSERVER_PRIORITIES$LOW)
+  }, once = TRUE, priority = OBSERVER_PRIORITIES$LOW, ignoreInit = FALSE)
 
   # FASE 5: Memory management setup
   log_debug("Setting up memory management...", "APP_SERVER")
@@ -222,9 +270,6 @@ app_server <- function(input, output, session) {
 
   session_debugger$event("server_setup_complete")
   debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
-
-  # EVENT SYSTEM: Set up reactive event listeners
-  setup_event_listeners(app_state, emit, input, output, session, ui_service)
 
   # FASE 3: Emit session_started event for name-only detection
   observeEvent(reactive(TRUE), {

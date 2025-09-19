@@ -49,8 +49,16 @@ autodetect_engine <- function(data = NULL,
     .context = "UNIFIED_AUTODETECT"
   )
 
-  # 1. TRIGGER VALIDATION - frozen state check
+  # 1. TRIGGER VALIDATION - smart unfreezing when data is available
   frozen_state <- isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
+
+  # SMART UNFREEZE: If we have data available and we're frozen, automatically unfreeze
+  if (frozen_state && !is.null(data) && nrow(data) > 0 && trigger_type == "file_upload") {
+    log_debug("SMART UNFREEZE: Data available, unfreezing autodetect system automatically", .context = "UNIFIED_AUTODETECT")
+    app_state$autodetect$frozen_until_next_trigger <- FALSE
+    frozen_state <- FALSE
+  }
+
   if (frozen_state && trigger_type != "manual") {
     log_debug("Autodetect skipped - system frozen until next trigger (use manual to override)",
               .context = "UNIFIED_AUTODETECT")
@@ -79,8 +87,8 @@ autodetect_engine <- function(data = NULL,
   # 3. STATE UPDATE & FREEZE
   log_debug("Updating app_state with detection results", .context = "UNIFIED_AUTODETECT")
 
-  # Update all column mappings in unified location
-  app_state$columns <- update_all_column_mappings(results, app_state$columns)
+  # Update all column mappings in unified location - pass app_state for direct updates
+  app_state$columns <- update_all_column_mappings(results, app_state$columns, app_state)
 
   # Set frozen state to prevent re-running until next legitimate trigger
   app_state$autodetect$frozen_until_next_trigger <- TRUE
@@ -320,9 +328,65 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
 #' @param results Detection results from autodetect engine
 #' @param existing_columns Existing column state (optional)
 #' @return Updated column state
-update_all_column_mappings <- function(results, existing_columns = NULL) {
+update_all_column_mappings <- function(results, existing_columns = NULL, app_state = NULL) {
+  log_debug(paste("update_all_column_mappings received app_state address:", capture.output(print(app_state))), .context = "UPDATE_MAPPINGS")
   log_debug_block("UPDATE_MAPPINGS", "Updating column mappings in unified state")
 
+  # SMART APP_STATE DETECTION: If app_state not provided, try to find it from parent environment
+  if (is.null(app_state)) {
+    # Look for app_state in the calling environment chain
+    for (i in 1:10) {
+      env <- parent.frame(i)
+      if (exists("app_state", envir = env)) {
+        app_state <- get("app_state", envir = env)
+        log_debug("Found app_state in parent environment (frame", i, ")", .context = "UPDATE_MAPPINGS")
+        break
+      }
+    }
+  }
+
+  # DIRECT APP_STATE UPDATE: If app_state is provided, update it directly
+  if (!is.null(app_state)) {
+    log_debug("Updating app_state$columns directly with autodetect results", .context = "UPDATE_MAPPINGS")
+
+    # Update individual column mappings directly in app_state
+    if (!is.null(results$x_col)) {
+      app_state$columns$x_column <- results$x_col
+      log_debug(paste("Set app_state$columns$x_column =", results$x_col), .context = "UPDATE_MAPPINGS")
+    }
+    if (!is.null(results$y_col)) {
+      app_state$columns$y_column <- results$y_col
+      log_debug(paste("Set app_state$columns$y_column =", results$y_col), .context = "UPDATE_MAPPINGS")
+    }
+    if (!is.null(results$n_col)) {
+      app_state$columns$n_column <- results$n_col
+      log_debug(paste("Set app_state$columns$n_column =", results$n_col), .context = "UPDATE_MAPPINGS")
+    }
+    if (!is.null(results$skift_col)) {
+      app_state$columns$skift_column <- results$skift_col
+      log_debug(paste("Set app_state$columns$skift_column =", results$skift_col), .context = "UPDATE_MAPPINGS")
+    }
+    if (!is.null(results$frys_col)) {
+      app_state$columns$frys_column <- results$frys_col
+      log_debug(paste("Set app_state$columns$frys_column =", results$frys_col), .context = "UPDATE_MAPPINGS")
+    }
+    if (!is.null(results$kommentar_col)) {
+      app_state$columns$kommentar_column <- results$kommentar_col
+      log_debug(paste("Set app_state$columns$kommentar_column =", results$kommentar_col), .context = "UPDATE_MAPPINGS")
+    }
+
+    # Store complete results for backward compatibility
+    app_state$columns$auto_detect_results <- results
+    app_state$columns$auto_detected_columns <- results
+
+    # Mark as completed
+    app_state$columns$auto_detect_completed <- TRUE
+    app_state$columns$auto_detect_in_progress <- FALSE
+
+    log_debug("✅ Direct app_state update completed", .context = "UPDATE_MAPPINGS")
+  }
+
+  # LEGACY SUPPORT: Return updated list for backward compatibility
   if (is.null(existing_columns)) {
     existing_columns <- list()
   }
