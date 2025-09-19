@@ -9,8 +9,9 @@ library(readxl)
 
 ## Læs CSV fil med fejlhåndtering - dansk-optimeret
 readCSVFile <- function(file_path, sep = CSV_SEPARATORS$semicolon, decimal = DECIMAL_SEPARATORS$comma, encoding = UTF8_ENCODING, header = TRUE) {
-  tryCatch(
-    {
+  safe_operation(
+    "Read CSV file with Danish locale",
+    code = {
       # Til danske CSV filer, brug read_csv2 når sep=";" og decimal=","
       if (sep == CSV_SEPARATORS$semicolon && decimal == DECIMAL_SEPARATORS$comma) {
         data <- readr::read_csv2(
@@ -62,10 +63,11 @@ readCSVFile <- function(file_path, sep = CSV_SEPARATORS$semicolon, decimal = DEC
 
       return(data)
     },
-    error = function(e1) {
+    fallback = function(e1) {
       # Fallback: basis R læsefunktioner
-      tryCatch(
-        {
+      safe_operation(
+        "Fallback CSV read with base R",
+        code = {
           data <- read.csv(
             file_path,
             sep = sep,
@@ -81,11 +83,13 @@ readCSVFile <- function(file_path, sep = CSV_SEPARATORS$semicolon, decimal = DEC
 
           return(data)
         },
-        error = function(e2) {
+        fallback = function(e2) {
           stop(paste("Kunne ikke læse CSV fil. Første fejl:", e1$message, "• Fallback-fejl:", e2$message))
-        }
+        },
+        error_type = "processing"
       )
-    }
+    },
+    error_type = "processing"
   )
 }
 
@@ -93,8 +97,9 @@ readCSVFile <- function(file_path, sep = CSV_SEPARATORS$semicolon, decimal = DEC
 
 ## Læs Excel fil med fejlhåndtering
 readExcelFile <- function(file_path) {
-  tryCatch(
-    {
+  safe_operation(
+    "Read Excel file",
+    code = {
       # Hent ark-navne
       sheets <- readxl::excel_sheets(file_path)
 
@@ -109,8 +114,9 @@ readExcelFile <- function(file_path) {
       # Konverter til data.frame
       return(as.data.frame(data))
     },
-    error = function(e) {
+    fallback = function(e) {
       stop(paste("Kunne ikke læse Excel fil:", e$message))
-    }
+    },
+    error_type = "processing"
   )
 }
