@@ -33,15 +33,17 @@ detectChartConfiguration <- function(data, chart_type) {
       break
     }
 
-    tryCatch(
-      {
+    safe_operation(
+      "Detect date column",
+      code = {
         char_data <- as.character(col_data)[!is.na(col_data)]
         if (length(char_data) > 0) {
           test_sample <- char_data[1:min(3, length(char_data))]
 
           # Use guess_formats for more intelligent date detection (with error handling)
-          tryCatch(
-            {
+          safe_operation(
+            "Parse dates with lubridate",
+            code = {
               guessed_formats <- suppressWarnings(
                 lubridate::guess_formats(test_sample, c("dmy", "ymd", "mdy", "dby", "dmY", "Ymd", "mdY"))
               )
@@ -66,16 +68,18 @@ detectChartConfiguration <- function(data, chart_type) {
                 }
               }
             },
-            error = function(e) {
+            fallback = function(e) {
               # Skip this column if parsing fails
               log_warn("Date parsing failed for column", col_name, ":", e$message, "DATE_DETECTION")
-            }
+            },
+            error_type = "processing"
           )
         }
       },
-      error = function(e) {
+      fallback = function(e) {
         # Ignore errors in date detection
-      }
+      },
+      error_type = "processing"
     )
   }
 
@@ -287,19 +291,22 @@ applyHospitalTheme <- function(plot) {
     return(plot)
   }
 
-  tryCatch(
-    {
-      footer_text <- tryCatch(
-        {
+  safe_operation(
+    "Apply hospital theme to plot",
+    code = {
+      footer_text <- safe_operation(
+        "Create plot footer",
+        code = {
           create_plot_footer(
             afdeling = "",
             data_kilde = "Upload",
             dato = Sys.Date()
           )
         },
-        error = function(e) {
+        fallback = function(e) {
           "SPC Analyse" # fallback text
-        }
+        },
+        error_type = "processing"
       )
 
       themed_plot <- plot +
@@ -322,9 +329,10 @@ applyHospitalTheme <- function(plot) {
 
       return(themed_plot)
     },
-    error = function(e) {
+    fallback = function(e) {
       return(plot)
-    }
+    },
+    error_type = "processing"
   )
 }
 
