@@ -28,6 +28,7 @@ NULL
 #' and appropriate priorities to ensure correct execution order.
 #'
 setup_event_listeners <- function(app_state, emit, input, output, session, ui_service = NULL) {
+  cat("DEBUG: setup_event_listeners function started\n")
   log_debug("Setting up unified event listeners", .context = "EVENT_SYSTEM")
   log_debug("EVENT_SETUP: Starting data lifecycle events", .context = "EVENT_SYSTEM")
 
@@ -109,11 +110,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # UI SYNCHRONIZATION EVENTS
+  cat("DEBUG: About to register ui_sync_needed observer\n")
   log_debug("Registering ui_sync_needed observer", .context = "EVENT_SETUP")
   observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
+    cat("DEBUG: ui_sync_needed observer triggered!\n")
     log_debug("ui_sync_needed event received", .context = "EVENT")
 
     # Add extra debugging
+    cat("DEBUG: About to call sync_ui_with_columns_unified\n")
     log_debug("About to call sync_ui_with_columns_unified", .context = "EVENT")
 
     tryCatch({
@@ -436,7 +440,13 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 #' @param session Shiny session
 #'
 sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_service = NULL) {
-  log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
+  cat("DEBUG: sync_ui_with_columns_unified function STARTED\n")
+  tryCatch({
+    log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
+    cat("DEBUG: log_debug_block completed\n")
+  }, error = function(e) {
+    cat("DEBUG: log_debug_block ERROR:", e$message, "\n")
+  })
 
   # DROPDOWN DEBUGGING: Log autodetect results that will be used
   auto_detect_results <- isolate(app_state$columns$auto_detect_results)

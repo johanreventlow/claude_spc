@@ -30,4 +30,6 @@ Thumbs.db
 .Rdata
 .httr-oauth
 .quarto
-# CLAUDE.md
+CLAUDE.md
+AGENTS.md
+GEMINI.md

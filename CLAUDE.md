@@ -501,5 +501,3 @@ session$onSessionEnded(function() {
 * **Performance** - Responsive user experience
 * **Danish language support** - Cultural and linguistic requirements
 * **Best practice compliance** - Industry standard development patterns
-
-**HUSK:** Dette er et klinisk kvalitetssystem. Stabilitet og korrekthed er vigtigere end hastighed eller elegance.

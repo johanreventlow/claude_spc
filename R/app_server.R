@@ -91,23 +91,40 @@ app_server <- function(input, output, session) {
   }
 
   # EVENT SYSTEM: Set up reactive event listeners AFTER shinylogs setup
+  cat("DEBUG: Line 94 executed - about to start event system setup\n")
+  tryCatch({
+    log_debug("🔧 Starting event system setup...", "APP_SERVER")
+  }, error = function(e) {
+    cat("ERROR in log_debug at line 95:", e$message, "\n")
+  })
+
   # SESSION FLAG: Prevent duplicate event listener registration
+  log_debug("🔧 Checking app_state$system exists...", "APP_SERVER")
+
   # Initialize event listeners setup flag in app_state to prevent double registration
-  if (is.null(isolate(app_state$system$event_listeners_setup))) {
-    app_state$system$event_listeners_setup <- FALSE
-  }
+  tryCatch({
+    log_debug("🔧 Checking event_listeners_setup flag...", "APP_SERVER")
+    if (is.null(isolate(app_state$system$event_listeners_setup))) {
+      log_debug("🔧 Setting event_listeners_setup = FALSE", "APP_SERVER")
+      app_state$system$event_listeners_setup <- FALSE
+    }
+    log_debug("🔧 Event listeners setup flag initialized successfully", "APP_SERVER")
+  }, error = function(e) {
+    log_debug(paste("❌ ERROR initializing event_listeners_setup flag:", e$message), "APP_SERVER")
+    print(e)
+  })
 
   log_debug("==========================================", "APP_SERVER")
   log_debug("About to set up event listeners AFTER shinylogs", "APP_SERVER")
   log_debug("Setting up event listeners with all required dependencies...", "APP_SERVER")
   tryCatch({
-    log_debug("Calling setup_event_listeners...", "APP_SERVER")
+    cat("DEBUG: About to call setup_event_listeners...\n")
     setup_event_listeners(app_state, emit, input, output, session, ui_service)
+    cat("DEBUG: setup_event_listeners call completed\n")
     app_state$system$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
-    log_debug("✅ setup_event_listeners returned successfully", "APP_SERVER")
-    log_debug("✅ Event listeners setup completed successfully", "APP_SERVER")
+    cat("DEBUG: Event listeners setup flag set to TRUE\n")
   }, error = function(e) {
-    log_debug(paste("❌ ERROR in setup_event_listeners:", e$message), "APP_SERVER")
+    cat("ERROR in setup_event_listeners:", e$message, "\n")
     print(paste("Full error details:", e))
   })
 
@@ -135,6 +152,7 @@ app_server <- function(input, output, session) {
   }, once = TRUE, priority = OBSERVER_PRIORITIES$LOW, ignoreInit = FALSE)
 
   # FASE 5: Memory management setup
+  cat("DEBUG: Line 150 executed - about to setup memory management\n")
   log_debug("Setting up memory management...", "APP_SERVER")
   setup_session_cleanup(session, app_state)
   log_debug("✅ Memory management configured", "APP_SERVER")
