@@ -26,12 +26,49 @@ library(shinylogs) # Advanced web-based logging and monitoring
 library(later) # Til forsinket udførelse
 
 # SOURCE UTILITIES --------------------------------
-source("R/utils_logging.R")
-# source("R/utils_app_setup.R")  # App setup - temporarily disabled due to logging dependency issue
-source("R/utils_shinylogs_config.R")  # Advanced web-based logging with shinylogs
-source("R/utils_advanced_debug.R")  # Advanced debug infrastructure
-source("R/utils_end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing
-source("R/constants.R")
+# Robust sourcing that works from different working directories
+source_from_base <- function(relative_path) {
+  # Multiple strategies to find base directory
+  base_dir <- getwd()
+
+  # If we're in tests/testthat, go up two levels
+  if (basename(base_dir) == "testthat" && basename(dirname(base_dir)) == "tests") {
+    base_dir <- dirname(dirname(base_dir))
+  }
+
+  # Try direct path from current working dir
+  full_path <- file.path(base_dir, relative_path)
+  if (file.exists(full_path)) {
+    source(full_path)
+    return(invisible(TRUE))
+  }
+
+  # If that fails and we're potentially in a test environment, try going up directories
+  if (grepl("tests?", base_dir, ignore.case = TRUE)) {
+    parent_dir <- dirname(base_dir)
+    full_path_parent <- file.path(parent_dir, relative_path)
+    if (file.exists(full_path_parent)) {
+      source(full_path_parent)
+      return(invisible(TRUE))
+    }
+  }
+
+  # Final fallback - try relative path as is
+  if (file.exists(relative_path)) {
+    source(relative_path)
+    return(invisible(TRUE))
+  }
+
+  # If nothing works, give descriptive error
+  stop(paste("Could not find file:", relative_path, "from directory:", base_dir))
+}
+
+source_from_base("R/utils_logging.R")
+# source_from_base("R/utils_app_setup.R")  # App setup - temporarily disabled due to logging dependency issue
+source_from_base("R/utils_shinylogs_config.R")  # Advanced web-based logging with shinylogs
+source_from_base("R/utils_advanced_debug.R")  # Advanced debug infrastructure
+source_from_base("R/utils_end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing
+source_from_base("R/constants.R")
 
 # ENHANCED DEBUGGING UTILITIES --------------------------------
 # Enhanced reactive context logging for Shiny fejlidentifikation
@@ -115,18 +152,18 @@ SHINY_DEBUG_MODE <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
 
 # HJÆLPEFUNKTIONER --------------------------------
 
-source("R/utils_danish_locale.R")
-source("R/utils_ui_helpers.R")
-source("R/utils_ui_components.R")
-source("R/utils_ui_updates.R")
-source("R/utils_event_system.R")
-source("R/utils_server_management.R")
-source("R/utils_performance.R")
-source("R/utils_memory_management.R")
+source_from_base("R/utils_danish_locale.R")
+source_from_base("R/utils_ui_helpers.R")
+source_from_base("R/utils_ui_components.R")
+source_from_base("R/utils_ui_updates.R")
+source_from_base("R/utils_event_system.R")
+source_from_base("R/utils_server_management.R")
+source_from_base("R/utils_performance.R")
+source_from_base("R/utils_memory_management.R")
 
 # UNIFIED AUTODETECT ENGINE
-source("R/fct_autodetect_unified.R")    # Main unified autodetect engine
-source("R/fct_autodetect_helpers.R")    # Supporting functions for robust detection
+source_from_base("R/fct_autodetect_unified.R")    # Main unified autodetect engine
+source_from_base("R/fct_autodetect_helpers.R")    # Supporting functions for robust detection
 
 # HOSPITAL BRANDING ================================
 

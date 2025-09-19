@@ -17,13 +17,25 @@ setup_test_app_state <- function() {
     Kommentar = c("Start", "", "Problem", "", "", "Fix", "", "Change", "", "End")
   )
 
-  app_state$data$current_data <- test_data
-  app_state$columns$auto_detect$results <- list(
-    x_col = "Observation",
-    y_col = "Value",
-    n_col = "Sample_Size",
-    timestamp = Sys.time()
-  )
+  # Set data using isolate() to avoid reactive context issues
+  isolate({
+    # Set data using hierarchical structure
+    app_state$data$core$current_data <- test_data
+    app_state$data$current_data <- test_data  # Legacy compatibility
+
+    # Set auto-detect results using hierarchical structure
+    app_state$columns$auto_detect$results <- list(
+      x_col = "Observation",
+      y_col = "Value",
+      n_col = "Sample_Size",
+      timestamp = Sys.time()
+    )
+
+    # Set column mappings
+    app_state$columns$mappings$x_column <- "Observation"
+    app_state$columns$mappings$y_column <- "Value"
+    app_state$columns$mappings$n_column <- "Sample_Size"
+  })
 
   return(app_state)
 }
