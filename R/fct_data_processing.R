@@ -287,9 +287,13 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   if (name_only_mode) {
     autodetect_tracer$step("executing_name_only_detection")
     # Use unified autodetect_engine instead of detect_columns_name_only
+    # För empty dataset (name_only_mode) behöver vi skapa et dummy dataset med kolonnerne
+    dummy_data <- data.frame(matrix(NA, nrow = 0, ncol = length(col_names)))
+    names(dummy_data) <- col_names
+
     result <- autodetect_engine(
-      col_names = col_names,
-      strategy = "name_only",
+      data = dummy_data,
+      trigger_type = "session_start",  # Name-only detection behandles som session start
       app_state = app_state,
       emit = emit
     )

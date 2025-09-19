@@ -443,11 +443,11 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
     # Kør autodetect_engine med name-only strategy for session reset
     log_debug("Running autodetect_engine with name-only strategy...", .context = "SESSION_RESET")
 
-    # Kald den unified autodetect_engine med name-only strategy
+    # Kald den unified autodetect_engine for session reset
     # Dette sikrer konsistent event-logik og unified state management
     autodetect_result <- autodetect_engine(
-      col_names = names(new_data),
-      strategy = "name_only",  # Eksplicit name-only strategy for session reset
+      data = new_data,
+      trigger_type = "session_start",  # Session reset behandles som ny session start
       app_state = app_state,
       emit = emit
     )
