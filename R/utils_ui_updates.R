@@ -303,37 +303,41 @@ create_ui_update_service <- function(session, app_state) {
   show_user_feedback <- function(message, type = "info", duration = 3, modal = FALSE) {
     log_debug("Showing user feedback:", type, "-", message, .context = "UI_SERVICE")
 
-    tryCatch({
-      if (modal) {
-        # Show as modal dialog
-        showModal(modalDialog(
-          title = switch(type,
-                        "success" = "Success",
-                        "info" = "Information",
-                        "warning" = "Advarsel",
-                        "error" = "Fejl",
-                        "Information"),
-          message,
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        ))
-      } else {
-        # Show as notification
-        shiny_type <- switch(type,
-                            "success" = "message",
-                            "info" = "default",
-                            "warning" = "warning",
-                            "error" = "error",
-                            "default")
+    safe_operation(
+      "Show user feedback",
+      code = {
+        if (modal) {
+          # Show as modal dialog
+          showModal(modalDialog(
+            title = switch(type,
+                          "success" = "Success",
+                          "info" = "Information",
+                          "warning" = "Advarsel",
+                          "error" = "Fejl",
+                          "Information"),
+            message,
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+        } else {
+          # Show as notification
+          shiny_type <- switch(type,
+                              "success" = "message",
+                              "info" = "default",
+                              "warning" = "warning",
+                              "error" = "error",
+                              "default")
 
-        showNotification(message, type = shiny_type, duration = duration)
-      }
+          showNotification(message, type = shiny_type, duration = duration)
+        }
 
-      log_debug("✅ User feedback shown successfully", .context = "UI_SERVICE")
-
-    }, error = function(e) {
-      log_error("Error showing user feedback:", e$message, "UI_SERVICE")
-    })
+        log_debug("✅ User feedback shown successfully", .context = "UI_SERVICE")
+      },
+      fallback = function(e) {
+        log_error("Error showing user feedback:", e$message, "UI_SERVICE")
+      },
+      error_type = "processing"
+    )
   }
 
   #' Update UI State Conditionally
@@ -345,58 +349,62 @@ create_ui_update_service <- function(session, app_state) {
   update_ui_conditionally <- function(conditions) {
     log_debug("Updating UI conditionally based on", length(conditions), "conditions", .context = "UI_SERVICE")
 
-    tryCatch({
-      for (condition_name in names(conditions)) {
-        condition_spec <- conditions[[condition_name]]
+    safe_operation(
+      "Update UI conditionally",
+      code = {
+        for (condition_name in names(conditions)) {
+          condition_spec <- conditions[[condition_name]]
 
-        # Evaluate condition
-        condition_met <- if (is.function(condition_spec$condition)) {
-          condition_spec$condition()
-        } else {
-          condition_spec$condition
+          # Evaluate condition
+          condition_met <- if (is.function(condition_spec$condition)) {
+            condition_spec$condition()
+          } else {
+            condition_spec$condition
+          }
+
+          log_debug("Condition", condition_name, ":", condition_met, .context = "UI_SERVICE")
+
+          if (condition_met) {
+            # Execute actions for true condition
+            if (!is.null(condition_spec$actions$show)) {
+              for (element in condition_spec$actions$show) {
+                shinyjs::show(element)
+              }
+            }
+
+            if (!is.null(condition_spec$actions$hide)) {
+              for (element in condition_spec$actions$hide) {
+                shinyjs::hide(element)
+              }
+            }
+
+            if (!is.null(condition_spec$actions$enable)) {
+              for (element in condition_spec$actions$enable) {
+                shinyjs::enable(element)
+              }
+            }
+
+            if (!is.null(condition_spec$actions$disable)) {
+              for (element in condition_spec$actions$disable) {
+                shinyjs::disable(element)
+              }
+            }
+
+            if (!is.null(condition_spec$actions$update)) {
+              for (update_spec in condition_spec$actions$update) {
+                do.call(update_spec$func, update_spec$args)
+              }
+            }
+          }
         }
 
-        log_debug("Condition", condition_name, ":", condition_met, .context = "UI_SERVICE")
-
-        if (condition_met) {
-          # Execute actions for true condition
-          if (!is.null(condition_spec$actions$show)) {
-            for (element in condition_spec$actions$show) {
-              shinyjs::show(element)
-            }
-          }
-
-          if (!is.null(condition_spec$actions$hide)) {
-            for (element in condition_spec$actions$hide) {
-              shinyjs::hide(element)
-            }
-          }
-
-          if (!is.null(condition_spec$actions$enable)) {
-            for (element in condition_spec$actions$enable) {
-              shinyjs::enable(element)
-            }
-          }
-
-          if (!is.null(condition_spec$actions$disable)) {
-            for (element in condition_spec$actions$disable) {
-              shinyjs::disable(element)
-            }
-          }
-
-          if (!is.null(condition_spec$actions$update)) {
-            for (update_spec in condition_spec$actions$update) {
-              do.call(update_spec$func, update_spec$args)
-            }
-          }
-        }
-      }
-
-      log_debug("✅ Conditional UI updates completed", .context = "UI_SERVICE")
-
-    }, error = function(e) {
-      log_error("Error in conditional UI updates:", e$message, "UI_SERVICE")
-    })
+        log_debug("✅ Conditional UI updates completed", .context = "UI_SERVICE")
+      },
+      fallback = function(e) {
+        log_error("Error in conditional UI updates:", e$message, "UI_SERVICE")
+      },
+      error_type = "processing"
+    )
   }
 
   # Return enhanced service interface
