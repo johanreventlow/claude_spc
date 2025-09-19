@@ -19,11 +19,11 @@ test_that("session_started trigger fungerer for name-only detection", {
 test_that("manual_autodetect_button trigger bypasser frozen state", {
   # SETUP: Create app_state with test data and freeze it
   app_state <- create_app_state()
-  app_state$data$current_data <- data.frame(
+  set_current_data(app_state, data.frame(
     Dato = c("01-01-2024", "02-01-2024", "03-01-2024"),
     Tæller = c(90, 85, 92),
     Nævner = c(100, 95, 100)
-  )
+  ))
 
   emit <- create_emit_api(app_state)
 
@@ -137,7 +137,7 @@ test_that("frozen state metadata gemmes korrekt", {
 test_that("session_start trigger virker uden data", {
   # SETUP: Create app_state without data
   app_state <- create_app_state()
-  app_state$data$current_data <- NULL
+  set_current_data(app_state, NULL)
   emit <- create_emit_api(app_state)
 
   # TEST: session_start should work with no data (name-only detection)
@@ -199,7 +199,7 @@ test_that("event flow konsistens mellem triggers", {
     Tæller = c(90, 85, 92),
     Nævner = c(100, 95, 100)
   )
-  app_state$data$current_data <- test_data
+  set_current_data(app_state, test_data)
   emit <- create_emit_api(app_state)
 
   # TEST: All trigger types should produce consistent results

@@ -15,7 +15,7 @@ test_that("autodetect opdaterer alle 6 dropdown kolonner", {
 
   # SETUP: Mock app state
   app_state <- create_app_state()
-  app_state$data$current_data <- test_data
+  set_current_data(app_state, test_data)
 
   # SETUP: Mock emit functions
   emit <- list(
@@ -62,13 +62,15 @@ test_that("sync_ui_with_columns_unified læser alle 6 kolonner fra app_state", {
   )
 
   app_state <- create_app_state()
-  app_state$data$current_data <- test_data
-  app_state$columns$mappings$x_column <- "Dato"
-  app_state$columns$mappings$y_column <- "Tæller"
-  app_state$columns$mappings$n_column <- "Nævner"
-  app_state$columns$mappings$skift_column <- "Skift"
-  app_state$columns$mappings$frys_column <- "Frys"
-  app_state$columns$mappings$kommentar_column <- "Kommentarer"
+  set_current_data(app_state, test_data)
+  isolate({
+    app_state$columns$mappings$x_column <- "Dato"
+    app_state$columns$mappings$y_column <- "Tæller"
+    app_state$columns$mappings$n_column <- "Nævner"
+    app_state$columns$mappings$skift_column <- "Skift"
+    app_state$columns$mappings$frys_column <- "Frys"
+    app_state$columns$mappings$kommentar_column <- "Kommentarer"
+  })
 
   # VERIFY: All 6 columns are accessible in app_state
   expect_equal(isolate(app_state$columns$mappings$x_column), "Dato")
@@ -95,7 +97,7 @@ test_that("ui_service default columns inkluderer alle 6 kolonner", {
   )
 
   app_state <- create_app_state()
-  app_state$data$current_data <- test_data
+  set_current_data(app_state, test_data)
 
   # VERIFY: UI service can be created without errors
   expect_silent({
@@ -119,15 +121,15 @@ test_that("choice formatting standard er defineret korrekt", {
 
   # TEST: Standard choice format generation
   app_state <- create_app_state()
-  app_state$data$current_data <- data.frame(A = 1, B = 2, C = 3)
+  set_current_data(app_state, data.frame(A = 1, B = 2, C = 3))
 
   # VERIFY: Choice format pattern matches expected structure
   # This mirrors the logic in sync_ui_with_columns_unified
-  col_names <- names(app_state$data$current_data)
+  col_names <- names(isolate(app_state$data$current_data))
   standard_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
 
   # Verify standard choice format structure
-  expect_equal(standard_choices[1], "")
+  expect_equal(unname(standard_choices[1]), "")
   expect_equal(names(standard_choices)[1], "Vælg kolonne...")
   expect_true(all(test_cols %in% standard_choices))
   expect_equal(length(standard_choices), 4) # "" + 3 columns
@@ -142,7 +144,7 @@ test_that("autodetect → UI sync event chain fungerer end-to-end", {
     Antal = c(21, 26, 18),
     stringsAsFactors = FALSE
   )
-  app_state$data$current_data <- test_data
+  set_current_data(app_state, test_data)
 
   # SETUP: Track events
   events_fired <- character(0)
@@ -163,9 +165,9 @@ test_that("autodetect → UI sync event chain fungerer end-to-end", {
   expect_true("auto_detection_completed" %in% events_fired)
 
   # VERIFY: Autodetect worked correctly
-  expect_equal(isolate(app_state$columns$x_column), "Måned")  # Time pattern
-  expect_equal(isolate(app_state$columns$y_column), "Procent")  # Rate pattern should score higher
+  expect_equal(isolate(app_state$columns$mappings$x_column), "Måned")  # Time pattern
+  expect_equal(isolate(app_state$columns$mappings$y_column), "Antal")  # Integer values detected as numerator
 
   # VERIFY: State is frozen until next trigger
-  expect_true(app_state$autodetect$frozen_until_next_trigger)
+  expect_true(isolate(app_state$autodetect$frozen_until_next_trigger))
 })

@@ -903,6 +903,17 @@ set_current_data <- function(app_state, value) {
   })
 }
 
+# Original data sync helper
+set_original_data <- function(app_state, value) {
+  isolate({
+    # Set both hierarchical and legacy patterns
+    app_state$data$core$original_data <- value
+    app_state$data$original_data <- value  # Legacy compatibility
+
+    log_debug(paste("Original data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "DUAL_STATE_SYNC")
+  })
+}
+
 # Get data with fallback
 get_current_data <- function(app_state) {
   isolate({

@@ -114,7 +114,7 @@ test_that("dual state sync patterns virker korrekt", {
   expect_null(current_data_check)  # Initially NULL in centralized state
 
   # Sæt data i centralized state
-  app_state$data$current_data <- data.frame(Dato = c("01-02-2022"), Tæller = c(20))
+  set_current_data(app_state, data.frame(Dato = c("01-02-2022"), Tæller = c(20)))
 
   # Nu skulle dual-state logic bruge centralized version
   current_data_check <- if (exists("use_centralized_state") && use_centralized_state && exists("app_state")) {
@@ -195,11 +195,13 @@ test_that("state consistency mellem old og new systems", {
   )
 
   # Simuler sync til nyt system
-  app_state$data$current_data <- old_values$current_data
-  app_state$ui$hide_anhoej_rules <- old_values$hide_anhoej_rules
-  app_state$columns$auto_detect$results <- old_values$auto_detected_columns
-  app_state$columns$auto_detect$in_progress <- old_values$auto_detect_in_progress
-  app_state$columns$auto_detect$completed <- old_values$initial_auto_detect_completed
+  set_current_data(app_state, old_values$current_data)
+  isolate({
+    app_state$ui$hide_anhoej_rules <- old_values$hide_anhoej_rules
+    app_state$columns$auto_detect$results <- old_values$auto_detected_columns
+    app_state$columns$auto_detect$in_progress <- old_values$auto_detect_in_progress
+    app_state$columns$auto_detect$completed <- old_values$initial_auto_detect_completed
+  })
 
   # Verificer konsistens
   expect_equal(nrow(app_state$data$current_data), 2)
@@ -223,18 +225,18 @@ test_that("centralized state management edge cases", {
   app_state <- create_app_state()
 
   # Test med NULL data
-  app_state$data$current_data <- NULL
+  set_current_data(app_state, NULL)
   expect_null(app_state$data$current_data)
 
   # Test med tom data frame
-  app_state$data$current_data <- data.frame()
+  set_current_data(app_state, data.frame())
   expect_equal(nrow(app_state$data$current_data), 0)
   expect_equal(ncol(app_state$data$current_data), 0)
 
   # Test med invalid column names
   test_data <- data.frame(x = 1, y = 2)
   names(test_data) <- c("", "invalid name with spaces")
-  app_state$data$current_data <- test_data
+  set_current_data(app_state, test_data)
 
   expect_equal(names(app_state$data$current_data), c("", "invalid name with spaces"))
   expect_equal(nrow(app_state$data$current_data), 1)
@@ -257,16 +259,20 @@ test_that("centralized state management edge cases", {
   expect_equal(app_state$session$file_name, "test_file.csv")
 
   # Test auto-detect state management
-  expect_false(app_state$columns$auto_detect$in_progress)
-  expect_false(app_state$columns$auto_detect$completed)
+  expect_false(isolate(app_state$columns$auto_detect$in_progress))
+  expect_false(isolate(app_state$columns$auto_detect$completed))
 
-  app_state$columns$auto_detect$in_progress <- TRUE
-  expect_true(app_state$columns$auto_detect$in_progress)
+  isolate({
+    app_state$columns$auto_detect$in_progress <- TRUE
+  })
+  expect_true(isolate(app_state$columns$auto_detect$in_progress))
 
-  app_state$columns$auto_detect$in_progress <- FALSE
-  app_state$columns$auto_detect$completed <- TRUE
-  expect_false(app_state$columns$auto_detect$in_progress)
-  expect_true(app_state$columns$auto_detect$completed)
+  isolate({
+    app_state$columns$auto_detect$in_progress <- FALSE
+    app_state$columns$auto_detect$completed <- TRUE
+  })
+  expect_false(isolate(app_state$columns$auto_detect$in_progress))
+  expect_true(isolate(app_state$columns$auto_detect$completed))
 
   # Test table versioning
   expect_equal(app_state$data$table_version, 0)

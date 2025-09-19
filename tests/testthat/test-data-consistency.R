@@ -161,8 +161,8 @@ test_that("data source consistency efter file upload", {
   mock_values$original_data <- uploaded_data
   mock_values$file_uploaded <- TRUE
 
-  mock_app_state$data$current_data <- uploaded_data
-  mock_app_state$data$original_data <- uploaded_data
+  set_current_data(mock_app_state, uploaded_data)
+  set_original_data(mock_app_state, uploaded_data)
   mock_app_state$session$file_uploaded <- TRUE
 
   # TEST: Data consistency mellem old og new state management

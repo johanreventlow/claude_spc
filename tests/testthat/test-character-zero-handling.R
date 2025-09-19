@@ -19,9 +19,8 @@ setup_test_app_state <- function() {
 
   # Set data using isolate() to avoid reactive context issues
   isolate({
-    # Set data using hierarchical structure
-    app_state$data$core$current_data <- test_data
-    app_state$data$current_data <- test_data  # Legacy compatibility
+    # Set data using dual-state sync helper
+    set_current_data(app_state, test_data)
 
     # Set auto-detect results using hierarchical structure
     app_state$columns$auto_detect$results <- list(

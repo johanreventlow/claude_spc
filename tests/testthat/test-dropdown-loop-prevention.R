@@ -100,14 +100,16 @@ test_that("Auto-detection workflow ikke skaber loops", {
   )
 
   # SETUP: Load data
-  app_state$data$current_data <- test_data
+  set_current_data(app_state, test_data)
 
   # SETUP: Simulate auto-detection results
-  app_state$columns$auto_detect$results <- list(
-    x_column = "Dato",
-    y_column = "Tæller",
-    n_column = "Nævner"
-  )
+  isolate({
+    app_state$columns$auto_detect$results <- list(
+      x_column = "Dato",
+      y_column = "Tæller",
+      n_column = "Nævner"
+    )
+  })
 
   # MEASURE: Event count before workflow
   events_before <- isolate(app_state$events$column_choices_changed)
@@ -253,10 +255,12 @@ test_that("Iterativ stress test - column_choices_changed forbliver 0 ved autoloa
     events_before <- isolate(app_state$events$column_choices_changed)
 
     # EXECUTE: Simulate autoload workflow with programmatic updates
-    app_state$data$current_data <- test_data
-    app_state$columns$auto_detect$results <- list(
-      x_column = "Dato", y_column = "Tæller", n_column = "Nævner"
-    )
+    set_current_data(app_state, test_data)
+    isolate({
+      app_state$columns$auto_detect$results <- list(
+        x_column = "Dato", y_column = "Tæller", n_column = "Nævner"
+      )
+    })
 
     # Simulate programmatic UI update (this should NOT trigger column_choices_changed)
     mock_session <- list()
@@ -579,16 +583,18 @@ test_that("UI sync med NULL columns bruger auto_detect_results som fallback", {
   emit <- create_emit_api(app_state)
 
   # Set up auto-detection results
-  app_state$columns$auto_detect$results <- list(
-    x_column = "Dato",
-    y_column = "Tæller",
-    n_column = "Nævner"
-  )
+  isolate({
+    app_state$columns$auto_detect$results <- list(
+      x_column = "Dato",
+      y_column = "Tæller",
+      n_column = "Nævner"
+    )
 
-  # Ensure columns are NULL (first sync scenario)
-  app_state$columns$mappings$x_column <- NULL
-  app_state$columns$mappings$y_column <- NULL
-  app_state$columns$mappings$n_column <- NULL
+    # Ensure columns are NULL (first sync scenario)
+    app_state$columns$mappings$x_column <- NULL
+    app_state$columns$mappings$y_column <- NULL
+    app_state$columns$mappings$n_column <- NULL
+  })
 
   # Track what values get used for UI sync
   ui_sync_values <- list()
