@@ -52,37 +52,42 @@ cleanup_reactive_values <- function(values) {
 
   # Clear data objects (graceful failure during session shutdown)
   safe_nullify <- function(value_name) {
-    tryCatch({
-      # Try to check if value exists and clear it
-      # This might fail during session shutdown when no reactive context exists
-      if (value_name %in% names(values)) {
+    safe_operation(
+      paste("Clear reactive value:", value_name),
+      code = {
+        # Try to check if value exists and clear it
+        # This might fail during session shutdown when no reactive context exists
+        if (value_name %in% names(values)) {
 
-        # Handle different types of values objects
-        if (inherits(values, "reactivevalues")) {
-          # It's a real ReactiveValues object
-          values[[value_name]] <- NULL
-        } else if (is.list(values) && is.environment(values)) {
-          # It's a list-like environment (test mock)
-          values[[value_name]] <- NULL
-        } else if (is.list(values)) {
-          # It's a simple list (test mock) - need to modify in place using assign
-          # This works for test scenarios where values is passed by reference
-          if (exists("mock_values", envir = parent.frame(n = 2))) {
-            eval(substitute(mock_values[[value_name]] <- NULL), envir = parent.frame(n = 2))
-          } else {
-            # Standard list modification (limited effectiveness in tests)
+          # Handle different types of values objects
+          if (inherits(values, "reactivevalues")) {
+            # It's a real ReactiveValues object
             values[[value_name]] <- NULL
+          } else if (is.list(values) && is.environment(values)) {
+            # It's a list-like environment (test mock)
+            values[[value_name]] <- NULL
+          } else if (is.list(values)) {
+            # It's a simple list (test mock) - need to modify in place using assign
+            # This works for test scenarios where values is passed by reference
+            if (exists("mock_values", envir = parent.frame(n = 2))) {
+              eval(substitute(mock_values[[value_name]] <- NULL), envir = parent.frame(n = 2))
+            } else {
+              # Standard list modification (limited effectiveness in tests)
+              values[[value_name]] <- NULL
+            }
           }
         }
-      }
-    }, error = function(e) {
-      # During session shutdown, reactive context errors are expected
-      if (grepl("reactive context", e$message, ignore.case = TRUE)) {
-        log_debug(paste("Skipping", value_name, "- no reactive context (session shutdown)"), "MEMORY_MGMT")
-      } else {
-        log_warn(paste("Failed to clear", value_name, ":", e$message), "MEMORY_MGMT")
-      }
-    })
+      },
+      fallback = function(e) {
+        # During session shutdown, reactive context errors are expected
+        if (grepl("reactive context", e$message, ignore.case = TRUE)) {
+          log_debug(paste("Skipping", value_name, "- no reactive context (session shutdown)"), "MEMORY_MGMT")
+        } else {
+          log_warn(paste("Failed to clear", value_name, ":", e$message), "MEMORY_MGMT")
+        }
+      },
+      error_type = "processing"
+    )
   }
 
   # Clear large data objects
@@ -144,13 +149,18 @@ cleanup_app_state <- function(app_state, emit = NULL) {
 
   # Reset column management - safe reactive access
   if (!is.null(app_state$columns)) {
-    tryCatch({
-      app_state$columns$auto_detect$in_progress <- FALSE
-      app_state$columns$auto_detect$completed <- FALSE
-      app_state$columns$auto_detect$results <- NULL
-    }, error = function(e) {
-      log_debug("Could not reset column state during cleanup", .context = "MEMORY_MGMT")
-    })
+    safe_operation(
+      "Reset column state during cleanup",
+      code = {
+        app_state$columns$auto_detect$in_progress <- FALSE
+        app_state$columns$auto_detect$completed <- FALSE
+        app_state$columns$auto_detect$results <- NULL
+      },
+      fallback = function(e) {
+        log_debug("Could not reset column state during cleanup", .context = "MEMORY_MGMT")
+      },
+      error_type = "processing"
+    )
   }
 
   log_debug("Centralized app state cleaned", "MEMORY_MGMT")
@@ -171,13 +181,18 @@ cleanup_observers <- function(observers) {
   log_debug("Destroying observers", "MEMORY_MGMT")
 
   destroy_observer <- function(obs) {
-    tryCatch({
-      if (inherits(obs, "Observer")) {
-        obs$destroy()
-      }
-    }, error = function(e) {
-      log_warn(paste("Failed to destroy observer:", e$message), "MEMORY_MGMT")
-    })
+    safe_operation(
+      "Destroy observer",
+      code = {
+        if (inherits(obs, "Observer")) {
+          obs$destroy()
+        }
+      },
+      fallback = function(e) {
+        log_warn(paste("Failed to destroy observer:", e$message), "MEMORY_MGMT")
+      },
+      error_type = "processing"
+    )
   }
 
   if (is.list(observers)) {
@@ -288,28 +303,38 @@ cleanup_temp_files <- function(temp_dir = tempdir(), pattern = NULL, max_age_hou
   old_files <- c()
 
   for (file_path in all_files) {
-    tryCatch({
-      file_info <- file.info(file_path)
-      file_age_hours <- as.numeric(difftime(current_time, file_info$mtime, units = "hours"))
+    safe_operation(
+      paste("Check file age for", basename(file_path)),
+      code = {
+        file_info <- file.info(file_path)
+        file_age_hours <- as.numeric(difftime(current_time, file_info$mtime, units = "hours"))
 
-      if (file_age_hours > max_age_hours) {
-        old_files <- c(old_files, file_path)
-      }
-    }, error = function(e) {
-      log_warn(paste("Failed to check file age for", file_path), "MEMORY_MGMT")
-    })
+        if (file_age_hours > max_age_hours) {
+          old_files <- c(old_files, file_path)
+        }
+      },
+      fallback = function(e) {
+        log_warn(paste("Failed to check file age for", file_path), "MEMORY_MGMT")
+      },
+      error_type = "processing"
+    )
   }
 
   # Delete old files
   if (length(old_files) > 0) {
     deleted_count <- 0
     for (file_path in old_files) {
-      tryCatch({
-        unlink(file_path)
-        deleted_count <- deleted_count + 1
-      }, error = function(e) {
-        log_warn(paste("Failed to delete", file_path, ":", e$message), "MEMORY_MGMT")
-      })
+      safe_operation(
+        paste("Delete temp file", basename(file_path)),
+        code = {
+          unlink(file_path)
+          deleted_count <- deleted_count + 1
+        },
+        fallback = function(e) {
+          log_warn(paste("Failed to delete", file_path, ":", e$message), "MEMORY_MGMT")
+        },
+        error_type = "processing"
+      )
     }
 
     log_info(paste("Deleted", deleted_count, "old temp files"), "MEMORY_MGMT")
