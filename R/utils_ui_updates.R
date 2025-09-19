@@ -125,29 +125,34 @@ create_ui_update_service <- function(session, app_state) {
     }
 
     isolate({
-      tryCatch({
-        for (field in fields) {
-          if (!is.null(metadata[[field]])) {
-            if (field == "indicator_title") {
-              updateTextInput(session, field, value = metadata[[field]])
-            } else if (field == "unit_custom") {
-              updateTextInput(session, field, value = metadata[[field]])
-            } else if (field == "indicator_description") {
-              updateTextAreaInput(session, field, value = metadata[[field]])
-            } else if (field == "target_value") {
-              updateTextInput(session, field, value = metadata[[field]])
-            } else if (field == "centerline_value") {
-              updateTextInput(session, field, value = metadata[[field]])
-            } else if (field %in% c("unit_select", "chart_type", "x_column", "y_column", "n_column", "y_axis_unit")) {
-              updateSelectizeInput(session, field, selected = metadata[[field]])
+      safe_operation(
+        "Update form fields from metadata",
+        code = {
+          for (field in fields) {
+            if (!is.null(metadata[[field]])) {
+              if (field == "indicator_title") {
+                updateTextInput(session, field, value = metadata[[field]])
+              } else if (field == "unit_custom") {
+                updateTextInput(session, field, value = metadata[[field]])
+              } else if (field == "indicator_description") {
+                updateTextAreaInput(session, field, value = metadata[[field]])
+              } else if (field == "target_value") {
+                updateTextInput(session, field, value = metadata[[field]])
+              } else if (field == "centerline_value") {
+                updateTextInput(session, field, value = metadata[[field]])
+              } else if (field %in% c("unit_select", "chart_type", "x_column", "y_column", "n_column", "y_axis_unit")) {
+                updateSelectizeInput(session, field, selected = metadata[[field]])
+              }
+              log_debug("Updated", field, "to:", metadata[[field]], .context = "UI_SERVICE")
             }
-            log_debug("Updated", field, "to:", metadata[[field]], .context = "UI_SERVICE")
           }
-        }
-        log_debug("✅ Form fields updated successfully", .context = "UI_SERVICE")
-      }, error = function(e) {
-        log_error("Error updating form fields:", e$message, "UI_SERVICE")
-      })
+          log_debug("✅ Form fields updated successfully", .context = "UI_SERVICE")
+        },
+        fallback = function(e) {
+          log_error("Error updating form fields:", e$message, "UI_SERVICE")
+        },
+        error_type = "processing"
+      )
     })
   }
 
@@ -160,25 +165,30 @@ create_ui_update_service <- function(session, app_state) {
     log_debug("Resetting form fields to defaults", .context = "UI_SERVICE")
 
     isolate({
-      tryCatch({
-        # Reset text inputs
-        updateTextInput(session, "indicator_title", value = "")
-        updateTextInput(session, "unit_custom", value = "")
-        updateTextInput(session, "target_value", value = "")
-        updateTextInput(session, "centerline_value", value = "")
+      safe_operation(
+        "Reset form fields to defaults",
+        code = {
+          # Reset text inputs
+          updateTextInput(session, "indicator_title", value = "")
+          updateTextInput(session, "unit_custom", value = "")
+          updateTextInput(session, "target_value", value = "")
+          updateTextInput(session, "centerline_value", value = "")
 
-        # Reset select inputs
-        updateSelectizeInput(session, "unit_select", selected = "")
-        updateSelectizeInput(session, "chart_type", selected = "run")
-        updateSelectizeInput(session, "y_axis_unit", selected = "count")
+          # Reset select inputs
+          updateSelectizeInput(session, "unit_select", selected = "")
+          updateSelectizeInput(session, "chart_type", selected = "run")
+          updateSelectizeInput(session, "y_axis_unit", selected = "count")
 
-        # Reset column choices (will be empty until data is loaded)
-        update_column_choices(clear_selections = TRUE)
+          # Reset column choices (will be empty until data is loaded)
+          update_column_choices(clear_selections = TRUE)
 
-        log_debug("✅ Form fields reset successfully", .context = "UI_SERVICE")
-      }, error = function(e) {
-        log_error("Error resetting form fields:", e$message, "UI_SERVICE")
-      })
+          log_debug("✅ Form fields reset successfully", .context = "UI_SERVICE")
+        },
+        fallback = function(e) {
+          log_error("Error resetting form fields:", e$message, "UI_SERVICE")
+        },
+        error_type = "processing"
+      )
     })
   }
 
@@ -190,17 +200,22 @@ create_ui_update_service <- function(session, app_state) {
   #' @param show Logical, whether to show (TRUE) or hide (FALSE) the element
   #'
   toggle_ui_element <- function(element_id, show = TRUE) {
-    tryCatch({
-      if (show) {
-        shinyjs::show(element_id)
-        log_debug("Showed element:", element_id, .context = "UI_SERVICE")
-      } else {
-        shinyjs::hide(element_id)
-        log_debug("Hid element:", element_id, .context = "UI_SERVICE")
-      }
-    }, error = function(e) {
-      log_error("Error toggling element", element_id, ":", e$message, "UI_SERVICE")
-    })
+    safe_operation(
+      paste("Toggle UI element", element_id),
+      code = {
+        if (show) {
+          shinyjs::show(element_id)
+          log_debug("Showed element:", element_id, .context = "UI_SERVICE")
+        } else {
+          shinyjs::hide(element_id)
+          log_debug("Hid element:", element_id, .context = "UI_SERVICE")
+        }
+      },
+      fallback = function(e) {
+        log_error("Error toggling element", element_id, ":", e$message, "UI_SERVICE")
+      },
+      error_type = "processing"
+    )
   }
 
   #' Validate Form Fields
@@ -215,59 +230,63 @@ create_ui_update_service <- function(session, app_state) {
 
     validation_results <- list(valid = TRUE, errors = list())
 
-    tryCatch({
-      for (field_name in names(field_rules)) {
-        rule <- field_rules[[field_name]]
-        field_value <- session$input[[field_name]]
+    safe_operation(
+      "Validate form fields",
+      code = {
+        for (field_name in names(field_rules)) {
+          rule <- field_rules[[field_name]]
+          field_value <- session$input[[field_name]]
 
-        # Required field validation
-        if (isTRUE(rule$required) && (is.null(field_value) || field_value == "")) {
-          validation_results$valid <- FALSE
-          validation_results$errors[[field_name]] <- "Dette felt er påkrævet"
-
-          if (show_feedback) {
-            shinyjs::addClass(field_name, "has-error")
-          }
-        }
-
-        # Numeric validation
-        if (!is.null(rule$type) && rule$type == "numeric" && !is.null(field_value) && field_value != "") {
-          if (is.na(as.numeric(field_value))) {
+          # Required field validation
+          if (isTRUE(rule$required) && (is.null(field_value) || field_value == "")) {
             validation_results$valid <- FALSE
-            validation_results$errors[[field_name]] <- "Skal være et tal"
+            validation_results$errors[[field_name]] <- "Dette felt er påkrævet"
 
             if (show_feedback) {
               shinyjs::addClass(field_name, "has-error")
             }
           }
-        }
 
-        # Custom validation function
-        if (!is.null(rule$validator) && is.function(rule$validator)) {
-          custom_result <- rule$validator(field_value)
-          if (!isTRUE(custom_result)) {
-            validation_results$valid <- FALSE
-            validation_results$errors[[field_name]] <- custom_result
+          # Numeric validation
+          if (!is.null(rule$type) && rule$type == "numeric" && !is.null(field_value) && field_value != "") {
+            if (is.na(as.numeric(field_value))) {
+              validation_results$valid <- FALSE
+              validation_results$errors[[field_name]] <- "Skal være et tal"
 
-            if (show_feedback) {
-              shinyjs::addClass(field_name, "has-error")
+              if (show_feedback) {
+                shinyjs::addClass(field_name, "has-error")
+              }
             }
+          }
+
+          # Custom validation function
+          if (!is.null(rule$validator) && is.function(rule$validator)) {
+            custom_result <- rule$validator(field_value)
+            if (!isTRUE(custom_result)) {
+              validation_results$valid <- FALSE
+              validation_results$errors[[field_name]] <- custom_result
+
+              if (show_feedback) {
+                shinyjs::addClass(field_name, "has-error")
+              }
+            }
+          }
+
+          # Remove error styling if field is valid
+          if (show_feedback && !field_name %in% names(validation_results$errors)) {
+            shinyjs::removeClass(field_name, "has-error")
           }
         }
 
-        # Remove error styling if field is valid
-        if (show_feedback && !field_name %in% names(validation_results$errors)) {
-          shinyjs::removeClass(field_name, "has-error")
-        }
-      }
-
-      log_debug("Form validation completed, valid:", validation_results$valid, .context = "UI_SERVICE")
-
-    }, error = function(e) {
-      log_error("Error during form validation:", e$message, "UI_SERVICE")
-      validation_results$valid <- FALSE
-      validation_results$errors[["general"]] <- "Validationsfejl"
-    })
+        log_debug("Form validation completed, valid:", validation_results$valid, .context = "UI_SERVICE")
+      },
+      fallback = function(e) {
+        log_error("Error during form validation:", e$message, "UI_SERVICE")
+        validation_results$valid <- FALSE
+        validation_results$errors[["general"]] <- "Validationsfejl"
+      },
+      error_type = "processing"
+    )
 
     return(validation_results)
   }
