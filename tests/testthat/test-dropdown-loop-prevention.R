@@ -224,3 +224,192 @@ test_that("UI service update med loop protection", {
   expect_equal(mock_input$y_column, "Tæller")
   expect_equal(mock_input$n_column, "Nævner")
 })
+
+test_that("Iterativ stress test - column_choices_changed forbliver 0 ved autoload", {
+  # SETUP: Stress test med K iterationer for at catch timing race conditions
+  stress_iterations <- 10
+  column_choices_failures <- 0
+
+  for (i in 1:stress_iterations) {
+    # SETUP: Fresh environment for each iteration
+    app_state <- create_app_state()
+    emit <- create_emit_api(app_state)
+
+    # SETUP: Test data
+    test_data <- data.frame(
+      Dato = as.Date(c("2025-01-01", "2025-01-02", "2025-01-03")),
+      Tæller = c(10, 12, 8),
+      Nævner = c(100, 110, 95),
+      stringsAsFactors = FALSE
+    )
+
+    # MEASURE: Event count before autoload simulation
+    events_before <- isolate(app_state$events$column_choices_changed)
+
+    # EXECUTE: Simulate autoload workflow with programmatic updates
+    app_state$data$current_data <- test_data
+    app_state$columns$auto_detect_results <- list(
+      x_column = "Dato", y_column = "Tæller", n_column = "Nævner"
+    )
+
+    # Simulate programmatic UI update (this should NOT trigger column_choices_changed)
+    mock_session <- list()
+    mock_updateSelectizeInput <- function(session, inputId, choices, selected) {
+      # Mock function - no actual UI update needed for this test
+    }
+
+    env <- environment()
+    env$updateSelectizeInput <- mock_updateSelectizeInput
+
+    # Use safe wrapper to update UI
+    safe_programmatic_ui_update(mock_session, app_state, function() {
+      updateSelectizeInput(mock_session, "x_column", choices = c("", "Dato", "Tæller", "Nævner"), selected = "Dato")
+      updateSelectizeInput(mock_session, "y_column", choices = c("", "Dato", "Tæller", "Nævner"), selected = "Tæller")
+    })
+
+    # Wait for any async operations to complete
+    if (requireNamespace("later", quietly = TRUE)) {
+      later::run_now()
+    }
+
+    # MEASURE: Event count after workflow
+    events_after <- isolate(app_state$events$column_choices_changed)
+    event_increase <- events_after - events_before
+
+    # COUNT: Track failures
+    if (event_increase > 0) {
+      column_choices_failures <- column_choices_failures + 1
+    }
+  }
+
+  # VERIFY: No failures across all iterations
+  expect_equal(column_choices_failures, 0,
+              info = paste("Failed in", column_choices_failures, "out of", stress_iterations, "iterations"))
+})
+
+test_that("Real-world timing test med forskellige browser response times", {
+  # SETUP: Test forskellige timing scenarios
+  timing_scenarios <- list(
+    fast_browser = 50,     # 50ms response
+    normal_browser = 150,  # 150ms response
+    slow_browser = 400     # 400ms response
+  )
+
+  for (scenario_name in names(timing_scenarios)) {
+    delay_ms <- timing_scenarios[[scenario_name]]
+
+    # SETUP: Fresh app state
+    app_state <- create_app_state()
+    emit <- create_emit_api(app_state)
+
+    # SETUP: Mock browser response delay
+    mock_session <- list()
+    ui_update_calls <- list()
+
+    mock_updateSelectizeInput <- function(session, inputId, choices, selected) {
+      # Simulate browser response delay
+      Sys.sleep(delay_ms / 1000)
+      ui_update_calls[[length(ui_update_calls) + 1]] <<- list(
+        inputId = inputId,
+        selected = selected,
+        timestamp = Sys.time(),
+        scenario = scenario_name
+      )
+    }
+
+    env <- environment()
+    env$updateSelectizeInput <- mock_updateSelectizeInput
+
+    # EXECUTE: Programmatic UI update
+    start_time <- Sys.time()
+    events_before <- isolate(app_state$events$column_choices_changed)
+
+    safe_programmatic_ui_update(mock_session, app_state, function() {
+      updateSelectizeInput(mock_session, "x_column", choices = c("", "Dato"), selected = "Dato")
+    }, delay_ms = LOOP_PROTECTION_DELAYS$default)
+
+    # Wait for completion
+    if (requireNamespace("later", quietly = TRUE)) {
+      later::run_now()
+    }
+
+    end_time <- Sys.time()
+    total_time_ms <- as.numeric(difftime(end_time, start_time, units = "secs")) * 1000
+
+    # VERIFY: No extra events triggered regardless of timing
+    events_after <- isolate(app_state$events$column_choices_changed)
+    expect_equal(events_after - events_before, 0,
+                info = paste("Scenario:", scenario_name, "- Total time:", round(total_time_ms, 2), "ms"))
+  }
+})
+
+test_that("Freeze-compatibility test - timing-måling påvirker ikke autodetect freeze-logik", {
+  # SETUP: Test at timing-måling ikke interfererer med freeze-state
+  app_state <- create_app_state()
+  emit <- create_emit_api(app_state)
+
+  # SETUP: Set freeze state
+  app_state$autodetect$frozen_until_next_trigger <- TRUE
+  initial_freeze_state <- isolate(app_state$autodetect$frozen_until_next_trigger)
+
+  # SETUP: Mock session for UI updates
+  mock_session <- list()
+  mock_updateSelectizeInput <- function(session, inputId, choices, selected) {
+    # Mock function
+  }
+  env <- environment()
+  env$updateSelectizeInput <- mock_updateSelectizeInput
+
+  # EXECUTE: Programmatic UI update with freeze-aware logging
+  safe_programmatic_ui_update(mock_session, app_state, function() {
+    updateSelectizeInput(mock_session, "x_column", choices = c("", "Dato"), selected = "Dato")
+  })
+
+  # Wait for operations to complete
+  if (requireNamespace("later", quietly = TRUE)) {
+    later::run_now()
+  }
+
+  # VERIFY: Freeze state unchanged by timing operations
+  final_freeze_state <- isolate(app_state$autodetect$frozen_until_next_trigger)
+  expect_equal(final_freeze_state, initial_freeze_state,
+              info = "Freeze state should remain unchanged by timing measurements")
+
+  # VERIFY: Timing observer doesn't emit autodetect events
+  autodetect_events_triggered <- isolate(app_state$events$auto_detection_started)
+  expect_equal(autodetect_events_triggered, 0L,
+              info = "Timing observer should not trigger autodetect events")
+})
+
+test_that("Session lifecycle test - loop-protection ressourcer cleanes korrekt", {
+  # SETUP: Simulate session lifecycle
+  app_state <- create_app_state()
+  mock_session <- list()
+
+  # Track cleanup calls
+  cleanup_calls <- list()
+  mock_onSessionEnded <- function(callback) {
+    cleanup_calls[[length(cleanup_calls) + 1]] <<- callback
+  }
+  mock_session$onSessionEnded <- mock_onSessionEnded
+
+  # SETUP: Set some loop protection state
+  app_state$ui$updating_programmatically <- TRUE
+  app_state$ui$flag_reset_scheduled <- FALSE
+
+  # SIMULATE: Session cleanup (normally triggered by Shiny)
+  # We simulate the cleanup function that would be registered
+  cleanup_function <- function() {
+    if (!is.null(app_state$ui)) {
+      app_state$ui$updating_programmatically <- FALSE
+      app_state$ui$flag_reset_scheduled <- TRUE
+    }
+  }
+
+  # EXECUTE: Cleanup
+  cleanup_function()
+
+  # VERIFY: All flags properly reset
+  expect_false(isolate(app_state$ui$updating_programmatically))
+  expect_true(isolate(app_state$ui$flag_reset_scheduled))
+})

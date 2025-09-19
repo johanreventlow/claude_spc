@@ -279,6 +279,15 @@ DEBOUNCE_DELAYS <- list(
   chart_update = 800      # 800ms
 )
 
+#' Loop protection delays for UI updates (milliseconds)
+#' @export
+LOOP_PROTECTION_DELAYS <- list(
+  default = 500,              # Standard delay for programmatic UI updates
+  conservative = 800,         # Conservative delay for slower browsers
+  minimal = 200,              # Minimal delay for fast responses
+  onFlushed_fallback = 1000   # Fallback delay if session$onFlushed not available
+)
+
 #' Performance monitoring thresholds
 #' @export
 PERFORMANCE_THRESHOLDS <- list(

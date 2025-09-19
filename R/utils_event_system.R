@@ -342,13 +342,38 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   for (col in columns_to_observe) {
     observeEvent(input[[col]], {
+      input_received_time <- Sys.time()
       new_value <- input[[col]]
-      log_debug(paste("Input", col, "changed to:", new_value), .context = "INPUT_OBSERVER")
-      log_debug(paste("LOOP_PROTECTION check: updating_programmatically is", isolate(app_state$ui$updating_programmatically)), .context = "LOOP_PROTECTION")
+
+      # DROPDOWN DEBUGGING: Log input change details
+      old_value <- isolate(app_state$columns[[col]]) %||% ""
+      log_debug(paste("DROPDOWN_DEBUG: Input", col, "changed from", paste0("'", old_value, "'"),
+                     "to", paste0("'", new_value, "'")), .context = "DROPDOWN_DEBUG")
+
+      # TIMING LOGGING: Calculate time since last programmatic update
+      last_update_time <- isolate(app_state$ui$last_programmatic_update)
+      time_since_update <- if (!is.null(last_update_time)) {
+        as.numeric(difftime(input_received_time, last_update_time, units = "secs")) * 1000
+      } else { NA }
+
+      log_debug(paste("LOOP_PROTECTION:", col, "input received",
+                     if (!is.na(time_since_update)) paste("(", round(time_since_update, 2), "ms after last update)") else ""),
+               .context = "LOOP_PROTECTION")
+
+      protection_active <- isolate(app_state$ui$updating_programmatically)
+
+      # FREEZE-AWARE LOGGING: Observe freeze state without modification
+      freeze_state <- if (!is.null(app_state$autodetect)) {
+        isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
+      } else { FALSE }
+
+      log_debug(paste("LOOP_PROTECTION check: updating_programmatically =", protection_active,
+                     ", autodetect frozen =", freeze_state), .context = "LOOP_PROTECTION")
 
       # LOOP PROTECTION: Skip event emission if we're in the middle of programmatic updates
-      if (isolate(app_state$ui$updating_programmatically)) {
-        log_debug(paste("Skipping event emission for", col, "- programmatic update in progress"), .context = "LOOP_PROTECTION")
+      if (protection_active) {
+        log_debug(paste("LOOP_PROTECTION: Skipping event emission for", col, "- programmatic update in progress"), .context = "LOOP_PROTECTION")
+        log_debug(paste("DROPDOWN_DEBUG: Programmatic update detected - value", paste0("'", new_value, "'"), "accepted but no events emitted for", col), .context = "DROPDOWN_DEBUG")
         # Still update app_state to keep it synchronized, but don't emit events
         app_state$columns[[col]] <- new_value
         return()
@@ -359,7 +384,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
       # Only emit events for user-driven changes (not programmatic updates)
       if (exists("column_choices_changed", envir = as.environment(emit))) {
-        log_debug(paste("User-driven change detected for", col, "- emitting event"), .context = "INPUT_OBSERVER")
+        log_debug(paste("LOOP_PROTECTION: User-driven change detected for", col, "- emitting event"), .context = "INPUT_OBSERVER")
+        log_debug(paste("DROPDOWN_DEBUG: User changed", col, "to", paste0("'", new_value, "'"), "- triggering column_choices_changed event"), .context = "DROPDOWN_DEBUG")
         emit$column_choices_changed()
       }
 
@@ -367,7 +393,30 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$MEDIUM)
   }
 
-  log_debug("✅ All event listeners registered (including input observers)", .context = "EVENT_SYSTEM")
+  # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
+  # This observer tracks timing metrics for optimization without emitting events
+  if (!is.null(app_state$ui)) {
+    observeEvent(app_state$ui$last_programmatic_update, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$lowest, {
+      current_time <- Sys.time()
+      last_update <- isolate(app_state$ui$last_programmatic_update)
+
+      if (!is.null(last_update)) {
+        # FREEZE-AWARE TIMING: Track performance metrics with context
+        freeze_state <- if (!is.null(app_state$autodetect)) {
+          isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
+        } else { FALSE }
+
+        autodetect_in_progress <- if (!is.null(app_state$columns)) {
+          isolate(app_state$columns$auto_detect_in_progress) %||% FALSE
+        } else { FALSE }
+
+        log_debug(paste("TIMING_MONITOR: System state at update - frozen:", freeze_state,
+                       ", autodetect active:", autodetect_in_progress), .context = "TIMING_MONITOR")
+      }
+    })
+  }
+
+  log_debug("✅ All event listeners registered (including input observers and timing monitor)", .context = "EVENT_SYSTEM")
 }
 
 # OVERFLØDIGT: Fjernet duplikeret sync_ui_with_columns_unified funktion
@@ -388,6 +437,18 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 #'
 sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_service = NULL) {
   log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
+
+  # DROPDOWN DEBUGGING: Log autodetect results that will be used
+  auto_detect_results <- isolate(app_state$columns$auto_detect_results)
+  log_debug("DROPDOWN_DEBUG: sync_ui_with_columns_unified called", .context = "DROPDOWN_DEBUG")
+  if (!is.null(auto_detect_results)) {
+    log_debug("DROPDOWN_DEBUG: Using autodetect results:", .context = "DROPDOWN_DEBUG")
+    for (col_name in names(auto_detect_results)) {
+      log_debug(paste("DROPDOWN_DEBUG:", col_name, "=", auto_detect_results[[col_name]]), .context = "DROPDOWN_DEBUG")
+    }
+  } else {
+    log_debug("DROPDOWN_DEBUG: No autodetect results available", .context = "DROPDOWN_DEBUG")
+  }
 
   # Use isolate() to access reactive values safely
   current_data <- isolate(app_state$data$current_data)
@@ -413,6 +474,12 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
         frys_column = isolate(columns_state$frys_column) %||% "",
         kommentar_column = isolate(columns_state$kommentar_column) %||% ""
       )
+
+      # DROPDOWN DEBUGGING: Log alle 6 kolonner eksplicit
+      log_debug("DROPDOWN_DEBUG: All 6 column values being sent to UI:", .context = "DROPDOWN_DEBUG")
+      for (col_name in names(selected_columns)) {
+        log_debug(paste("DROPDOWN_DEBUG:", col_name, "=", paste0("'", selected_columns[[col_name]], "'")), .context = "DROPDOWN_DEBUG")
+      }
 
       ui_service$update_column_choices(
         choices = col_choices,

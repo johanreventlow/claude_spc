@@ -31,7 +31,16 @@ create_ui_update_service <- function(session, app_state) {
   #' @param clear_selections If TRUE, clear all selections
   #'
   update_column_choices <- function(choices = NULL, selected = NULL, columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column"), clear_selections = FALSE) {
-    log_debug("Updating column choices for:", paste(columns, collapse = ", "), .context = "UI_SERVICE")
+    log_debug("DROPDOWN_DEBUG: update_column_choices called for:", paste(columns, collapse = ", "), .context = "DROPDOWN_DEBUG")
+    log_debug(paste("DROPDOWN_DEBUG: Parameters - choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
+                   "selected:", if(!is.null(selected)) paste0("[", length(selected), " items]") else "NULL",
+                   "clear_selections:", clear_selections), .context = "DROPDOWN_DEBUG")
+
+    if (!is.null(selected)) {
+      for (col in names(selected)) {
+        log_debug(paste("DROPDOWN_DEBUG: Selected value for", col, ":", selected[[col]]), .context = "DROPDOWN_DEBUG")
+      }
+    }
 
     # Generate choices from current data if not provided
     if (is.null(choices)) {
@@ -435,58 +444,151 @@ add_ui_update_emit_functions <- function(emit, app_state) {
   return(emit)
 }
 
-#' Safe Programmatic UI Update Wrapper
+#' Safe Programmatic UI Update Wrapper (Enhanced with Intelligent Flag Clearing)
 #'
-#' Wrapper function that prevents circular event loops during programmatic UI updates.
-#' Sets protection flag before updates and clears it afterwards to prevent input observers
-#' from triggering new events during programmatic changes.
+#' Advanced wrapper function that prevents circular event loops during programmatic UI updates.
+#' Uses intelligent flag-clearing strategy with session$onFlushed for immediate clearing after
+#' Shiny processes updates, with later::later() safety fallback for robust operation.
 #'
-#' @param session Shiny session object
-#' @param app_state Centralized app state with UI protection flags
+#' KEY FEATURES:
+#' - Configurable delay from LOOP_PROTECTION_DELAYS constants
+#' - Single-reset guarantee to prevent double flag clearing
+#' - session$onFlushed primary strategy for immediate response
+#' - later::later() safety fallback with double delay
+#' - Comprehensive timing logging for performance optimization
+#' - Freeze-aware logging that respects autodetect state without interference
+#' - Automatic session cleanup on error conditions
+#'
+#' TIMING STRATEGY:
+#' 1. session$onFlushed(): Immediate clearing after Shiny processes UI updates
+#' 2. later::later() fallback: Safety net with 2x delay if onFlushed doesn't fire
+#' 3. Synchronous delay: Last resort if later package unavailable
+#'
+#' @param session Shiny session object (must support onFlushed for optimal performance)
+#' @param app_state Centralized app state with UI protection flags and autodetect state
 #' @param update_function Function to execute with protection (should contain updateSelectizeInput calls)
-#' @param delay_ms Delay in milliseconds before clearing protection flag (default: 100ms)
+#' @param delay_ms Delay in milliseconds (default: uses LOOP_PROTECTION_DELAYS$default from constants)
 #'
 #' @examples
 #' \dontrun{
+#' # Standard usage with default 500ms delay
 #' safe_programmatic_ui_update(session, app_state, function() {
 #'   updateSelectizeInput(session, "x_column", choices = choices, selected = "Dato")
 #'   updateSelectizeInput(session, "y_column", choices = choices, selected = "Tæller")
 #' })
+#'
+#' # Custom delay for slow environments
+#' safe_programmatic_ui_update(session, app_state, function() {
+#'   updateSelectizeInput(session, "x_column", choices = choices, selected = "Dato")
+#' }, delay_ms = LOOP_PROTECTION_DELAYS$conservative)
 #' }
 #'
 #' @export
-safe_programmatic_ui_update <- function(session, app_state, update_function, delay_ms = 200) {
-  log_debug("Starting safe programmatic UI update", .context = "LOOP_PROTECTION")
+safe_programmatic_ui_update <- function(session, app_state, update_function, delay_ms = NULL) {
+  # Use configured delay from constants if not specified
+  if (is.null(delay_ms)) {
+    delay_ms <- LOOP_PROTECTION_DELAYS$default
+  }
+
+  update_start_time <- Sys.time()
+
+  # FREEZE-AWARE LOGGING: Observe freeze state without modification
+  freeze_state <- if (!is.null(app_state$autodetect)) {
+    isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
+  } else { FALSE }
+
+  log_debug(paste("Starting safe programmatic UI update with", delay_ms, "ms delay",
+                 "(autodetect frozen:", freeze_state, ")"), .context = "LOOP_PROTECTION")
 
   tryCatch({
+    # SINGLE-RESET GUARANTEE: Check if flag is already being processed
+    if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
+      log_debug("LOOP_PROTECTION: Another update already in progress, skipping", .context = "LOOP_PROTECTION")
+      return()
+    }
+
     # Set protection flag to prevent input observers from firing
     app_state$ui$updating_programmatically <- TRUE
-    app_state$ui$last_programmatic_update <- Sys.time()
+    app_state$ui$last_programmatic_update <- update_start_time
+    app_state$ui$flag_reset_scheduled <- FALSE
 
-    log_debug("Protection flag set - programmatic updates active", .context = "LOOP_PROTECTION")
+    log_debug("LOOP_PROTECTION: Flag set, executing UI updates", .context = "LOOP_PROTECTION")
 
-    # Execute the UI updates
-    update_function()
+    # DROPDOWN DEBUGGING: Wrap updateSelectizeInput to log all dropdown updates
+    original_updateSelectizeInput <- updateSelectizeInput
+    updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
+      log_debug(paste("DROPDOWN_DEBUG: Updating", inputId,
+                     "with choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
+                     "selected:", if(!is.null(selected)) paste0("'", selected, "'") else "NULL"),
+               .context = "DROPDOWN_DEBUG")
 
-    log_debug("UI updates completed, scheduling protection flag clear", .context = "LOOP_PROTECTION")
+      if (!is.null(choices) && length(choices) > 0) {
+        log_debug(paste("DROPDOWN_DEBUG: Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", ")),
+                 .context = "DROPDOWN_DEBUG")
+      }
 
-    # Clear protection flag after short delay to ensure all reactive chains complete
-    if (requireNamespace("later", quietly = TRUE)) {
-      later::later(function() {
+      result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
+      log_debug(paste("DROPDOWN_DEBUG: updateSelectizeInput completed for", inputId), .context = "DROPDOWN_DEBUG")
+      return(result)
+    }
+
+    # Execute the UI updates with debugging wrapper
+    tryCatch({
+      update_function()
+    }, finally = {
+      # Restore original function
+      updateSelectizeInput <- original_updateSelectizeInput
+    })
+
+    update_completed_time <- Sys.time()
+    execution_time_ms <- as.numeric(difftime(update_completed_time, update_start_time, units = "secs")) * 1000
+    log_debug(paste("LOOP_PROTECTION: UI updates completed in", round(execution_time_ms, 2), "ms"), .context = "LOOP_PROTECTION")
+
+    # INTELLIGENT FLAG CLEARING: Try session$onFlushed first, then later::later() as fallback
+    clear_protection_flag <- function() {
+      if (!isTRUE(isolate(app_state$ui$flag_reset_scheduled))) {
+        app_state$ui$flag_reset_scheduled <- TRUE
         app_state$ui$updating_programmatically <- FALSE
-        log_debug("LOOP_PROTECTION: updating_programmatically flag reset to FALSE", .context = "LOOP_PROTECTION")
-      }, delay = delay_ms / 1000)
+        flag_clear_time <- Sys.time()
+        total_time_ms <- as.numeric(difftime(flag_clear_time, update_start_time, units = "secs")) * 1000
+        log_debug(paste("LOOP_PROTECTION: Flag cleared after", round(total_time_ms, 2), "ms total"), .context = "LOOP_PROTECTION")
+      }
+    }
+
+    # Try session$onFlushed for immediate clearing after Shiny processes updates
+    if (!is.null(session) && !is.null(session$onFlushed)) {
+      log_debug("LOOP_PROTECTION: Using session$onFlushed for immediate flag clearing", .context = "LOOP_PROTECTION")
+      session$onFlushed(clear_protection_flag, once = TRUE)
+
+      # Safety fallback with later::later() in case onFlushed doesn't fire
+      if (requireNamespace("later", quietly = TRUE)) {
+        later::later(function() {
+          if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
+            log_debug("LOOP_PROTECTION: Safety fallback triggered - onFlushed didn't fire", .context = "LOOP_PROTECTION")
+            clear_protection_flag()
+          }
+        }, delay = (delay_ms * 2) / 1000)  # Double delay for safety fallback
+      }
     } else {
-      # Fallback if later package not available
-      Sys.sleep(delay_ms / 1000)
-      app_state$ui$updating_programmatically <- FALSE
-      log_debug("Protection flag cleared (fallback) - programmatic updates complete", .context = "LOOP_PROTECTION")
+      # Fallback to later::later() if session$onFlushed not available
+      log_debug("LOOP_PROTECTION: session$onFlushed not available, using later::later()", .context = "LOOP_PROTECTION")
+      if (requireNamespace("later", quietly = TRUE)) {
+        later::later(clear_protection_flag, delay = delay_ms / 1000)
+      } else {
+        # Last resort: synchronous delay (not recommended for production)
+        log_debug("LOOP_PROTECTION: later package not available, using synchronous delay", .context = "LOOP_PROTECTION")
+        Sys.sleep(delay_ms / 1000)
+        clear_protection_flag()
+      }
     }
 
   }, error = function(e) {
-    # Ensure protection flag is cleared even on error
+    # ENSURE CLEANUP: Always clear protection flag on error
     app_state$ui$updating_programmatically <- FALSE
-    log_error(paste("Error in safe programmatic UI update:", e$message), "LOOP_PROTECTION")
+    app_state$ui$flag_reset_scheduled <- TRUE
+    error_time <- Sys.time()
+    total_error_time_ms <- as.numeric(difftime(error_time, update_start_time, units = "secs")) * 1000
+    log_error(paste("LOOP_PROTECTION: Error after", round(total_error_time_ms, 2), "ms:", e$message), "LOOP_PROTECTION")
     stop(e)
   })
 }

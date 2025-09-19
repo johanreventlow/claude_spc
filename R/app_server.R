@@ -92,7 +92,10 @@ app_server <- function(input, output, session) {
 
   # EVENT SYSTEM: Set up reactive event listeners AFTER shinylogs setup
   # SESSION FLAG: Prevent duplicate event listener registration
-  event_listeners_setup <- FALSE
+  # Initialize event listeners setup flag in app_state to prevent double registration
+  if (is.null(isolate(app_state$system$event_listeners_setup))) {
+    app_state$system$event_listeners_setup <- FALSE
+  }
 
   log_debug("==========================================", "APP_SERVER")
   log_debug("About to set up event listeners AFTER shinylogs", "APP_SERVER")
@@ -100,7 +103,7 @@ app_server <- function(input, output, session) {
   tryCatch({
     log_debug("Calling setup_event_listeners...", "APP_SERVER")
     setup_event_listeners(app_state, emit, input, output, session, ui_service)
-    event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
+    app_state$system$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
     log_debug("✅ setup_event_listeners returned successfully", "APP_SERVER")
     log_debug("✅ Event listeners setup completed successfully", "APP_SERVER")
   }, error = function(e) {
@@ -110,11 +113,11 @@ app_server <- function(input, output, session) {
 
   # EMERGENCY FIX: Setup event listeners in observer ONLY if direct call failed
   observeEvent(reactive(TRUE), {
-    if (!event_listeners_setup) {
+    if (!isolate(app_state$system$event_listeners_setup)) {
       log_debug("🚨 EMERGENCY: Setting up event listeners in observer (direct call failed)", "APP_SERVER")
       tryCatch({
         setup_event_listeners(app_state, emit, input, output, session, ui_service)
-        event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
+        app_state$system$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
         log_debug("🚨 EMERGENCY: Event listeners setup SUCCESS", "APP_SERVER")
       }, error = function(e) {
         log_debug(paste("🚨 EMERGENCY ERROR:", e$message), "APP_SERVER")
@@ -312,6 +315,17 @@ app_server <- function(input, output, session) {
 
     # Cleanup alle observers
     obs_manager$cleanup_all()
+
+    # LOOP PROTECTION CLEANUP: Ensure all flags are cleared and no dangling callbacks
+    tryCatch({
+      if (!is.null(app_state$ui)) {
+        app_state$ui$updating_programmatically <- FALSE
+        app_state$ui$flag_reset_scheduled <- TRUE
+        log_debug("LOOP_PROTECTION: Flags cleared during session cleanup", .context = "SESSION_CLEANUP")
+      }
+    }, error = function(e) {
+      log_debug(paste("Session cleanup: Could not clear loop protection flags:", e$message), .context = "SESSION_CLEANUP")
+    })
 
     # Cleanup waiter
     if (exists("waiter_file") && !is.null(waiter_file)) {

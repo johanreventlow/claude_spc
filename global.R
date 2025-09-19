@@ -705,7 +705,8 @@ create_app_state <- function() {
   app_state$ui <- reactiveValues(
     hide_anhoej_rules = FALSE,
     updating_programmatically = FALSE,    # LOOP PROTECTION: Flag to prevent circular events during UI updates
-    last_programmatic_update = NULL       # LOOP PROTECTION: Timestamp of last programmatic update
+    last_programmatic_update = NULL,      # LOOP PROTECTION: Timestamp of last programmatic update
+    flag_reset_scheduled = FALSE          # LOOP PROTECTION: Single-reset guarantee flag
   )
 
   # Autodetect State - Unified autodetect engine state management
@@ -737,6 +738,11 @@ create_app_state <- function() {
     error_history = list(),     # Recent error history (max 10)
     recovery_attempts = 0L,     # Number of recovery attempts
     last_recovery_time = NULL   # Timestamp of last recovery
+  )
+
+  # System Management - Infrastructure flags and state
+  app_state$system <- reactiveValues(
+    event_listeners_setup = FALSE     # Prevent double registration of event listeners
   )
 
   return(app_state)
