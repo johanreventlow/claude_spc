@@ -414,5 +414,6 @@ monitor_memory_usage <- function(operation_name = "unknown") {
 PERFORMANCE_THRESHOLDS <- list(
   reactive_warning = 0.5,    # 500ms for reactive expressions
   debounce_warning = 1.0,    # 1 second for debounced operations
-  memory_warning = 10        # 10MB memory change
+  memory_warning = 10,       # 10MB memory change
+  cache_timeout_default = 300 # 5 minutes default cache timeout
 )
