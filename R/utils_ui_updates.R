@@ -474,7 +474,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
     if (requireNamespace("later", quietly = TRUE)) {
       later::later(function() {
         app_state$ui$updating_programmatically <- FALSE
-        log_debug("Protection flag cleared - programmatic updates complete", .context = "LOOP_PROTECTION")
+        log_debug("LOOP_PROTECTION: updating_programmatically flag reset to FALSE", .context = "LOOP_PROTECTION")
       }, delay = delay_ms / 1000)
     } else {
       # Fallback if later package not available

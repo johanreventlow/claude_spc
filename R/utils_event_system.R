@@ -344,6 +344,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     observeEvent(input[[col]], {
       new_value <- input[[col]]
       log_debug(paste("Input", col, "changed to:", new_value), .context = "INPUT_OBSERVER")
+      log_debug(paste("LOOP_PROTECTION check: updating_programmatically is", isolate(app_state$ui$updating_programmatically)), .context = "LOOP_PROTECTION")
 
       # LOOP PROTECTION: Skip event emission if we're in the middle of programmatic updates
       if (isolate(app_state$ui$updating_programmatically)) {
@@ -386,7 +387,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 #' @param session Shiny session
 #'
 sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_service = NULL) {
-  log_debug(paste("sync_ui_with_columns_unified received app_state address:", capture.output(print(app_state))), .context = "UI_SYNC_UNIFIED")
   log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
 
   # Use isolate() to access reactive values safely
@@ -413,8 +413,6 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
         frys_column = isolate(columns_state$frys_column) %||% "",
         kommentar_column = isolate(columns_state$kommentar_column) %||% ""
       )
-
-      log_debug(paste("Selected columns for UI sync:", capture.output(str(selected_columns))), .context = "UI_SYNC_UNIFIED")
 
       ui_service$update_column_choices(
         choices = col_choices,

@@ -329,7 +329,6 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
 #' @param existing_columns Existing column state (optional)
 #' @return Updated column state
 update_all_column_mappings <- function(results, existing_columns = NULL, app_state = NULL) {
-  log_debug(paste("update_all_column_mappings received app_state address:", capture.output(print(app_state))), .context = "UPDATE_MAPPINGS")
   log_debug_block("UPDATE_MAPPINGS", "Updating column mappings in unified state")
 
   # SMART APP_STATE DETECTION: If app_state not provided, try to find it from parent environment
