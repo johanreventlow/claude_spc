@@ -247,8 +247,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       set_plot_state("plot_warnings", character(0))
 
       # Generer plot
-      tryCatch(
-        {
+      safe_operation(
+        "Generate SPC plot",
+        code = {
           # Hent fase konfiguration
           skift_config <- skift_config_reactive()
 
@@ -332,7 +333,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
           return(plot)
         },
-        error = function(e) {
+        fallback = function(e) {
           set_plot_state("plot_warnings", c("Graf-generering fejlede:", e$message))
           set_plot_state("plot_ready", FALSE)
           set_plot_state("anhoej_results", NULL)
@@ -349,7 +350,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           log_debug("Cache invalidated due to error", .context = "PLOT_CACHE")
 
           return(NULL)
-        }
+        },
+        error_type = "processing"
       )
     })
 
@@ -483,52 +485,57 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         # Debug reactive chain dependencies
         log_debug("Checking dependencies...", "RENDER_PLOT")
 
-        data <- tryCatch({
-          log_debug("Using pure function approach to bypass reactive scope issues...", "RENDER_PLOT")
+        data <- safe_operation(
+          "Get module data for plot",
+          code = {
+            log_debug("Using pure function approach to bypass reactive scope issues...", "RENDER_PLOT")
 
-          # PRIORITY 1: Try cached data (most reliable, populated by reactive)
-          cached_result <- cached_data()
-          log_debug(paste("Cached data is.null:", is.null(cached_result)), "RENDER_PLOT")
+            # PRIORITY 1: Try cached data (most reliable, populated by reactive)
+            cached_result <- cached_data()
+            log_debug(paste("Cached data is.null:", is.null(cached_result)), "RENDER_PLOT")
 
-          if (!is.null(cached_result)) {
-            log_debug("✅ Using cached data successfully", "RENDER_PLOT")
-            if (is.data.frame(cached_result)) {
-              log_debug(paste("Cached data dimensions:", nrow(cached_result), "x", ncol(cached_result)), "RENDER_PLOT")
+            if (!is.null(cached_result)) {
+              log_debug("✅ Using cached data successfully", "RENDER_PLOT")
+              if (is.data.frame(cached_result)) {
+                log_debug(paste("Cached data dimensions:", nrow(cached_result), "x", ncol(cached_result)), "RENDER_PLOT")
+              }
+              return(cached_result)
             }
-            return(cached_result)
-          }
 
-          # PRIORITY 2: Try pure function approach (fallback during timing issues)
-          log_debug("No cached data found, using pure function approach...", "RENDER_PLOT")
-          pure_result <- get_module_data()
-          log_debug("Pure function call completed", "RENDER_PLOT")
+            # PRIORITY 2: Try pure function approach (fallback during timing issues)
+            log_debug("No cached data found, using pure function approach...", "RENDER_PLOT")
+            pure_result <- get_module_data()
+            log_debug("Pure function call completed", "RENDER_PLOT")
 
-          if (!is.null(pure_result)) {
-            log_debug("✅ Pure function returned data successfully", "RENDER_PLOT")
-            if (is.data.frame(pure_result)) {
-              log_debug(paste("Pure function data dimensions:", nrow(pure_result), "x", ncol(pure_result)), "RENDER_PLOT")
+            if (!is.null(pure_result)) {
+              log_debug("✅ Pure function returned data successfully", "RENDER_PLOT")
+              if (is.data.frame(pure_result)) {
+                log_debug(paste("Pure function data dimensions:", nrow(pure_result), "x", ncol(pure_result)), "RENDER_PLOT")
+              }
+              # Cache this result for future calls
+              cached_data(pure_result)
+              log_debug("✅ Pure function result cached for future use", "RENDER_PLOT")
+              return(pure_result)
             }
-            # Cache this result for future calls
-            cached_data(pure_result)
-            log_debug("✅ Pure function result cached for future use", "RENDER_PLOT")
-            return(pure_result)
-          }
 
-          # PRIORITY 3: Wait for next reactive cycle
-          log_debug("⚠️ Both cached and pure function returned NULL - will retry on next reactive cycle", "RENDER_PLOT")
-          return(NULL)
-
-        }, error = function(e) {
-          log_debug(paste("❌ Pure function approach failed:", e$message), "RENDER_PLOT")
-          log_debug(paste("Error class:", class(e)), "RENDER_PLOT")
-          if (length(e$message) == 0 || e$message == "") {
-            log_debug("Empty error message detected", "RENDER_PLOT")
-            log_debug(paste("Error call:", deparse(e$call)), "RENDER_PLOT")
+            # PRIORITY 3: Wait for next reactive cycle
+            log_debug("⚠️ Both cached and pure function returned NULL - will retry on next reactive cycle", "RENDER_PLOT")
+            return(NULL)
+          },
+          fallback = function(e) {
+            log_debug(paste("❌ Pure function approach failed:", e$message), "RENDER_PLOT")
+            log_debug(paste("Error class:", class(e)), "RENDER_PLOT")
+            if (length(e$message) == 0 || e$message == "") {
+              log_debug("Empty error message detected", "RENDER_PLOT")
+              log_debug(paste("Error call:", deparse(e$call)), "RENDER_PLOT")
+            }
+            return(NULL)
+          },
+          error_type = "processing",
+          finally = function() {
+            log_debug("Pure function approach completed", "RENDER_PLOT")
           }
-          return(NULL)
-        }, finally = function() {
-          log_debug("Pure function approach completed", "RENDER_PLOT")
-        })
+        )
         log_debug(paste("Data reactive result:", !is.null(data)), "RENDER_PLOT")
 
         if (is.null(data)) {
@@ -544,24 +551,34 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           log_debug(paste("Y col:", column_config$y_col), "RENDER_PLOT")
         }
 
-        chart_config_result <- tryCatch({
-          chart_config()
-        }, error = function(e) {
-          log_debug(paste("Chart config error:", e$message), "RENDER_PLOT")
-          return(NULL)
-        })
+        chart_config_result <- safe_operation(
+          "Get chart config",
+          code = {
+            chart_config()
+          },
+          fallback = function(e) {
+            log_debug(paste("Chart config error:", e$message), "RENDER_PLOT")
+            return(NULL)
+          },
+          error_type = "processing"
+        )
         log_debug(paste("Chart config:", !is.null(chart_config_result)), "RENDER_PLOT")
 
         plot_ready <- get_plot_state("plot_ready")
         log_debug(paste("Plot ready status:", plot_ready), "RENDER_PLOT")
 
         # Try to get plot
-        plot <- tryCatch({
-          spc_plot()
-        }, error = function(e) {
-          log_debug(paste("SPC plot error:", e$message), "RENDER_PLOT")
-          return(NULL)
-        })
+        plot <- safe_operation(
+          "Get SPC plot",
+          code = {
+            spc_plot()
+          },
+          fallback = function(e) {
+            log_debug(paste("SPC plot error:", e$message), "RENDER_PLOT")
+            return(NULL)
+          },
+          error_type = "processing"
+        )
 
         log_debug(paste("Plot object result:", !is.null(plot)), "RENDER_PLOT")
 
