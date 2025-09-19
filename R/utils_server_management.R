@@ -11,7 +11,7 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
   log_debug_block("SESSION_MGMT", "Initializing session management observers")
   log_debug("Received app_state environment address:", capture.output(print(app_state)), .context = "SESSION_MGMT")
 
-  # PHASE 4: Check if centralized state is available
+  # Check if centralized state is available
   use_centralized_state <- !is.null(app_state)
   # Auto-gendan session data når tilgængelig (hvis aktiveret)
   observeEvent(input$auto_restore_data,
@@ -30,26 +30,26 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
 
           if (!is.null(saved_state$data)) {
             # Sæt gendannelses guards for at forhindre interferens
-            # PHASE 4B: Unified state assignment only
+            # Unified state assignment only
             app_state$session$restoring_session <- TRUE
-            # PHASE 4B: Unified state assignment only
+            # Unified state assignment only
             app_state$data$updating_table <- TRUE
-            # PHASE 4B: Unified state assignment only
+            # Unified state assignment only
             app_state$data$table_operation_in_progress <- TRUE
-            # PHASE 4B: Unified state assignment only
+            # Unified state assignment only
             app_state$session$auto_save_enabled <- FALSE
 
             # Oprydningsfunktion til at nulstille guards
             on.exit(
               {
-                # PHASE 4B: Unified state assignment only
+                # Unified state assignment only
                 app_state$data$updating_table <- FALSE
-                # PHASE 4B: Unified state assignment only
+                # Unified state assignment only
                 app_state$session$restoring_session <- FALSE
-                # PHASE 4B: Unified state assignment only
+                # Unified state assignment only
                 app_state$session$auto_save_enabled <- TRUE
                 # Set flag for delayed cleanup - handled by separate observer
-                # PHASE 4B: Unified state assignment only
+                # Unified state assignment only
                 app_state$data$table_operation_cleanup_needed <- TRUE
               },
               add = TRUE
@@ -91,7 +91,7 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
                 }
               }
 
-              # PHASE 4: Dual-state sync during migration
+              # Dual-state sync during migration
               set_current_data(app_state, reconstructed_data)
               app_state$data$original_data <- reconstructed_data
 
@@ -99,7 +99,7 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
               emit$data_loaded()
             } else {
               # Fallback for older save format
-              # PHASE 4: Dual-state sync during migration
+              # Dual-state sync during migration
               fallback_data <- as.data.frame(saved_state$data)
               set_current_data(app_state, fallback_data)
               app_state$data$original_data <- fallback_data
@@ -108,9 +108,9 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
               emit$data_loaded()
             }
 
-            # PHASE 4B: Unified state assignment only
+            # Unified state assignment only
             app_state$session$file_uploaded <- TRUE
-            # PHASE 4B: Unified state assignment only
+            # Unified state assignment only
             app_state$columns$auto_detect$completed <- TRUE
 
             # Restore metadata if available
@@ -137,13 +137,13 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
         },
         fallback = {
           # Reset guards even on error
-          # PHASE 4B: Unified state assignment only
+          # Unified state assignment only
           app_state$data$updating_table <- FALSE
-          # PHASE 4B: Unified state assignment only
+          # Unified state assignment only
           app_state$session$restoring_session <- FALSE
-          # PHASE 4B: Unified state assignment only
+          # Unified state assignment only
           app_state$session$auto_save_enabled <- TRUE
-          # PHASE 4B: Unified state assignment only
+          # Unified state assignment only
           app_state$data$table_operation_in_progress <- FALSE
         },
         session = session,
@@ -165,7 +165,7 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
     metadata <- collect_metadata(input)
 
     saveDataLocally(session, current_data_check, metadata)
-    # PHASE 4B: Unified state assignment only
+    # Unified state assignment only
     app_state$session$last_save_time <- Sys.time()
     showNotification("Session gemt lokalt!", type = "message", duration = 2)
   })
@@ -196,7 +196,7 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
     log_debug("Confirm upload clicked", .context = "UPLOAD_MODAL")
 
     # Set navigation flags for file upload flow
-    # PHASE 4: Use unified state management
+    # Use unified state management
     app_state$session$user_started_session <- TRUE
     app_state$session$file_uploaded <- FALSE  # Will be set to TRUE by actual file upload handler
 
@@ -309,7 +309,7 @@ collect_metadata <- function(input) {
 }
 
 handle_clear_saved_request <- function(input, session, app_state, emit) {
-  # Check if there's data or settings to lose - PHASE 4: Use unified state
+  # Check if there's data or settings to lose - Use unified state
   current_data_check <- app_state$data$current_data
   has_data <- !is.null(current_data_check) &&
     any(!is.na(current_data_check), na.rm = TRUE) &&
@@ -349,22 +349,22 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
     .context = "SESSION_RESET"
   )
   clearDataLocally(session)
-  # PHASE 4B: Unified state assignment only
+  # Unified state assignment only
   app_state$session$last_save_time <- NULL
 
-  # PHASE 4C: Unified state only
+  # Unified state only
   app_state$data$updating_table <- TRUE
 
   # Force hide Anhøj rules until real data is loaded
-  # PHASE 4B: Unified state assignment only
+  # Unified state assignment only
   app_state$ui$hide_anhoej_rules <- TRUE
 
   # Reset to standard column order using helper function
-  # PHASE 4: Sync current_data to both old and new state management
+  # Sync current_data to both old and new state management
   # Brug synlige standarddata (så tabel er synlig) men force name-only detection
   standard_data <- create_empty_session_data()
 
-  # PHASE 4: Unified state assignment only
+  # Unified state assignment only
   app_state$data$current_data <- standard_data
   log_debug("Session reset: synced standard_data to app_state, dims:", paste(dim(standard_data), collapse="x"), .context = "SESSION_RESET")
 
@@ -376,13 +376,13 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
   log_debug("Emitting navigation_changed event", .context = "SESSION_RESET")
   emit$navigation_changed()
 
-  # PHASE 4B: Unified state assignment only
+  # Unified state assignment only
   app_state$session$file_uploaded <- FALSE
-  # PHASE 4B: Unified state assignment only
+  # Unified state assignment only
   app_state$session$user_started_session <- TRUE # NEW: Set flag that user has started
-  # PHASE 4: Unified state assignment only
+  # Unified state assignment only
   app_state$data$original_data <- NULL
-  # PHASE 4B: Unified state assignment only
+  # Unified state assignment only
   app_state$columns$auto_detect$completed <- FALSE
 
   # Unified state: Get new standard session data
@@ -459,7 +459,7 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
     log_debug("✅ Autodetect_engine completed for session reset", .context = "SESSION_RESET")
   }
 
-  # PHASE 4C: Unified state only
+  # Unified state only
   app_state$data$updating_table <- FALSE
 }
 
@@ -560,7 +560,7 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
     }
 
     # Samme logik som eksisterende start_new_session
-    # PHASE 4: Unified state assignment only
+    # Unified state assignment only
     empty_session_data <- create_empty_session_data()
     app_state$data$current_data <- empty_session_data
     app_state$data$original_data <- empty_session_data
@@ -574,14 +574,14 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
     new_version <- app_state$data$table_version
     log_debug("table_version incremented from", old_version, "to", new_version, .context = "WELCOME_PAGE")
 
-    # PHASE 4B: Unified state assignment only - FALSE for manual session
+    # Unified state assignment only - FALSE for manual session
     app_state$session$file_uploaded <- FALSE
     # Set user_started_session to TRUE for proper navigation
     app_state$session$user_started_session <- TRUE
-    # PHASE 4B: Unified state assignment only
+    # Unified state assignment only
     app_state$ui$hide_anhoej_rules <- TRUE
     # Unified state: Clear session file name
-    # PHASE 4B: Legacy session_file_name assignment removed - not used elsewhere
+    # Legacy session_file_name assignment removed - not used elsewhere
     app_state$session$file_name <- NULL
 
     # Nulstil konfigurationer
@@ -662,13 +662,13 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
           log_debug(paste("Final data dimensions:", paste(dim(demo_data), collapse = "x")), "SERVER_MGMT")
 
           # Sæt reaktive værdier
-          # PHASE 4: Unified state assignment only
+          # Unified state assignment only
           app_state$data$current_data <- demo_data
           app_state$data$original_data <- demo_data
 
           # Emit event to trigger downstream effects
           emit$data_loaded()
-          # PHASE 4B: Unified state assignment only
+          # Unified state assignment only
           app_state$session$file_uploaded <- TRUE
           # Unified state: Set user started session for demo navigation
           app_state$session$user_started_session <- TRUE
@@ -676,10 +676,10 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
           # Using unified state management - will trigger auto-detect
           app_state$columns$auto_detect$completed <- FALSE
           # Using unified state management - reset for new data
-          # PHASE 4B: Unified state assignment only
+          # Unified state assignment only
           app_state$ui$hide_anhoej_rules <- FALSE # Vis Anhøj regler for rigtige data
           # Unified state: Set demo file name
-          # PHASE 4B: Legacy session_file_name assignment removed - not used elsewhere
+          # Legacy session_file_name assignment removed - not used elsewhere
           app_state$session$file_name <- "Eksempel data (SPC demo)"
 
           # Skjul waiter

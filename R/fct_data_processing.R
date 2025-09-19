@@ -42,8 +42,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
   log_debug_block("COLUMN_MGMT", "Setting up column management")
   log_debug("Received app_state environment address:", capture.output(print(app_state)), .context = "COLUMN_MGMT")
 
-  # PHASE 4: Centralized state is now always available
-  log_debug("Centralized state available for column management", .context = "PHASE4")
+  log_debug("Centralized state available for column management", .context = "COLUMN_MGMT")
 
   # LEGACY: Column choices update observer moved to unified event system
   # Now handled by emit$data_changed() -> update_column_choices_unified()
@@ -91,7 +90,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
   # Kolonnevaliderings output
   output$column_validation_messages <- renderUI({
-    # PHASE 4: Use unified state management
+    # Use unified state management
     current_data_check <- app_state$data$current_data
     req(current_data_check)
 
@@ -208,7 +207,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
             ),
             session_id = session_id)
 
-  # PHASE 4: Centralized state availability check
+  # Centralized state availability check
   use_centralized_state <- !is.null(app_state)
   if (use_centralized_state) {
     log_debug("Centralized state available for auto-detect function", .context = "PHASE4")
@@ -216,7 +215,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
 
   autodetect_tracer$step("data_source_validation")
 
-  # PHASE 4: Use unified state management for current_data access
+  # Use unified state management for current_data access
   current_data_check <- if (!is.null(app_state)) {
     app_state$data$current_data
   } else {
@@ -531,7 +530,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
 
             # Apply conversion if successful (inside isolate to prevent reactive triggers)
             if (!is.null(converted_dates) && sum(!is.na(converted_dates)) / length(converted_dates) >= 0.7) {
-              # PHASE 4: Dimension safety check before assignment - unified state only
+              # Dimension safety check before assignment - unified state only
               current_rows <- nrow(app_state$data$current_data)
               converted_rows <- length(converted_dates)
 
@@ -699,7 +698,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
 
     # Using unified state management for auto-detected columns storage
     log_debug("Auto-detected columns handled by unified state management", .context = "PHASE4")
-    # PHASE 4: Sync auto_detected_columns to centralized state - FIX: Use correct path that visualization expects
+    # Sync auto_detected_columns to centralized state - FIX: Use correct path that visualization expects
     app_state$columns$auto_detect$results <- list(
       x_col = x_col,
       y_col = taeller_col,
@@ -734,7 +733,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
       timestamp = as.numeric(Sys.time())  # Force reactivity trigger
     )
 
-    # PHASE 4: Use unified state management
+    # Use unified state management
     app_state$columns$ui_sync$needed <- sync_data
 
     # CRITICAL: Set debounce timestamp BEFORE triggering UI sync to prevent race condition
@@ -843,7 +842,7 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
     return()
   }
 
-  # PHASE 4: Unified state assignment only
+  # Unified state assignment only
   names(app_state$data$current_data) <- new_names
 
   # Emit event to trigger downstream effects
@@ -897,13 +896,13 @@ handle_add_column <- function(input, session, app_state = NULL, emit = NULL) {
   new_col_type <- input$new_col_type
 
   if (new_col_type == "numeric") {
-    # PHASE 4: Unified state assignment only
+    # Unified state assignment only
     app_state$data$current_data[[new_col_name]] <- rep(NA_real_, nrow(current_data_check))
   } else if (new_col_type == "date") {
-    # PHASE 4: Unified state assignment only
+    # Unified state assignment only
     app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
   } else {
-    # PHASE 4: Unified state assignment only
+    # Unified state assignment only
     app_state$data$current_data[[new_col_name]] <- rep(NA_character_, nrow(current_data_check))
   }
 
@@ -939,7 +938,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
 
     # Inkluder table_version for at tvinge re-render efter gendannelse
-    # PHASE 4: Use unified state management
+    # Use unified state management
     version_trigger <- app_state$session$table_version
 
     data <- current_data_check
@@ -981,31 +980,31 @@ setup_data_table <- function(input, output, session, app_state, emit) {
   # Håndtér excelR tabel ændringer
   observeEvent(input$main_data_table,
     {
-      # PHASE 4: Use unified state management
+      # Use unified state management
       updating_table_check <- app_state$data$updating_table
 
-      # PHASE 4: Use unified state management
+      # Use unified state management
       restoring_session_check <- app_state$session$restoring_session
 
       if (updating_table_check || restoring_session_check) {
         return()
       }
 
-      # PHASE 4: Use unified state management
+      # Use unified state management
       app_state$data$updating_table <- TRUE
-      # PHASE 4: Use unified state management
+      # Use unified state management
       app_state$data$table_operation_in_progress <- TRUE
 
       on.exit(
         {
-          # PHASE 4: Use unified state management
+          # Use unified state management
           app_state$data$updating_table <- FALSE
         },
         add = TRUE
       )
 
       # Trigger event-driven cleanup instead of timing-based
-      # PHASE 4: Use unified state management
+      # Use unified state management
       app_state$data$table_operation_cleanup_needed <- TRUE
 
       safe_operation(
@@ -1084,7 +1083,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
             return()
           }
 
-          # PHASE 4: Dual-state sync for compatibility during migration
+          # Dual-state sync for compatibility during migration
           set_current_data(app_state, new_df)
 
           # Emit event to trigger downstream effects
@@ -1109,13 +1108,13 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     req(current_data_check)
 
     # Sæt vedvarende flag for at forhindre auto-save interferens
-    # PHASE 4: Use unified state management
+    # Use unified state management
     app_state$data$table_operation_in_progress <- TRUE
 
     new_row <- current_data_check[1, ]
     new_row[1, ] <- NA
 
-    # PHASE 4: Dual-state sync for compatibility during migration
+    # Dual-state sync for compatibility during migration
     current_data <- get_current_data(app_state)
     set_current_data(app_state, rbind(current_data, new_row))
 
@@ -1125,7 +1124,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     showNotification("Ny række tilføjet", type = "message")
 
     # Trigger event-driven cleanup instead of timing-based
-    # PHASE 4: Use unified state management
+    # Use unified state management
     app_state$data$table_operation_cleanup_needed <- TRUE
   })
 
