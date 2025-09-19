@@ -38,9 +38,7 @@ app_server <- function(input, output, session) {
   source("R/mod_spc_chart_server.R", local = TRUE)
   log_debug("✅ All server components sourced", "APP_SERVER")
 
-  # PHASE 4: Legacy reactive values system removed - using unified app_state only
-
-  # PHASE 4: Centraliseret state management (parallel til existing values)
+  # Centralized state management using unified app_state architecture
   log_debug("Initializing centralized app state...", "APP_SERVER")
   debug_log("Creating centralized app_state", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
   app_state <- create_app_state()
@@ -280,21 +278,19 @@ app_server <- function(input, output, session) {
           test_data <- ensure_standard_columns(test_data)
           autoload_tracer$step("data_processing_complete")
 
-          # Set reactive values - PHASE 4: Dual-state sync during migration
+          # Set reactive values using dual-state sync
           app_state$data$original_data <- test_data
           # Unified state: Set data using sync helper for compatibility
           set_current_data(app_state, test_data)
 
           # Emit event to trigger downstream effects
           emit$data_loaded()
-          # PHASE 4B: Unified state assignment only
+          # Set session flags
           app_state$session$file_uploaded <- TRUE
-          # PHASE 4B: Unified state assignment only
           app_state$session$user_started_session <- TRUE
-          # PHASE 4B: Unified state assignment only
+          # Reset auto-detection state
           app_state$columns$auto_detect$completed <- FALSE
-          # PHASE 4B: Legacy assignment removed - managed by unified state
-          # PHASE 4B: Unified state assignment only
+          # Legacy assignments removed - managed by unified state
           app_state$ui$hide_anhoej_rules <- FALSE
 
           autoload_tracer$step("state_synchronization_complete")
@@ -350,7 +346,7 @@ app_server <- function(input, output, session) {
   setup_helper_observers(input, output, session, obs_manager, app_state)
 
   ## Kolonne management logik
-  # PHASE 4: Pass centralized state to column management - now uses unified event system
+  # Pass centralized state to column management via unified event system
   setup_column_management(input, output, session, app_state, emit)
   log_debug("Column management setup completed with unified event system", .context = "APP_SERVER")
 
