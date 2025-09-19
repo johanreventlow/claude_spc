@@ -399,6 +399,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           # Get kommentar column
           kommentar_col <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
 
+          # DEBUG: Log all parameters before generateSPCPlot call
+          log_debug(paste("target_value:", deparse(target_value_reactive())), .context = "PLOT_PARAMS")
+          log_debug(paste("centerline_value:", deparse(centerline_value_reactive())), .context = "PLOT_PARAMS")
+          log_debug(paste("skift_config:", deparse(skift_config)), .context = "PLOT_PARAMS")
+          log_debug(paste("frys_column:", deparse(frys_column)), .context = "PLOT_PARAMS")
+          log_debug(paste("chart_title_reactive result:", deparse(chart_title_reactive())), .context = "PLOT_PARAMS")
+          log_debug(paste("kommentar_col:", deparse(kommentar_col)), .context = "PLOT_PARAMS")
+
           spc_result <- generateSPCPlot(
             data = data,
             config = config,
@@ -465,6 +473,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           set_plot_state("plot_warnings", c("Graf-generering fejlede:", e$message))
           set_plot_state("plot_ready", FALSE)
           set_plot_state("anhoej_results", NULL)
+
+          # Detailed error logging for diagnosis
+          log_debug(paste("❌ PLOT ERROR:", e$message), .context = "PLOT_ERROR")
+          log_debug(paste("Error class:", class(e)), .context = "PLOT_ERROR")
+          if (exists("config")) log_debug(paste("Config at error:", deparse(config)), .context = "PLOT_ERROR")
+          if (exists("data")) log_debug(paste("Data dimensions at error:", nrow(data), "x", ncol(data)), .context = "PLOT_ERROR")
 
           # Invalidate cache on error
           plot_cache(NULL)

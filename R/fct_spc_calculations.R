@@ -349,8 +349,19 @@ get_optimal_formatting <- function(interval_info, debug = TRUE) {
 
 ## Generér SPC plot med tilpasset styling
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
-  # DEBUG: Log input parameters
-  log_debug(paste("=== FUNCTION INPUT DEBUG ===\ny_axis_unit parameter received:", y_axis_unit, "\n============================"), "SPC_CALC")
+  # DEBUG: Comprehensive input parameter logging
+  log_debug("======================================", "SPC_CALC_DEBUG")
+  log_debug("generateSPCPlot function called", "SPC_CALC_DEBUG")
+  log_debug(paste("chart_type:", chart_type), "SPC_CALC_DEBUG")
+  log_debug(paste("target_value:", if(is.null(target_value)) "NULL" else target_value), "SPC_CALC_DEBUG")
+  log_debug(paste("show_phases:", show_phases), "SPC_CALC_DEBUG")
+  log_debug(paste("skift_column:", if(is.null(skift_column)) "NULL" else paste("'", skift_column, "'", sep="")), "SPC_CALC_DEBUG")
+  log_debug(paste("frys_column:", if(is.null(frys_column)) "NULL" else paste("'", frys_column, "'", sep="")), "SPC_CALC_DEBUG")
+  log_debug(paste("y_axis_unit:", if(is.null(y_axis_unit)) "NULL" else paste("'", y_axis_unit, "'", sep="")), "SPC_CALC_DEBUG")
+  log_debug(paste("kommentar_column:", if(is.null(kommentar_column)) "NULL" else paste("'", kommentar_column, "'", sep="")), "SPC_CALC_DEBUG")
+  log_debug(paste("Data dimensions:", nrow(data), "x", ncol(data)), "SPC_CALC_DEBUG")
+  log_debug(paste("Column names:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
+  log_debug("======================================", "SPC_CALC_DEBUG")
 
   # Safety checks
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
@@ -361,22 +372,32 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     stop("Y-kolonne ikke fundet i data")
   }
 
-  # Get title
+  # Get title with detailed debugging
+  log_debug("Processing chart title...", "SPC_CALC_DEBUG")
   custom_title <- tryCatch(
     {
       if (!is.null(chart_title_reactive) && is.function(chart_title_reactive)) {
+        log_debug("Calling chart_title_reactive function...", "SPC_CALC_DEBUG")
         title <- chart_title_reactive()
+        log_debug(paste("chart_title_reactive returned:", if(is.null(title)) "NULL" else paste("'", title, "'", sep="")), "SPC_CALC_DEBUG")
         if (!is.null(title) && title != "" && title != "SPC Analyse") {
+          log_debug("Using custom title", "SPC_CALC_DEBUG")
           title
         } else {
+          log_debug("Using default title (custom title empty or default)", "SPC_CALC_DEBUG")
           NULL
         }
       } else {
+        log_debug("No chart_title_reactive function provided", "SPC_CALC_DEBUG")
         NULL
       }
     },
-    error = function(e) NULL
+    error = function(e) {
+      log_debug(paste("ERROR in chart_title_reactive:", e$message), "SPC_CALC_DEBUG")
+      NULL
+    }
   )
+  log_debug(paste("Final custom_title result:", if(is.null(custom_title)) "NULL" else paste("'", custom_title, "'", sep="")), "SPC_CALC_DEBUG")
 
   title_text <- if (!is.null(custom_title)) {
     custom_title
@@ -384,12 +405,39 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     paste("SPC Chart -", config$y_col)
   }
 
-  # Prepare data
+  # Prepare data with defensive checking
+  log_debug("Preparing data variables...", "SPC_CALC_DEBUG")
+  log_debug(paste("config$x_col:", if(is.null(config$x_col)) "NULL" else paste("'", config$x_col, "'", sep="")), "SPC_CALC_DEBUG")
+  log_debug(paste("config$y_col:", if(is.null(config$y_col)) "NULL" else paste("'", config$y_col, "'", sep="")), "SPC_CALC_DEBUG")
+  log_debug(paste("config$n_col:", if(is.null(config$n_col)) "NULL" else paste("'", config$n_col, "'", sep="")), "SPC_CALC_DEBUG")
+
+  # DEFENSIVE: Check for character(0) in config values
+  if (!is.null(config$x_col) && (length(config$x_col) == 0 || identical(config$x_col, character(0)))) {
+    log_debug("⚠️ config$x_col is character(0) - setting to NULL", "SPC_CALC_DEBUG")
+    config$x_col <- NULL
+  }
+  if (!is.null(config$y_col) && (length(config$y_col) == 0 || identical(config$y_col, character(0)))) {
+    log_debug("⚠️ config$y_col is character(0) - this will cause errors", "SPC_CALC_DEBUG")
+    stop("Y-kolonne kan ikke være character(0)")
+  }
+  if (!is.null(config$n_col) && (length(config$n_col) == 0 || identical(config$n_col, character(0)))) {
+    log_debug("⚠️ config$n_col is character(0) - setting to NULL", "SPC_CALC_DEBUG")
+    config$n_col <- NULL
+  }
+
   x_data <- if (!is.null(config$x_col) && config$x_col %in% names(data)) data[[config$x_col]] else NULL
+  log_debug(paste("x_data extracted:", if(is.null(x_data)) "NULL" else paste("length=", length(x_data))), "SPC_CALC_DEBUG")
+
   y_data_raw <- data[[config$y_col]]
+  log_debug(paste("y_data_raw extracted:", if(is.null(y_data_raw)) "NULL" else paste("length=", length(y_data_raw))), "SPC_CALC_DEBUG")
 
   # Handle different chart types
+  log_debug("Checking chart type routing...", "SPC_CALC_DEBUG")
+  log_debug(paste("n_col check - config$n_col:", if(is.null(config$n_col)) "NULL" else paste("'", config$n_col, "'", sep="")), "SPC_CALC_DEBUG")
+  log_debug(paste("n_col exists in data:", if(is.null(config$n_col)) "N/A" else (config$n_col %in% names(data))), "SPC_CALC_DEBUG")
+
   if (!is.null(config$n_col) && config$n_col %in% names(data)) {
+    log_debug("✓ Using numerator/denominator chart type (ratio calculations)", "SPC_CALC_DEBUG")
     # Charts with numerator/denominator
     taeller_raw <- y_data_raw
     naevner_raw <- data[[config$n_col]]
@@ -452,24 +500,64 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     data <- data_filtered
 
     # Get unit labels early - before they are used
+    log_debug("Processing unit labels...", "SPC_CALC_DEBUG")
+    log_debug(paste("y_axis_unit received:", if(is.null(y_axis_unit)) "NULL" else paste("'", y_axis_unit, "' (length:", length(y_axis_unit), ")", sep="")), "SPC_CALC_DEBUG")
+
     x_unit_label <- ""
-    y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+    # DEFENSIVE: Check for character(0) before calling get_unit_label
+    if (length(y_axis_unit) == 0 || identical(y_axis_unit, character(0))) {
+      log_debug("⚠️ y_axis_unit is character(0) - using default 'count'", "SPC_CALC_DEBUG")
+      y_unit_label <- get_unit_label("count", Y_AXIS_UNITS_DA)
+    } else {
+      y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+    }
+    log_debug(paste("y_unit_label result:", if(is.null(y_unit_label)) "NULL" else paste("'", y_unit_label, "'", sep="")), "SPC_CALC_DEBUG")
+
+    log_debug("Building y_data and ylab_text...", "SPC_CALC_DEBUG")
+    log_debug(paste("chart_type:", chart_type), "SPC_CALC_DEBUG")
+    log_debug(paste("taeller length:", length(taeller)), "SPC_CALC_DEBUG")
+    log_debug(paste("naevner length:", length(naevner)), "SPC_CALC_DEBUG")
+
+    # DEFENSIVE: Check config values before using in paste
+    y_col_safe <- if (is.null(config$y_col) || length(config$y_col) == 0 || identical(config$y_col, character(0))) "Y" else config$y_col
+    n_col_safe <- if (is.null(config$n_col) || length(config$n_col) == 0 || identical(config$n_col, character(0))) "N" else config$n_col
+    log_debug(paste("y_col_safe:", y_col_safe), "SPC_CALC_DEBUG")
+    log_debug(paste("n_col_safe:", n_col_safe), "SPC_CALC_DEBUG")
 
     if (chart_type == "run") {
+      log_debug("Processing run chart type...", "SPC_CALC_DEBUG")
       y_data <- (taeller / naevner) * 100
-      ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", config$y_col, "/", config$n_col, ") %")
+      log_debug("y_data calculated successfully", "SPC_CALC_DEBUG")
+      ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", y_col_safe, "/", n_col_safe, ") %")
+      log_debug("ylab_text created successfully", "SPC_CALC_DEBUG")
     } else if (chart_type %in% c("p", "pp", "u", "up")) {
+      log_debug("Processing p/u chart type...", "SPC_CALC_DEBUG")
       y_data <- taeller
       n_data <- naevner
       ylab_text <- if (y_unit_label != "") y_unit_label else (if (chart_type %in% c("p", "pp")) "Proportion" else "Rate")
+      log_debug("y_data and ylab_text created successfully", "SPC_CALC_DEBUG")
     } else {
+      log_debug("Processing other chart type...", "SPC_CALC_DEBUG")
       y_data <- (taeller / naevner) * 100
-      ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", config$y_col, "/", config$n_col, ") %")
+      log_debug("y_data calculated successfully", "SPC_CALC_DEBUG")
+      ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", y_col_safe, "/", n_col_safe, ") %")
+      log_debug("ylab_text created successfully", "SPC_CALC_DEBUG")
     }
+    log_debug("✅ y_data and ylab_text processing completed", "SPC_CALC_DEBUG")
   } else {
     # Get unit labels early - before they are used
+    log_debug("Processing unit labels...", "SPC_CALC_DEBUG")
+    log_debug(paste("y_axis_unit received:", if(is.null(y_axis_unit)) "NULL" else paste("'", y_axis_unit, "' (length:", length(y_axis_unit), ")", sep="")), "SPC_CALC_DEBUG")
+
     x_unit_label <- ""
-    y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+    # DEFENSIVE: Check for character(0) before calling get_unit_label
+    if (length(y_axis_unit) == 0 || identical(y_axis_unit, character(0))) {
+      log_debug("⚠️ y_axis_unit is character(0) - using default 'count'", "SPC_CALC_DEBUG")
+      y_unit_label <- get_unit_label("count", Y_AXIS_UNITS_DA)
+    } else {
+      y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+    }
+    log_debug(paste("y_unit_label result:", if(is.null(y_unit_label)) "NULL" else paste("'", y_unit_label, "'", sep="")), "SPC_CALC_DEBUG")
 
     # Standard numeric data - filter out missing values first
     complete_rows <- !is.na(y_data_raw) & trimws(as.character(y_data_raw)) != ""
@@ -523,7 +611,17 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Handle x-axis data med intelligent formatering - EFTER data filtrering
   # FASE 5: Performance optimization - cache expensive x-column validation
   data_hash <- paste0(nrow(data), "_", ncol(data), "_", paste(names(data), collapse = "_"))
-  cache_key <- paste0("x_validation_", config$x_col, "_", substr(data_hash, 1, 20))
+
+  # ROBUST CACHE KEY: Safe ID generation to handle character(0) and NULL values
+  safe_x_col_id <- if (is.null(config$x_col) || length(config$x_col) == 0 || identical(config$x_col, character(0)) || is.na(config$x_col)) {
+    "NULL_XCOL"
+  } else {
+    # Sanitize column name for cache key (remove problematic characters)
+    gsub("[^a-zA-Z0-9_]", "_", as.character(config$x_col)[1])
+  }
+  log_debug(paste("Safe X column ID for cache:", safe_x_col_id), "SPC_CALC_DEBUG")
+
+  cache_key <- paste0("x_validation_", safe_x_col_id, "_", substr(data_hash, 1, 20))
 
   x_validation <- create_cached_reactive({
     validate_x_column_format(data, config$x_col, "observation")
@@ -537,42 +635,77 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   log_debug(paste("=== X-VALIDATION DEBUG ===\nx_col:", config$x_col, "\nx_data class:", class(x_data)[1], "\nx_data sample:", paste(head(x_data, 3), collapse = ", "), "\nis_date:", x_validation$is_date, "\nx.period:", x_validation$x.period, "\nx.format:", x_validation$x.format, "\n========================"), "X_VALIDATION")
 
   # Handle phases from selected Skift column
+  log_debug("Processing skift_column for phases...", "SPC_CALC_DEBUG")
+  log_debug(paste("show_phases:", show_phases), "SPC_CALC_DEBUG")
+  log_debug(paste("skift_column value:", if(is.null(skift_column)) "NULL" else paste("'", skift_column, "' (length:", length(skift_column), ")", sep="")), "SPC_CALC_DEBUG")
+
   part_positions <- NULL
-  if (show_phases && !is.null(skift_column) && skift_column %in% names(data)) {
-    skift_data <- data[[skift_column]]
+  if (show_phases && !is.null(skift_column)) {
+    log_debug("Checking if skift_column exists in data...", "SPC_CALC_DEBUG")
+    # DEFENSIVE: Check for character(0) before using %in%
+    if (length(skift_column) == 0 || identical(skift_column, character(0))) {
+      log_debug("⚠️ skift_column is character(0) - skipping phase processing", "SPC_CALC_DEBUG")
+    } else if (skift_column %in% names(data)) {
+      log_debug(paste("✓ skift_column", skift_column, "found in data"), "SPC_CALC_DEBUG")
+      skift_data <- data[[skift_column]]
 
-    # Convert to logical if needed
-    if (!is.logical(skift_data)) {
-      skift_data <- as.logical(skift_data)
+      # Convert to logical if needed
+      if (!is.logical(skift_data)) {
+        skift_data <- as.logical(skift_data)
+      }
+
+      # Get positions where TRUE values occur (these are where new phases start)
+      skift_points <- which(skift_data == TRUE)
+      log_debug(paste("Skift points found:", length(skift_points), "positions:", paste(skift_points, collapse=", ")), "SPC_CALC_DEBUG")
+
+      if (length(skift_points) > 0) {
+        # qic() expects integer vector of positions where new phases start
+        part_positions <- sort(skift_points)
+        log_debug(paste("Final part_positions:", paste(part_positions, collapse=", ")), "SPC_CALC_DEBUG")
+      }
+    } else {
+      log_debug(paste("⚠️ skift_column", skift_column, "not found in data columns:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
     }
-
-    # Get positions where TRUE values occur (these are where new phases start)
-    skift_points <- which(skift_data == TRUE)
-
-    if (length(skift_points) > 0) {
-      # qic() expects integer vector of positions where new phases start
-      part_positions <- sort(skift_points)
-    }
+  } else {
+    log_debug("Skipping phase processing (show_phases=FALSE or skift_column=NULL)", "SPC_CALC_DEBUG")
   }
+  log_debug(paste("Final part_positions result:", if(is.null(part_positions)) "NULL" else paste(part_positions, collapse=", ")), "SPC_CALC_DEBUG")
 
   # Handle baseline freeze from selected Frys column
+  log_debug("Processing frys_column for baseline freeze...", "SPC_CALC_DEBUG")
+  log_debug(paste("frys_column value:", if(is.null(frys_column)) "NULL" else paste("'", frys_column, "' (length:", length(frys_column), ")", sep="")), "SPC_CALC_DEBUG")
+
   freeze_position <- NULL
-  if (!is.null(frys_column) && frys_column %in% names(data)) {
-    frys_data <- data[[frys_column]]
+  if (!is.null(frys_column)) {
+    log_debug("Checking if frys_column exists in data...", "SPC_CALC_DEBUG")
+    # DEFENSIVE: Check for character(0) before using %in%
+    if (length(frys_column) == 0 || identical(frys_column, character(0))) {
+      log_debug("⚠️ frys_column is character(0) - skipping freeze processing", "SPC_CALC_DEBUG")
+    } else if (frys_column %in% names(data)) {
+      log_debug(paste("✓ frys_column", frys_column, "found in data"), "SPC_CALC_DEBUG")
+      frys_data <- data[[frys_column]]
 
-    # Convert to logical if needed
-    if (!is.logical(frys_data)) {
-      frys_data <- as.logical(frys_data)
+      # Convert to logical if needed
+      if (!is.logical(frys_data)) {
+        frys_data <- as.logical(frys_data)
+      }
+
+      # Get positions where TRUE values occur (baseline freeze points)
+      frys_points <- which(frys_data == TRUE)
+      log_debug(paste("Frys points found:", length(frys_points), "positions:", paste(frys_points, collapse=", ")), "SPC_CALC_DEBUG")
+
+      if (length(frys_points) > 0) {
+        # Use the last TRUE position as freeze point (baseline up to this point)
+        freeze_position <- max(frys_points)
+        log_debug(paste("Final freeze_position:", freeze_position), "SPC_CALC_DEBUG")
+      }
+    } else {
+      log_debug(paste("⚠️ frys_column", frys_column, "not found in data columns:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
     }
-
-    # Get positions where TRUE values occur (baseline freeze points)
-    frys_points <- which(frys_data == TRUE)
-
-    if (length(frys_points) > 0) {
-      # Use the last TRUE position as freeze point (baseline up to this point)
-      freeze_position <- max(frys_points)
-    }
+  } else {
+    log_debug("Skipping freeze processing (frys_column=NULL)", "SPC_CALC_DEBUG")
   }
+  log_debug(paste("Final freeze_position result:", if(is.null(freeze_position)) "NULL" else freeze_position), "SPC_CALC_DEBUG")
 
   # Build qic call arguments dynamically
   call_args <- list(

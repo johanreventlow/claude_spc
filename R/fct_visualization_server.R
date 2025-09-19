@@ -11,6 +11,30 @@ setup_visualization <- function(input, output, session, app_state) {
   log_debug("=======================================", "VISUALIZATION")
   log_debug("Setting up visualization system", "VISUALIZATION")
 
+  # HELPER FUNCTION: Robust input sanitization for character(0) and NA handling
+  sanitize_selection <- function(input_value) {
+    if (is.null(input_value) || length(input_value) == 0 || identical(input_value, character(0))) {
+      return(NULL)
+    }
+    # Handle vectors with all NA values
+    if (all(is.na(input_value))) {
+      return(NULL)
+    }
+    # Handle vectors - use first element only
+    if (length(input_value) > 1) {
+      input_value <- input_value[1]
+    }
+    # Handle single NA value
+    if (is.na(input_value)) {
+      return(NULL)
+    }
+    # Handle empty strings and whitespace-only strings
+    if (is.character(input_value) && (input_value == "" || trimws(input_value) == "")) {
+      return(NULL)
+    }
+    return(input_value)
+  }
+
   # UNIFIED EVENT SYSTEM: Direct access to app_state data instead of reactive dependencies
   # No need for app_data_reactive - visualization module uses its own event-driven data access
   log_debug("Visualization setup - using unified event system", "VISUALIZATION")
@@ -50,9 +74,9 @@ setup_visualization <- function(input, output, session, app_state) {
   })
 
   manual_config <- reactive({
-    x_col <- if (!is.null(input$x_column) && input$x_column != "") input$x_column else NULL
-    y_col <- if (!is.null(input$y_column) && input$y_column != "") input$y_column else NULL
-    n_col <- if (!is.null(input$n_column) && input$n_column != "") input$n_column else NULL
+    x_col <- sanitize_selection(input$x_column)
+    y_col <- sanitize_selection(input$y_column)
+    n_col <- sanitize_selection(input$n_column)
 
     list(
       x_col = x_col,
@@ -159,12 +183,8 @@ setup_visualization <- function(input, output, session, app_state) {
         return(list(show_phases = FALSE, skift_column = NULL))
       }
 
-      # Tjek om bruger har valgt en Skift kolonne - normalisér character(0) til NULL
-      skift_col <- if (!is.null(input$skift_column) && length(input$skift_column) > 0 && input$skift_column != "") {
-        input$skift_column
-      } else {
-        NULL
-      }
+      # Tjek om bruger har valgt en Skift kolonne - brug robust sanitization
+      skift_col <- sanitize_selection(input$skift_column)
 
       # Hvis ingen Skift kolonne valgt, ingen faser
       if (is.null(skift_col) || !skift_col %in% names(data)) {
@@ -189,12 +209,8 @@ setup_visualization <- function(input, output, session, app_state) {
         return(NULL)
       }
 
-      # Tjek om bruger har valgt en Frys kolonne - normalisér character(0) til NULL
-      frys_col <- if (!is.null(input$frys_column) && length(input$frys_column) > 0 && input$frys_column != "") {
-        input$frys_column
-      } else {
-        NULL
-      }
+      # Tjek om bruger har valgt en Frys kolonne - brug robust sanitization
+      frys_col <- sanitize_selection(input$frys_column)
 
       # Hvis ingen Frys kolonne valgt eller ikke i data, returner NULL
       if (is.null(frys_col) || !frys_col %in% names(data)) {
@@ -212,11 +228,7 @@ setup_visualization <- function(input, output, session, app_state) {
       }
     }),
     kommentar_column_reactive = reactive({
-      if (is.null(input$kommentar_column) || input$kommentar_column == "") {
-        return(NULL)
-      } else {
-        return(input$kommentar_column)
-      }
+      return(sanitize_selection(input$kommentar_column))
     }),
     app_state = app_state
   )

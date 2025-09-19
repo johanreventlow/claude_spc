@@ -370,7 +370,19 @@ create_empty_session_data <- function() {
 # Reaktiv funktion for nuværende organisatoriske enhed
 current_unit <- function(input) {
   reactive({
-    if (input$unit_type == "select") {
+    # Helper to sanitize input values (same as in visualization server)
+    sanitize_input <- function(input_value) {
+      if (is.null(input_value) || length(input_value) == 0 || identical(input_value, character(0)) || input_value == "") {
+        return("")
+      }
+      if (length(input_value) > 1) {
+        input_value <- input_value[1]
+      }
+      return(input_value)
+    }
+
+    unit_type_safe <- sanitize_input(input$unit_type)
+    if (unit_type_safe == "select") {
       unit_names <- list(
         "med" = "Medicinsk Afdeling",
         "kir" = "Kirurgisk Afdeling",
@@ -380,14 +392,14 @@ current_unit <- function(input) {
         "paed" = "Pædiatrisk Afdeling",
         "gyn" = "Gynækologi/Obstetrik"
       )
-      selected_unit <- if (is.null(input$unit_select)) "" else input$unit_select
+      selected_unit <- sanitize_input(input$unit_select)
       if (selected_unit != "" && selected_unit %in% names(unit_names)) {
         return(unit_names[[selected_unit]])
       } else {
         return("")
       }
     } else {
-      return(if (is.null(input$unit_custom)) "" else input$unit_custom)
+      return(sanitize_input(input$unit_custom))
     }
   })
 }
@@ -396,7 +408,19 @@ current_unit <- function(input) {
 # Reaktiv funktion for komplet chart titel
 chart_title <- function(input) {
   reactive({
-    base_title <- if (is.null(input$indicator_title) || input$indicator_title == "") "SPC Analyse" else input$indicator_title
+    # Helper to sanitize input values (same pattern throughout app)
+    sanitize_input <- function(input_value) {
+      if (is.null(input_value) || length(input_value) == 0 || identical(input_value, character(0)) || input_value == "") {
+        return("")
+      }
+      if (length(input_value) > 1) {
+        input_value <- input_value[1]
+      }
+      return(input_value)
+    }
+
+    indicator_title_safe <- sanitize_input(input$indicator_title)
+    base_title <- if (indicator_title_safe == "") "SPC Analyse" else indicator_title_safe
     unit_name <- current_unit(input)()
 
     if (base_title != "SPC Analyse" && unit_name != "") {
