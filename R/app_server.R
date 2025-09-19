@@ -27,16 +27,8 @@ app_server <- function(input, output, session) {
   debug_log("SPC App server initialization started", "SESSION_LIFECYCLE",
             level = "INFO", session_id = session$token)
 
-  # Source all required server components
-  log_debug("Sourcing server components...", "APP_SERVER")
-  source("R/utils_reactive_state.R", local = TRUE)
-  source("R/utils_session_helpers.R", local = TRUE)
-  source("R/utils_server_management.R", local = TRUE)
-  source("R/fct_data_processing.R", local = TRUE)
-  source("R/fct_file_operations.R", local = TRUE)
-  source("R/fct_visualization_server.R", local = TRUE)
-  source("R/mod_spc_chart_server.R", local = TRUE)
-  log_debug("✅ All server components sourced", "APP_SERVER")
+  # Server components now loaded globally in global.R for better performance
+  log_debug("Server components loaded from global.R", "APP_SERVER")
 
   # Centralized state management using unified app_state architecture
   log_debug("Initializing centralized app state...", "APP_SERVER")

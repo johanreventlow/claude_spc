@@ -1,9 +1,7 @@
-# app_ui.R  
+# app_ui.R
 # Consolidated UI components for SPC app
 
-# Dependencies ----------------------------------------------------------------
-source("R/mod_spc_chart_ui.R")
-source("R/mod_session_storage.R")
+# UI components now loaded globally in global.R for better performance
 
 # UI HEADER KOMPONENTER =======================================================
 

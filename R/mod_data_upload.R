@@ -9,8 +9,7 @@ library(shinyjs)
 # MODULKOMPONENTER ============================================================
 
 ## Kilde alle data modul komponenter
-source("R/fct_file_io.R")
-source("R/fct_data_validation.R")
+# File I/O and validation functions now loaded globally in global.R for better performance
 
 # BAGUDKOMPATIBILITET =========================================================
 

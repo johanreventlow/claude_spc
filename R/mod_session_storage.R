@@ -8,8 +8,7 @@ library(shinyjs)
 # MODULKOMPONENTER ============================================================
 
 ## Kilde alle local storage modul komponenter
-source("R/utils_local_storage_js.R")
-source("R/utils_local_storage.R")
+# Local storage utilities now loaded globally in global.R for better performance
 
 # BAGUDKOMPATIBILITET =========================================================
 

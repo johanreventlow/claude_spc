@@ -70,6 +70,33 @@ source_from_base("R/utils_advanced_debug.R")  # Advanced debug infrastructure
 source_from_base("R/utils_end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing
 source_from_base("R/constants.R")
 
+# CORE FUNCTIONS - moved from runtime to global initialization
+source_from_base("R/fct_chart_helpers.R")
+source_from_base("R/fct_spc_helpers.R")
+source_from_base("R/fct_spc_plot_generation.R")
+source_from_base("R/fct_file_io.R")
+source_from_base("R/fct_data_validation.R")
+source_from_base("R/utils_local_storage_js.R")
+source_from_base("R/utils_local_storage.R")
+
+# SERVER COMPONENTS - moved from runtime to global initialization
+source_from_base("R/utils_reactive_state.R")
+source_from_base("R/utils_session_helpers.R")
+source_from_base("R/utils_server_management.R")
+source_from_base("R/fct_data_processing.R")
+source_from_base("R/fct_file_operations.R")
+source_from_base("R/fct_visualization_server.R")
+source_from_base("R/mod_spc_chart_server.R")
+
+# UI COMPONENTS - moved from runtime to global initialization
+source_from_base("R/mod_spc_chart_ui.R")
+source_from_base("R/mod_session_storage.R")
+source_from_base("R/mod_data_upload.R")
+
+# MAIN APP COMPONENTS - moved from runtime to global initialization
+source_from_base("R/app_server.R")
+source_from_base("R/app_ui.R")
+
 # ENHANCED DEBUGGING UTILITIES --------------------------------
 # Enhanced reactive context logging for Shiny fejlidentifikation
 log_reactive_context <- function(message, component = "REACTIVE", reactive_name = NULL) {

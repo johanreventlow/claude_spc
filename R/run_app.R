@@ -15,9 +15,8 @@ run_app <- function(#port = 3838,
   if (!exists("HOSPITAL_NAME", envir = .GlobalEnv)) {
     source("global.R", local = FALSE)
   }
-  
-  # Load server function
-  source("R/app_server.R", local = FALSE)
+
+  # Server function now loaded globally for better performance
   
   # Setup static resource paths for Golem structure
   shiny::addResourcePath("www", "www")
@@ -52,8 +51,8 @@ run_app <- function(#port = 3838,
 #' Get the UI function
 #' @noRd
 app_ui <- function() {
-  source("R/app_ui.R", local = TRUE)
-  
+  # UI components now loaded globally for better performance
+
   # Return the UI structure using consolidated functions
   page_navbar(
     title = tagList(

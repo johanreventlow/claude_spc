@@ -6,10 +6,7 @@
 library(shiny)
 library(shinyjs)
 
-# Source required helper functions
-source("R/fct_chart_helpers.R")
-source("R/fct_spc_helpers.R")
-source("R/fct_spc_plot_generation.R")
+# Helper functions now loaded globally in global.R for better performance
 
 
 visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL) {
