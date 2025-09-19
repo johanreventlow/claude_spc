@@ -157,6 +157,70 @@ app_server <- function(input, output, session) {
   setup_session_cleanup(session, app_state)
   log_debug("✅ Memory management configured", "APP_SERVER")
 
+  # FASE 4: AUTOMATIC BACKGROUND CLEANUP - Schedule periodic system maintenance
+  log_debug("Setting up automatic background cleanup scheduling...", "APP_SERVER")
+
+  # Schedule regular comprehensive cleanup every 5 minutes
+  if (requireNamespace("later", quietly = TRUE)) {
+    cleanup_interval_minutes <- 5
+    later::later(function() {
+      # Recursive cleanup scheduler
+      schedule_periodic_cleanup <- function() {
+        log_debug("🧹 Running scheduled comprehensive system cleanup", "BACKGROUND_CLEANUP")
+        tryCatch({
+          comprehensive_system_cleanup(app_state)
+          log_debug("✅ Scheduled cleanup completed successfully", "BACKGROUND_CLEANUP")
+        }, error = function(e) {
+          log_error(paste("Background cleanup error:", e$message), "BACKGROUND_CLEANUP")
+        })
+
+        # Schedule next cleanup
+        later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
+      }
+
+      # Start the periodic cleanup cycle
+      schedule_periodic_cleanup()
+    }, delay = cleanup_interval_minutes * 60)  # Initial delay
+
+    log_debug(paste("✅ Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), "APP_SERVER")
+  } else {
+    log_warn("later package not available - background cleanup disabled", "APP_SERVER")
+  }
+
+  # FASE 4: PERFORMANCE MONITORING INTEGRATION - Schedule periodic reporting
+  if (requireNamespace("later", quietly = TRUE)) {
+    report_interval_minutes <- 15
+    later::later(function() {
+      # Recursive performance reporting
+      schedule_periodic_reporting <- function() {
+        log_debug("📊 Generating periodic performance report", "PERFORMANCE_MONITOR")
+        tryCatch({
+          report <- get_performance_report(app_state)
+          log_debug("=== PERIODIC PERFORMANCE REPORT ===", "PERFORMANCE_MONITOR")
+          log_debug(report$formatted_text, "PERFORMANCE_MONITOR")
+
+          # Check if system needs attention
+          if (report$health_status == "WARNING") {
+            log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
+          } else if (report$health_status == "CAUTION") {
+            log_debug(paste("System health CAUTION - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
+          }
+
+        }, error = function(e) {
+          log_error(paste("Performance reporting error:", e$message), "PERFORMANCE_MONITOR")
+        })
+
+        # Schedule next report
+        later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
+      }
+
+      # Start the periodic reporting cycle
+      schedule_periodic_reporting()
+    }, delay = report_interval_minutes * 60)  # Initial delay
+
+    log_debug(paste("✅ Performance monitoring scheduled every", report_interval_minutes, "minutes"), "APP_SERVER")
+  }
+
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
   log_debug("Checking TEST_MODE configuration...", "APP_SERVER")
