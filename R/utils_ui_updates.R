@@ -31,14 +31,14 @@ create_ui_update_service <- function(session, app_state) {
   #' @param clear_selections If TRUE, clear all selections
   #'
   update_column_choices <- function(choices = NULL, selected = NULL, columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column"), clear_selections = FALSE) {
-    cat("DROPDOWN_DEBUG: update_column_choices called for:", paste(columns, collapse = ", "), "\n")
-    cat(paste("DROPDOWN_DEBUG: Parameters - choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
+    log_debug(paste("update_column_choices called for:", paste(columns, collapse = ", ")), "DROPDOWN_DEBUG")
+    log_debug(paste("Parameters - choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
                    "selected:", if(!is.null(selected)) paste0("[", length(selected), " items]") else "NULL",
-                   "clear_selections:", clear_selections, "\n"))
+                   "clear_selections:", clear_selections), "DROPDOWN_DEBUG")
 
     if (!is.null(selected)) {
       for (col in names(selected)) {
-        cat(paste("DROPDOWN_DEBUG: Selected value for", col, ":", selected[[col]], "\n"))
+        log_debug(paste("Selected value for", col, ":", selected[[col]]), "DROPDOWN_DEBUG")
       }
     }
 
@@ -500,14 +500,14 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
     isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
   } else { FALSE }
 
-  cat(paste("DROPDOWN_DEBUG: ⭐ Starting safe programmatic UI update with", delay_ms, "ms delay",
-                 "(autodetect frozen:", freeze_state, ")\n"))
+  log_debug(paste("⭐ Starting safe programmatic UI update with", delay_ms, "ms delay",
+                 "(autodetect frozen:", freeze_state, ")"), "DROPDOWN_DEBUG")
 
   tryCatch({
     # FASE 2: QUEUE SYSTEM - Check for overlapping updates and queue if necessary
     current_flag_state <- isolate(app_state$ui$updating_programmatically)
     if (isTRUE(current_flag_state)) {
-      cat("DROPDOWN_DEBUG: ⚠️ Another update in progress - adding to queue\n")
+      log_debug("⚠️ Another update in progress - adding to queue", "DROPDOWN_DEBUG")
 
       # QUEUE SYSTEM: Add this update to queue instead of clearing flag
       queue_entry <- list(
@@ -523,7 +523,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
       max_queue_size <- isolate(app_state$ui$memory_limits$max_queue_size)
 
       if (length(current_queue) >= max_queue_size) {
-        cat(paste("QUEUE_DEBUG: ⚠️ Queue at capacity (", length(current_queue), "/", max_queue_size, "), dropping oldest entry\n"))
+        log_debug(paste("⚠️ Queue at capacity (", length(current_queue), "/", max_queue_size, "), dropping oldest entry"), "QUEUE_DEBUG")
         # Remove oldest entry (first in list)
         current_queue <- current_queue[-1]
       }
@@ -540,8 +540,8 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
         }
       })
 
-      cat(paste("QUEUE_DEBUG: Added update to queue with ID:", queue_entry$queue_id,
-                "(queue size:", new_queue_size, "/", max_queue_size, ")\n"))
+      log_debug(paste("Added update to queue with ID:", queue_entry$queue_id,
+                "(queue size:", new_queue_size, "/", max_queue_size, ")"), "QUEUE_DEBUG")
 
       # QUEUE SCHEDULING: Use later::later() to process queue after current update completes
       later::later(function() {
@@ -558,7 +558,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 
     # LEGACY RACE CONDITION FIX: If not queued, clear any residual flags
     if (isTRUE(current_flag_state)) {
-      cat("DROPDOWN_DEBUG: ⚠️ Clearing residual flag before proceeding\n")
+      log_debug("⚠️ Clearing residual flag before proceeding", "DROPDOWN_DEBUG")
       app_state$ui$updating_programmatically <- FALSE
       app_state$ui$flag_reset_scheduled <- TRUE
       Sys.sleep(0.05)  # Shorter delay since we're not in overlap situation
@@ -569,22 +569,22 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
     app_state$ui$last_programmatic_update <- update_start_time
     app_state$ui$flag_reset_scheduled <- FALSE
 
-    cat("DROPDOWN_DEBUG: ✅ LOOP_PROTECTION flag set to TRUE, executing UI updates\n")
+    log_debug("✅ LOOP_PROTECTION flag set to TRUE, executing UI updates", "DROPDOWN_DEBUG")
 
     # TOKEN GENERATION: Generate unique token for this UI update session
     app_state$ui$programmatic_token_counter <- isolate(app_state$ui$programmatic_token_counter) + 1L
     session_token <- paste0("token_", isolate(app_state$ui$programmatic_token_counter), "_", format(update_start_time, "%H%M%S_%f"))
-    cat(paste("TOKEN_DEBUG: Generated session token:", session_token, "\n"))
+    log_debug(paste("Generated session token:", session_token), "TOKEN_DEBUG")
 
     # DROPDOWN DEBUGGING + TOKEN TRACKING: Wrap updateSelectizeInput to log and track tokens
     original_updateSelectizeInput <- updateSelectizeInput
     updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
-      cat(paste("DROPDOWN_DEBUG: Updating", inputId,
+      log_debug(paste("Updating", inputId,
                      "with choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
-                     "selected:", if(!is.null(selected)) paste0("'", selected, "'") else "NULL", "\n"))
+                     "selected:", if(!is.null(selected)) paste0("'", selected, "'") else "NULL"), "DROPDOWN_DEBUG")
 
       if (!is.null(choices) && length(choices) > 0) {
-        cat(paste("DROPDOWN_DEBUG: Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", "), "\n"))
+        log_debug(paste("Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", ")), "DROPDOWN_DEBUG")
       }
 
       # TOKEN TRACKING: Record this programmatic input with token
@@ -598,11 +598,11 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
             session_token = session_token
           )
         })
-        cat(paste("TOKEN_DEBUG: Token", input_token, "assigned to", inputId, "with value", paste0("'", selected, "'"), "\n"))
+        log_debug(paste("Token", input_token, "assigned to", inputId, "with value", paste0("'", selected, "'")), "TOKEN_DEBUG")
       }
 
       result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
-      cat(paste("DROPDOWN_DEBUG: updateSelectizeInput completed for", inputId, "\n"))
+      log_debug(paste("updateSelectizeInput completed for", inputId), "DROPDOWN_DEBUG")
       return(result)
     }
 
@@ -625,38 +625,38 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
         app_state$ui$updating_programmatically <- FALSE
         flag_clear_time <- Sys.time()
         total_time_ms <- as.numeric(difftime(flag_clear_time, update_start_time, units = "secs")) * 1000
-        cat(paste("DROPDOWN_DEBUG: 🚫 LOOP_PROTECTION flag cleared after", round(total_time_ms, 2), "ms total\n"))
+        log_debug(paste("🚫 LOOP_PROTECTION flag cleared after", round(total_time_ms, 2), "ms total"), "DROPDOWN_DEBUG")
       }
     }
 
     # TEST ENVIRONMENT: Clear flag immediately for test compatibility
     is_test_environment <- (is.null(session) || is.list(session))
     if (is_test_environment) {
-      cat("DROPDOWN_DEBUG: Test environment detected - clearing flag immediately\n")
+      log_debug("Test environment detected - clearing flag immediately", "DROPDOWN_DEBUG")
       clear_protection_flag()
     } else {
       # PRODUCTION: Try session$onFlushed for immediate clearing after Shiny processes updates
       if (!is.null(session) && !is.null(session$onFlushed)) {
-        cat("DROPDOWN_DEBUG: Using session$onFlushed for immediate flag clearing\n")
+        log_debug("Using session$onFlushed for immediate flag clearing", "DROPDOWN_DEBUG")
         session$onFlushed(clear_protection_flag, once = TRUE)
 
         # Safety fallback with later::later() in case onFlushed doesn't fire
         if (requireNamespace("later", quietly = TRUE)) {
           later::later(function() {
             if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
-              cat("DROPDOWN_DEBUG: Safety fallback triggered - onFlushed didn't fire\n")
+              log_debug("Safety fallback triggered - onFlushed didn't fire", "DROPDOWN_DEBUG")
               clear_protection_flag()
             }
           }, delay = (delay_ms * 2) / 1000)  # Double delay for safety fallback
         }
       } else {
         # Fallback to later::later() if session$onFlushed not available
-        cat("DROPDOWN_DEBUG: session$onFlushed not available, using later::later()\n")
+        log_debug("session$onFlushed not available, using later::later()", "DROPDOWN_DEBUG")
         if (requireNamespace("later", quietly = TRUE)) {
           later::later(clear_protection_flag, delay = delay_ms / 1000)
         } else {
           # Last resort: synchronous delay (not recommended for production)
-          cat("DROPDOWN_DEBUG: later package not available, using synchronous delay\n")
+          log_debug("later package not available, using synchronous delay", "DROPDOWN_DEBUG")
           Sys.sleep(delay_ms / 1000)
           clear_protection_flag()
         }
@@ -684,8 +684,8 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
       }
     })
 
-    cat(paste("PERFORMANCE_DEBUG: Update completed in", round(update_duration_ms, 2), "ms",
-              "(avg:", round(isolate(app_state$ui$performance_metrics$avg_update_duration_ms), 2), "ms)\n"))
+    log_debug(paste("Update completed in", round(update_duration_ms, 2), "ms",
+              "(avg:", round(isolate(app_state$ui$performance_metrics$avg_update_duration_ms), 2), "ms)"), "PERFORMANCE_DEBUG")
 
   }, error = function(e) {
     # ENSURE CLEANUP: Always clear protection flag on error
@@ -709,11 +709,11 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 #'
 #' @export
 process_ui_update_queue <- function(app_state) {
-  cat("QUEUE_DEBUG: ⚙️ Processing UI update queue...\n")
+  log_debug("⚙️ Processing UI update queue...", "QUEUE_DEBUG")
 
   # SAFETY CHECK: Don't process queue if update is currently in progress
   if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
-    cat("QUEUE_DEBUG: ⏳ Update still in progress, rescheduling queue processing\n")
+    log_debug("⏳ Update still in progress, rescheduling queue processing", "QUEUE_DEBUG")
     later::later(function() {
       process_ui_update_queue(app_state)
     }, delay = 0.1)  # Try again in 100ms
@@ -724,11 +724,11 @@ process_ui_update_queue <- function(app_state) {
   current_queue <- isolate(app_state$ui$queued_updates)
 
   if (length(current_queue) == 0) {
-    cat("QUEUE_DEBUG: ✅ Queue is empty, processing complete\n")
+    log_debug("✅ Queue is empty, processing complete", "QUEUE_DEBUG")
     return()
   }
 
-  cat(paste("QUEUE_DEBUG: Processing", length(current_queue), "queued updates\n"))
+  log_debug(paste("Processing", length(current_queue), "queued updates"), "QUEUE_DEBUG")
 
   # CLEANUP EXPIRED: Remove old entries before processing
   cleanup_expired_queue_updates(app_state, max_age_seconds = 30)
@@ -737,7 +737,7 @@ process_ui_update_queue <- function(app_state) {
   current_queue <- isolate(app_state$ui$queued_updates)
 
   if (length(current_queue) == 0) {
-    cat("QUEUE_DEBUG: ✅ Queue empty after cleanup\n")
+    log_debug("✅ Queue empty after cleanup", "QUEUE_DEBUG")
     return()
   }
 
@@ -748,8 +748,8 @@ process_ui_update_queue <- function(app_state) {
   # UPDATE QUEUE: Remove processed item
   app_state$ui$queued_updates <- remaining_queue
 
-  cat(paste("QUEUE_DEBUG: 🔄 Processing queued update with ID:", next_update$queue_id,
-            "(", length(remaining_queue), "remaining)\n"))
+  log_debug(paste("🔄 Processing queued update with ID:", next_update$queue_id,
+            "(", length(remaining_queue), "remaining)"), "QUEUE_DEBUG")
 
   # EXECUTE UPDATE: Use recursive call to safe_programmatic_ui_update
   tryCatch({
@@ -760,7 +760,7 @@ process_ui_update_queue <- function(app_state) {
       delay_ms = next_update$delay_ms
     )
 
-    cat(paste("QUEUE_DEBUG: ✅ Queued update", next_update$queue_id, "completed successfully\n"))
+    log_debug(paste("✅ Queued update", next_update$queue_id, "completed successfully"), "QUEUE_DEBUG")
 
     # SCHEDULE NEXT: Process remaining queue items after this one completes
     if (length(remaining_queue) > 0) {
@@ -770,7 +770,7 @@ process_ui_update_queue <- function(app_state) {
     }
 
   }, error = function(e) {
-    cat(paste("QUEUE_DEBUG: ❌ Error processing queued update", next_update$queue_id, ":", e$message, "\n"))
+    log_debug(paste("❌ Error processing queued update", next_update$queue_id, ":", e$message), "QUEUE_DEBUG")
 
     # CONTINUE PROCESSING: Don't let one error stop the queue
     if (length(remaining_queue) > 0) {
@@ -807,8 +807,8 @@ cleanup_expired_queue_updates <- function(app_state, max_age_seconds = 30) {
     if (age_seconds <= max_age_seconds) {
       fresh_updates <- c(fresh_updates, list(update_entry))
     } else {
-      cat(paste("QUEUE_CLEANUP: Removing expired update", update_entry$queue_id,
-                "(age:", round(age_seconds, 1), "seconds)\n"))
+      log_debug(paste("Removing expired update", update_entry$queue_id,
+                "(age:", round(age_seconds, 1), "seconds)"), "QUEUE_CLEANUP")
     }
   }
 
@@ -817,8 +817,8 @@ cleanup_expired_queue_updates <- function(app_state, max_age_seconds = 30) {
 
   removed_count <- length(current_queue) - length(fresh_updates)
   if (removed_count > 0) {
-    cat(paste("QUEUE_CLEANUP: ✅ Removed", removed_count, "expired updates,",
-              length(fresh_updates), "remaining\n"))
+    log_debug(paste("✅ Removed", removed_count, "expired updates,",
+              length(fresh_updates), "remaining"), "QUEUE_CLEANUP")
   }
 }
 
@@ -850,8 +850,8 @@ cleanup_expired_tokens <- function(app_state, max_age_seconds = 300) {
     if (age_seconds <= max_age_seconds) {
       fresh_tokens[[inputId]] <- token_entry
     } else {
-      cat(paste("TOKEN_CLEANUP: Removing expired token", token_entry$token,
-                "for", inputId, "(age:", round(age_seconds, 1), "seconds)\n"))
+      log_debug(paste("Removing expired token", token_entry$token,
+                "for", inputId, "(age:", round(age_seconds, 1), "seconds)"), "TOKEN_CLEANUP")
     }
   }
 
@@ -860,8 +860,8 @@ cleanup_expired_tokens <- function(app_state, max_age_seconds = 300) {
 
   removed_count <- length(current_tokens) - length(fresh_tokens)
   if (removed_count > 0) {
-    cat(paste("TOKEN_CLEANUP: ✅ Removed", removed_count, "expired tokens,",
-              length(fresh_tokens), "remaining\n"))
+    log_debug(paste("✅ Removed", removed_count, "expired tokens,",
+              length(fresh_tokens), "remaining"), "TOKEN_CLEANUP")
   }
 }
 
@@ -874,7 +874,7 @@ cleanup_expired_tokens <- function(app_state, max_age_seconds = 300) {
 #'
 #' @export
 comprehensive_system_cleanup <- function(app_state) {
-  cat("SYSTEM_CLEANUP: 🧹 Starting comprehensive cleanup...\n")
+  log_debug("🧹 Starting comprehensive cleanup...", "SYSTEM_CLEANUP")
 
   cleanup_start <- Sys.time()
 
@@ -889,20 +889,20 @@ comprehensive_system_cleanup <- function(app_state) {
   max_tokens <- isolate(app_state$ui$memory_limits$max_pending_tokens)
 
   if (length(current_tokens) > max_tokens) {
-    cat(paste("SYSTEM_CLEANUP: ⚠️ Token limit exceeded (", length(current_tokens), "/", max_tokens, "), removing oldest tokens\n"))
+    log_debug(paste("⚠️ Token limit exceeded (", length(current_tokens), "/", max_tokens, "), removing oldest tokens"), "SYSTEM_CLEANUP")
 
     # Sort by timestamp and keep newest
     sorted_tokens <- current_tokens[order(sapply(current_tokens, function(x) x$timestamp), decreasing = TRUE)]
     app_state$ui$pending_programmatic_inputs <- sorted_tokens[1:max_tokens]
 
     removed_token_count <- length(current_tokens) - max_tokens
-    cat(paste("SYSTEM_CLEANUP: Removed", removed_token_count, "oldest tokens\n"))
+    log_debug(paste("Removed", removed_token_count, "oldest tokens"), "SYSTEM_CLEANUP")
   }
 
   cleanup_end <- Sys.time()
   cleanup_duration_ms <- as.numeric(difftime(cleanup_end, cleanup_start, units = "secs")) * 1000
 
-  cat(paste("SYSTEM_CLEANUP: ✅ Comprehensive cleanup completed in", round(cleanup_duration_ms, 2), "ms\n"))
+  log_debug(paste("✅ Comprehensive cleanup completed in", round(cleanup_duration_ms, 2), "ms"), "SYSTEM_CLEANUP")
 }
 
 #' Get Performance Report
@@ -981,5 +981,5 @@ reset_performance_metrics <- function(app_state) {
     app_state$ui$performance_metrics$last_performance_reset <- Sys.time()
   })
 
-  cat("PERFORMANCE_DEBUG: 🔄 Performance metrics reset\n")
+  log_debug("🔄 Performance metrics reset", "PERFORMANCE_DEBUG")
 }

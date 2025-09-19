@@ -603,14 +603,14 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
 
   # Håndtér "Upload data" knap fra velkomstsiden
   observeEvent(input$upload_data_welcome, {
-    cat("Welcome page: Upload data clicked\n")
+    log_debug("Welcome page: Upload data clicked", "SERVER_MGMT")
     # Fokusér på fil input eller åbn fil dialog
     shinyjs::click("file_upload")
   })
 
   # Håndtér "Quick start demo" knap
   observeEvent(input$quick_start_demo, {
-    cat("Welcome page: Quick start demo clicked\n")
+    log_debug("Welcome page: Quick start demo clicked", "SERVER_MGMT")
 
     # Indlæs eksempel data
     test_file_path <- "R/data/spc_exampledata.csv"
@@ -618,13 +618,13 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
     if (file.exists(test_file_path)) {
       tryCatch(
         {
-          cat("Welcome page: Starting demo data load...\n")
+          log_debug("Welcome page: Starting demo data load...", "SERVER_MGMT")
 
           # Vis indlæsnings waiter
           waiter_file$show()
 
           # Indlæs demo data med readr::read_csv2 (samme som fungerende fil upload)
-          cat("Loading demo data with readr::read_csv2...\n")
+          log_debug("Loading demo data with readr::read_csv2...", "SERVER_MGMT")
           demo_data <- readr::read_csv2(
             test_file_path,
             locale = readr::locale(
@@ -635,21 +635,21 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
             show_col_types = FALSE
           )
 
-          cat("Successfully loaded with read_csv2\n")
-          cat("Column names:", paste(names(demo_data), collapse = ", "), "\n")
-          cat("Rows loaded:", nrow(demo_data), "\n")
+          log_debug("Successfully loaded with read_csv2", "SERVER_MGMT")
+          log_debug(paste("Column names:", paste(names(demo_data), collapse = ", ")), "SERVER_MGMT")
+          log_debug(paste("Rows loaded:", nrow(demo_data)), "SERVER_MGMT")
 
           if (is.null(demo_data) || nrow(demo_data) == 0) {
             stop("No data loaded from file")
           }
 
-          cat("Demo data column names before ensure_standard_columns:", paste(names(demo_data), collapse = ", "), "\n")
+          log_debug(paste("Demo data column names before ensure_standard_columns:", paste(names(demo_data), collapse = ", ")), "SERVER_MGMT")
 
           # Sikr at standard kolonner er til stede
           demo_data <- ensure_standard_columns(demo_data)
 
-          cat("Demo data column names after ensure_standard_columns:", paste(names(demo_data), collapse = ", "), "\n")
-          cat("Final data dimensions:", paste(dim(demo_data), collapse = "x"), "\n")
+          log_debug(paste("Demo data column names after ensure_standard_columns:", paste(names(demo_data), collapse = ", ")), "SERVER_MGMT")
+          log_debug(paste("Final data dimensions:", paste(dim(demo_data), collapse = "x")), "SERVER_MGMT")
 
           # Sæt reaktive værdier
           # PHASE 4: Unified state assignment only
@@ -677,7 +677,7 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
             waiter_file$hide()
           }, 0.5)
 
-          cat("Welcome page: Demo data loaded successfully\n")
+          log_debug("Welcome page: Demo data loaded successfully", "SERVER_MGMT")
 
           # Vis succes besked
           showNotification(

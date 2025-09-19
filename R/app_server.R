@@ -50,10 +50,10 @@ app_server <- function(input, output, session) {
   log_debug("Initializing centralized app state...", "APP_SERVER")
   debug_log("Creating centralized app_state", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
   app_state <- create_app_state()
-  cat("⭐⭐⭐ create_app_state() COMPLETED SUCCESSFULLY ⭐⭐⭐\n")
+  log_debug("⭐⭐⭐ create_app_state() COMPLETED SUCCESSFULLY ⭐⭐⭐", "APP_SERVER")
   log_debug("✅ Centralized state initialized", "APP_SERVER")
   session_debugger$event("centralized_state_initialized")
-  cat("⭐⭐⭐ session_debugger event COMPLETED ⭐⭐⭐\n")
+  log_debug("⭐⭐⭐ session_debugger event COMPLETED ⭐⭐⭐", "APP_SERVER")
 
   # EVENT SYSTEM: Initialize reactive event bus
   log_debug("==========================================", "APP_SERVER")

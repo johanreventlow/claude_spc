@@ -876,8 +876,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           # Call qic() with prepared arguments
           log_debug("=== QIC CALL DEBUG ===\nCalling qic()...", "QIC_CALL")
           if (getOption("debug.mode", FALSE)) {
-            cat("qic_args structure:\n")
-            str(qic_args)
+            log_debug("qic_args structure:", "QIC_CALL")
+            log_debug(qic_args, "QIC_CALL")
           }
           
           log_debug(qic_args, "QIC")

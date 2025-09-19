@@ -368,20 +368,20 @@ if (should_enable_shinylogs()) {
   # Use basic cat since log_info may not be loaded yet
   # Will be replaced by proper logging when system is initialized
 
-  cat("=====================================\n")
-  cat("🌟 SHINYLOGS ADVANCED LOGGING ACTIVE\n")
-  cat("=====================================\n")
-  cat("Features enabled:\n")
-  cat("• Real-time web-based log viewer\n")
-  cat("• Automatic input/output tracking\n")
-  cat("• Performance monitoring\n")
-  cat("• Error tracking and reporting\n")
-  cat("• Session management statistics\n")
-  cat("• Export capabilities\n")
-  cat("\n")
-  cat("Access logs dashboard at: /logs (when implemented in UI)\n")
-  cat("Control via: ENABLE_SHINYLOGS environment variable\n")
-  cat("=====================================\n")
+  log_debug("=====================================", "SHINYLOGS")
+  log_debug("🌟 SHINYLOGS ADVANCED LOGGING ACTIVE", "SHINYLOGS")
+  log_debug("=====================================", "SHINYLOGS")
+  log_debug("Features enabled:", "SHINYLOGS")
+  log_debug("• Real-time web-based log viewer", "SHINYLOGS")
+  log_debug("• Automatic input/output tracking", "SHINYLOGS")
+  log_debug("• Performance monitoring", "SHINYLOGS")
+  log_debug("• Error tracking and reporting", "SHINYLOGS")
+  log_debug("• Session management statistics", "SHINYLOGS")
+  log_debug("• Export capabilities", "SHINYLOGS")
+  log_debug("", "SHINYLOGS")
+  log_debug("Access logs dashboard at: /logs (when implemented in UI)", "SHINYLOGS")
+  log_debug("Control via: ENABLE_SHINYLOGS environment variable", "SHINYLOGS")
+  log_debug("=====================================", "SHINYLOGS")
 } else {
   # shinylogs disabled - no output needed
 }
