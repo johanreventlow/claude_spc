@@ -711,7 +711,25 @@ create_app_state <- function() {
     # TOKEN-BASED TRACKING: Advanced loop protection infrastructure
     pending_programmatic_inputs = list(), # TOKEN TRACKING: Map of inputId -> {token, value, timestamp}
     programmatic_token_counter = 0L,      # TOKEN GENERATION: Counter for unique token generation
-    queued_updates = list()               # QUEUE SYSTEM: Queued UI updates for overlapping calls
+    queued_updates = list(),              # QUEUE SYSTEM: Queued UI updates for overlapping calls
+
+    # FASE 3: PERFORMANCE MONITORING - Track system performance metrics
+    performance_metrics = list(
+      total_updates = 0L,                 # METRIC: Total UI updates processed
+      queued_updates = 0L,                # METRIC: Total updates that were queued
+      tokens_consumed = 0L,               # METRIC: Total tokens consumed
+      queue_max_size = 0L,                # METRIC: Maximum queue size reached
+      avg_update_duration_ms = 0.0,       # METRIC: Average UI update duration
+      last_performance_reset = Sys.time() # METRIC: When metrics were last reset
+    ),
+
+    # FASE 3: MEMORY MANAGEMENT - Control memory usage and cleanup
+    memory_limits = list(
+      max_queue_size = 50L,               # LIMIT: Maximum queue entries allowed
+      max_pending_tokens = 100L,          # LIMIT: Maximum pending tokens
+      token_cleanup_interval_sec = 300L,  # CLEANUP: Clean tokens every 5 minutes
+      performance_reset_interval_sec = 3600L  # RESET: Reset metrics every hour
+    )
   )
 
   # Autodetect State - Unified autodetect engine state management

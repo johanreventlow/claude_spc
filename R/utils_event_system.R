@@ -381,6 +381,12 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         # CONSUME TOKEN: This is a programmatic input, don't emit event
         app_state$ui$pending_programmatic_inputs[[col]] <- NULL
         app_state$columns[[col]] <- new_value
+
+        # FASE 3: PERFORMANCE METRICS - Track token consumption
+        isolate({
+          app_state$ui$performance_metrics$tokens_consumed <- app_state$ui$performance_metrics$tokens_consumed + 1L
+        })
+
         cat(paste("TOKEN_DEBUG: Programmatic input consumed for", col, "with token", pending_token$token, "- no events emitted\n"))
         return()
       }
