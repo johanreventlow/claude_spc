@@ -39,15 +39,16 @@ measure_reactive_performance <- function(expr, operation_name = "unknown") {
   ))
 }
 
-#' Create cached reactive expression
+#' Create cached reactive expression with session-local cache
 #'
 #' Wrapper omkring reactive() der tilføjer intelligent caching
 #' for expensive operations. Cache invalideres automatisk
-#' når dependencies ændres. Virker både i reactive context og uden.
+#' når dependencies ændres. Bruger session-local cache for isolation.
 #'
 #' @param expr Reactive expression der skal caches
 #' @param cache_key Character string med unique cache key
 #' @param cache_timeout Numeric - cache timeout i sekunder (default 300)
+#' @param session Shiny session object (optional - auto-detected if available)
 #'
 #' @return Cached reactive expression eller function (context-afhængig)
 #'
@@ -55,13 +56,13 @@ measure_reactive_performance <- function(expr, operation_name = "unknown") {
 #' \dontrun{
 #' # Cache expensive data processing
 #' processed_data <- create_cached_reactive({
-#'   expensive_data_processing(values$current_data)
-#' }, "data_processing", cache_timeout = 600)
+#'   expensive_data_processing(app_state$data$current_data)
+#' }, "data_processing", cache_timeout = 600, session = session)
 #' }
 #'
 #' @family performance
 #' @export
-create_cached_reactive <- function(expr, cache_key, cache_timeout = 300) {
+create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session = NULL) {
 
   # FAILSAFE: Robust cache key validation to handle NULL, character(0), and malformed keys
   safe_cache_key <- tryCatch({
@@ -84,16 +85,35 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300) {
 
   log_debug(paste("Using cache key:", safe_cache_key), "PERFORMANCE")
 
-  # Global cache environment (persistent during session)
-  if (!exists(".performance_cache", envir = .GlobalEnv)) {
-    assign(".performance_cache", new.env(), envir = .GlobalEnv)
+  # SESSION-LOCAL CACHE: Auto-detect session or use fallback
+  if (is.null(session)) {
+    # Try to get session from current reactive domain
+    session <- tryCatch({
+      getFromNamespace("getDefaultReactiveDomain", "shiny")()$session
+    }, error = function(e) NULL)
+  }
+
+  # Get or create session-local cache environment
+  cache_env <- if (!is.null(session)) {
+    # Use session$userData for session-local cache
+    if (is.null(session$userData$performance_cache)) {
+      session$userData$performance_cache <- new.env()
+      log_debug("Created session-local performance cache", "PERFORMANCE")
+    }
+    session$userData$performance_cache
+  } else {
+    # Fallback to global environment for non-session contexts (e.g., tests)
+    if (!exists(".performance_cache_fallback", envir = .GlobalEnv)) {
+      assign(".performance_cache_fallback", new.env(), envir = .GlobalEnv)
+      log_debug("Created fallback performance cache (no session available)", "PERFORMANCE")
+    }
+    get(".performance_cache_fallback", envir = .GlobalEnv)
   }
 
   # Define cache logic as function for reuse
   cache_logic <- function() {
     # FAILSAFE: Wrap entire cache logic in error handling
     tryCatch({
-      cache_env <- get(".performance_cache", envir = .GlobalEnv)
       current_time <- Sys.time()
 
       # Check if cache exists and is valid
@@ -271,19 +291,34 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
   }
 }
 
-#' Clear performance caches
+#' Clear performance caches from session-local or fallback storage
 #'
 #' Utility function til at cleare performance caches.
 #' Bruges ved session cleanup eller når cache skal invalideres.
 #'
 #' @param cache_pattern Character string med pattern for cache keys (optional)
+#' @param session Shiny session object (optional - auto-detected if available)
 #'
 #' @family performance
 #' @export
-clear_performance_cache <- function(cache_pattern = NULL) {
-  if (exists(".performance_cache", envir = .GlobalEnv)) {
-    cache_env <- get(".performance_cache", envir = .GlobalEnv)
+clear_performance_cache <- function(cache_pattern = NULL, session = NULL) {
+  # Auto-detect session if not provided
+  if (is.null(session)) {
+    session <- tryCatch({
+      getFromNamespace("getDefaultReactiveDomain", "shiny")()$session
+    }, error = function(e) NULL)
+  }
 
+  # Get cache environment
+  cache_env <- if (!is.null(session) && !is.null(session$userData$performance_cache)) {
+    session$userData$performance_cache
+  } else if (exists(".performance_cache_fallback", envir = .GlobalEnv)) {
+    get(".performance_cache_fallback", envir = .GlobalEnv)
+  } else {
+    NULL
+  }
+
+  if (!is.null(cache_env)) {
     if (is.null(cache_pattern)) {
       # Clear all caches
       rm(list = ls(cache_env), envir = cache_env)
@@ -297,6 +332,8 @@ clear_performance_cache <- function(cache_pattern = NULL) {
         log_debug(paste("Cleared", length(matching_keys), "performance caches matching", cache_pattern), "PERFORMANCE")
       }
     }
+  } else {
+    log_debug("No performance cache found to clear", "PERFORMANCE")
   }
 }
 
