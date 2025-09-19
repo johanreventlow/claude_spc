@@ -338,8 +338,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Generate SPC data using qicharts2
 
   # Generate SPC data using qicharts2 and build custom ggplot
-  tryCatch(
-    {
+  safe_operation(
+    "Generate SPC plot data",
+    code = {
       # Use data parameter approach like the working example
       # qicharts2::qic(x = Dato, y = `Tæller`, n = `Nævner`, part = c(12), data = data, return.data = TRUE)
 
@@ -399,8 +400,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
 
       # Generate SPC data using qicharts2
-      tryCatch(
-        {
+      qic_data <- safe_operation(
+        "Generate SPC data using qicharts2",
+        code = {
           # Build qic call arguments
           qic_args <- list(
             data = data,
@@ -434,7 +436,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             log_debug("qic_args structure:", "QIC_CALL")
             log_debug(qic_args, "QIC_CALL")
           }
-          
+
           log_debug(qic_args, "QIC")
 
           qic_data <- do.call(qicharts2::qic, qic_args)
@@ -449,7 +451,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           log_debug_block("QIC_DATA", "qic_data structure completed", type = "stop")
 
           log_debug(qic_data, "QIC")
-          
+
           # Convert proportions to percentages for run charts with rate data
           if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
             qic_data$y <- qic_data$y * 100
@@ -462,10 +464,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               qic_data$lcl <- qic_data$lcl * 100
             }
           }
+
+          return(qic_data)
         },
-        error = function(e) {
+        fallback = function(e) {
           stop("Fejl ved qic() kald: ", e$message)
-        }
+        },
+        error_type = "processing"
       )
 
       # Handle comment data for labels
@@ -501,8 +506,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # Build custom ggplot using qic calculations
       log_debug(paste("=== GGPLOT BUILD DEBUG ===\nqic_data dimensions:", nrow(qic_data), "x", ncol(qic_data), "\nqic_data columns:", paste(names(qic_data), collapse = ", ")), "GGPLOT_BUILD")
 
-      tryCatch(
-        {
+      plot <- safe_operation(
+        "Build custom ggplot",
+        code = {
           plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y))
           log_debug("Base plot created successfully", "GGPLOT_BUILD")
 
@@ -523,11 +529,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
           plot <- plot + ggplot2::theme_minimal()
           log_debug("Theme added successfully", "GGPLOT_BUILD")
+
+          return(plot)
         },
-        error = function(e) {
+        fallback = function(e) {
           log_debug(paste("ERROR in ggplot build:", e$message), "GGPLOT_BUILD")
           stop(e)
-        }
+        },
+        error_type = "processing"
       )
 
       # Add control limits conditionally
@@ -678,7 +687,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
       return(list(plot = plot, qic_data = qic_data))
     },
-    error = function(e) {
+    fallback = function(e) {
       # Fallback to basic ggplot if qic() fails
       plot_data <- data.frame(x = call_args$x, y = call_args$y)
 
@@ -705,6 +714,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       }
 
       return(list(plot = plot, qic_data = NULL))
-    }
+    },
+    error_type = "processing"
   )
 }

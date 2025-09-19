@@ -185,15 +185,15 @@ test_that("Cache management works correctly", {
   result2 <- cached_func2()
 
   # Get stats before clear
-  stats_before <- get_performance_stats()
-  cache_count_before <- stats_before$cache_entries
+  expect_true(exists(".performance_cache_fallback", envir = .GlobalEnv))
+  cache_env <- get(".performance_cache_fallback", envir = .GlobalEnv)
+  cache_count_before <- length(ls(cache_env))
 
   # Clear specific pattern
   clear_performance_cache("test_cache_1")
 
   # Get stats after clear
-  stats_after <- get_performance_stats()
-  cache_count_after <- stats_after$cache_entries
+  cache_count_after <- length(ls(cache_env))
 
   # TEST: Cache was partially cleared
   expect_lt(cache_count_after, cache_count_before)
@@ -201,8 +201,9 @@ test_that("Cache management works correctly", {
   # Clear all caches
   clear_performance_cache()
 
-  stats_final <- get_performance_stats()
-  expect_equal(stats_final$cache_entries, 0)
+  clear_performance_cache()
+  cache_count_final <- length(ls(cache_env))
+  expect_equal(cache_count_final, 0)
 })
 
 test_that("Memory cleanup handles edge cases", {

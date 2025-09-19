@@ -205,7 +205,7 @@ test_that("Reactive values initialization fungerer", {
     values <- initialize_reactive_values()
 
     # Test core reactive values
-    expect_true(is.reactive(values))
+    expect_true(inherits(values, "reactivevalues"))
     expect_false(isolate(values$file_uploaded))
     expect_false(isolate(values$auto_detect_done))
     expect_null(isolate(values$current_data))

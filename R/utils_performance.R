@@ -65,32 +65,42 @@ measure_reactive_performance <- function(expr, operation_name = "unknown") {
 create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session = NULL) {
 
   # FAILSAFE: Robust cache key validation to handle NULL, character(0), and malformed keys
-  safe_cache_key <- tryCatch({
-    if (is.null(cache_key) || length(cache_key) == 0 || identical(cache_key, character(0))) {
-      paste0("fallback_key_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
-    } else {
-      # Sanitize cache key - remove problematic characters and ensure it's a single string
-      key_str <- as.character(cache_key)[1]
-      if (is.na(key_str) || key_str == "" || trimws(key_str) == "") {
-        paste0("empty_key_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
+  safe_cache_key <- safe_operation(
+    "Validate cache key",
+    code = {
+      if (is.null(cache_key) || length(cache_key) == 0 || identical(cache_key, character(0))) {
+        paste0("fallback_key_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
       } else {
-        # Clean key: only alphanumeric, underscores, and hyphens
-        gsub("[^a-zA-Z0-9_-]", "_", key_str)
+        # Sanitize cache key - remove problematic characters and ensure it's a single string
+        key_str <- as.character(cache_key)[1]
+        if (is.na(key_str) || key_str == "" || trimws(key_str) == "") {
+          paste0("empty_key_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
+        } else {
+          # Clean key: only alphanumeric, underscores, and hyphens
+          gsub("[^a-zA-Z0-9_-]", "_", key_str)
+        }
       }
-    }
-  }, error = function(e) {
-    log_debug(paste("Cache key validation failed:", e$message, "- using emergency fallback"), "PERFORMANCE")
-    paste0("error_key_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
-  })
+    },
+    fallback = function(e) {
+      log_debug(paste("Cache key validation failed:", e$message, "- using emergency fallback"), "PERFORMANCE")
+      paste0("error_key_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
+    },
+    error_type = "processing"
+  )
 
   log_debug(paste("Using cache key:", safe_cache_key), "PERFORMANCE")
 
   # SESSION-LOCAL CACHE: Auto-detect session or use fallback
   if (is.null(session)) {
     # Try to get session from current reactive domain
-    session <- tryCatch({
-      getFromNamespace("getDefaultReactiveDomain", "shiny")()$session
-    }, error = function(e) NULL)
+    session <- safe_operation(
+      "Get session from reactive domain",
+      code = {
+        getFromNamespace("getDefaultReactiveDomain", "shiny")()$session
+      },
+      fallback = function(e) NULL,
+      error_type = "processing"
+    )
   }
 
   # Get or create session-local cache environment

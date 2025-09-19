@@ -537,199 +537,212 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
   log_debug(paste("⭐ Starting safe programmatic UI update with", delay_ms, "ms delay",
                  "(autodetect frozen:", freeze_state, ")"), "DROPDOWN_DEBUG")
 
-  tryCatch({
-    # FASE 2: QUEUE SYSTEM - Check for overlapping updates and queue if necessary
-    current_flag_state <- isolate(app_state$ui$updating_programmatically)
-    if (isTRUE(current_flag_state)) {
-      log_debug("⚠️ Another update in progress - adding to queue", "DROPDOWN_DEBUG")
+  safe_operation(
+    "Execute programmatic UI update",
+    code = {
+      # FASE 2: QUEUE SYSTEM - Check for overlapping updates and queue if necessary
+      current_flag_state <- isolate(app_state$ui$updating_programmatically)
+      if (isTRUE(current_flag_state)) {
+        log_debug("⚠️ Another update in progress - adding to queue", "DROPDOWN_DEBUG")
 
-      # QUEUE SYSTEM: Add this update to queue instead of clearing flag
-      queue_entry <- list(
-        func = update_function,
-        session = session,
-        timestamp = update_start_time,
-        delay_ms = delay_ms,
-        queue_id = paste0("queue_", update_start_time, "_", sample(1000:9999, 1))
-      )
+        # QUEUE SYSTEM: Add this update to queue instead of clearing flag
+        queue_entry <- list(
+          func = update_function,
+          session = session,
+          timestamp = update_start_time,
+          delay_ms = delay_ms,
+          queue_id = paste0("queue_", update_start_time, "_", sample(1000:9999, 1))
+        )
 
-      # FASE 3: QUEUE SIZE LIMITS - Check if queue is at capacity
-      current_queue <- isolate(app_state$ui$queued_updates)
-      max_queue_size <- isolate(app_state$ui$memory_limits$max_queue_size)
+        # FASE 3: QUEUE SIZE LIMITS - Check if queue is at capacity
+        current_queue <- isolate(app_state$ui$queued_updates)
+        max_queue_size <- isolate(app_state$ui$memory_limits$max_queue_size)
 
-      if (length(current_queue) >= max_queue_size) {
-        log_debug(paste("⚠️ Queue at capacity (", length(current_queue), "/", max_queue_size, "), dropping oldest entry"), "QUEUE_DEBUG")
-        # Remove oldest entry (first in list)
-        current_queue <- current_queue[-1]
+        if (length(current_queue) >= max_queue_size) {
+          log_debug(paste("⚠️ Queue at capacity (", length(current_queue), "/", max_queue_size, "), dropping oldest entry"), "QUEUE_DEBUG")
+          # Remove oldest entry (first in list)
+          current_queue <- current_queue[-1]
+        }
+
+        # Add to queue
+        app_state$ui$queued_updates <- c(current_queue, list(queue_entry))
+
+        # FASE 3: PERFORMANCE METRICS - Update queue metrics
+        new_queue_size <- length(isolate(app_state$ui$queued_updates))
+        isolate({
+          app_state$ui$performance_metrics$queued_updates <- app_state$ui$performance_metrics$queued_updates + 1L
+          if (new_queue_size > app_state$ui$performance_metrics$queue_max_size) {
+            app_state$ui$performance_metrics$queue_max_size <- new_queue_size
+          }
+        })
+
+        log_debug(paste("Added update to queue with ID:", queue_entry$queue_id,
+                  "(queue size:", new_queue_size, "/", max_queue_size, ")"), "QUEUE_DEBUG")
+
+        # QUEUE SCHEDULING: Use later::later() to process queue after current update completes
+        later::later(function() {
+          process_ui_update_queue(app_state)
+        }, delay = (delay_ms + 100) / 1000)  # Convert to seconds and add buffer
+
+        return(list(
+          success = TRUE,
+          queued = TRUE,
+          queue_id = queue_entry$queue_id,
+          message = "Update queued successfully"
+        ))
       }
 
-      # Add to queue
-      app_state$ui$queued_updates <- c(current_queue, list(queue_entry))
+      # LEGACY RACE CONDITION FIX: If not queued, clear any residual flags
+      if (isTRUE(current_flag_state)) {
+        log_debug("⚠️ Clearing residual flag before proceeding", "DROPDOWN_DEBUG")
+        app_state$ui$updating_programmatically <- FALSE
+        app_state$ui$flag_reset_scheduled <- TRUE
+        Sys.sleep(0.05)  # Shorter delay since we're not in overlap situation
+      }
 
-      # FASE 3: PERFORMANCE METRICS - Update queue metrics
-      new_queue_size <- length(isolate(app_state$ui$queued_updates))
+      # Set protection flag to prevent input observers from firing
+      app_state$ui$updating_programmatically <- TRUE
+      app_state$ui$last_programmatic_update <- update_start_time
+      app_state$ui$flag_reset_scheduled <- FALSE
+
+      log_debug("✅ LOOP_PROTECTION flag set to TRUE, executing UI updates", "DROPDOWN_DEBUG")
+
+      # TOKEN GENERATION: Generate unique token for this UI update session
+      app_state$ui$programmatic_token_counter <- isolate(app_state$ui$programmatic_token_counter) + 1L
+      session_token <- paste0("token_", isolate(app_state$ui$programmatic_token_counter), "_", format(update_start_time, "%H%M%S_%f"))
+      log_debug(paste("Generated session token:", session_token), "TOKEN_DEBUG")
+
+      # DROPDOWN DEBUGGING + TOKEN TRACKING: Wrap updateSelectizeInput to log and track tokens
+      original_updateSelectizeInput <- updateSelectizeInput
+      updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
+        log_debug(paste("Updating", inputId,
+                       "with choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
+                       "selected:", if(!is.null(selected)) paste0("'", selected, "'") else "NULL"), "DROPDOWN_DEBUG")
+
+        if (!is.null(choices) && length(choices) > 0) {
+          log_debug(paste("Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", ")), "DROPDOWN_DEBUG")
+        }
+
+        # TOKEN TRACKING: Record this programmatic input with token
+        if (!is.null(selected)) {
+          input_token <- paste0(session_token, "_", inputId)
+          isolate({
+            app_state$ui$pending_programmatic_inputs[[inputId]] <- list(
+              token = input_token,
+              value = selected,
+              timestamp = Sys.time(),
+              session_token = session_token
+            )
+          })
+          log_debug(paste("Token", input_token, "assigned to", inputId, "with value", paste0("'", selected, "'")), "TOKEN_DEBUG")
+        }
+
+        result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
+        log_debug(paste("updateSelectizeInput completed for", inputId), "DROPDOWN_DEBUG")
+        return(result)
+      }
+
+      # Execute the UI updates with debugging wrapper
+      safe_operation(
+        "Execute update function",
+        code = {
+          update_function()
+        },
+        fallback = function(e) {
+          # Restore original function on error
+          updateSelectizeInput <- original_updateSelectizeInput
+          stop(e)
+        },
+        error_type = "processing"
+      )
+
+      # Restore original function
+      updateSelectizeInput <- original_updateSelectizeInput
+
+      update_completed_time <- Sys.time()
+      execution_time_ms <- as.numeric(difftime(update_completed_time, update_start_time, units = "secs")) * 1000
+      log_debug(paste("LOOP_PROTECTION: UI updates completed in", round(execution_time_ms, 2), "ms"), .context = "LOOP_PROTECTION")
+
+      # INTELLIGENT FLAG CLEARING: Try session$onFlushed first, then later::later() as fallback
+      clear_protection_flag <- function() {
+        if (!isTRUE(isolate(app_state$ui$flag_reset_scheduled))) {
+          app_state$ui$flag_reset_scheduled <- TRUE
+          app_state$ui$updating_programmatically <- FALSE
+          flag_clear_time <- Sys.time()
+          total_time_ms <- as.numeric(difftime(flag_clear_time, update_start_time, units = "secs")) * 1000
+          log_debug(paste("🚫 LOOP_PROTECTION flag cleared after", round(total_time_ms, 2), "ms total"), "DROPDOWN_DEBUG")
+        }
+      }
+
+      # TEST ENVIRONMENT: Clear flag immediately for test compatibility
+      is_test_environment <- (is.null(session) || is.list(session))
+      if (is_test_environment) {
+        log_debug("Test environment detected - clearing flag immediately", "DROPDOWN_DEBUG")
+        clear_protection_flag()
+      } else {
+        # PRODUCTION: Try session$onFlushed for immediate clearing after Shiny processes updates
+        if (!is.null(session) && !is.null(session$onFlushed)) {
+          log_debug("Using session$onFlushed for immediate flag clearing", "DROPDOWN_DEBUG")
+          session$onFlushed(clear_protection_flag, once = TRUE)
+
+          # Safety fallback with later::later() in case onFlushed doesn't fire
+          if (requireNamespace("later", quietly = TRUE)) {
+            later::later(function() {
+              if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
+                log_debug("Safety fallback triggered - onFlushed didn't fire", "DROPDOWN_DEBUG")
+                clear_protection_flag()
+              }
+            }, delay = (delay_ms * 2) / 1000)  # Double delay for safety fallback
+          }
+        } else {
+          # Fallback to later::later() if session$onFlushed not available
+          log_debug("session$onFlushed not available, using later::later()", "DROPDOWN_DEBUG")
+          if (requireNamespace("later", quietly = TRUE)) {
+            later::later(clear_protection_flag, delay = delay_ms / 1000)
+          } else {
+            # Last resort: synchronous delay (not recommended for production)
+            log_debug("later package not available, using synchronous delay", "DROPDOWN_DEBUG")
+            Sys.sleep(delay_ms / 1000)
+            clear_protection_flag()
+          }
+        }
+      }
+
+      # FASE 3: PERFORMANCE TRACKING - Record successful update completion
+      performance_end <- Sys.time()
+      update_duration_ms <- as.numeric(difftime(performance_end, performance_start, units = "secs")) * 1000
+
       isolate({
-        app_state$ui$performance_metrics$queued_updates <- app_state$ui$performance_metrics$queued_updates + 1L
-        if (new_queue_size > app_state$ui$performance_metrics$queue_max_size) {
-          app_state$ui$performance_metrics$queue_max_size <- new_queue_size
+        # Update total updates counter
+        app_state$ui$performance_metrics$total_updates <- app_state$ui$performance_metrics$total_updates + 1L
+
+        # Update average duration (rolling average)
+        current_avg <- app_state$ui$performance_metrics$avg_update_duration_ms
+        total_updates <- app_state$ui$performance_metrics$total_updates
+
+        if (total_updates == 1) {
+          app_state$ui$performance_metrics$avg_update_duration_ms <- update_duration_ms
+        } else {
+          # Weighted average: (old_avg * (n-1) + new_value) / n
+          app_state$ui$performance_metrics$avg_update_duration_ms <-
+            (current_avg * (total_updates - 1) + update_duration_ms) / total_updates
         }
       })
 
-      log_debug(paste("Added update to queue with ID:", queue_entry$queue_id,
-                "(queue size:", new_queue_size, "/", max_queue_size, ")"), "QUEUE_DEBUG")
-
-      # QUEUE SCHEDULING: Use later::later() to process queue after current update completes
-      later::later(function() {
-        process_ui_update_queue(app_state)
-      }, delay = (delay_ms + 100) / 1000)  # Convert to seconds and add buffer
-
-      return(list(
-        success = TRUE,
-        queued = TRUE,
-        queue_id = queue_entry$queue_id,
-        message = "Update queued successfully"
-      ))
-    }
-
-    # LEGACY RACE CONDITION FIX: If not queued, clear any residual flags
-    if (isTRUE(current_flag_state)) {
-      log_debug("⚠️ Clearing residual flag before proceeding", "DROPDOWN_DEBUG")
+      log_debug(paste("Update completed in", round(update_duration_ms, 2), "ms",
+                "(avg:", round(isolate(app_state$ui$performance_metrics$avg_update_duration_ms), 2), "ms)"), "PERFORMANCE_DEBUG")
+    },
+    fallback = function(e) {
+      # ENSURE CLEANUP: Always clear protection flag on error
       app_state$ui$updating_programmatically <- FALSE
       app_state$ui$flag_reset_scheduled <- TRUE
-      Sys.sleep(0.05)  # Shorter delay since we're not in overlap situation
-    }
-
-    # Set protection flag to prevent input observers from firing
-    app_state$ui$updating_programmatically <- TRUE
-    app_state$ui$last_programmatic_update <- update_start_time
-    app_state$ui$flag_reset_scheduled <- FALSE
-
-    log_debug("✅ LOOP_PROTECTION flag set to TRUE, executing UI updates", "DROPDOWN_DEBUG")
-
-    # TOKEN GENERATION: Generate unique token for this UI update session
-    app_state$ui$programmatic_token_counter <- isolate(app_state$ui$programmatic_token_counter) + 1L
-    session_token <- paste0("token_", isolate(app_state$ui$programmatic_token_counter), "_", format(update_start_time, "%H%M%S_%f"))
-    log_debug(paste("Generated session token:", session_token), "TOKEN_DEBUG")
-
-    # DROPDOWN DEBUGGING + TOKEN TRACKING: Wrap updateSelectizeInput to log and track tokens
-    original_updateSelectizeInput <- updateSelectizeInput
-    updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
-      log_debug(paste("Updating", inputId,
-                     "with choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
-                     "selected:", if(!is.null(selected)) paste0("'", selected, "'") else "NULL"), "DROPDOWN_DEBUG")
-
-      if (!is.null(choices) && length(choices) > 0) {
-        log_debug(paste("Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", ")), "DROPDOWN_DEBUG")
-      }
-
-      # TOKEN TRACKING: Record this programmatic input with token
-      if (!is.null(selected)) {
-        input_token <- paste0(session_token, "_", inputId)
-        isolate({
-          app_state$ui$pending_programmatic_inputs[[inputId]] <- list(
-            token = input_token,
-            value = selected,
-            timestamp = Sys.time(),
-            session_token = session_token
-          )
-        })
-        log_debug(paste("Token", input_token, "assigned to", inputId, "with value", paste0("'", selected, "'")), "TOKEN_DEBUG")
-      }
-
-      result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
-      log_debug(paste("updateSelectizeInput completed for", inputId), "DROPDOWN_DEBUG")
-      return(result)
-    }
-
-    # Execute the UI updates with debugging wrapper
-    tryCatch({
-      update_function()
-    }, finally = {
-      # Restore original function
-      updateSelectizeInput <- original_updateSelectizeInput
-    })
-
-    update_completed_time <- Sys.time()
-    execution_time_ms <- as.numeric(difftime(update_completed_time, update_start_time, units = "secs")) * 1000
-    log_debug(paste("LOOP_PROTECTION: UI updates completed in", round(execution_time_ms, 2), "ms"), .context = "LOOP_PROTECTION")
-
-    # INTELLIGENT FLAG CLEARING: Try session$onFlushed first, then later::later() as fallback
-    clear_protection_flag <- function() {
-      if (!isTRUE(isolate(app_state$ui$flag_reset_scheduled))) {
-        app_state$ui$flag_reset_scheduled <- TRUE
-        app_state$ui$updating_programmatically <- FALSE
-        flag_clear_time <- Sys.time()
-        total_time_ms <- as.numeric(difftime(flag_clear_time, update_start_time, units = "secs")) * 1000
-        log_debug(paste("🚫 LOOP_PROTECTION flag cleared after", round(total_time_ms, 2), "ms total"), "DROPDOWN_DEBUG")
-      }
-    }
-
-    # TEST ENVIRONMENT: Clear flag immediately for test compatibility
-    is_test_environment <- (is.null(session) || is.list(session))
-    if (is_test_environment) {
-      log_debug("Test environment detected - clearing flag immediately", "DROPDOWN_DEBUG")
-      clear_protection_flag()
-    } else {
-      # PRODUCTION: Try session$onFlushed for immediate clearing after Shiny processes updates
-      if (!is.null(session) && !is.null(session$onFlushed)) {
-        log_debug("Using session$onFlushed for immediate flag clearing", "DROPDOWN_DEBUG")
-        session$onFlushed(clear_protection_flag, once = TRUE)
-
-        # Safety fallback with later::later() in case onFlushed doesn't fire
-        if (requireNamespace("later", quietly = TRUE)) {
-          later::later(function() {
-            if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
-              log_debug("Safety fallback triggered - onFlushed didn't fire", "DROPDOWN_DEBUG")
-              clear_protection_flag()
-            }
-          }, delay = (delay_ms * 2) / 1000)  # Double delay for safety fallback
-        }
-      } else {
-        # Fallback to later::later() if session$onFlushed not available
-        log_debug("session$onFlushed not available, using later::later()", "DROPDOWN_DEBUG")
-        if (requireNamespace("later", quietly = TRUE)) {
-          later::later(clear_protection_flag, delay = delay_ms / 1000)
-        } else {
-          # Last resort: synchronous delay (not recommended for production)
-          log_debug("later package not available, using synchronous delay", "DROPDOWN_DEBUG")
-          Sys.sleep(delay_ms / 1000)
-          clear_protection_flag()
-        }
-      }
-    }
-
-    # FASE 3: PERFORMANCE TRACKING - Record successful update completion
-    performance_end <- Sys.time()
-    update_duration_ms <- as.numeric(difftime(performance_end, performance_start, units = "secs")) * 1000
-
-    isolate({
-      # Update total updates counter
-      app_state$ui$performance_metrics$total_updates <- app_state$ui$performance_metrics$total_updates + 1L
-
-      # Update average duration (rolling average)
-      current_avg <- app_state$ui$performance_metrics$avg_update_duration_ms
-      total_updates <- app_state$ui$performance_metrics$total_updates
-
-      if (total_updates == 1) {
-        app_state$ui$performance_metrics$avg_update_duration_ms <- update_duration_ms
-      } else {
-        # Weighted average: (old_avg * (n-1) + new_value) / n
-        app_state$ui$performance_metrics$avg_update_duration_ms <-
-          (current_avg * (total_updates - 1) + update_duration_ms) / total_updates
-      }
-    })
-
-    log_debug(paste("Update completed in", round(update_duration_ms, 2), "ms",
-              "(avg:", round(isolate(app_state$ui$performance_metrics$avg_update_duration_ms), 2), "ms)"), "PERFORMANCE_DEBUG")
-
-  }, error = function(e) {
-    # ENSURE CLEANUP: Always clear protection flag on error
-    app_state$ui$updating_programmatically <- FALSE
-    app_state$ui$flag_reset_scheduled <- TRUE
-    error_time <- Sys.time()
-    total_error_time_ms <- as.numeric(difftime(error_time, update_start_time, units = "secs")) * 1000
-    log_error(paste("LOOP_PROTECTION: Error after", round(total_error_time_ms, 2), "ms:", e$message), "LOOP_PROTECTION")
-    stop(e)
-  })
+      error_time <- Sys.time()
+      total_error_time_ms <- as.numeric(difftime(error_time, update_start_time, units = "secs")) * 1000
+      log_error(paste("LOOP_PROTECTION: Error after", round(total_error_time_ms, 2), "ms:", e$message), "LOOP_PROTECTION")
+      stop(e)
+    },
+    error_type = "processing"
+  )
 }
 
 # FASE 2: QUEUE PROCESSING FUNCTIONS ============================================
@@ -786,33 +799,37 @@ process_ui_update_queue <- function(app_state) {
             "(", length(remaining_queue), "remaining)"), "QUEUE_DEBUG")
 
   # EXECUTE UPDATE: Use recursive call to safe_programmatic_ui_update
-  tryCatch({
-    result <- safe_programmatic_ui_update(
-      session = next_update$session,
-      app_state = app_state,
-      update_function = next_update$func,
-      delay_ms = next_update$delay_ms
-    )
+  safe_operation(
+    "Execute queued UI update",
+    code = {
+      result <- safe_programmatic_ui_update(
+        session = next_update$session,
+        app_state = app_state,
+        update_function = next_update$func,
+        delay_ms = next_update$delay_ms
+      )
 
-    log_debug(paste("✅ Queued update", next_update$queue_id, "completed successfully"), "QUEUE_DEBUG")
+      log_debug(paste("✅ Queued update", next_update$queue_id, "completed successfully"), "QUEUE_DEBUG")
 
-    # SCHEDULE NEXT: Process remaining queue items after this one completes
-    if (length(remaining_queue) > 0) {
-      later::later(function() {
-        process_ui_update_queue(app_state)
-      }, delay = (next_update$delay_ms + 50) / 1000)  # Add 50ms buffer between queue items
-    }
+      # SCHEDULE NEXT: Process remaining queue items after this one completes
+      if (length(remaining_queue) > 0) {
+        later::later(function() {
+          process_ui_update_queue(app_state)
+        }, delay = (next_update$delay_ms + 50) / 1000)  # Add 50ms buffer between queue items
+      }
+    },
+    fallback = function(e) {
+      log_debug(paste("❌ Error processing queued update", next_update$queue_id, ":", e$message), "QUEUE_DEBUG")
 
-  }, error = function(e) {
-    log_debug(paste("❌ Error processing queued update", next_update$queue_id, ":", e$message), "QUEUE_DEBUG")
-
-    # CONTINUE PROCESSING: Don't let one error stop the queue
-    if (length(remaining_queue) > 0) {
-      later::later(function() {
-        process_ui_update_queue(app_state)
-      }, delay = 0.1)  # Quick retry for remaining items
-    }
-  })
+      # CONTINUE PROCESSING: Don't let one error stop the queue
+      if (length(remaining_queue) > 0) {
+        later::later(function() {
+          process_ui_update_queue(app_state)
+        }, delay = 0.1)  # Quick retry for remaining items
+      }
+    },
+    error_type = "processing"
+  )
 }
 
 #' Cleanup Expired Queue Updates

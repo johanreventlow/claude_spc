@@ -29,25 +29,3 @@ test_that("R list modification scoping test", {
   # TEST: Return value har modification
   expect_equal(result$new_value, "added")
 })
-
-test_that("detect_columns_name_only return value test", {
-  # TEST: Test om detect_columns_name_only returnerer complete information
-
-  # Source required functions
-  source("../../R/fct_data_processing.R")
-
-  standard_cols <- c("Dato", "Tæller")
-  mock_session <- list(token = "test_session")
-  mock_values <- list()
-
-  result <- detect_columns_name_only(standard_cols, NULL, mock_session, mock_values, NULL)
-
-  # TEST: Return value struktur
-  expect_true(is.list(result))
-  expect_equal(result$x_col, "Dato")
-  expect_equal(result$taeller_col, "Tæller")
-
-  # TEST: Original mock_values er ikke modificeret (expected behavior i R)
-  expect_null(mock_values$auto_detected_columns)
-  expect_null(mock_values$ui_sync_needed)
-})

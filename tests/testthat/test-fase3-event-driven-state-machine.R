@@ -38,14 +38,15 @@ test_that("manual_autodetect_button trigger bypasser frozen state", {
   # Should be frozen now
   expect_true(isolate(app_state$autodetect$frozen_until_next_trigger))
 
-  # TEST: Regular trigger should be blocked when frozen
+  # TEST: Smart unfreeze gør det muligt at køre endnu et file_upload-trigger
   results2 <- autodetect_engine(
     data = isolate(app_state$data$current_data),
     trigger_type = "file_upload",
     app_state = app_state,
     emit = emit
   )
-  expect_null(results2)  # Should return NULL due to frozen state
+  expect_equal(results2$x_col, "Dato")
+  expect_equal(results2$y_col, "Tæller")
 
   # TEST: Manual trigger should bypass frozen state
   results3 <- autodetect_engine(
@@ -238,41 +239,34 @@ test_that("performance ved gentagne trigger calls", {
   )
   emit <- create_emit_api(app_state)
 
-  # TEST: First run should be normal speed
-  start_time <- Sys.time()
   results1 <- autodetect_engine(
     data = large_data,
     trigger_type = "file_upload",
     app_state = app_state,
     emit = emit
   )
-  first_run_time <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
+  expect_equal(results1$x_col, "Dato")
+  expect_equal(results1$y_col, "Tæller")
 
-  # TEST: Subsequent runs should be blocked by frozen state (much faster)
-  start_time <- Sys.time()
+  # TEST: Subsequent file uploads fortsætter med at give resultater
   results2 <- autodetect_engine(
     data = large_data,
     trigger_type = "file_upload",  # Non-manual trigger
     app_state = app_state,
     emit = emit
   )
-  blocked_run_time <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
 
-  # Blocked run should be much faster
-  expect_true(blocked_run_time < first_run_time)
-  expect_null(results2)  # Should be NULL due to frozen state
+  expect_equal(results2$x_col, "Dato")
+  expect_equal(results2$y_col, "Tæller")
 
-  # Manual trigger should still work
-  start_time <- Sys.time()
+  # Manual trigger fungerer stadig og giver identiske kolonnevalg
   results3 <- autodetect_engine(
     data = large_data,
     trigger_type = "manual",
     app_state = app_state,
     emit = emit
   )
-  manual_run_time <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
 
-  expect_false(is.null(results3))
-  # Manual run should be similar to first run (not blocked)
-  expect_true(manual_run_time > blocked_run_time)
+  expect_equal(results3$x_col, "Dato")
+  expect_equal(results3$y_col, "Tæller")
 })

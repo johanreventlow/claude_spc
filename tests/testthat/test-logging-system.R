@@ -205,10 +205,11 @@ test_that("log_debug_block funktionalitet", {
 
   # Test both type
   output <- capture.output(log_debug_block("TEST_CONTEXT", "Full test operation", type = "both"))
-  expect_true(length(output) == 3)  # Should have 3 lines: separator, action, separator
+  expect_equal(length(output), 4L)  # Separator, action, completion, separator
   expect_match(output[1], "DEBUG.*\\[TEST_CONTEXT\\].*=====")
-  expect_match(output[2], "DEBUG.*\\[TEST_CONTEXT\\].*Full test operation")
-  expect_match(output[3], "DEBUG.*\\[TEST_CONTEXT\\].*=====")
+  expect_match(output[2], "DEBUG.*\\[TEST_CONTEXT\\].*Full test operation$")
+  expect_match(output[3], "DEBUG.*\\[TEST_CONTEXT\\].*Full test operation - completed")
+  expect_match(output[4], "DEBUG.*\\[TEST_CONTEXT\\].*=====")
 
   # Gendan original level
   if (original_level == "") {
@@ -223,10 +224,10 @@ test_that("log_debug_kv funktionalitet", {
   Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
 
   # Test navngivne argumenter
-  expect_output(log_debug_kv(trigger_value = 1, status = "active", .context = "TEST"),
-                "DEBUG.*\\[TEST\\].*trigger_value: 1")
-  expect_output(log_debug_kv(trigger_value = 1, status = "active", .context = "TEST"),
-                "DEBUG.*\\[TEST\\].*status: active")
+  output <- capture.output(log_debug_kv(trigger_value = 1, status = "active", .context = "TEST"))
+  expect_equal(length(output), 2L)
+  expect_match(output[1], "DEBUG.*\\[TEST\\].*trigger_value: 1")
+  expect_match(output[2], "DEBUG.*\\[TEST\\].*status: active")
 
   # Test liste data
   test_list <- list(rows = 100, cols = 5, type = "data.frame")
