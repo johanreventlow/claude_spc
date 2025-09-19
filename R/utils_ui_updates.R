@@ -497,13 +497,13 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
     isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
   } else { FALSE }
 
-  log_debug(paste("Starting safe programmatic UI update with", delay_ms, "ms delay",
-                 "(autodetect frozen:", freeze_state, ")"), .context = "LOOP_PROTECTION")
+  cat(paste("DROPDOWN_DEBUG: ⭐ Starting safe programmatic UI update with", delay_ms, "ms delay",
+                 "(autodetect frozen:", freeze_state, ")\n"))
 
   tryCatch({
     # SINGLE-RESET GUARANTEE: Check if flag is already being processed
     if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
-      log_debug("LOOP_PROTECTION: Another update already in progress, skipping", .context = "LOOP_PROTECTION")
+      cat("DROPDOWN_DEBUG: ⚠️ Another update already in progress, skipping\n")
       return()
     }
 
@@ -512,7 +512,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
     app_state$ui$last_programmatic_update <- update_start_time
     app_state$ui$flag_reset_scheduled <- FALSE
 
-    log_debug("LOOP_PROTECTION: Flag set, executing UI updates", .context = "LOOP_PROTECTION")
+    cat("DROPDOWN_DEBUG: ✅ LOOP_PROTECTION flag set to TRUE, executing UI updates\n")
 
     # DROPDOWN DEBUGGING: Wrap updateSelectizeInput to log all dropdown updates
     original_updateSelectizeInput <- updateSelectizeInput
