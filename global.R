@@ -706,7 +706,12 @@ create_app_state <- function() {
     hide_anhoej_rules = FALSE,
     updating_programmatically = FALSE,    # LOOP PROTECTION: Flag to prevent circular events during UI updates
     last_programmatic_update = NULL,      # LOOP PROTECTION: Timestamp of last programmatic update
-    flag_reset_scheduled = FALSE          # LOOP PROTECTION: Single-reset guarantee flag
+    flag_reset_scheduled = FALSE,         # LOOP PROTECTION: Single-reset guarantee flag
+
+    # TOKEN-BASED TRACKING: Advanced loop protection infrastructure
+    pending_programmatic_inputs = list(), # TOKEN TRACKING: Map of inputId -> {token, value, timestamp}
+    programmatic_token_counter = 0L,      # TOKEN GENERATION: Counter for unique token generation
+    queued_updates = list()               # QUEUE SYSTEM: Queued UI updates for overlapping calls
   )
 
   # Autodetect State - Unified autodetect engine state management

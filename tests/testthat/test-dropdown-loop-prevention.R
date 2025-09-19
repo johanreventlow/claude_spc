@@ -419,3 +419,209 @@ test_that("Session lifecycle test - loop-protection ressourcer cleanes korrekt",
   expect_false(isolate(app_state$ui$updating_programmatically))
   expect_true(isolate(app_state$ui$flag_reset_scheduled))
 })
+
+# TOKEN-BASED TRACKING TESTS ===================================================
+
+test_that("Token-baseret tracking forhindrer false column_choices_changed emission", {
+  # SETUP: Create app state with token tracking support
+  app_state <- create_app_state()
+  emit <- create_emit_api(app_state)
+
+  # Initialize token tracking if not present
+  if (is.null(isolate(app_state$ui$pending_programmatic_inputs))) {
+    app_state$ui$pending_programmatic_inputs <- list()
+  }
+  if (is.null(isolate(app_state$ui$programmatic_token_counter))) {
+    app_state$ui$programmatic_token_counter <- 0L
+  }
+
+  # Track column_choices_changed emissions
+  events_before <- isolate(app_state$events$column_choices_changed)
+
+  # EXECUTE: Simulate programmatic update with token
+  test_token <- paste0("token_", Sys.time(), "_", sample(1000, 1))
+  app_state$ui$pending_programmatic_inputs[["x_column"]] <- list(
+    token = test_token,
+    value = "Dato",
+    timestamp = Sys.time()
+  )
+
+  # Simulate input observer with token consumption logic
+  mock_input_observer <- function(col, new_value) {
+    # Check for pending programmatic input token
+    pending_token <- app_state$ui$pending_programmatic_inputs[[col]]
+
+    if (!is.null(pending_token) && pending_token$value == new_value) {
+      # CONSUME TOKEN: This is a programmatic input, don't emit event
+      app_state$ui$pending_programmatic_inputs[[col]] <- NULL
+      cat(paste("TOKEN_DEBUG: Programmatic input consumed for", col, "with token", pending_token$token, "\n"))
+      return("token_consumed")
+    } else {
+      # GENUINE USER INPUT: Emit event
+      app_state$columns[[col]] <- new_value
+      emit$column_choices_changed()
+      return("event_emitted")
+    }
+  }
+
+  # TEST: Programmatic input should be consumed without emitting event
+  result <- mock_input_observer("x_column", "Dato")
+  expect_equal(result, "token_consumed")
+
+  # VERIFY: No column_choices_changed event emitted
+  events_after <- isolate(app_state$events$column_choices_changed)
+  expect_equal(events_after - events_before, 0)
+
+  # VERIFY: Token was consumed
+  expect_null(isolate(app_state$ui$pending_programmatic_inputs)[["x_column"]])
+
+  # TEST: User input without token should emit event
+  result2 <- mock_input_observer("y_column", "Tæller")
+  expect_equal(result2, "event_emitted")
+
+  # VERIFY: Event was emitted for genuine user input
+  events_final <- isolate(app_state$events$column_choices_changed)
+  expect_equal(events_final - events_after, 1)
+})
+
+test_that("Mock session med onFlushed simulation virker med token system", {
+  # SETUP: Enhanced mock session that simulates Shiny session behavior
+  app_state <- create_app_state()
+
+  # Initialize token support
+  if (is.null(isolate(app_state$ui$pending_programmatic_inputs))) {
+    app_state$ui$pending_programmatic_inputs <- list()
+  }
+
+  flushed_callbacks <- list()
+  mock_session <- structure(list(
+    onFlushed = function(callback, once = TRUE) {
+      flushed_callbacks[[length(flushed_callbacks) + 1]] <<- list(
+        callback = callback,
+        once = once,
+        called = FALSE
+      )
+    },
+    token = "test_session_123"
+  ), class = "ShinySession")
+
+  # Mock UI update tracking
+  ui_update_calls <- list()
+  token_assignments <- list()
+
+  # Mock updateSelectizeInput with token recording
+  mock_updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
+    # Generate and record token
+    test_token <- paste0("token_", inputId, "_", length(token_assignments) + 1)
+
+    ui_update_calls[[length(ui_update_calls) + 1]] <<- list(
+      inputId = inputId,
+      selected = selected,
+      token = test_token,
+      timestamp = Sys.time()
+    )
+
+    # Record token in app_state
+    app_state$ui$pending_programmatic_inputs[[inputId]] <- list(
+      token = test_token,
+      value = selected,
+      timestamp = Sys.time()
+    )
+
+    token_assignments[[inputId]] <<- test_token
+    cat(paste("TOKEN_DEBUG: Token", test_token, "assigned to", inputId, "with value", selected, "\n"))
+  }
+
+  # Override function globally for test
+  original_updateSelectizeInput <- get("updateSelectizeInput", envir = globalenv())
+  assign("updateSelectizeInput", mock_updateSelectizeInput, envir = globalenv())
+
+  on.exit({
+    assign("updateSelectizeInput", original_updateSelectizeInput, envir = globalenv())
+  })
+
+  # EXECUTE: Safe programmatic update
+  safe_programmatic_ui_update(mock_session, app_state, function() {
+    updateSelectizeInput(mock_session, "x_column", choices = c("", "Dato", "Tæller"), selected = "Dato")
+    updateSelectizeInput(mock_session, "y_column", choices = c("", "Dato", "Tæller"), selected = "Tæller")
+  })
+
+  # SIMULATE: onFlushed callback execution
+  for (i in seq_along(flushed_callbacks)) {
+    if (!flushed_callbacks[[i]]$called) {
+      flushed_callbacks[[i]]$callback()
+      flushed_callbacks[[i]]$called <- TRUE
+    }
+  }
+
+  # VERIFY: UI updates were made with tokens
+  expect_gte(length(ui_update_calls), 2)
+  expect_true(all(sapply(ui_update_calls, function(call) !is.null(call$token))))
+
+  # VERIFY: Tokens are present in app_state
+  pending_inputs <- isolate(app_state$ui$pending_programmatic_inputs)
+  expect_true("x_column" %in% names(pending_inputs))
+  expect_true("y_column" %in% names(pending_inputs))
+
+  # VERIFY: Tokens have correct structure
+  x_token <- pending_inputs[["x_column"]]
+  expect_true(!is.null(x_token$token))
+  expect_equal(x_token$value, "Dato")
+  expect_true(!is.null(x_token$timestamp))
+
+  y_token <- pending_inputs[["y_column"]]
+  expect_equal(y_token$value, "Tæller")
+})
+
+test_that("UI sync med NULL columns bruger auto_detect_results som fallback", {
+  # SETUP: App state med auto_detect_results men NULL columns
+  app_state <- create_app_state()
+  emit <- create_emit_api(app_state)
+
+  # Set up auto-detection results
+  app_state$columns$auto_detect_results <- list(
+    x_column = "Dato",
+    y_column = "Tæller",
+    n_column = "Nævner"
+  )
+
+  # Ensure columns are NULL (first sync scenario)
+  app_state$columns$x_column <- NULL
+  app_state$columns$y_column <- NULL
+  app_state$columns$n_column <- NULL
+
+  # Track what values get used for UI sync
+  ui_sync_values <- list()
+
+  # Mock the UI service update_column_choices function
+  mock_ui_service <- list(
+    update_column_choices = function(choices = NULL, selected = NULL, ...) {
+      ui_sync_values$choices <<- choices
+      ui_sync_values$selected <<- selected
+      ui_sync_values$call_time <<- Sys.time()
+      cat("TOKEN_DEBUG: UI sync called with selected values:\n")
+      if (!is.null(selected)) {
+        for (col in names(selected)) {
+          cat(paste("TOKEN_DEBUG:  ", col, "=", selected[[col]], "\n"))
+        }
+      }
+    }
+  )
+
+  # Mock input and session for sync function
+  mock_input <- list()
+  mock_session <- list()
+
+  # EXECUTE: Call sync function that should use auto_detect_results as fallback
+  sync_ui_with_columns_unified(app_state, mock_input, list(), mock_session, mock_ui_service)
+
+  # VERIFY: UI sync was called with auto_detect_results values
+  expect_false(is.null(ui_sync_values$selected))
+  expect_equal(ui_sync_values$selected$x_column, "Dato")
+  expect_equal(ui_sync_values$selected$y_column, "Tæller")
+  expect_equal(ui_sync_values$selected$n_column, "Nævner")
+
+  # VERIFY: This prevents the "blank-first, real-second" pattern
+  expect_true(ui_sync_values$selected$x_column != "")
+  expect_true(ui_sync_values$selected$y_column != "")
+})

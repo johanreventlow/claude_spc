@@ -374,7 +374,18 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       cat(paste("DROPDOWN_DEBUG: LOOP_PROTECTION check for", col, ": updating_programmatically =", protection_active,
                      ", autodetect frozen =", freeze_state, "\n"))
 
-      # LOOP PROTECTION: Skip event emission if we're in the middle of programmatic updates
+      # TOKEN CONSUMPTION: Check for pending programmatic input tokens
+      pending_token <- app_state$ui$pending_programmatic_inputs[[col]]
+
+      if (!is.null(pending_token) && pending_token$value == new_value) {
+        # CONSUME TOKEN: This is a programmatic input, don't emit event
+        app_state$ui$pending_programmatic_inputs[[col]] <- NULL
+        app_state$columns[[col]] <- new_value
+        cat(paste("TOKEN_DEBUG: Programmatic input consumed for", col, "with token", pending_token$token, "- no events emitted\n"))
+        return()
+      }
+
+      # LEGACY LOOP PROTECTION: Skip event emission if we're in the middle of programmatic updates
       if (protection_active) {
         cat(paste("DROPDOWN_DEBUG: LOOP_PROTECTION ACTIVE - Skipping event emission for", col, "- programmatic update in progress\n"))
         cat(paste("DROPDOWN_DEBUG: Programmatic update detected - value", paste0("'", new_value, "'"), "accepted but no events emitted for", col, "\n"))

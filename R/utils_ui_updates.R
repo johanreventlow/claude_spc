@@ -519,7 +519,12 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 
     cat("DROPDOWN_DEBUG: ✅ LOOP_PROTECTION flag set to TRUE, executing UI updates\n")
 
-    # DROPDOWN DEBUGGING: Wrap updateSelectizeInput to log all dropdown updates
+    # TOKEN GENERATION: Generate unique token for this UI update session
+    app_state$ui$programmatic_token_counter <- isolate(app_state$ui$programmatic_token_counter) + 1L
+    session_token <- paste0("token_", isolate(app_state$ui$programmatic_token_counter), "_", format(update_start_time, "%H%M%S_%f"))
+    cat(paste("TOKEN_DEBUG: Generated session token:", session_token, "\n"))
+
+    # DROPDOWN DEBUGGING + TOKEN TRACKING: Wrap updateSelectizeInput to log and track tokens
     original_updateSelectizeInput <- updateSelectizeInput
     updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
       cat(paste("DROPDOWN_DEBUG: Updating", inputId,
@@ -528,6 +533,18 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 
       if (!is.null(choices) && length(choices) > 0) {
         cat(paste("DROPDOWN_DEBUG: Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", "), "\n"))
+      }
+
+      # TOKEN TRACKING: Record this programmatic input with token
+      if (!is.null(selected)) {
+        input_token <- paste0(session_token, "_", inputId)
+        app_state$ui$pending_programmatic_inputs[[inputId]] <- list(
+          token = input_token,
+          value = selected,
+          timestamp = Sys.time(),
+          session_token = session_token
+        )
+        cat(paste("TOKEN_DEBUG: Token", input_token, "assigned to", inputId, "with value", paste0("'", selected, "'"), "\n"))
       }
 
       result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
