@@ -878,6 +878,61 @@ create_app_state <- function() {
   return(app_state)
 }
 
+#' Dual-State Sync Helpers
+#'
+#' Helper functions to maintain consistency between hierarchical and legacy
+#' flat access patterns during migration phase
+#'
+#' @param app_state The app state object
+#' @param value The value to set
+#'
+#' @details
+#' These functions ensure that both the new hierarchical structure
+#' (app_state$data$core$current_data) and the legacy flat access
+#' (app_state$data$current_data) remain synchronized during the migration.
+#'
+
+# Data sync helper
+set_current_data <- function(app_state, value) {
+  isolate({
+    # Set both hierarchical and legacy patterns
+    app_state$data$core$current_data <- value
+    app_state$data$current_data <- value  # Legacy compatibility
+
+    log_debug(paste("Data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "DUAL_STATE_SYNC")
+  })
+}
+
+# Get data with fallback
+get_current_data <- function(app_state) {
+  isolate({
+    # Prefer hierarchical, fallback to legacy
+    data <- if (!is.null(app_state$data$core$current_data)) {
+      app_state$data$core$current_data
+    } else {
+      app_state$data$current_data
+    }
+    return(data)
+  })
+}
+
+# Session state sync helper
+set_session_state <- function(app_state, key, value) {
+  isolate({
+    # Set in hierarchical structure
+    if (key %in% names(app_state$session$state)) {
+      app_state$session$state[[key]] <- value
+    }
+
+    # Set in legacy pattern if it exists
+    if (key %in% names(app_state$session)) {
+      app_state$session[[key]] <- value
+    }
+
+    log_debug(paste("Session state", key, "set to", value), "DUAL_STATE_SYNC")
+  })
+}
+
 #' Create Event Emit API
 #'
 #' Creates a clean API for emitting events to the app_state event bus.

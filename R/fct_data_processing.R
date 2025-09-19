@@ -1078,8 +1078,8 @@ setup_data_table <- function(input, output, session, app_state, emit) {
             return()
           }
 
-          # PHASE 4: Unified state assignment only
-          app_state$data$current_data <- new_df
+          # PHASE 4: Dual-state sync for compatibility during migration
+          set_current_data(app_state, new_df)
 
           # Emit event to trigger downstream effects
           emit$data_changed()
@@ -1109,8 +1109,9 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     new_row <- current_data_check[1, ]
     new_row[1, ] <- NA
 
-    # PHASE 4: Unified state assignment only
-    app_state$data$current_data <- rbind(app_state$data$current_data, new_row)
+    # PHASE 4: Dual-state sync for compatibility during migration
+    current_data <- get_current_data(app_state)
+    set_current_data(app_state, rbind(current_data, new_row))
 
     # Emit event to trigger downstream effects
     emit$data_changed()

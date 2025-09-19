@@ -269,10 +269,10 @@ app_server <- function(input, output, session) {
           test_data <- ensure_standard_columns(test_data)
           autoload_tracer$step("data_processing_complete")
 
-          # Set reactive values - PHASE 4: Unified state only
+          # Set reactive values - PHASE 4: Dual-state sync during migration
           app_state$data$original_data <- test_data
-          # Unified state: Set data and flags in both legacy and centralized state
-          app_state$data$current_data <- test_data
+          # Unified state: Set data using sync helper for compatibility
+          set_current_data(app_state, test_data)
 
           # Emit event to trigger downstream effects
           emit$data_loaded()
