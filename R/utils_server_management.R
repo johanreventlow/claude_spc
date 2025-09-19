@@ -23,8 +23,9 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
         return()
       }
 
-      tryCatch(
-        {
+      safe_operation(
+        "Auto restore session data",
+        code = {
           saved_state <- input$auto_restore_data
 
           if (!is.null(saved_state$data)) {
@@ -134,9 +135,7 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
             )
           }
         },
-        error = function(e) {
-          showNotification(paste("Fejl ved automatisk genindlæsning:", e$message), type = "error")
-
+        fallback = {
           # Reset guards even on error
           # PHASE 4B: Unified state assignment only
           app_state$data$updating_table <- FALSE
@@ -146,7 +145,12 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
           app_state$session$auto_save_enabled <- TRUE
           # PHASE 4B: Unified state assignment only
           app_state$data$table_operation_in_progress <- FALSE
-        }
+        },
+        session = session,
+        error_type = "processing",
+        show_user = TRUE,
+        emit = emit,
+        app_state = app_state
       )
     },
     once = TRUE
@@ -621,8 +625,9 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
     test_file_path <- "R/data/spc_exampledata.csv"
 
     if (file.exists(test_file_path)) {
-      tryCatch(
-        {
+      safe_operation(
+        "Load demo data for quick start",
+        code = {
           log_debug("Welcome page: Starting demo data load...", "SERVER_MGMT")
 
           # Vis indlæsnings waiter
@@ -691,20 +696,14 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
             duration = 3
           )
         },
-        error = function(e) {
-          log_error("Failed to load demo data:", e$message, "DEMO_DATA")
-          log_error("Stacktrace:", "DEMO_DATA")
-          traceback()
-
+        fallback = {
           waiter_file$hide()
-
-          # Vis fejlbesked til bruger
-          showNotification(
-            paste("Kunne ikke indlæse eksempel data:", e$message),
-            type = "error",
-            duration = 8
-          )
-        }
+        },
+        session = session,
+        error_type = "processing",
+        show_user = TRUE,
+        emit = emit,
+        app_state = app_state
       )
     } else {
       log_warn("Demo data file not found at:", test_file_path, "DEMO_DATA")

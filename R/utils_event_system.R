@@ -515,96 +515,100 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
   # Update UI controls with detected columns using centralized service
   log_debug("About to check ui_service", "DEBUG")
   log_debug(paste("ui_service is null:", is.null(ui_service)), "DEBUG")
-  tryCatch({
-    if (!is.null(ui_service)) {
-      log_debug("ui_service is available, proceeding with UI updates", "DEBUG")
-      # Use centralized UI service with detected selections for all 6 columns
-      col_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
-      selected_columns <- list(
-        x_column = isolate(columns_state$x_column) %||% "",
-        y_column = isolate(columns_state$y_column) %||% "",
-        n_column = isolate(columns_state$n_column) %||% "",
-        skift_column = isolate(columns_state$skift_column) %||% "",
-        frys_column = isolate(columns_state$frys_column) %||% "",
-        kommentar_column = isolate(columns_state$kommentar_column) %||% ""
-      )
+  safe_operation(
+    "UI controls update with detected columns",
+    code = {
+      if (!is.null(ui_service)) {
+        log_debug("ui_service is available, proceeding with UI updates", "DEBUG")
+        # Use centralized UI service with detected selections for all 6 columns
+        col_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
+        selected_columns <- list(
+          x_column = isolate(columns_state$x_column) %||% "",
+          y_column = isolate(columns_state$y_column) %||% "",
+          n_column = isolate(columns_state$n_column) %||% "",
+          skift_column = isolate(columns_state$skift_column) %||% "",
+          frys_column = isolate(columns_state$frys_column) %||% "",
+          kommentar_column = isolate(columns_state$kommentar_column) %||% ""
+        )
 
-      # DROPDOWN DEBUGGING: Log alle 6 kolonner eksplicit
-      log_debug("All 6 column values being sent to UI:", "DROPDOWN_DEBUG")
-      for (col_name in names(selected_columns)) {
-        log_debug(paste(col_name, "=", paste0("'", selected_columns[[col_name]], "'")), "DROPDOWN_DEBUG")
+        # DROPDOWN DEBUGGING: Log alle 6 kolonner eksplicit
+        log_debug("All 6 column values being sent to UI:", "DROPDOWN_DEBUG")
+        for (col_name in names(selected_columns)) {
+          log_debug(paste(col_name, "=", paste0("'", selected_columns[[col_name]], "'")), "DROPDOWN_DEBUG")
+        }
+
+        log_debug("About to call ui_service$update_column_choices", "DEBUG")
+        ui_service$update_column_choices(
+          choices = col_choices,
+          selected = selected_columns,
+          columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
+        )
+        log_debug("✅ Used centralized ui_service for all 6 column sync", .context = "UI_SYNC_UNIFIED")
+      } else {
+        # Fallback to direct updates using safe wrapper to prevent loops
+        standard_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
+
+        safe_programmatic_ui_update(session, app_state, function() {
+          # Primary columns (required)
+          x_col_val <- isolate(columns_state$x_column)
+          if (!is.null(x_col_val)) {
+            updateSelectizeInput(session, "x_column",
+                               choices = standard_choices,
+                               selected = x_col_val)
+            log_debug_kv(updated_x_column_ui = x_col_val, .context = "UI_SYNC_UNIFIED")
+          }
+
+          y_col_val <- isolate(columns_state$y_column)
+          if (!is.null(y_col_val)) {
+            updateSelectizeInput(session, "y_column",
+                               choices = standard_choices,
+                               selected = y_col_val)
+            log_debug_kv(updated_y_column_ui = y_col_val, .context = "UI_SYNC_UNIFIED")
+          }
+
+          n_col_val <- isolate(columns_state$n_column)
+          if (!is.null(n_col_val)) {
+            updateSelectizeInput(session, "n_column",
+                               choices = standard_choices,
+                               selected = n_col_val)
+            log_debug_kv(updated_n_column_ui = n_col_val, .context = "UI_SYNC_UNIFIED")
+          }
+
+          # Control columns (optional)
+          skift_col_val <- isolate(columns_state$skift_column)
+          if (!is.null(skift_col_val)) {
+            updateSelectizeInput(session, "skift_column",
+                               choices = standard_choices,
+                               selected = skift_col_val)
+            log_debug_kv(updated_skift_column_ui = skift_col_val, .context = "UI_SYNC_UNIFIED")
+          }
+
+          frys_col_val <- isolate(columns_state$frys_column)
+          if (!is.null(frys_col_val)) {
+            updateSelectizeInput(session, "frys_column",
+                               choices = standard_choices,
+                               selected = frys_col_val)
+            log_debug_kv(updated_frys_column_ui = frys_col_val, .context = "UI_SYNC_UNIFIED")
+          }
+
+          kommentar_col_val <- isolate(columns_state$kommentar_column)
+          if (!is.null(kommentar_col_val)) {
+            updateSelectizeInput(session, "kommentar_column",
+                               choices = standard_choices,
+                               selected = kommentar_col_val)
+            log_debug_kv(updated_kommentar_column_ui = kommentar_col_val, .context = "UI_SYNC_UNIFIED")
+          }
+
+          log_debug("✅ All 6 columns UI synchronization completed", .context = "UI_SYNC_UNIFIED")
+        })
       }
-
-      log_debug("About to call ui_service$update_column_choices", "DEBUG")
-      ui_service$update_column_choices(
-        choices = col_choices,
-        selected = selected_columns,
-        columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
-      )
-      log_debug("✅ Used centralized ui_service for all 6 column sync", .context = "UI_SYNC_UNIFIED")
-    } else {
-      # Fallback to direct updates using safe wrapper to prevent loops
-      standard_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
-
-      safe_programmatic_ui_update(session, app_state, function() {
-        # Primary columns (required)
-        x_col_val <- isolate(columns_state$x_column)
-        if (!is.null(x_col_val)) {
-          updateSelectizeInput(session, "x_column",
-                             choices = standard_choices,
-                             selected = x_col_val)
-          log_debug_kv(updated_x_column_ui = x_col_val, .context = "UI_SYNC_UNIFIED")
-        }
-
-        y_col_val <- isolate(columns_state$y_column)
-        if (!is.null(y_col_val)) {
-          updateSelectizeInput(session, "y_column",
-                             choices = standard_choices,
-                             selected = y_col_val)
-          log_debug_kv(updated_y_column_ui = y_col_val, .context = "UI_SYNC_UNIFIED")
-        }
-
-        n_col_val <- isolate(columns_state$n_column)
-        if (!is.null(n_col_val)) {
-          updateSelectizeInput(session, "n_column",
-                             choices = standard_choices,
-                             selected = n_col_val)
-          log_debug_kv(updated_n_column_ui = n_col_val, .context = "UI_SYNC_UNIFIED")
-        }
-
-        # Control columns (optional)
-        skift_col_val <- isolate(columns_state$skift_column)
-        if (!is.null(skift_col_val)) {
-          updateSelectizeInput(session, "skift_column",
-                             choices = standard_choices,
-                             selected = skift_col_val)
-          log_debug_kv(updated_skift_column_ui = skift_col_val, .context = "UI_SYNC_UNIFIED")
-        }
-
-        frys_col_val <- isolate(columns_state$frys_column)
-        if (!is.null(frys_col_val)) {
-          updateSelectizeInput(session, "frys_column",
-                             choices = standard_choices,
-                             selected = frys_col_val)
-          log_debug_kv(updated_frys_column_ui = frys_col_val, .context = "UI_SYNC_UNIFIED")
-        }
-
-        kommentar_col_val <- isolate(columns_state$kommentar_column)
-        if (!is.null(kommentar_col_val)) {
-          updateSelectizeInput(session, "kommentar_column",
-                             choices = standard_choices,
-                             selected = kommentar_col_val)
-          log_debug_kv(updated_kommentar_column_ui = kommentar_col_val, .context = "UI_SYNC_UNIFIED")
-        }
-
-        log_debug("✅ All 6 columns UI synchronization completed", .context = "UI_SYNC_UNIFIED")
-      })
-    }
-
-  }, error = function(e) {
-    log_error("UI sync error", .context = "UI_SYNC_UNIFIED")
-    log_debug_kv(error_message = e$message, .context = "UI_SYNC_UNIFIED")
-  })
+    },
+    fallback = NULL,
+    session = session,
+    error_type = "processing",
+    emit = emit,
+    app_state = app_state
+  )
 }
 
 #' Update Column Choices (Unified Event Version)
@@ -676,21 +680,23 @@ update_column_choices_unified <- function(app_state, input, output, session, ui_
     }
 
     # Update UI controls using centralized service
-    tryCatch({
-      if (!is.null(ui_service)) {
-        ui_service$update_column_choices(choices = col_choices, selected = current_selections)
-        log_debug("✅ Used centralized ui_service for column choices with retained selections", .context = "COLUMN_CHOICES_UNIFIED")
-      } else {
-        # Fallback to direct updates with retained selections
-        for (col in columns_to_update) {
-          updateSelectizeInput(session, col, choices = col_choices, selected = current_selections[[col]])
+    safe_operation(
+      "Column choices UI update",
+      code = {
+        if (!is.null(ui_service)) {
+          ui_service$update_column_choices(choices = col_choices, selected = current_selections)
+          log_debug("✅ Used centralized ui_service for column choices with retained selections", .context = "COLUMN_CHOICES_UNIFIED")
+        } else {
+          # Fallback to direct updates with retained selections
+          for (col in columns_to_update) {
+            updateSelectizeInput(session, col, choices = col_choices, selected = current_selections[[col]])
+          }
+          log_debug("✅ Column choices updated with retained selections", .context = "COLUMN_CHOICES_UNIFIED")
         }
-        log_debug("✅ Column choices updated with retained selections", .context = "COLUMN_CHOICES_UNIFIED")
-      }
-
-    }, error = function(e) {
-      log_error("Error updating UI", .context = "COLUMN_CHOICES_UNIFIED")
-      log_debug_kv(error_message = e$message, .context = "COLUMN_CHOICES_UNIFIED")
-    })
+      },
+      fallback = NULL,
+      session = session,
+      error_type = "processing"
+    )
   }
 }

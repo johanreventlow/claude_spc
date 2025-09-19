@@ -40,3 +40,50 @@ wait_for_app_ready <- function(app, timeout = 10) {
   Sys.sleep(2) # Basic wait for app initialization
   TRUE
 }
+
+# Test helper: Minimal app_state uden Shiny reaktivitet
+create_test_app_state <- function() {
+  state <- new.env(parent = emptyenv())
+
+  state$autodetect <- new.env(parent = emptyenv())
+  state$autodetect$frozen_until_next_trigger <- FALSE
+  state$autodetect$last_run <- NULL
+
+  state$columns <- new.env(parent = emptyenv())
+  state$columns$mappings <- new.env(parent = emptyenv())
+  state$columns$mappings$x_column <- NULL
+  state$columns$mappings$y_column <- NULL
+  state$columns$mappings$n_column <- NULL
+  state$columns$mappings$skift_column <- NULL
+  state$columns$mappings$frys_column <- NULL
+  state$columns$mappings$kommentar_column <- NULL
+
+  state$columns$auto_detect <- new.env(parent = emptyenv())
+  state$columns$auto_detect$in_progress <- FALSE
+  state$columns$auto_detect$completed <- FALSE
+  state$columns$auto_detect$results <- NULL
+
+  state$data <- new.env(parent = emptyenv())
+  state$data$current_data <- NULL
+  state$data$original_data <- NULL
+
+  state$ui <- new.env(parent = emptyenv())
+  state$ui$updating_programmatically <- FALSE
+  state$ui$flag_reset_scheduled <- FALSE
+  state$ui$queued_updates <- list()
+  state$ui$pending_programmatic_inputs <- list()
+  state$ui$memory_limits <- list(
+    max_queue_size = 5L,
+    max_pending_tokens = 100L
+  )
+  state$ui$programmatic_token_counter <- 0L
+  state$ui$performance_metrics <- list(
+    queued_updates = 0L,
+    queue_max_size = 0L,
+    tokens_consumed = 0L,
+    total_updates = 0L,
+    avg_update_duration_ms = 0
+  )
+
+  state
+}

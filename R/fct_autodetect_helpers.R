@@ -150,19 +150,21 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
 test_date_parsing_format <- function(test_sample, format) {
   if (length(test_sample) == 0) return(0)
 
-  tryCatch({
-    # Use enhanced Danish date parsing on entire sample
-    parsed_dates <- parse_danish_dates(test_sample, format)
+  safe_operation(
+    "Test date parsing format",
+    code = {
+      # Use enhanced Danish date parsing on entire sample
+      parsed_dates <- parse_danish_dates(test_sample, format)
 
-    # Count successful parses
-    successful_parses <- sum(!is.na(parsed_dates))
-    total_attempts <- length(test_sample)
+      # Count successful parses
+      successful_parses <- sum(!is.na(parsed_dates))
+      total_attempts <- length(test_sample)
 
-    return(successful_parses / total_attempts)
-  }, error = function(e) {
-    # All parsing failed
-    return(0)
-  })
+      return(successful_parses / total_attempts)
+    },
+    fallback = 0,
+    error_type = "processing"
+  )
 }
 
 #' Find Numeric Columns Suitable for Analysis
@@ -569,30 +571,33 @@ parse_danish_dates <- function(date_strings, format) {
   }
 
   # Use appropriate lubridate function with quiet parsing
-  tryCatch({
-    result <- switch(format,
-      "dmy" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
-      "dmY" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
-      "ymd" = suppressWarnings(lubridate::ymd(processed_strings, quiet = TRUE)),
-      "mdy" = suppressWarnings(lubridate::mdy(processed_strings, quiet = TRUE)),
-      "Ymd" = suppressWarnings(lubridate::ymd(processed_strings, quiet = TRUE)),
-      "mdY" = suppressWarnings(lubridate::mdy(processed_strings, quiet = TRUE)),
-      # For month name formats, try dmy approach
-      "dby" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
-      "dbY" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
-      "d B Y" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
-      "d b Y" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
-      # Default: use parse_date_time for complex formats
-      suppressWarnings(lubridate::parse_date_time(processed_strings, format, quiet = TRUE))
-    )
+  safe_operation(
+    "Parse Danish dates with lubridate",
+    code = {
+      result <- switch(format,
+        "dmy" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+        "dmY" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+        "ymd" = suppressWarnings(lubridate::ymd(processed_strings, quiet = TRUE)),
+        "mdy" = suppressWarnings(lubridate::mdy(processed_strings, quiet = TRUE)),
+        "Ymd" = suppressWarnings(lubridate::ymd(processed_strings, quiet = TRUE)),
+        "mdY" = suppressWarnings(lubridate::mdy(processed_strings, quiet = TRUE)),
+        # For month name formats, try dmy approach
+        "dby" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+        "dbY" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+        "d B Y" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+        "d b Y" = suppressWarnings(lubridate::dmy(processed_strings, quiet = TRUE)),
+        # Default: use parse_date_time for complex formats
+        suppressWarnings(lubridate::parse_date_time(processed_strings, format, quiet = TRUE))
+      )
 
-    # Ensure we return a Date vector of correct length
-    if (is.null(result) || length(result) != length(date_strings)) {
-      return(rep(as.Date(NA), length(date_strings)))
-    }
+      # Ensure we return a Date vector of correct length
+      if (is.null(result) || length(result) != length(date_strings)) {
+        return(rep(as.Date(NA), length(date_strings)))
+      }
 
-    return(as.Date(result))
-  }, error = function(e) {
-    return(rep(as.Date(NA), length(date_strings)))
-  })
+      return(as.Date(result))
+    },
+    fallback = rep(as.Date(NA), length(date_strings)),
+    error_type = "processing"
+  )
 }
