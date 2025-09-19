@@ -123,79 +123,99 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session
   # Define cache logic as function for reuse
   cache_logic <- function() {
     # FAILSAFE: Wrap entire cache logic in error handling
-    tryCatch({
-      current_time <- Sys.time()
+    safe_operation(
+      "Execute cache logic",
+      code = {
+        current_time <- Sys.time()
 
-      # Check if cache exists and is valid
-      cache_entry <- cache_env[[safe_cache_key]]
-      if (!is.null(cache_entry)) {
-        cache_age <- as.numeric(current_time - cache_entry$timestamp)
-        if (cache_age < cache_timeout) {
-          log_debug(paste("Cache hit for", safe_cache_key), "PERFORMANCE")
-          return(cache_entry$value)
+        # Check if cache exists and is valid
+        cache_entry <- cache_env[[safe_cache_key]]
+        if (!is.null(cache_entry)) {
+          cache_age <- as.numeric(current_time - cache_entry$timestamp)
+          if (cache_age < cache_timeout) {
+            log_debug(paste("Cache hit for", safe_cache_key), "PERFORMANCE")
+            return(cache_entry$value)
+          }
         }
-      }
 
-      # Cache miss or expired - evaluate expression with robust error handling
-      log_debug(paste("Cache miss for", safe_cache_key, "- computing..."), "PERFORMANCE")
-      start_time <- Sys.time()
+        # Cache miss or expired - evaluate expression with robust error handling
+        log_debug(paste("Cache miss for", safe_cache_key, "- computing..."), "PERFORMANCE")
+        start_time <- Sys.time()
 
-      # FAILSAFE: Expression evaluation with comprehensive error handling
-      result <- tryCatch({
-        expr
-      }, error = function(e) {
-        log_debug(paste("Expression evaluation failed in cache for", safe_cache_key, ":", e$message), "PERFORMANCE")
-        # Return NULL as safe fallback - caller must handle NULL gracefully
-        NULL
-      }, warning = function(w) {
-        log_debug(paste("Warning during expression evaluation in cache for", safe_cache_key, ":", w$message), "PERFORMANCE")
-        # Continue with evaluation despite warning
-        suppressWarnings(expr)
-      })
+        # FAILSAFE: Expression evaluation with comprehensive error handling
+        result <- safe_operation(
+          paste("Evaluate cached expression for", safe_cache_key),
+          code = {
+            expr
+          },
+          fallback = function(e) {
+            log_debug(paste("Expression evaluation failed in cache for", safe_cache_key, ":", e$message), "PERFORMANCE")
+            # Return NULL as safe fallback - caller must handle NULL gracefully
+            NULL
+          },
+          error_type = "processing"
+        )
 
-      end_time <- Sys.time()
+        end_time <- Sys.time()
 
-      # FAILSAFE: Only cache non-NULL results to avoid caching failures
-      if (!is.null(result)) {
-        tryCatch({
-          # Store in cache
-          cache_env[[safe_cache_key]] <- list(
-            value = result,
-            timestamp = current_time,
-            computation_time = as.numeric(end_time - start_time)
+        # FAILSAFE: Only cache non-NULL results to avoid caching failures
+        if (!is.null(result)) {
+          safe_operation(
+            paste("Store cache result for", safe_cache_key),
+            code = {
+              # Store in cache
+              cache_env[[safe_cache_key]] <- list(
+                value = result,
+                timestamp = current_time,
+                computation_time = as.numeric(end_time - start_time)
+              )
+              log_debug(paste("Cached result for", safe_cache_key), "PERFORMANCE")
+            },
+            fallback = function(e) {
+              log_debug(paste("Failed to store cache for", safe_cache_key, ":", e$message), "PERFORMANCE")
+              # Continue without caching - return result anyway
+            },
+            error_type = "processing"
           )
-          log_debug(paste("Cached result for", safe_cache_key), "PERFORMANCE")
-        }, error = function(e) {
-          log_debug(paste("Failed to store cache for", safe_cache_key, ":", e$message), "PERFORMANCE")
-          # Continue without caching - return result anyway
-        })
-      } else {
-        log_debug(paste("Skipping cache storage for NULL result:", safe_cache_key), "PERFORMANCE")
-      }
+        } else {
+          log_debug(paste("Skipping cache storage for NULL result:", safe_cache_key), "PERFORMANCE")
+        }
 
-      return(result)
-
-    }, error = function(e) {
-      log_debug(paste("Complete cache logic failure for", safe_cache_key, ":", e$message), "PERFORMANCE")
-      # Emergency fallback: try to evaluate expression directly without caching
-      tryCatch({
-        expr
-      }, error = function(inner_e) {
-        log_debug(paste("Emergency expression evaluation also failed:", inner_e$message), "PERFORMANCE")
-        NULL
-      })
-    })
+        return(result)
+      },
+      fallback = function(e) {
+        log_debug(paste("Complete cache logic failure for", safe_cache_key, ":", e$message), "PERFORMANCE")
+        # Emergency fallback: try to evaluate expression directly without caching
+        safe_operation(
+          "Emergency expression evaluation without cache",
+          code = {
+            expr
+          },
+          fallback = function(inner_e) {
+            log_debug(paste("Emergency expression evaluation also failed:", inner_e$message), "PERFORMANCE")
+            NULL
+          },
+          error_type = "processing"
+        )
+      },
+      error_type = "processing"
+    )
   }
 
   # Check if we're in reactive context
-  in_reactive_context <- tryCatch({
-    # Try to get current reactive domain
-    getCurrentDomain <- getFromNamespace("getCurrentDomain", "shiny")
-    domain <- getCurrentDomain()
-    !is.null(domain)
-  }, error = function(e) {
-    FALSE
-  })
+  in_reactive_context <- safe_operation(
+    "Check reactive context",
+    code = {
+      # Try to get current reactive domain
+      getCurrentDomain <- getFromNamespace("getCurrentDomain", "shiny")
+      domain <- getCurrentDomain()
+      !is.null(domain)
+    },
+    fallback = function(e) {
+      FALSE
+    },
+    error_type = "processing"
+  )
 
   if (in_reactive_context) {
     # Return reactive expression if in reactive context
@@ -267,14 +287,19 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
   }
 
   # Check if we're in reactive context
-  in_reactive_context <- tryCatch({
-    # Try to get current reactive domain
-    getCurrentDomain <- getFromNamespace("getCurrentDomain", "shiny")
-    domain <- getCurrentDomain()
-    !is.null(domain)
-  }, error = function(e) {
-    FALSE
-  })
+  in_reactive_context <- safe_operation(
+    "Check reactive context for debounce",
+    code = {
+      # Try to get current reactive domain
+      getCurrentDomain <- getFromNamespace("getCurrentDomain", "shiny")
+      domain <- getCurrentDomain()
+      !is.null(domain)
+    },
+    fallback = function(e) {
+      FALSE
+    },
+    error_type = "processing"
+  )
 
   if (in_reactive_context) {
     # Use debounce if in reactive context
@@ -314,9 +339,14 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
 clear_performance_cache <- function(cache_pattern = NULL, session = NULL) {
   # Auto-detect session if not provided
   if (is.null(session)) {
-    session <- tryCatch({
-      getFromNamespace("getDefaultReactiveDomain", "shiny")()$session
-    }, error = function(e) NULL)
+    session <- safe_operation(
+      "Auto-detect session for cache clear",
+      code = {
+        getFromNamespace("getDefaultReactiveDomain", "shiny")()$session
+      },
+      fallback = function(e) NULL,
+      error_type = "processing"
+    )
   }
 
   # Get cache environment
