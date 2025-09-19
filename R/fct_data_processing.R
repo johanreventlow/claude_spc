@@ -37,7 +37,7 @@
 #' setup_column_management(input, output, session, values, app_state)
 #' }
 #'
-#' @seealso \code{\link{detect_columns_name_only}}, \code{\link{ensure_standard_columns}}
+#' @seealso \code{\link{autodetect_engine}}, \code{\link{ensure_standard_columns}}
 setup_column_management <- function(input, output, session, app_state, emit) {
   log_debug_block("COLUMN_MGMT", "Setting up column management")
   log_debug("Received app_state environment address:", capture.output(print(app_state)), .context = "COLUMN_MGMT")
@@ -180,193 +180,8 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
 # AUTO-DETEKTION FUNKTIONER ==================================================
 
-#' Auto-detekter SPC kolonner baseret på kolonnenavne
-#'
-#' Intelligent matching af kolonnenavne til standard SPC kolonner, designet
-#' til tomme datasæt hvor data-baseret auto-detektion ikke er mulig.
-#' Bruger case-insensitive pattern matching og fallback strategier.
-#'
-#' @param col_names Character vector med tilgængelige kolonnenavne
-#' @param input Shiny input object (kan være NULL for pure name matching)
-#' @param session Shiny session object for UI opdateringer
-#' @param values Reactive values list med app state (legacy system)
-#' @param app_state List med centraliseret app state (Phase 4 system), optional
-#'
-#' @details
-#' Matching prioriteter:
-#' \enumerate{
-#'   \item Eksakte matches (case-insensitive)
-#'   \item Substring matches med høj specificitet
-#'   \item Fuzzy matching for almindelige navne
-#'   \item Fallback til første tilgængelige kolonne
-#' }
-#'
-#' Standard SPC kolonner der matches:
-#' \itemize{
-#'   \item X-akse: "Dato", "Date", "Time", "Periode"
-#'   \item Tæller: "Tæller", "Count", "Events", "Numerator"
-#'   \item Nævner: "Nævner", "Total", "Denominator", "N"
-#'   \item Skift: "Skift", "Shift", "Phase"
-#'   \item Frys: "Frys", "Freeze", "Frost"
-#'   \item Kommentar: "Kommentar", "Comment", "Note"
-#' }
-#'
-#' @return List med detekterede kolonner:
-#' \describe{
-#'   \item{x_col}{X-akse kolonne navn}
-#'   \item{taeller_col}{Tæller kolonne navn}
-#'   \item{naevner_col}{Nævner kolonne navn}
-#'   \item{skift_col}{Skift kolonne navn}
-#'   \item{frys_col}{Frys kolonne navn}
-#'   \item{kommentar_col}{Kommentar kolonne navn}
-#'   \item{ui_sync_data}{Data til UI synkronisering}
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' # Standard SPC kolonner
-#' cols <- c("Dato", "Tæller", "Nævner", "Skift", "Frys", "Kommentar")
-#' result <- detect_columns_name_only(cols, NULL, session, app_state)
-#'
-#' # Engelske kolonner
-#' cols_en <- c("Date", "Count", "Total", "Phase", "Comment")
-#' result <- detect_columns_name_only(cols_en, NULL, session, app_state)
-#' }
-#'
-#' @seealso \code{\link{setup_column_management}}, \code{\link{ensure_standard_columns}}
-detect_columns_name_only <- function(col_names, input, session, app_state = NULL) {
-  log_debug_block("AUTO_DETECT_FUNC", "Starting name-only detection")
-
-  # Initialiser resultater
-  x_col <- NULL
-  taeller_col <- NULL
-  naevner_col <- NULL
-  skift_col <- NULL
-  frys_col <- NULL
-  kommentar_col <- NULL
-
-  col_names_lower <- tolower(col_names)
-
-  # X-kolonne (dato/tid detection)
-  dato_idx <- which(grepl("dato|date|tid|time|år|year|måned|month|uge|week|dag|day", col_names_lower, ignore.case = TRUE))
-  if (length(dato_idx) > 0) {
-    x_col <- col_names[dato_idx[1]]
-    log_debug("Name-only X column:", x_col, .context = "AUTO_DETECT_FUNC")
-  } else if (length(col_names) > 0) {
-    x_col <- col_names[1]
-    log_debug("Name-only X column (fallback):", x_col, .context = "AUTO_DETECT_FUNC")
-  }
-
-  # Y-kolonne (taeller detection)
-  taeller_idx <- which(grepl("t.ller|tael|num|count", col_names_lower, ignore.case = TRUE))
-  if (length(taeller_idx) > 0) {
-    taeller_col <- col_names[taeller_idx[1]]
-    log_debug("Name-only Y column:", taeller_col, .context = "AUTO_DETECT_FUNC")
-  }
-
-  # N-kolonne (naevner detection)
-  naevner_idx <- which(grepl("n.vner|naev|denom|total", col_names_lower, ignore.case = TRUE))
-  if (length(naevner_idx) > 0) {
-    naevner_col <- col_names[naevner_idx[1]]
-    log_debug("Name-only N column:", naevner_col, .context = "AUTO_DETECT_FUNC")
-  }
-
-  # Skift-kolonne (eksakt match)
-  skift_idx <- which(grepl("^skift$", col_names_lower, ignore.case = TRUE))
-  if (length(skift_idx) > 0) {
-    skift_col <- col_names[skift_idx[1]]
-    log_debug("Name-only Skift column:", skift_col, .context = "AUTO_DETECT_FUNC")
-  }
-
-  # Frys-kolonne (eksakt match)
-  frys_idx <- which(grepl("^frys$", col_names_lower, ignore.case = TRUE))
-  if (length(frys_idx) > 0) {
-    frys_col <- col_names[frys_idx[1]]
-    log_debug("Name-only Frys column:", frys_col, .context = "AUTO_DETECT_FUNC")
-  }
-
-  # Kommentar-kolonne
-  kommentar_idx <- which(grepl("kommentar|comment|note|bemærk", col_names_lower, ignore.case = TRUE))
-  if (length(kommentar_idx) > 0) {
-    kommentar_col <- col_names[kommentar_idx[1]]
-    log_debug("Name-only Comment column:", kommentar_col, .context = "AUTO_DETECT_FUNC")
-  }
-
-  log_debug("Name-only mode results:", .context = "AUTO_DETECT_FUNC")
-  log_debug_kv(
-    X = ifelse(is.null(x_col), "NULL", x_col),
-    Y = ifelse(is.null(taeller_col), "NULL", taeller_col),
-    N = ifelse(is.null(naevner_col), "NULL", naevner_col),
-    Skift = ifelse(is.null(skift_col), "NULL", skift_col),
-    Frys = ifelse(is.null(frys_col), "NULL", frys_col),
-    .context = "AUTO_DETECT_FUNC"
-  )
-
-  # Opdater UI ligesom normal auto-detection
-  use_centralized_state <- !is.null(app_state)
-
-  # Gem resultater - use standard field names that visualization expects
-  auto_detected_columns <- list(
-    x_col = x_col,
-    y_col = taeller_col,  # Map taeller_col to y_col
-    n_col = naevner_col,  # Map naevner_col to n_col
-    skift_col = skift_col,
-    frys_col = frys_col,
-    kommentar_col = kommentar_col
-  )
-
-  if (use_centralized_state && !is.null(app_state)) {
-    # FIX: Use correct state path that visualization expects
-    app_state$columns$auto_detected_columns <- auto_detected_columns
-    log_debug("Synced name-only auto_detected_columns to centralized state (FIXED PATH)", .context = "PHASE4")
-  } else {
-    # PHASE 4: Use unified state management - this assignment is now handled in centralized state
-  }
-
-  # Trigger UI sync
-  col_choices <- setNames(col_names, col_names)
-  col_choices <- c("Vælg kolonne" = "", col_choices)
-
-  ui_sync_data <- list(
-    x_col = x_col,
-    taeller_col = taeller_col,
-    naevner_col = naevner_col,
-    skift_col = skift_col,
-    frys_col = frys_col,
-    kommentar_col = kommentar_col,
-    col_choices = col_choices,
-    timestamp = Sys.time()
-  )
-
-  if (use_centralized_state && !is.null(app_state)) {
-    log_debug("Setting app_state$columns$ui_sync$needed", .context = "UI_SYNC_TRIGGER")
-    log_debug("Before: app_state$columns$ui_sync$needed is", if(is.null(app_state$columns$ui_sync$needed)) "NULL" else "SET", .context = "UI_SYNC_TRIGGER")
-    app_state$columns$ui_sync$needed <- ui_sync_data
-    log_debug("After: app_state$columns$ui_sync$needed is", if(is.null(app_state$columns$ui_sync$needed)) "NULL" else "SET", .context = "UI_SYNC_TRIGGER")
-    log_debug("UI sync data keys:", paste(names(ui_sync_data), collapse = ", "), .context = "UI_SYNC_TRIGGER")
-    log_debug("Synced name-only UI sync data to centralized state", .context = "PHASE4")
-
-    # CRITICAL: Set debounce timestamp BEFORE triggering UI sync to prevent race condition
-    app_state$columns$ui_sync$last_sync_time <- Sys.time()
-    log_debug("⏰ Debounce timestamp set BEFORE UI sync (name-only mode) to prevent column mgmt override", .context = "UI_SYNC_TRIGGER")
-
-    # UNIFIED EVENT SYSTEM: UI sync is now handled by events
-    # Store results in app_state and emit ui_sync_needed event
-    app_state$columns$auto_detect_results <- list(
-      x_column = ui_sync_data$x_col,
-      y_column = ui_sync_data$taeller_col,
-      n_column = ui_sync_data$naevner_col
-    )
-    log_debug("Results stored in app_state for unified event system", .context = "UI_SYNC_UNIFIED")
-  } else {
-    # PHASE 4: Legacy path removed - now using unified state management only
-    log_debug("Using unified state management - no legacy values assignment", .context = "UI_SYNC_TRIGGER")
-  }
-
-  log_debug_block("AUTO_DETECT_FUNC", "✅ Name-only detection completed", type = "stop")
-
-  return(auto_detected_columns)
-}
+# NOTE: detect_columns_name_only function has been replaced by autodetect_engine
+# with strategy = "name_only". All production code now uses the unified autodetect_engine.
 
 ## Auto-detekter og opdater kolonner
 # Automatisk detektion af kolonnetyper baseret på data indhold
@@ -471,7 +286,13 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   # NAME-ONLY DETECTION for tomme datasaet
   if (name_only_mode) {
     autodetect_tracer$step("executing_name_only_detection")
-    result <- detect_columns_name_only(col_names, input, session, app_state)
+    # Use unified autodetect_engine instead of detect_columns_name_only
+    result <- autodetect_engine(
+      col_names = col_names,
+      strategy = "name_only",
+      app_state = app_state,
+      emit = emit
+    )
     autodetect_tracer$complete("auto_detect_name_only_complete")
     return(result)
   }

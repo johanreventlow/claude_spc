@@ -197,7 +197,16 @@ inject_dependencies <- function(func, deps, ...) {
 
 create_column_detection_service <- function() {
   list(
-    detect_by_name = function(column_names) detect_columns_name_only(column_names, NULL, NULL),
+    detect_by_name = function(column_names) {
+      # Use unified autodetect_engine instead of detect_columns_name_only
+      # Note: Requires proper app_state and emit context in actual usage
+      autodetect_engine(
+        col_names = column_names,
+        strategy = "name_only",
+        app_state = NULL,  # Should be injected in real usage
+        emit = NULL        # Should be injected in real usage
+      )
+    },
     detect_by_data = function(data) detect_columns_with_data(data),
     validate_detection = function(detection_result) validate_column_detection(detection_result)
   )
