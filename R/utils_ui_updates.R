@@ -67,18 +67,21 @@ create_ui_update_service <- function(session, app_state) {
       selected <- list()
       for (col in columns) {
         # Priority: input[[col]] > app_state$columns[[col]] > ""
-        current_val <- tryCatch({
-          if (!is.null(input[[col]]) && input[[col]] != "") {
-            input[[col]]
-          } else if (!is.null(isolate(app_state$columns[[col]]))) {
-            isolate(app_state$columns[[col]])
-          } else {
-            ""
-          }
-        }, error = function(e) {
-          log_debug(paste("Error reading", col, "from app_state:", e$message), .context = "UI_SERVICE")
-          ""
-        })
+        current_val <- safe_operation(
+          paste("Read column value for", col),
+          code = {
+            if (!is.null(input[[col]]) && input[[col]] != "") {
+              input[[col]]
+            } else if (!is.null(isolate(app_state$columns[[col]]))) {
+              isolate(app_state$columns[[col]])
+            } else {
+              ""
+            }
+          },
+          fallback = "",
+          session = session,
+          error_type = "general"
+        )
         selected[[col]] <- current_val
         log_debug(paste("Auto-read selection for", col, ":", current_val), .context = "UI_SERVICE")
       }
@@ -86,16 +89,20 @@ create_ui_update_service <- function(session, app_state) {
 
     # Update each column input using safe wrapper to prevent loops
     safe_programmatic_ui_update(session, app_state, function() {
-      tryCatch({
-        for (col in columns) {
-          selected_value <- if (!is.null(selected) && col %in% names(selected)) selected[[col]] else ""
-          updateSelectizeInput(session, col, choices = choices, selected = selected_value)
-          log_debug("Updated", col, "with selected:", selected_value, .context = "UI_SERVICE")
-        }
-        log_debug("✅ Column choices updated successfully", .context = "UI_SERVICE")
-      }, error = function(e) {
-        log_error(paste("Error updating column choices:", e$message), "UI_SERVICE")
-      })
+      safe_operation(
+        "Update column choices UI",
+        code = {
+          for (col in columns) {
+            selected_value <- if (!is.null(selected) && col %in% names(selected)) selected[[col]] else ""
+            updateSelectizeInput(session, col, choices = choices, selected = selected_value)
+            log_debug("Updated", col, "with selected:", selected_value, .context = "UI_SERVICE")
+          }
+          log_debug("✅ Column choices updated successfully", .context = "UI_SERVICE")
+        },
+        fallback = NULL,
+        session = session,
+        error_type = "processing"
+      )
     })
   }
 
