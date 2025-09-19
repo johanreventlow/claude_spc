@@ -1,0 +1,44 @@
+Package: claudespc
+Title: Statistical Process Control Application for Healthcare
+Version: 0.1.0
+Authors@R:
+    person("SPC", "Team", , "noreply@example.com", role = c("aut", "cre"))
+Description:
+    En Shiny applikation til Statistical Process Control (SPC) analyse
+    specifikt designet til brug i sundhedsvæsenet. Appen giver mulighed for
+    at uploade data, konfigurere SPC grafer og eksportere resultater til
+    kvalitetsarbejde i kliniske miljøer.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+LazyData: true
+Depends:
+    R (>= 4.0.0)
+Imports:
+    shiny (>= 1.7.0),
+    bslib (>= 0.4.0),
+    shinyjs (>= 2.1.0),
+    DT (>= 0.24),
+    dplyr (>= 1.0.0),
+    qicharts2 (>= 0.7.0),
+    readr (>= 2.0.0),
+    readxl (>= 1.4.0),
+    writexl (>= 1.4.0),
+    excelR (>= 0.4.0),
+    waiter (>= 0.2.0),
+    shinylogs (>= 0.2.0),
+    rstudioapi (>= 0.13),
+    yaml (>= 2.3.0),
+    jsonlite (>= 1.8.0),
+    tools,
+    utils,
+    grDevices,
+    graphics,
+    stats
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr

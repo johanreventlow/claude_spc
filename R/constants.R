@@ -5,32 +5,39 @@
 # APPLICATION CONFIGURATION ===================================================
 
 #' Standard port for development server
+#'
+#' Port number brugt til udvikling af Shiny applikationen.
 #' @export
 DEFAULT_PORT <- 3838
 
-#' Test mode konfiguration (defined in global.R)
-#' @export
-# TEST_MODE_AUTO_LOAD <- TRUE  # Disabled - global.R defines this
-
-#' Standard test data fil path (defined in global.R)
-#' @export
-# TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"  # Disabled - global.R defines this
+# TEST_MODE_AUTO_LOAD <- TRUE  # Defined in global.R
+# TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"  # Defined in global.R
 
 #' Auto restore funktion
+#'
+#' Bestemmer om session data automatisk skal gendannes ved app start.
 #' @export
 AUTO_RESTORE_ENABLED <- FALSE
 
 # FILE PROCESSING CONSTANTS ===================================================
 
 #' Standard encoding for Windows kompatibilitet
+#'
+#' ISO-8859-1 encoding bruges for at sikre kompatibilitet med Windows systemer
+#' og danske specialtegn i CSV filer.
 #' @export
 DEFAULT_ENCODING <- "ISO-8859-1"
 
 #' Alternative encoding for UTF-8 filer
+#'
+#' UTF-8 encoding til moderne tekst filer og internationale tegnsæt.
 #' @export
 UTF8_ENCODING <- "UTF-8"
 
 #' Standard CSV separators
+#'
+#' Liste over understøttede kolonne separatorer til CSV fil parsing.
+#' @format Named list med separator karakterer
 #' @export
 CSV_SEPARATORS <- list(
   semicolon = ";",
@@ -39,6 +46,9 @@ CSV_SEPARATORS <- list(
 )
 
 #' Standard decimal separators
+#'
+#' Liste over understøttede decimal separatorer til numerisk parsing.
+#' @format Named list med decimal separator karakterer
 #' @export
 DECIMAL_SEPARATORS <- list(
   comma = ",",
@@ -48,6 +58,9 @@ DECIMAL_SEPARATORS <- list(
 # UI LAYOUT CONSTANTS ==========================================================
 
 #' Standard kolonne bredder for UI
+#'
+#' Prædefinerede kolonne bredde kombinationer til bslib layout systemer.
+#' @format Named list med numeriske vektorer for kolonne bredder
 #' @export
 UI_COLUMN_WIDTHS <- list(
   quarter = c(6, 6, 6, 6),
@@ -57,6 +70,9 @@ UI_COLUMN_WIDTHS <- list(
 )
 
 #' Standard højder for UI komponenter
+#'
+#' CSS højde værdier til konsistent UI layout på tværs af komponenter.
+#' @format Named list med CSS højde strings
 #' @export
 UI_HEIGHTS <- list(
   logo = "40px",
@@ -67,6 +83,9 @@ UI_HEIGHTS <- list(
 )
 
 #' CSS styles constants
+#'
+#' Genbrugelige CSS style strings til konsistent styling.
+#' @format Named list med CSS style strings
 #' @export
 UI_STYLES <- list(
   flex_column = "display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;",

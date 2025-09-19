@@ -15,6 +15,11 @@ source("R/fct_spc_calculations.R")
 #'
 #' Håndterer selve plot visningen uden status elementer.
 #' Status elementer er separeret i visualizationStatusUI for modularitet.
+#'
+#' @param id Character. Namespace ID for modulet
+#' @return Shiny UI element
+#' @family visualization_modules
+#' @export
 visualizationModuleUI <- function(id) {
   ns <- NS(id)
 
@@ -43,6 +48,11 @@ visualizationModuleUI <- function(id) {
 #'
 #' Separeret fra plot UI for bedre modularitet.
 #' Håndterer value boxes og SPC metrics visning.
+#'
+#' @param id Character. Namespace ID for modulet
+#' @return Shiny UI element med value boxes
+#' @family visualization_modules
+#' @export
 visualizationStatusUI <- function(id) {
   ns <- NS(id)
 

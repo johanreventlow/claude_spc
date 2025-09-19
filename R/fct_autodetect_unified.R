@@ -12,6 +12,8 @@
 #' @param app_state Centralized app state environment
 #' @param emit Event emission functions list
 #' @return Invisibly returns detection results, primarily works via state updates
+#' @family autodetect_functions
+#' @export
 autodetect_engine <- function(data = NULL,
                               trigger_type = c("session_start", "file_upload", "manual"),
                               app_state,

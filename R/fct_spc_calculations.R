@@ -8,7 +8,13 @@ library(lubridate)
 
 # HJÆLPEFUNKTIONER ============================================================
 
-## Konverter enheds-kode til dansk label
+#' Konverter enheds-kode til dansk label
+#'
+#' @param unit_code Character. Kode for organisatorisk enhed
+#' @param unit_list Named list. Mapping mellem enheder og koder
+#' @return Character. Dansk label for enheden
+#' @family spc_helpers
+#' @export
 get_unit_label <- function(unit_code, unit_list) {
   if (is.null(unit_code) || unit_code == "") {
     return("")
@@ -28,12 +34,9 @@ get_unit_label <- function(unit_code, unit_list) {
 #'
 #' Intelligent validering og formatering af X-akse data, med automatisk
 #' detektion af dato formater og optimeret visning baseret på data interval.
-#' Håndterer både numeriske observationer og tidsserie data.
 #'
-#' @param data Data frame med SPC data
-#' @param x_col Character string med X-akse kolonne navn
-#' @param x_axis_unit Character string med X-akse enhed ("observation", "day", "week", "month", "quarter", "year")
-#'
+#' @param x_data Vector. Rå X-akse data (datoer, tal eller tekst)
+#' @return List med formateret data og metadata
 #' @details
 #' Validering proces:
 #' \enumerate{
