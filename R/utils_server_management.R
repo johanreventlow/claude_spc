@@ -168,7 +168,7 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
 
   # Clear saved handler
   observeEvent(input$clear_saved, {
-    handle_clear_saved_request(input, session, values, app_state)
+    handle_clear_saved_request(input, session, app_state, emit)
   })
 
   # Upload modal handler
@@ -326,7 +326,7 @@ handle_clear_saved_request <- function(input, session, app_state, emit) {
   }
 
   # If there IS data or settings, show confirmation dialog
-  show_clear_confirmation_modal(has_data, has_settings, values)
+  show_clear_confirmation_modal(has_data, has_settings)
 }
 
 handle_confirm_clear_saved <- function(session, app_state, emit, ui_service = NULL) {
@@ -501,7 +501,7 @@ show_upload_modal <- function() {
   ))
 }
 
-show_clear_confirmation_modal <- function(has_data, has_settings, values) {
+show_clear_confirmation_modal <- function(has_data, has_settings) {
   showModal(modalDialog(
     title = "Start ny session?",
     size = "m",
