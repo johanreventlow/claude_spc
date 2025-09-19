@@ -381,17 +381,16 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
                      if (!is.na(time_since_update)) paste("(", round(time_since_update, 2), "ms after last update)") else ""),
                .context = "LOOP_PROTECTION")
 
-      protection_active <- isolate(app_state$ui$updating_programmatically)
-
       # FREEZE-AWARE LOGGING: Observe freeze state without modification
       freeze_state <- if (!is.null(app_state$autodetect)) {
         isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
       } else { FALSE }
 
-      log_debug(paste("LOOP_PROTECTION check for", col, ": updating_programmatically =", protection_active,
+      log_debug(paste("TOKEN-BASED LOOP_PROTECTION check for", col,
                      ", autodetect frozen =", freeze_state), "DROPDOWN_DEBUG")
 
-      # TOKEN CONSUMPTION: Check for pending programmatic input tokens
+      # TOKEN CONSUMPTION: Primary and only loop protection mechanism
+      # Check for pending programmatic input tokens
       pending_token <- app_state$ui$pending_programmatic_inputs[[col]]
 
       if (!is.null(pending_token) && pending_token$value == new_value) {
@@ -399,21 +398,13 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         app_state$ui$pending_programmatic_inputs[[col]] <- NULL
         app_state$columns[[col]] <- new_value
 
-        # FASE 3: PERFORMANCE METRICS - Track token consumption
+        # PERFORMANCE METRICS: Track token consumption for monitoring
         isolate({
           app_state$ui$performance_metrics$tokens_consumed <- app_state$ui$performance_metrics$tokens_consumed + 1L
         })
 
-        log_debug(paste("Programmatic input consumed for"), "TOKEN_DEBUG")
-        return()
-      }
-
-      # LEGACY LOOP PROTECTION: Skip event emission if we're in the middle of programmatic updates
-      if (protection_active) {
-        log_debug(paste("LOOP_PROTECTION ACTIVE - Skipping event emission for"), "DROPDOWN_DEBUG")
-        log_debug(paste("Programmatic update detected - value", paste0("'", new_value, "'"), "accepted but no events emitted for", col), "DROPDOWN_DEBUG")
-        # Still update app_state to keep it synchronized, but don't emit events
-        app_state$columns[[col]] <- new_value
+        log_debug(paste("✅ TOKEN CONSUMED: Programmatic input for", col, "value", paste0("'", new_value, "'"),
+                       "- no event emitted"), "TOKEN_DEBUG")
         return()
       }
 

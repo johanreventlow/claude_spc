@@ -198,19 +198,26 @@ test_that("App initialisering og setup fungerer korrekt", {
   test_debug_log("App initialization tests completed\n")
 })
 
-test_that("Reactive values initialization fungerer", {
+test_that("Unified state system initialization fungerer", {
 
-  # Test at initialize_reactive_values eksisterer og fungerer
-  if (exists("initialize_reactive_values")) {
-    values <- initialize_reactive_values()
+  # Test at create_app_state eksisterer og fungerer (erstatter legacy initialize_reactive_values)
+  expect_true(exists("create_app_state"))
+  expect_false(exists("initialize_reactive_values"))
 
-    # Test core reactive values
-    expect_true(inherits(values, "reactivevalues"))
-    expect_false(isolate(values$file_uploaded))
-    expect_false(isolate(values$auto_detect_done))
-    expect_null(isolate(values$current_data))
-    expect_null(isolate(values$original_data))
-  }
+  # Test unified state creation
+  app_state <- create_app_state()
+
+  # Test environment structure
+  expect_true(is.environment(app_state))
+  expect_true(exists("events", envir = app_state))
+  expect_true(exists("data", envir = app_state))
+  expect_true(exists("session", envir = app_state))
+
+  # Test reactive values structure
+  expect_true(inherits(app_state$data, "reactivevalues"))
+  expect_false(isolate(app_state$session$file_uploaded))
+  expect_null(isolate(app_state$data$current_data))
+  expect_null(isolate(app_state$data$original_data))
 })
 
 # TEST SUITE 2: TEST DATA AUTO-LOAD =========================================

@@ -465,7 +465,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             }
           }
 
-          return(qic_data)
+          qic_data
         },
         fallback = function(e) {
           stop("Fejl ved qic() kald: ", e$message)
@@ -530,7 +530,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           plot <- plot + ggplot2::theme_minimal()
           log_debug("Theme added successfully", "GGPLOT_BUILD")
 
-          return(plot)
+          plot
         },
         fallback = function(e) {
           log_debug(paste("ERROR in ggplot build:", e$message), "GGPLOT_BUILD")

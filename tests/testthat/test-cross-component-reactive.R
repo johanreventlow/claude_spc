@@ -2,20 +2,18 @@
 # Tests for cross-component reactive dependencies og data flow
 
 # Source required functions
-source("../../R/utils_reactive_state.R")
 source("../../R/utils_session_helpers.R")
 source("../../R/fct_data_processing.R")
 
-context("Cross-Component Reactive Dependencies")
+# Cross-Component Reactive Dependencies Tests
 
 test_that("Reactive values initialization og structure", {
   # TEST: Core reactive values setup og initial state
 
-  # Test initialize_reactive_values function
-  if (exists("initialize_reactive_values")) {
-    # This requires Shiny context, so we'll test the structure instead
-    expect_true(exists("initialize_reactive_values"))
-  }
+  # Test unified state system (legacy initialize_reactive_values has been removed)
+  # Now we use create_app_state() for unified state management
+  expect_true(exists("create_app_state"))
+  expect_false(exists("initialize_reactive_values"))
 
   # Test manual reactive values structure (simulating what initialize_reactive_values creates)
   mock_reactive_values <- list(

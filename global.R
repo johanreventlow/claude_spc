@@ -76,11 +76,10 @@ source_from_base("R/fct_spc_helpers.R")
 source_from_base("R/fct_spc_plot_generation.R")
 source_from_base("R/fct_file_io.R")
 source_from_base("R/fct_data_validation.R")
-source_from_base("R/utils_local_storage_js.R")
+# source_from_base("R/utils_local_storage_js.R")  # Moved to www/local-storage.js
 source_from_base("R/utils_local_storage.R")
 
 # SERVER COMPONENTS - moved from runtime to global initialization
-source_from_base("R/utils_reactive_state.R")
 source_from_base("R/utils_session_helpers.R")
 source_from_base("R/utils_server_management.R")
 source_from_base("R/fct_data_processing.R")
@@ -566,10 +565,16 @@ safe_operation <- function(operation_name, code,
         )
       }
 
+      if (is.function(fallback)) {
+        return(fallback(e))
+      }
       return(fallback)
     }
   )
 }
+
+# DEVELOPMENT LOG LEVEL - Activate all DEBUG messages during development
+set_log_level_development()
 
 # REACTIVE PERFORMANCE HJÆLPEFUNKTIONER =============================
 
@@ -680,79 +685,63 @@ create_app_state <- function() {
   log_debug(paste("Environment created with address:", capture.output(print(app_state))), "CREATE_APP_STATE")
 
   # REACTIVE EVENT BUS: Central event system for all triggers
-  # Using reactiveValues for proper Shiny reactivity
+  # STREAMLINED EVENT-BUS: Reduced noise, consolidated events
   app_state$events <- reactiveValues(
-    # Data lifecycle events
-    data_loaded = 0L,
-    data_changed = 0L,
+    # DATA-LIVSCYKLUS ------------------------------------------------------
+    data_loaded = 0L,                  # Triggeres når ny data er indlæst eller uploadet
+    data_changed = 0L,                 # Triggeres ved eksplicit dataændringer
 
-    # Column detection events
+    # KOLONNEDETEKTION -----------------------------------------------------
     auto_detection_started = 0L,
     auto_detection_completed = 0L,
     columns_detected = 0L,
 
-    # UI synchronization events
+    # UI SYNKRONISERING ----------------------------------------------------
     ui_sync_needed = 0L,
     ui_sync_completed = 0L,
-
-    # Navigation events
+    ui_update_needed = 0L,
+    column_choices_changed = 0L,
     navigation_changed = 0L,
 
-    # Session lifecycle events
-    session_started = 0L,              # FASE 3: Session start trigger (name-only detection)
+    # SESSION LIVSCYKLUS ---------------------------------------------------
+    session_started = 0L,
     session_reset = 0L,
-    manual_autodetect_button = 0L,     # FASE 3: Manual trigger (bypasses frozen state)
+    manual_autodetect_button = 0L,
     test_mode_ready = 0L,
 
-    # Error handling events
-    error_occurred = 0L,           # General error event
-    validation_error = 0L,         # Input validation errors
-    processing_error = 0L,         # Data processing errors
-    network_error = 0L,           # File I/O and network errors
-    recovery_completed = 0L,      # Successful error recovery
+    # FEJL- OG GENOPRETTELSESHÅNDTERING -----------------------------------
+    error_occurred = 0L,
+    validation_error = 0L,
+    processing_error = 0L,
+    network_error = 0L,
+    recovery_completed = 0L,
 
-    # UI update events
-    ui_update_needed = 0L,        # General UI update trigger
-    column_choices_changed = 0L,  # Column choices need update
-    form_reset_needed = 0L,       # Form fields need reset
-    form_restore_needed = 0L      # Form fields need restore from metadata
+    # FORM- OG STATEHÅNDTERING --------------------------------------------
+    form_reset_needed = 0L,
+    form_restore_needed = 0L,
+    form_update_needed = 0L
   )
 
-  # Data Management - Hierarchical structure with sub-objects
+  # Data Management - Simplified unified structure
   app_state$data <- reactiveValues(
-    # Core data sub-system
-    core = reactiveValues(
-      current_data = NULL,
-      original_data = NULL,
-      processed_data = NULL,
-      backup_data = NULL
-    ),
-
-    # File metadata sub-system
-    file = reactiveValues(
-      info = NULL,
-      path = NULL,
-      encoding = NULL,
-      import_settings = NULL
-    ),
-
-    # Table operations sub-system
-    table = reactiveValues(
-      updating = FALSE,
-      operation_in_progress = FALSE,
-      operation_cleanup_needed = FALSE,
-      version = 0,
-      last_update_time = NULL
-    ),
-
-    # Legacy flat access for backward compatibility (will be phased out)
+    # Core data
     current_data = NULL,
     original_data = NULL,
+    processed_data = NULL,
+    backup_data = NULL,
+
+    # File metadata
     file_info = NULL,
+    file_path = NULL,
+    file_encoding = NULL,
+    import_settings = NULL,
+
+    # Table operations
     updating_table = FALSE,
     table_operation_in_progress = FALSE,
     table_operation_cleanup_needed = FALSE,
-    table_version = 0
+    table_version = 0,
+    last_update_time = NULL
   )
 
   # Column Management - Hierarchical structure with sub-objects
@@ -786,45 +775,29 @@ create_app_state <- function() {
     )
   )
 
-  # Session Management - Hierarchical structure with sub-objects
+  # Session Management - Simplified unified structure
   app_state$session <- reactiveValues(
-    # State management sub-system
-    state = reactiveValues(
-      auto_save_enabled = TRUE,
-      restoring_session = FALSE,
-      file_uploaded = FALSE,
-      user_started_session = FALSE
-    ),
-
-    # File tracking sub-system
-    file = reactiveValues(
-      name = NULL,
-      path = NULL,
-      last_modified = NULL,
-      size = NULL
-    ),
-
-    # Time tracking sub-system
-    timing = reactiveValues(
-      last_save_time = NULL,
-      session_start_time = NULL,
-      last_activity_time = NULL
-    ),
-
-    # Lifecycle tracking sub-system
-    lifecycle = reactiveValues(
-      session_active = TRUE,
-      cleanup_initiated = FALSE,
-      background_tasks_active = TRUE
-    ),
-
-    # Legacy flat access for backward compatibility (will be phased out)
+    # State management
     auto_save_enabled = TRUE,
     restoring_session = FALSE,
     file_uploaded = FALSE,
     user_started_session = FALSE,
+
+    # File tracking
+    file_name = NULL,
+    file_path = NULL,
+    last_modified = NULL,
+    file_size = NULL,
+
+    # Time tracking
     last_save_time = NULL,
-    file_name = NULL
+    session_start_time = NULL,
+    last_activity_time = NULL,
+
+    # Lifecycle tracking
+    session_active = TRUE,
+    cleanup_initiated = FALSE,
+    background_tasks_active = TRUE
   )
 
   # Test Mode Management
@@ -905,69 +878,34 @@ create_app_state <- function() {
   return(app_state)
 }
 
-#' Dual-State Sync Helpers
+#' Simplified State Access Helpers
 #'
-#' Helper functions to maintain consistency between hierarchical and legacy
-#' flat access patterns during migration phase
+#' Helper functions for consistent state access patterns
 #'
 #' @param app_state The app state object
 #' @param value The value to set
 #'
-#' @details
-#' These functions ensure that both the new hierarchical structure
-#' (app_state$data$core$current_data) and the legacy flat access
-#' (app_state$data$current_data) remain synchronized during the migration.
-#'
 
-# Data sync helper
+# Data helper (simplified)
 set_current_data <- function(app_state, value) {
   isolate({
-    # Set both hierarchical and legacy patterns
-    app_state$data$core$current_data <- value
-    app_state$data$current_data <- value  # Legacy compatibility
-
-    log_debug(paste("Data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "DUAL_STATE_SYNC")
+    app_state$data$current_data <- value
+    log_debug(paste("Data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
   })
 }
 
-# Original data sync helper
+# Original data helper (simplified)
 set_original_data <- function(app_state, value) {
   isolate({
-    # Set both hierarchical and legacy patterns
-    app_state$data$core$original_data <- value
-    app_state$data$original_data <- value  # Legacy compatibility
-
-    log_debug(paste("Original data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "DUAL_STATE_SYNC")
+    app_state$data$original_data <- value
+    log_debug(paste("Original data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
   })
 }
 
-# Get data with fallback
+# Get data helper (simplified)
 get_current_data <- function(app_state) {
   isolate({
-    # Prefer hierarchical, fallback to legacy
-    data <- if (!is.null(app_state$data$core$current_data)) {
-      app_state$data$core$current_data
-    } else {
-      app_state$data$current_data
-    }
-    return(data)
-  })
-}
-
-# Session state sync helper
-set_session_state <- function(app_state, key, value) {
-  isolate({
-    # Set in hierarchical structure
-    if (key %in% names(app_state$session$state)) {
-      app_state$session$state[[key]] <- value
-    }
-
-    # Set in legacy pattern if it exists
-    if (key %in% names(app_state$session)) {
-      app_state$session[[key]] <- value
-    }
-
-    log_debug(paste("Session state", key, "set to", value), "DUAL_STATE_SYNC")
+    return(app_state$data$current_data)
   })
 }
 
@@ -998,14 +936,12 @@ create_emit_api <- function(app_state) {
     data_loaded = function() {
       isolate({
         app_state$events$data_loaded <- app_state$events$data_loaded + 1L
-        log_debug(paste("data_loaded emitted:", app_state$events$data_loaded), "EVENT")
       })
     },
 
     data_changed = function() {
       isolate({
         app_state$events$data_changed <- app_state$events$data_changed + 1L
-        log_debug(paste("data_changed emitted:", app_state$events$data_changed), "EVENT")
       })
     },
 
@@ -1013,21 +949,18 @@ create_emit_api <- function(app_state) {
     auto_detection_started = function() {
       isolate({
         app_state$events$auto_detection_started <- app_state$events$auto_detection_started + 1L
-        log_debug(paste("auto_detection_started emitted:", app_state$events$auto_detection_started), "EVENT")
       })
     },
 
     auto_detection_completed = function() {
       isolate({
         app_state$events$auto_detection_completed <- app_state$events$auto_detection_completed + 1L
-        log_debug(paste("auto_detection_completed emitted:", app_state$events$auto_detection_completed), "EVENT")
       })
     },
 
     columns_detected = function() {
       isolate({
         app_state$events$columns_detected <- app_state$events$columns_detected + 1L
-        log_debug(paste("columns_detected emitted:", app_state$events$columns_detected), "EVENT")
       })
     },
 
@@ -1035,14 +968,12 @@ create_emit_api <- function(app_state) {
     ui_sync_needed = function() {
       isolate({
         app_state$events$ui_sync_needed <- app_state$events$ui_sync_needed + 1L
-        log_debug(paste("ui_sync_needed emitted:", app_state$events$ui_sync_needed), "EVENT")
       })
     },
 
     ui_sync_completed = function() {
       isolate({
         app_state$events$ui_sync_completed <- app_state$events$ui_sync_completed + 1L
-        log_debug(paste("ui_sync_completed emitted:", app_state$events$ui_sync_completed), "EVENT")
       })
     },
 
@@ -1050,7 +981,6 @@ create_emit_api <- function(app_state) {
     navigation_changed = function() {
       isolate({
         app_state$events$navigation_changed <- app_state$events$navigation_changed + 1L
-        log_debug(paste("navigation_changed emitted:", app_state$events$navigation_changed), "EVENT")
       })
     },
 
@@ -1058,28 +988,24 @@ create_emit_api <- function(app_state) {
     session_started = function() {
       isolate({
         app_state$events$session_started <- app_state$events$session_started + 1L
-        log_debug(paste("session_started emitted:", app_state$events$session_started), "EVENT")
       })
     },
 
     session_reset = function() {
       isolate({
         app_state$events$session_reset <- app_state$events$session_reset + 1L
-        log_debug(paste("session_reset emitted:", app_state$events$session_reset), "EVENT")
       })
     },
 
     manual_autodetect_button = function() {
       isolate({
         app_state$events$manual_autodetect_button <- app_state$events$manual_autodetect_button + 1L
-        log_debug(paste("manual_autodetect_button emitted:", app_state$events$manual_autodetect_button), "EVENT")
       })
     },
 
     test_mode_ready = function() {
       isolate({
         app_state$events$test_mode_ready <- app_state$events$test_mode_ready + 1L
-        log_debug(paste("test_mode_ready emitted:", app_state$events$test_mode_ready), "EVENT")
       })
     },
 
@@ -1087,35 +1013,30 @@ create_emit_api <- function(app_state) {
     error_occurred = function() {
       isolate({
         app_state$events$error_occurred <- app_state$events$error_occurred + 1L
-        log_debug(paste("error_occurred emitted:", app_state$events$error_occurred), "EVENT")
       })
     },
 
     validation_error = function() {
       isolate({
         app_state$events$validation_error <- app_state$events$validation_error + 1L
-        log_debug(paste("validation_error emitted:", app_state$events$validation_error), "EVENT")
       })
     },
 
     processing_error = function() {
       isolate({
         app_state$events$processing_error <- app_state$events$processing_error + 1L
-        log_debug(paste("processing_error emitted:", app_state$events$processing_error), "EVENT")
       })
     },
 
     network_error = function() {
       isolate({
         app_state$events$network_error <- app_state$events$network_error + 1L
-        log_debug(paste("network_error emitted:", app_state$events$network_error), "EVENT")
       })
     },
 
     recovery_completed = function() {
       isolate({
         app_state$events$recovery_completed <- app_state$events$recovery_completed + 1L
-        log_debug(paste("recovery_completed emitted:", app_state$events$recovery_completed), "EVENT")
       })
     },
 
@@ -1123,28 +1044,24 @@ create_emit_api <- function(app_state) {
     ui_update_needed = function() {
       isolate({
         app_state$events$ui_update_needed <- app_state$events$ui_update_needed + 1L
-        log_debug(paste("ui_update_needed emitted:", app_state$events$ui_update_needed), "EVENT")
       })
     },
 
     column_choices_changed = function() {
       isolate({
         app_state$events$column_choices_changed <- app_state$events$column_choices_changed + 1L
-        log_debug(paste("column_choices_changed emitted:", app_state$events$column_choices_changed), "EVENT")
       })
     },
 
     form_reset_needed = function() {
       isolate({
         app_state$events$form_reset_needed <- app_state$events$form_reset_needed + 1L
-        log_debug(paste("form_reset_needed emitted:", app_state$events$form_reset_needed), "EVENT")
       })
     },
 
     form_restore_needed = function() {
       isolate({
         app_state$events$form_restore_needed <- app_state$events$form_restore_needed + 1L
-        log_debug(paste("form_restore_needed emitted:", app_state$events$form_restore_needed), "EVENT")
       })
     }
   )

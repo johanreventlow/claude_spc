@@ -469,7 +469,8 @@ test_that("Data preprocessing functions work correctly", {
 
   # TEST: Mixed valid/invalid data
   mixed_data <- c("90,5", "invalid", "92,1")
-  converted_mixed <- test_danish_numbers(mixed_data)
+  # Suppress expected "NAs introduced by coercion" warning
+  converted_mixed <- suppressWarnings(test_danish_numbers(mixed_data))
 
   expect_true(is.numeric(converted_mixed))
   expect_equal(converted_mixed[1], 90.5)
@@ -484,6 +485,22 @@ test_that("generateSPCPlot config validation works", {
   valid_config <- list(
     x_col = "Dato",
     y_col = "Tæller",
+    n_col = "Nævner"
+  )
+
+  invalid_config <- list(
+    x_col = "Dato",
+    n_col = "Nævner"
+  )
+
+  invalid_y_config <- list(
+    x_col = "Dato",
+    y_col = character(0),
+    n_col = "Nævner"
+  )
+
+  invalid_config <- list(
+    x_col = "Dato",
     n_col = "Nævner"
   )
 
@@ -550,49 +567,18 @@ test_that("generateSPCPlot handles character(0) column inputs correctly", {
     n_col = "Nævner"
   )
 
+  invalid_config <- list(
+    x_col = "Dato",
+    n_col = "Nævner"
+  )
+
+  invalid_y_config <- list(
+    x_col = "Dato",
+    y_col = character(0),
+    n_col = "Nævner"
+  )
+
   # TEST 1: character(0) for skift_column parameter
-  expect_no_error({
-    result <- generateSPCPlot(
-      data = test_data,
-      config = valid_config,
-      chart_type = "p",
-      target_value = NULL,
-      centerline_value = NULL,
-      show_phases = TRUE,
-      skift_column = character(0), # This should not cause "argument is of length zero"
-      frys_column = NULL
-    )
-  })
-
-  # TEST 2: character(0) for frys_column parameter
-  expect_no_error({
-    result <- generateSPCPlot(
-      data = test_data,
-      config = valid_config,
-      chart_type = "p",
-      target_value = NULL,
-      centerline_value = NULL,
-      show_phases = FALSE,
-      skift_column = NULL,
-      frys_column = character(0) # This should not cause "argument is of length zero"
-    )
-  })
-
-  # TEST 3: Both parameters as character(0)
-  expect_no_error({
-    result <- generateSPCPlot(
-      data = test_data,
-      config = valid_config,
-      chart_type = "p",
-      target_value = NULL,
-      centerline_value = NULL,
-      show_phases = TRUE,
-      skift_column = character(0),
-      frys_column = character(0)
-    )
-  })
-
-  # TEST 4: Verify that the function still produces valid output
   result <- generateSPCPlot(
     data = test_data,
     config = valid_config,
@@ -609,6 +595,21 @@ test_that("generateSPCPlot handles character(0) column inputs correctly", {
   expect_true("qic_data" %in% names(result))
   expect_true(inherits(result$plot, "ggplot"))
   expect_true(is.data.frame(result$qic_data))
+
+  expect_error(
+    generateSPCPlot(
+      data = test_data,
+      config = invalid_y_config,
+      chart_type = "p",
+      target_value = NULL,
+      centerline_value = NULL,
+      show_phases = TRUE,
+      skift_column = "Skift",
+      frys_column = "Frys"
+    ),
+    "Y-kolonne kan ikke være character(0)",
+    fixed = TRUE
+  )
 
   # TEST 5: Verify that valid column names still work after fix
   result_with_valid_columns <- generateSPCPlot(

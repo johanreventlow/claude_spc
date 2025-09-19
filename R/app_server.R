@@ -7,11 +7,7 @@
 #' 
 #' @noRd
 app_server <- function(input, output, session) {
-  log_info("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀", "APP_SERVER")
-  log_info("🚀🚀🚀 APP_SERVER FUNCTION CALLED!!! SESSION START!!! 🚀🚀🚀", "APP_SERVER")
-  log_info("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀", "APP_SERVER")
-  log_debug("🚀🚀🚀 APP_SERVER FUNCTION CALLED 🚀🚀🚀", "APP_SERVER")
-  log_debug("===========================================", "APP_SERVER")
+  log_info("SPC App server initialization started", "APP_SERVER")
 
   # Initialize advanced debug system
   initialize_advanced_debug(enable_history = TRUE, max_history_entries = 1000)
@@ -152,7 +148,10 @@ app_server <- function(input, output, session) {
       # Recursive cleanup scheduler
       schedule_periodic_cleanup <- function() {
         # Check if session is still active before continuing
-        if (!app_state$session$lifecycle$session_active || !app_state$session$lifecycle$background_tasks_active) {
+        session_check <- isolate({
+          !app_state$session$lifecycle$session_active || !app_state$session$lifecycle$background_tasks_active
+        })
+        if (session_check) {
           log_debug("🧹 Stopping periodic cleanup - session ended", "BACKGROUND_CLEANUP")
           return()
         }
@@ -172,7 +171,10 @@ app_server <- function(input, output, session) {
         )
 
         # Schedule next cleanup only if session is still active
-        if (app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active) {
+        should_continue <- isolate({
+          app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active
+        })
+        if (should_continue) {
           later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
         }
       }
@@ -193,7 +195,10 @@ app_server <- function(input, output, session) {
       # Recursive performance reporting
       schedule_periodic_reporting <- function() {
         # Check if session is still active before continuing
-        if (!app_state$session$lifecycle$session_active || !app_state$session$lifecycle$background_tasks_active) {
+        session_check <- isolate({
+          !app_state$session$lifecycle$session_active || !app_state$session$lifecycle$background_tasks_active
+        })
+        if (session_check) {
           log_debug("📊 Stopping periodic reporting - session ended", "PERFORMANCE_MONITOR")
           return()
         }
@@ -221,7 +226,10 @@ app_server <- function(input, output, session) {
         )
 
         # Schedule next report only if session is still active
-        if (app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active) {
+        should_continue <- isolate({
+          app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active
+        })
+        if (should_continue) {
           later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
         }
       }
@@ -297,7 +305,7 @@ app_server <- function(input, output, session) {
           app_state$session$file_uploaded <- TRUE
           app_state$session$user_started_session <- TRUE
           # Reset auto-detection state
-          app_state$columns$auto_detect$completed <- FALSE
+          isolate(app_state$columns$auto_detect$completed <- FALSE)
           # Legacy assignments removed - managed by unified state
           app_state$ui$hide_anhoej_rules <- FALSE
 
@@ -408,12 +416,14 @@ app_server <- function(input, output, session) {
     debug_log("Session cleanup initiated", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
 
     # Stop background tasks immediately
-    if (!is.null(app_state$session$lifecycle)) {
-      app_state$session$lifecycle$session_active <- FALSE
-      app_state$session$lifecycle$background_tasks_active <- FALSE
-      app_state$session$lifecycle$cleanup_initiated <- TRUE
-      log_debug("🔄 Background tasks stopped", "SESSION_LIFECYCLE")
-    }
+    isolate({
+      if (!is.null(app_state$session$lifecycle)) {
+        app_state$session$lifecycle$session_active <- FALSE
+        app_state$session$lifecycle$background_tasks_active <- FALSE
+        app_state$session$lifecycle$cleanup_initiated <- TRUE
+        log_debug("🔄 Background tasks stopped", "SESSION_LIFECYCLE")
+      }
+    })
 
     # Cleanup alle observers
     obs_manager$cleanup_all()

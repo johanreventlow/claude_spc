@@ -248,16 +248,6 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     emit$navigation_changed()
     log_debug("EXCEL_READ: navigation_changed event emitted", "EXCEL_READ")
 
-    # EVENT SYSTEM: Emit data_loaded event
-    if (!is.null(emit)) {
-      log_debug("🔥 EVENT SYSTEM: Emitting data_loaded event", .context = "EXCEL_UPLOAD")
-      emit$data_loaded()
-      log_debug("✅ data_loaded event emitted successfully", .context = "EXCEL_UPLOAD")
-      log_debug("✅ Data loaded event emitted", "EXCEL_READ")
-    } else {
-      log_debug("⚠️ No emit API available - data loaded but no event triggered", .context = "EXCEL_UPLOAD")
-      log_debug("⚠️ No emit API available for event triggering", "EXCEL_READ")
-    }
 
     showNotification(
       paste("Excel fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
@@ -444,17 +434,6 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
 
   # ROBUST AUTO-DETECT: Enhanced auto-detection triggering with validation
   log_debug("Setting auto-detect trigger with validation...", "CSV_READ")
-
-  # EVENT SYSTEM: Emit data_loaded event
-  if (!is.null(emit)) {
-    log_debug("🔥 EVENT SYSTEM: Emitting data_loaded event", .context = "FILE_UPLOAD")
-    emit$data_loaded()
-    log_debug("✅ data_loaded event emitted successfully", .context = "FILE_UPLOAD")
-    log_debug("✅ Data loaded event emitted", "CSV_READ")
-  } else {
-    log_debug("⚠️ No emit API available - data loaded but no event triggered", .context = "FILE_UPLOAD")
-    log_debug("⚠️ No emit API available for event triggering", "CSV_READ")
-  }
 
   debug_log("Data loaded event emitted successfully", "FILE_UPLOAD_FLOW", level = "INFO",
             context = list(

@@ -45,6 +45,9 @@ wait_for_app_ready <- function(app, timeout = 10) {
 create_test_app_state <- function() {
   state <- new.env(parent = emptyenv())
 
+  # Minimal event struktur til unit tests uden fuld Shiny state
+  state$events <- new.env(parent = emptyenv())
+
   state$autodetect <- new.env(parent = emptyenv())
   state$autodetect$frozen_until_next_trigger <- FALSE
   state$autodetect$last_run <- NULL
@@ -86,4 +89,42 @@ create_test_app_state <- function() {
   )
 
   state
+}
+
+# Hjælpefunktion til at sikre at alle nødvendige event-tællere findes
+ensure_event_counters <- function(app_state, required_events = NULL) {
+  if (is.null(required_events)) {
+    required_events <- c(
+      "data_loaded", "data_changed",
+      "auto_detection_started", "auto_detection_completed", "columns_detected",
+      "ui_sync_needed", "ui_sync_completed", "ui_update_needed",
+      "navigation_changed",
+      "session_started", "session_reset", "manual_autodetect_button",
+      "test_mode_ready",
+      "error_occurred", "validation_error", "processing_error",
+      "network_error", "recovery_completed",
+      "column_choices_changed",
+      "form_reset_needed", "form_restore_needed", "form_update_needed"
+    )
+  }
+
+  for (event_name in required_events) {
+    current_value <- tryCatch(
+      isolate(app_state$events[[event_name]]),
+      error = function(...) NULL
+    )
+
+    if (is.null(current_value)) {
+      app_state$events[[event_name]] <- 0L
+    }
+  }
+
+  app_state
+}
+
+# Fuldt initialiseret app_state til integrationstests
+create_test_ready_app_state <- function() {
+  app_state <- create_app_state()
+  ensure_event_counters(app_state)
+  app_state
 }

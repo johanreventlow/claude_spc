@@ -5,7 +5,7 @@
 # SETUP FUNCTION ===========================================================
 
 setup_test_app_state <- function() {
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
 
   # Load test data
   test_data <- data.frame(

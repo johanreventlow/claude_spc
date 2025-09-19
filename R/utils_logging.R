@@ -329,3 +329,47 @@ log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
   
   invisible(NULL)
 }
+
+#' Convenience functions for common log level configurations
+#'
+#' @description
+#' Helper functions to easily switch between development and production
+#' log level configurations. These set the `SPC_LOG_LEVEL` environment
+#' variable for the current R session.
+#'
+#' @return invisible(NULL). The environment variable is set as a side effect.
+#' @export
+#'
+#' @examples
+#' set_log_level_development()  # Enables all DEBUG messages
+#' set_log_level_production()   # Only WARN and ERROR in production
+#' set_log_level_quiet()        # Only ERROR messages
+set_log_level_development <- function() {
+  Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+  cat("[LOG_CONFIG] Log level set to DEBUG (development mode)\n")
+  invisible(NULL)
+}
+
+#' @rdname set_log_level_development
+#' @export
+set_log_level_production <- function() {
+  Sys.setenv(SPC_LOG_LEVEL = "WARN")
+  cat("[LOG_CONFIG] Log level set to WARN (production mode)\n")
+  invisible(NULL)
+}
+
+#' @rdname set_log_level_development
+#' @export
+set_log_level_quiet <- function() {
+  Sys.setenv(SPC_LOG_LEVEL = "ERROR")
+  cat("[LOG_CONFIG] Log level set to ERROR (quiet mode)\n")
+  invisible(NULL)
+}
+
+#' @rdname set_log_level_development
+#' @export
+set_log_level_info <- function() {
+  Sys.setenv(SPC_LOG_LEVEL = "INFO")
+  cat("[LOG_CONFIG] Log level set to INFO (standard mode)\n")
+  invisible(NULL)
+}

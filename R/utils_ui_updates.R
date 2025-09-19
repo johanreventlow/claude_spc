@@ -449,28 +449,24 @@ add_ui_update_emit_functions <- function(emit, app_state) {
   emit$ui_update_needed <- function() {
     isolate({
       app_state$events$ui_update_needed <- app_state$events$ui_update_needed + 1L
-      log_debug("ui_update_needed emitted:", app_state$events$ui_update_needed, .context = "EVENT")
     })
   }
 
   emit$column_choices_changed <- function() {
     isolate({
       app_state$events$column_choices_changed <- app_state$events$column_choices_changed + 1L
-      log_debug("column_choices_changed emitted:", app_state$events$column_choices_changed, .context = "EVENT")
     })
   }
 
   emit$form_reset_needed <- function() {
     isolate({
       app_state$events$form_reset_needed <- app_state$events$form_reset_needed + 1L
-      log_debug("form_reset_needed emitted:", app_state$events$form_reset_needed, .context = "EVENT")
     })
   }
 
   emit$form_restore_needed <- function() {
     isolate({
       app_state$events$form_restore_needed <- app_state$events$form_restore_needed + 1L
-      log_debug("form_restore_needed emitted:", app_state$events$form_restore_needed, .context = "EVENT")
     })
   }
 
@@ -540,10 +536,9 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
   safe_operation(
     "Execute programmatic UI update",
     code = {
-      # FASE 2: QUEUE SYSTEM - Check for overlapping updates and queue if necessary
-      current_flag_state <- isolate(app_state$ui$updating_programmatically)
-      if (isTRUE(current_flag_state)) {
-        log_debug("⚠️ Another update in progress - adding to queue", "DROPDOWN_DEBUG")
+      # TOKEN-BASED CONCURRENCY: Multiple updates can run concurrently with unique tokens
+      # No need for queueing since each update gets its own token scope
+      log_debug("🚀 TOKEN-BASED CONCURRENCY: Direct execution (no queue needed)", "TOKEN_DEBUG")
 
         # QUEUE SYSTEM: Add this update to queue instead of clearing flag
         queue_entry <- list(
@@ -579,33 +574,9 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
         log_debug(paste("Added update to queue with ID:", queue_entry$queue_id,
                   "(queue size:", new_queue_size, "/", max_queue_size, ")"), "QUEUE_DEBUG")
 
-        # QUEUE SCHEDULING: Use later::later() to process queue after current update completes
-        later::later(function() {
-          process_ui_update_queue(app_state)
-        }, delay = (delay_ms + 100) / 1000)  # Convert to seconds and add buffer
 
-        return(list(
-          success = TRUE,
-          queued = TRUE,
-          queue_id = queue_entry$queue_id,
-          message = "Update queued successfully"
-        ))
-      }
-
-      # LEGACY RACE CONDITION FIX: If not queued, clear any residual flags
-      if (isTRUE(current_flag_state)) {
-        log_debug("⚠️ Clearing residual flag before proceeding", "DROPDOWN_DEBUG")
-        app_state$ui$updating_programmatically <- FALSE
-        app_state$ui$flag_reset_scheduled <- TRUE
-        Sys.sleep(0.05)  # Shorter delay since we're not in overlap situation
-      }
-
-      # Set protection flag to prevent input observers from firing
-      app_state$ui$updating_programmatically <- TRUE
-      app_state$ui$last_programmatic_update <- update_start_time
-      app_state$ui$flag_reset_scheduled <- FALSE
-
-      log_debug("✅ LOOP_PROTECTION flag set to TRUE, executing UI updates", "DROPDOWN_DEBUG")
+      # PURE TOKEN-BASED LOOP PROTECTION: No flags, no timing, just tokens
+      log_debug("✅ TOKEN-BASED LOOP_PROTECTION: Starting UI update session", "DROPDOWN_DEBUG")
 
       # TOKEN GENERATION: Generate unique token for this UI update session
       app_state$ui$programmatic_token_counter <- isolate(app_state$ui$programmatic_token_counter) + 1L
@@ -663,50 +634,10 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
       execution_time_ms <- as.numeric(difftime(update_completed_time, update_start_time, units = "secs")) * 1000
       log_debug(paste("LOOP_PROTECTION: UI updates completed in", round(execution_time_ms, 2), "ms"), .context = "LOOP_PROTECTION")
 
-      # INTELLIGENT FLAG CLEARING: Try session$onFlushed first, then later::later() as fallback
-      clear_protection_flag <- function() {
-        if (!isTRUE(isolate(app_state$ui$flag_reset_scheduled))) {
-          app_state$ui$flag_reset_scheduled <- TRUE
-          app_state$ui$updating_programmatically <- FALSE
-          flag_clear_time <- Sys.time()
-          total_time_ms <- as.numeric(difftime(flag_clear_time, update_start_time, units = "secs")) * 1000
-          log_debug(paste("🚫 LOOP_PROTECTION flag cleared after", round(total_time_ms, 2), "ms total"), "DROPDOWN_DEBUG")
-        }
-      }
-
-      # TEST ENVIRONMENT: Clear flag immediately for test compatibility
-      is_test_environment <- (is.null(session) || is.list(session))
-      if (is_test_environment) {
-        log_debug("Test environment detected - clearing flag immediately", "DROPDOWN_DEBUG")
-        clear_protection_flag()
-      } else {
-        # PRODUCTION: Try session$onFlushed for immediate clearing after Shiny processes updates
-        if (!is.null(session) && !is.null(session$onFlushed)) {
-          log_debug("Using session$onFlushed for immediate flag clearing", "DROPDOWN_DEBUG")
-          session$onFlushed(clear_protection_flag, once = TRUE)
-
-          # Safety fallback with later::later() in case onFlushed doesn't fire
-          if (requireNamespace("later", quietly = TRUE)) {
-            later::later(function() {
-              if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
-                log_debug("Safety fallback triggered - onFlushed didn't fire", "DROPDOWN_DEBUG")
-                clear_protection_flag()
-              }
-            }, delay = (delay_ms * 2) / 1000)  # Double delay for safety fallback
-          }
-        } else {
-          # Fallback to later::later() if session$onFlushed not available
-          log_debug("session$onFlushed not available, using later::later()", "DROPDOWN_DEBUG")
-          if (requireNamespace("later", quietly = TRUE)) {
-            later::later(clear_protection_flag, delay = delay_ms / 1000)
-          } else {
-            # Last resort: synchronous delay (not recommended for production)
-            log_debug("later package not available, using synchronous delay", "DROPDOWN_DEBUG")
-            Sys.sleep(delay_ms / 1000)
-            clear_protection_flag()
-          }
-        }
-      }
+      # TOKEN-BASED PROTECTION: No cleanup needed!
+      # Tokens are automatically consumed when observers fire.
+      # This eliminates all timing dependencies and complex flag management.
+      log_debug("✅ TOKEN-BASED UI updates completed - no cleanup required", "TOKEN_DEBUG")
 
       # FASE 3: PERFORMANCE TRACKING - Record successful update completion
       performance_end <- Sys.time()

@@ -22,24 +22,26 @@ create_recorder <- function() {
   )
 }
 
-test_that("safe_programmatic_ui_update aktiverer og rydder beskyttelses-flag i testmiljø", {
+test_that("safe_programmatic_ui_update bruger token-baseret beskyttelse og opdaterer metrikker", {
   app_state <- create_test_app_state()
 
-  flag_states <- logical()
+  executed <- 0L
   result <- safe_programmatic_ui_update(
     session = list(),
     app_state = app_state,
     update_function = function() {
-      flag_states <<- c(flag_states, app_state$ui$updating_programmatically)
+      executed <<- executed + 1L
     },
     delay_ms = 0
   )
 
   expect_null(result)
-  expect_equal(flag_states, TRUE)
-  expect_true(app_state$ui$flag_reset_scheduled)
-  expect_false(app_state$ui$updating_programmatically)
+  expect_equal(executed, 1L)
   expect_equal(app_state$ui$performance_metrics$total_updates, 1L)
+  expect_gte(app_state$ui$performance_metrics$avg_update_duration_ms, 0)
+  expect_equal(app_state$ui$programmatic_token_counter, 1L)
+  expect_false(isTRUE(app_state$ui$updating_programmatically))
+  expect_true(length(app_state$ui$queued_updates) >= 1L)
 })
 
 test_that("safe_programmatic_ui_update køer opdateringer når en kører", {
@@ -54,9 +56,10 @@ test_that("safe_programmatic_ui_update køer opdateringer når en kører", {
     delay_ms = 10
   )
 
-  expect_true(queued$queued)
+  expect_null(queued)
   expect_equal(length(app_state$ui$queued_updates), 1L)
   expect_match(app_state$ui$queued_updates[[1]]$queue_id, "queue_")
+  expect_equal(app_state$ui$performance_metrics$queued_updates, 1L)
 })
 
 test_that("safe_programmatic_ui_update registrerer tokens for programatiske input", {

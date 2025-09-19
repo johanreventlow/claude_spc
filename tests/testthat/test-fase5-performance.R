@@ -5,7 +5,7 @@
 source("../../R/utils_performance.R")
 source("../../R/utils_memory_management.R")
 
-context("Fase 5 Performance Optimization Tests")
+# Fase 5 Performance Optimization Tests
 
 test_that("Performance utilities load correctly", {
   # TEST: Utilities are available

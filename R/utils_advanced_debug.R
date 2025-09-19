@@ -99,9 +99,20 @@ debug_log <- function(message, category, level = "DEBUG", context = NULL,
     log_parts$context <- context_str
   }
 
-  # Output log entry
-  log_entry <- paste(log_parts, collapse = " ")
-  cat(log_entry, "\n")
+  # VERBOSE LOGGING FILTER: Respect debug mode settings
+  # TRACE level requires explicit SHINY_DEBUG_MODE=TRUE
+  # INFO and above always shown for important state changes
+  should_log <- TRUE
+  if (level == "TRACE") {
+    debug_mode <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
+    should_log <- debug_mode
+  }
+
+  # Output log entry only if allowed by filter
+  if (should_log) {
+    log_entry <- paste(log_parts, collapse = " ")
+    cat(log_entry, "\n")
+  }
 
   # Store in global debug history if enabled
   if (exists("GLOBAL_DEBUG_HISTORY", envir = .GlobalEnv)) {
@@ -620,14 +631,18 @@ initialize_advanced_debug <- function(enable_history = TRUE, max_history_entries
 
   debug_log("Advanced debug system initialized", "SESSION_LIFECYCLE", level = "INFO")
 
-  log_info("=== ADVANCED DEBUG SYSTEM ACTIVE ===", "ADVANCED_DEBUG")
-  log_info("Available utilities:", "ADVANCED_DEBUG")
-  log_info("- debug_log()              Enhanced logging med categories", "ADVANCED_DEBUG")
-  log_info("- debug_state_snapshot()   State inspection og comparison", "ADVANCED_DEBUG")
-  log_info("- debug_performance_timer() High-precision operation timing", "ADVANCED_DEBUG")
-  log_info("- debug_workflow_tracer()   End-to-end workflow tracking", "ADVANCED_DEBUG")
-  log_info("- debug_session_lifecycle() Session creation → cleanup tracking", "ADVANCED_DEBUG")
-  log_info("=====================================", "ADVANCED_DEBUG")
+  # REDUCED NOISE: Only show debug system banner if verbose debugging enabled
+  debug_mode <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
+  if (debug_mode) {
+    log_info("=== ADVANCED DEBUG SYSTEM ACTIVE ===", "ADVANCED_DEBUG")
+    log_info("Available utilities:", "ADVANCED_DEBUG")
+    log_info("- debug_log()              Enhanced logging med categories", "ADVANCED_DEBUG")
+    log_info("- debug_state_snapshot()   State inspection og comparison", "ADVANCED_DEBUG")
+    log_info("- debug_performance_timer() High-precision operation timing", "ADVANCED_DEBUG")
+    log_info("- debug_workflow_tracer()   End-to-end workflow tracking", "ADVANCED_DEBUG")
+    log_info("- debug_session_lifecycle() Session creation → cleanup tracking", "ADVANCED_DEBUG")
+    log_info("=====================================", "ADVANCED_DEBUG")
+  }
 }
 
 # NULL-safe operator for backward compatibility

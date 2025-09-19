@@ -405,7 +405,13 @@ validate_spc_inputs <- function(data, config) {
     stop("Ingen gyldig data at visualisere")
   }
 
-  if (is.null(config$y_col) || !config$y_col %in% names(data)) {
+  if (is.null(config$y_col) || length(config$y_col) == 0 || identical(config$y_col, character(0))) {
+    stop("Y-kolonne kan ikke være character(0)")
+  }
+
+  y_col <- config$y_col[[1]]
+
+  if (!y_col %in% names(data)) {
     stop("Y-kolonne ikke fundet i data")
   }
 }

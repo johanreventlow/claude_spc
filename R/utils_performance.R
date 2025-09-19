@@ -207,8 +207,7 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session
     "Check reactive context",
     code = {
       # Try to get current reactive domain
-      getCurrentDomain <- getFromNamespace("getCurrentDomain", "shiny")
-      domain <- getCurrentDomain()
+      domain <- shiny::getDefaultReactiveDomain()
       !is.null(domain)
     },
     fallback = function(e) {
@@ -291,8 +290,7 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
     "Check reactive context for debounce",
     code = {
       # Try to get current reactive domain
-      getCurrentDomain <- getFromNamespace("getCurrentDomain", "shiny")
-      domain <- getCurrentDomain()
+      domain <- shiny::getDefaultReactiveDomain()
       !is.null(domain)
     },
     fallback = function(e) {

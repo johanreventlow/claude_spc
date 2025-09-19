@@ -456,12 +456,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Toggle visibility using shinyjs
       if (show_plot) {
         log_debug("✅ Showing plot, hiding messages", .context = "PLOT_VISIBILITY")
-        shinyjs::show("spc_plot_actual")
-        shinyjs::hide("message_overlay")
+        shinyjs::show(ns("spc_plot_actual"))
+        shinyjs::hide(ns("message_overlay"))
       } else {
         log_debug("❌ Hiding plot, showing messages", .context = "PLOT_VISIBILITY")
-        shinyjs::hide("spc_plot_actual")
-        shinyjs::show("message_overlay")
+        shinyjs::hide(ns("spc_plot_actual"))
+        shinyjs::show(ns("message_overlay"))
       }
     }, priority = OBSERVER_PRIORITIES$medium)
 
@@ -528,11 +528,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             }
             return(NULL)
           },
-          error_type = "processing",
-          finally = function() {
-            log_debug("Pure function approach completed", "RENDER_PLOT")
-          }
+          error_type = "processing"
         )
+        log_debug("Pure function approach completed", "RENDER_PLOT")
         log_debug(paste("Data reactive result:", !is.null(data)), "RENDER_PLOT")
 
         if (is.null(data)) {

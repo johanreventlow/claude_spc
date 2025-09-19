@@ -4,7 +4,7 @@
 
 test_that("session_started trigger fungerer for name-only detection", {
   # SETUP: Mock app_state and emit API
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   emit <- create_emit_api(app_state)
 
   # TEST: session_started trigger should work without data
@@ -18,7 +18,7 @@ test_that("session_started trigger fungerer for name-only detection", {
 
 test_that("manual_autodetect_button trigger bypasser frozen state", {
   # SETUP: Create app_state with test data and freeze it
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   set_current_data(app_state, data.frame(
     Dato = c("01-01-2024", "02-01-2024", "03-01-2024"),
     Tæller = c(90, 85, 92),
@@ -61,7 +61,7 @@ test_that("manual_autodetect_button trigger bypasser frozen state", {
 
 test_that("data_loaded event unfreezer autodetect systemet", {
   # SETUP: Create frozen app_state
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   app_state$autodetect$frozen_until_next_trigger <- TRUE
   emit <- create_emit_api(app_state)
 
@@ -82,7 +82,7 @@ test_that("data_loaded event unfreezer autodetect systemet", {
 
 test_that("trigger isolation fungerer korrekt", {
   # SETUP: Create test environment
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   emit <- create_emit_api(app_state)
 
   # TEST: Each trigger should have independent event counters
@@ -106,7 +106,7 @@ test_that("trigger isolation fungerer korrekt", {
 
 test_that("frozen state metadata gemmes korrekt", {
   # SETUP: Create app_state with test data
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   test_data <- data.frame(
     Dato = c("01-01-2024", "02-01-2024"),
     Tæller = c(90, 85),
@@ -137,7 +137,7 @@ test_that("frozen state metadata gemmes korrekt", {
 
 test_that("session_start trigger virker uden data", {
   # SETUP: Create app_state without data
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   set_current_data(app_state, NULL)
   emit <- create_emit_api(app_state)
 
@@ -158,7 +158,7 @@ test_that("session_start trigger virker uden data", {
 
 test_that("error handling i event-driven architecture", {
   # SETUP: Create app_state with invalid data
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   emit <- create_emit_api(app_state)
 
   # TEST: Invalid trigger type should fail gracefully
@@ -194,7 +194,7 @@ test_that("error handling i event-driven architecture", {
 
 test_that("event flow konsistens mellem triggers", {
   # SETUP: Create app_state with standard test data
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   test_data <- data.frame(
     Dato = c("01-01-2024", "02-01-2024", "03-01-2024"),
     Tæller = c(90, 85, 92),
@@ -231,7 +231,7 @@ test_that("event flow konsistens mellem triggers", {
 
 test_that("performance ved gentagne trigger calls", {
   # SETUP: Create app_state with large dataset simulation
-  app_state <- create_app_state()
+  app_state <- create_test_ready_app_state()
   large_data <- data.frame(
     Dato = rep(c("01-01-2024", "02-01-2024"), 500),
     Tæller = rep(c(90, 85), 500),

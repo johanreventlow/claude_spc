@@ -1,7 +1,7 @@
 # test-scoping-debug.R
 # Test for at forstå R scoping problem
 
-context("R Scoping Debug")
+# R Scoping Debug Tests
 
 test_that("R list modification scoping test", {
   # TEST: Verificer hvordan R håndterer list modification
