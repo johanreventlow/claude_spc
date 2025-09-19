@@ -595,14 +595,14 @@ initialize_advanced_debug <- function(enable_history = TRUE, max_history_entries
 
   debug_log("Advanced debug system initialized", "SESSION_LIFECYCLE", level = "INFO")
 
-  cat("=== ADVANCED DEBUG SYSTEM ACTIVE ===\n")
-  cat("Available utilities:\n")
-  cat("- debug_log()              Enhanced logging med categories\n")
-  cat("- debug_state_snapshot()   State inspection og comparison\n")
-  cat("- debug_performance_timer() High-precision operation timing\n")
-  cat("- debug_workflow_tracer()   End-to-end workflow tracking\n")
-  cat("- debug_session_lifecycle() Session creation → cleanup tracking\n")
-  cat("=====================================\n")
+  log_info("=== ADVANCED DEBUG SYSTEM ACTIVE ===", "ADVANCED_DEBUG")
+  log_info("Available utilities:", "ADVANCED_DEBUG")
+  log_info("- debug_log()              Enhanced logging med categories", "ADVANCED_DEBUG")
+  log_info("- debug_state_snapshot()   State inspection og comparison", "ADVANCED_DEBUG")
+  log_info("- debug_performance_timer() High-precision operation timing", "ADVANCED_DEBUG")
+  log_info("- debug_workflow_tracer()   End-to-end workflow tracking", "ADVANCED_DEBUG")
+  log_info("- debug_session_lifecycle() Session creation → cleanup tracking", "ADVANCED_DEBUG")
+  log_info("=====================================", "ADVANCED_DEBUG")
 }
 
 # NULL-safe operator for backward compatibility

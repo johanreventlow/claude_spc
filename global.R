@@ -650,7 +650,7 @@ create_app_state <- function() {
   # CRITICAL FIX: Environment passes by reference, solving scope isolation
   app_state <- new.env(parent = emptyenv())
 
-  cat("DEBUG: [CREATE_APP_STATE] Environment created with address:", capture.output(print(app_state)), "\n")
+  log_debug(paste("Environment created with address:", capture.output(print(app_state))), "CREATE_APP_STATE")
 
   # REACTIVE EVENT BUS: Central event system for all triggers
   # Using reactiveValues for proper Shiny reactivity
@@ -905,14 +905,14 @@ create_emit_api <- function(app_state) {
     data_loaded = function() {
       isolate({
         app_state$events$data_loaded <- app_state$events$data_loaded + 1L
-        cat("DEBUG: [EVENT] data_loaded emitted:", app_state$events$data_loaded, "\n")
+        log_debug(paste("data_loaded emitted:", app_state$events$data_loaded), "EVENT")
       })
     },
 
     data_changed = function() {
       isolate({
         app_state$events$data_changed <- app_state$events$data_changed + 1L
-        cat("DEBUG: [EVENT] data_changed emitted:", app_state$events$data_changed, "\n")
+        log_debug(paste("data_changed emitted:", app_state$events$data_changed), "EVENT")
       })
     },
 
@@ -920,21 +920,21 @@ create_emit_api <- function(app_state) {
     auto_detection_started = function() {
       isolate({
         app_state$events$auto_detection_started <- app_state$events$auto_detection_started + 1L
-        cat("DEBUG: [EVENT] auto_detection_started emitted:", app_state$events$auto_detection_started, "\n")
+        log_debug(paste("auto_detection_started emitted:", app_state$events$auto_detection_started), "EVENT")
       })
     },
 
     auto_detection_completed = function() {
       isolate({
         app_state$events$auto_detection_completed <- app_state$events$auto_detection_completed + 1L
-        cat("DEBUG: [EVENT] auto_detection_completed emitted:", app_state$events$auto_detection_completed, "\n")
+        log_debug(paste("auto_detection_completed emitted:", app_state$events$auto_detection_completed), "EVENT")
       })
     },
 
     columns_detected = function() {
       isolate({
         app_state$events$columns_detected <- app_state$events$columns_detected + 1L
-        cat("DEBUG: [EVENT] columns_detected emitted:", app_state$events$columns_detected, "\n")
+        log_debug(paste("columns_detected emitted:", app_state$events$columns_detected), "EVENT")
       })
     },
 
@@ -942,14 +942,14 @@ create_emit_api <- function(app_state) {
     ui_sync_needed = function() {
       isolate({
         app_state$events$ui_sync_needed <- app_state$events$ui_sync_needed + 1L
-        cat("DEBUG: [EVENT] ui_sync_needed emitted:", app_state$events$ui_sync_needed, "\n")
+        log_debug(paste("ui_sync_needed emitted:", app_state$events$ui_sync_needed), "EVENT")
       })
     },
 
     ui_sync_completed = function() {
       isolate({
         app_state$events$ui_sync_completed <- app_state$events$ui_sync_completed + 1L
-        cat("DEBUG: [EVENT] ui_sync_completed emitted:", app_state$events$ui_sync_completed, "\n")
+        log_debug(paste("ui_sync_completed emitted:", app_state$events$ui_sync_completed), "EVENT")
       })
     },
 
@@ -957,7 +957,7 @@ create_emit_api <- function(app_state) {
     navigation_changed = function() {
       isolate({
         app_state$events$navigation_changed <- app_state$events$navigation_changed + 1L
-        cat("DEBUG: [EVENT] navigation_changed emitted:", app_state$events$navigation_changed, "\n")
+        log_debug(paste("navigation_changed emitted:", app_state$events$navigation_changed), "EVENT")
       })
     },
 
@@ -965,28 +965,28 @@ create_emit_api <- function(app_state) {
     session_started = function() {
       isolate({
         app_state$events$session_started <- app_state$events$session_started + 1L
-        cat("DEBUG: [EVENT] session_started emitted:", app_state$events$session_started, "\n")
+        log_debug(paste("session_started emitted:", app_state$events$session_started), "EVENT")
       })
     },
 
     session_reset = function() {
       isolate({
         app_state$events$session_reset <- app_state$events$session_reset + 1L
-        cat("DEBUG: [EVENT] session_reset emitted:", app_state$events$session_reset, "\n")
+        log_debug(paste("session_reset emitted:", app_state$events$session_reset), "EVENT")
       })
     },
 
     manual_autodetect_button = function() {
       isolate({
         app_state$events$manual_autodetect_button <- app_state$events$manual_autodetect_button + 1L
-        cat("DEBUG: [EVENT] manual_autodetect_button emitted:", app_state$events$manual_autodetect_button, "\n")
+        log_debug(paste("manual_autodetect_button emitted:", app_state$events$manual_autodetect_button), "EVENT")
       })
     },
 
     test_mode_ready = function() {
       isolate({
         app_state$events$test_mode_ready <- app_state$events$test_mode_ready + 1L
-        cat("DEBUG: [EVENT] test_mode_ready emitted:", app_state$events$test_mode_ready, "\n")
+        log_debug(paste("test_mode_ready emitted:", app_state$events$test_mode_ready), "EVENT")
       })
     },
 
@@ -994,35 +994,35 @@ create_emit_api <- function(app_state) {
     error_occurred = function() {
       isolate({
         app_state$events$error_occurred <- app_state$events$error_occurred + 1L
-        cat("DEBUG: [EVENT] error_occurred emitted:", app_state$events$error_occurred, "\n")
+        log_debug(paste("error_occurred emitted:", app_state$events$error_occurred), "EVENT")
       })
     },
 
     validation_error = function() {
       isolate({
         app_state$events$validation_error <- app_state$events$validation_error + 1L
-        cat("DEBUG: [EVENT] validation_error emitted:", app_state$events$validation_error, "\n")
+        log_debug(paste("validation_error emitted:", app_state$events$validation_error), "EVENT")
       })
     },
 
     processing_error = function() {
       isolate({
         app_state$events$processing_error <- app_state$events$processing_error + 1L
-        cat("DEBUG: [EVENT] processing_error emitted:", app_state$events$processing_error, "\n")
+        log_debug(paste("processing_error emitted:", app_state$events$processing_error), "EVENT")
       })
     },
 
     network_error = function() {
       isolate({
         app_state$events$network_error <- app_state$events$network_error + 1L
-        cat("DEBUG: [EVENT] network_error emitted:", app_state$events$network_error, "\n")
+        log_debug(paste("network_error emitted:", app_state$events$network_error), "EVENT")
       })
     },
 
     recovery_completed = function() {
       isolate({
         app_state$events$recovery_completed <- app_state$events$recovery_completed + 1L
-        cat("DEBUG: [EVENT] recovery_completed emitted:", app_state$events$recovery_completed, "\n")
+        log_debug(paste("recovery_completed emitted:", app_state$events$recovery_completed), "EVENT")
       })
     },
 
@@ -1030,28 +1030,28 @@ create_emit_api <- function(app_state) {
     ui_update_needed = function() {
       isolate({
         app_state$events$ui_update_needed <- app_state$events$ui_update_needed + 1L
-        cat("DEBUG: [EVENT] ui_update_needed emitted:", app_state$events$ui_update_needed, "\n")
+        log_debug(paste("ui_update_needed emitted:", app_state$events$ui_update_needed), "EVENT")
       })
     },
 
     column_choices_changed = function() {
       isolate({
         app_state$events$column_choices_changed <- app_state$events$column_choices_changed + 1L
-        cat("DEBUG: [EVENT] column_choices_changed emitted:", app_state$events$column_choices_changed, "\n")
+        log_debug(paste("column_choices_changed emitted:", app_state$events$column_choices_changed), "EVENT")
       })
     },
 
     form_reset_needed = function() {
       isolate({
         app_state$events$form_reset_needed <- app_state$events$form_reset_needed + 1L
-        cat("DEBUG: [EVENT] form_reset_needed emitted:", app_state$events$form_reset_needed, "\n")
+        log_debug(paste("form_reset_needed emitted:", app_state$events$form_reset_needed), "EVENT")
       })
     },
 
     form_restore_needed = function() {
       isolate({
         app_state$events$form_restore_needed <- app_state$events$form_restore_needed + 1L
-        cat("DEBUG: [EVENT] form_restore_needed emitted:", app_state$events$form_restore_needed, "\n")
+        log_debug(paste("form_restore_needed emitted:", app_state$events$form_restore_needed), "EVENT")
       })
     }
   )

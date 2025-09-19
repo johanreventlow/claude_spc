@@ -7,9 +7,9 @@
 #' 
 #' @noRd
 app_server <- function(input, output, session) {
-  cat("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n")
-  cat("🚀🚀🚀 APP_SERVER FUNCTION CALLED!!! SESSION START!!! 🚀🚀🚀\n")
-  cat("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n")
+  log_info("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀", "APP_SERVER")
+  log_info("🚀🚀🚀 APP_SERVER FUNCTION CALLED!!! SESSION START!!! 🚀🚀🚀", "APP_SERVER")
+  log_info("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀", "APP_SERVER")
   log_debug("🚀🚀🚀 APP_SERVER FUNCTION CALLED 🚀🚀🚀", "APP_SERVER")
   log_debug("===========================================", "APP_SERVER")
 
@@ -89,7 +89,7 @@ app_server <- function(input, output, session) {
   tryCatch({
     log_debug("🔧 Starting event system setup...", "APP_SERVER")
   }, error = function(e) {
-    cat("ERROR in log_debug at line 95:", e$message, "\n")
+    log_error(paste("ERROR in log_debug at line 95:", e$message), "APP_SERVER")
   })
 
   # SESSION FLAG: Prevent duplicate event listener registration
@@ -118,7 +118,7 @@ app_server <- function(input, output, session) {
     app_state$system$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
     log_debug("Event listeners setup flag set to TRUE", "DEBUG")
   }, error = function(e) {
-    cat("ERROR in setup_event_listeners:", e$message, "\n")
+    log_error(paste("ERROR in setup_event_listeners:", e$message), "APP_SERVER")
     print(paste("Full error details:", e))
   })
 
