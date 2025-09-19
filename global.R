@@ -654,8 +654,34 @@ create_app_state <- function() {
     form_restore_needed = 0L      # Form fields need restore from metadata
   )
 
-  # Data Management - Convert to reactiveValues for consistency
+  # Data Management - Hierarchical structure with sub-objects
   app_state$data <- reactiveValues(
+    # Core data sub-system
+    core = reactiveValues(
+      current_data = NULL,
+      original_data = NULL,
+      processed_data = NULL,
+      backup_data = NULL
+    ),
+
+    # File metadata sub-system
+    file = reactiveValues(
+      info = NULL,
+      path = NULL,
+      encoding = NULL,
+      import_settings = NULL
+    ),
+
+    # Table operations sub-system
+    table = reactiveValues(
+      updating = FALSE,
+      operation_in_progress = FALSE,
+      operation_cleanup_needed = FALSE,
+      version = 0,
+      last_update_time = NULL
+    ),
+
+    # Legacy flat access for backward compatibility (will be phased out)
     current_data = NULL,
     original_data = NULL,
     file_info = NULL,
@@ -665,40 +691,99 @@ create_app_state <- function() {
     table_version = 0
   )
 
-  # Column Management - Convert to reactiveValues for consistency
+  # Column Management - Hierarchical structure with sub-objects
   app_state$columns <- reactiveValues(
-    # Auto-detection state
+    # Auto-detection sub-system
+    auto_detect = reactiveValues(
+      in_progress = FALSE,
+      completed = FALSE,
+      results = NULL,
+      trigger = NULL,
+      last_run = NULL,
+      frozen_until_next_trigger = FALSE
+    ),
+
+    # Column mappings sub-system
+    mappings = reactiveValues(
+      x_column = NULL,
+      y_column = NULL,
+      n_column = NULL,
+      cl_column = NULL,
+      skift_column = NULL,
+      frys_column = NULL,
+      kommentar_column = NULL
+    ),
+
+    # UI synchronization sub-system
+    ui_sync = reactiveValues(
+      needed = FALSE,
+      last_sync_time = NULL,
+      pending_updates = list()
+    ),
+
+    # Legacy flat access for backward compatibility (will be phased out)
     auto_detect_in_progress = FALSE,
     auto_detect_completed = FALSE,
     auto_detect_results = NULL,
-
-    # Unified auto-detection results (consistent naming across all files)
     auto_detected_columns = NULL,
-
-    # Column mappings
     x_column = NULL,
     y_column = NULL,
     n_column = NULL,
     cl_column = NULL,
-
-    # Control columns
     skift_column = NULL,
     frys_column = NULL,
     kommentar_column = NULL,
-
-    # UI sync state
     ui_sync_needed = FALSE,
     ui_sync_last_time = NULL
   )
 
-  # Session Management - Convert to reactiveValues for consistency
+  # Session Management - Hierarchical structure with sub-objects
   app_state$session <- reactiveValues(
+    # State management sub-system
+    state = reactiveValues(
+      auto_save_enabled = TRUE,
+      restoring_session = FALSE,
+      file_uploaded = FALSE,
+      user_started_session = FALSE
+    ),
+
+    # File tracking sub-system
+    file = reactiveValues(
+      name = NULL,
+      path = NULL,
+      last_modified = NULL,
+      size = NULL
+    ),
+
+    # Time tracking sub-system
+    timing = reactiveValues(
+      last_save_time = NULL,
+      session_start_time = NULL,
+      last_activity_time = NULL
+    ),
+
+    # Lifecycle tracking sub-system
+    lifecycle = reactiveValues(
+      session_active = TRUE,
+      cleanup_initiated = FALSE,
+      background_tasks_active = TRUE
+    ),
+
+    # Legacy flat access for backward compatibility (will be phased out)
     auto_save_enabled = TRUE,
     restoring_session = FALSE,
     file_uploaded = FALSE,
     user_started_session = FALSE,
     last_save_time = NULL,
     file_name = NULL
+  )
+
+  # Test Mode Management
+  app_state$test_mode <- reactiveValues(
+    enabled = FALSE,
+    auto_load = FALSE,
+    file_path = NULL,
+    data_loaded = FALSE
   )
 
   # UI State - Convert to reactiveValues for consistency

@@ -84,7 +84,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       }
     }, error = function(e) {
       log_debug("Auto-detection error:", e$message, .context = "EVENT")
-      app_state$columns$auto_detect_in_progress <- FALSE
+      app_state$columns$auto_detect$in_progress <- FALSE
     })
   })
 
@@ -92,11 +92,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     log_debug("auto_detection_completed event received", .context = "EVENT")
 
     # Update state
-    app_state$columns$auto_detect_in_progress <- FALSE
-    app_state$columns$auto_detect_completed <- TRUE
+    app_state$columns$auto_detect$in_progress <- FALSE
+    app_state$columns$auto_detect$completed <- TRUE
 
     # Trigger UI sync if columns were detected
-    auto_detect_results <- isolate(app_state$columns$auto_detect_results)
+    auto_detect_results <- isolate(app_state$columns$auto_detect$results)
     log_debug(paste("DIAGNOSTIC: auto_detect_results =", capture.output(str(auto_detect_results))), .context = "EVENT")
 
     if (!is.null(auto_detect_results)) {
@@ -192,9 +192,9 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
     # Reset all state to initial values
     app_state$data$current_data <- NULL
-    app_state$columns$auto_detect_in_progress <- FALSE
-    app_state$columns$auto_detect_completed <- FALSE
-    app_state$columns$auto_detect_results <- NULL
+    app_state$columns$auto_detect$in_progress <- FALSE
+    app_state$columns$auto_detect$completed <- FALSE
+    app_state$columns$auto_detect$results <- NULL
 
     # FASE 3: Reset frozen state
     app_state$autodetect$frozen_until_next_trigger <- FALSE

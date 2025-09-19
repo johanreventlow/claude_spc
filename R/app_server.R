@@ -146,6 +146,12 @@ app_server <- function(input, output, session) {
     later::later(function() {
       # Recursive cleanup scheduler
       schedule_periodic_cleanup <- function() {
+        # Check if session is still active before continuing
+        if (!app_state$session$lifecycle$session_active || !app_state$session$lifecycle$background_tasks_active) {
+          log_debug("🧹 Stopping periodic cleanup - session ended", "BACKGROUND_CLEANUP")
+          return()
+        }
+
         log_debug("🧹 Running scheduled comprehensive system cleanup", "BACKGROUND_CLEANUP")
         tryCatch({
           comprehensive_system_cleanup(app_state)
@@ -154,8 +160,10 @@ app_server <- function(input, output, session) {
           log_error(paste("Background cleanup error:", e$message), "BACKGROUND_CLEANUP")
         })
 
-        # Schedule next cleanup
-        later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
+        # Schedule next cleanup only if session is still active
+        if (app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active) {
+          later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
+        }
       }
 
       # Start the periodic cleanup cycle
@@ -173,6 +181,12 @@ app_server <- function(input, output, session) {
     later::later(function() {
       # Recursive performance reporting
       schedule_periodic_reporting <- function() {
+        # Check if session is still active before continuing
+        if (!app_state$session$lifecycle$session_active || !app_state$session$lifecycle$background_tasks_active) {
+          log_debug("📊 Stopping periodic reporting - session ended", "PERFORMANCE_MONITOR")
+          return()
+        }
+
         log_debug("📊 Generating periodic performance report", "PERFORMANCE_MONITOR")
         tryCatch({
           report <- get_performance_report(app_state)
@@ -190,8 +204,10 @@ app_server <- function(input, output, session) {
           log_error(paste("Performance reporting error:", e$message), "PERFORMANCE_MONITOR")
         })
 
-        # Schedule next report
-        later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
+        # Schedule next report only if session is still active
+        if (app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active) {
+          later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
+        }
       }
 
       # Start the periodic reporting cycle
@@ -265,7 +281,7 @@ app_server <- function(input, output, session) {
           # PHASE 4B: Unified state assignment only
           app_state$session$user_started_session <- TRUE
           # PHASE 4B: Unified state assignment only
-          app_state$columns$auto_detect_completed <- FALSE
+          app_state$columns$auto_detect$completed <- FALSE
           # PHASE 4B: Legacy assignment removed - managed by unified state
           # PHASE 4B: Unified state assignment only
           app_state$ui$hide_anhoej_rules <- FALSE
@@ -374,6 +390,14 @@ app_server <- function(input, output, session) {
   session$onSessionEnded(function() {
     session_debugger$event("session_cleanup_started")
     debug_log("Session cleanup initiated", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
+
+    # Stop background tasks immediately
+    if (!is.null(app_state$session$lifecycle)) {
+      app_state$session$lifecycle$session_active <- FALSE
+      app_state$session$lifecycle$background_tasks_active <- FALSE
+      app_state$session$lifecycle$cleanup_initiated <- TRUE
+      log_debug("🔄 Background tasks stopped", "SESSION_LIFECYCLE")
+    }
 
     # Cleanup alle observers
     obs_manager$cleanup_all()

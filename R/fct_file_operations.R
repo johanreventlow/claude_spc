@@ -126,7 +126,7 @@ setup_file_upload <- function(input, output, session, waiter_file, app_state, em
         if (file_ext %in% c("xlsx", "xls")) {
           log_debug("📊 Processing Excel file...", "FILE_UPLOAD")
           debug_log("Starting Excel file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
-          handle_excel_upload(file_path, session, app_state, emit)
+          handle_excel_upload(file_path, session, app_state, emit, ui_service)
           log_debug("✅ Excel file processed successfully", "FILE_UPLOAD")
           upload_tracer$step("excel_processing_complete")
         } else {
@@ -158,7 +158,7 @@ setup_file_upload <- function(input, output, session, waiter_file, app_state, em
 }
 
 ## Håndter Excel fil upload
-handle_excel_upload <- function(file_path, session, app_state, emit) {
+handle_excel_upload <- function(file_path, session, app_state, emit, ui_service = NULL) {
   log_debug("========================================", "EXCEL_READ")
   log_debug("Starting Excel file processing", "EXCEL_READ")
   log_debug(paste("File path:", file_path), "EXCEL_READ")
@@ -210,7 +210,11 @@ handle_excel_upload <- function(file_path, session, app_state, emit) {
     # Restore metadata with delay to ensure UI is ready
     invalidateLater(500)
     isolate({
-      restore_metadata(session, metadata, ui_service)
+      if (!is.null(ui_service)) {
+        restore_metadata(session, metadata, ui_service)
+      } else {
+        log_debug("No ui_service provided, skipping metadata restore", "EXCEL_READ")
+      }
     })
 
     showNotification(

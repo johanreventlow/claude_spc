@@ -352,37 +352,37 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
 
     # Update individual column mappings directly in app_state
     if (!is.null(results$x_col)) {
-      app_state$columns$x_column <- results$x_col
-      log_debug(paste("Set app_state$columns$x_column =", results$x_col), .context = "UPDATE_MAPPINGS")
+      app_state$columns$mappings$x_column <- results$x_col
+      log_debug(paste("Set app_state$columns$mappings$x_column =", results$x_col), .context = "UPDATE_MAPPINGS")
     }
     if (!is.null(results$y_col)) {
-      app_state$columns$y_column <- results$y_col
-      log_debug(paste("Set app_state$columns$y_column =", results$y_col), .context = "UPDATE_MAPPINGS")
+      app_state$columns$mappings$y_column <- results$y_col
+      log_debug(paste("Set app_state$columns$mappings$y_column =", results$y_col), .context = "UPDATE_MAPPINGS")
     }
     if (!is.null(results$n_col)) {
-      app_state$columns$n_column <- results$n_col
-      log_debug(paste("Set app_state$columns$n_column =", results$n_col), .context = "UPDATE_MAPPINGS")
+      app_state$columns$mappings$n_column <- results$n_col
+      log_debug(paste("Set app_state$columns$mappings$n_column =", results$n_col), .context = "UPDATE_MAPPINGS")
     }
     if (!is.null(results$skift_col)) {
-      app_state$columns$skift_column <- results$skift_col
-      log_debug(paste("Set app_state$columns$skift_column =", results$skift_col), .context = "UPDATE_MAPPINGS")
+      app_state$columns$mappings$skift_column <- results$skift_col
+      log_debug(paste("Set app_state$columns$mappings$skift_column =", results$skift_col), .context = "UPDATE_MAPPINGS")
     }
     if (!is.null(results$frys_col)) {
-      app_state$columns$frys_column <- results$frys_col
-      log_debug(paste("Set app_state$columns$frys_column =", results$frys_col), .context = "UPDATE_MAPPINGS")
+      app_state$columns$mappings$frys_column <- results$frys_col
+      log_debug(paste("Set app_state$columns$mappings$frys_column =", results$frys_col), .context = "UPDATE_MAPPINGS")
     }
     if (!is.null(results$kommentar_col)) {
-      app_state$columns$kommentar_column <- results$kommentar_col
-      log_debug(paste("Set app_state$columns$kommentar_column =", results$kommentar_col), .context = "UPDATE_MAPPINGS")
+      app_state$columns$mappings$kommentar_column <- results$kommentar_col
+      log_debug(paste("Set app_state$columns$mappings$kommentar_column =", results$kommentar_col), .context = "UPDATE_MAPPINGS")
     }
 
     # Store complete results for backward compatibility
-    app_state$columns$auto_detect_results <- results
+    app_state$columns$auto_detect$results <- results
     app_state$columns$auto_detected_columns <- results
 
     # Mark as completed
-    app_state$columns$auto_detect_completed <- TRUE
-    app_state$columns$auto_detect_in_progress <- FALSE
+    app_state$columns$auto_detect$completed <- TRUE
+    app_state$columns$auto_detect$in_progress <- FALSE
 
     log_debug("✅ Direct app_state update completed", .context = "UPDATE_MAPPINGS")
   }

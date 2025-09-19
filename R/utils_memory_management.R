@@ -145,9 +145,9 @@ cleanup_app_state <- function(app_state, emit = NULL) {
   # Reset column management - safe reactive access
   if (!is.null(app_state$columns)) {
     tryCatch({
-      app_state$columns$auto_detect_in_progress <- FALSE
-      app_state$columns$auto_detect_completed <- FALSE
-      app_state$columns$auto_detected_columns <- NULL
+      app_state$columns$auto_detect$in_progress <- FALSE
+      app_state$columns$auto_detect$completed <- FALSE
+      app_state$columns$auto_detect$results <- NULL
     }, error = function(e) {
       log_debug("Could not reset column state during cleanup", .context = "MEMORY_MGMT")
     })

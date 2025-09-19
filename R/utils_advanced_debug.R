@@ -223,8 +223,8 @@ debug_state_snapshot <- function(checkpoint_name, app_state, include_hash = TRUE
       column_state <- tryCatch({
         if (shiny::isRunning()) {
           list(
-            auto_detect_completed = shiny::isolate(app_state$columns$auto_detect_completed %||% FALSE),
-            auto_detect_in_progress = shiny::isolate(app_state$columns$auto_detect_in_progress %||% FALSE)
+            auto_detect_completed = shiny::isolate(app_state$columns$auto_detect$completed %||% FALSE),
+            auto_detect_in_progress = shiny::isolate(app_state$columns$auto_detect$in_progress %||% FALSE)
           )
         } else {
           list(
