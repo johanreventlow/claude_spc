@@ -9,8 +9,9 @@ library(jsonlite)
 
 ## Local Storage funktioner til server med datastruktur preservation
 saveDataLocally <- function(session, data, metadata = NULL) {
-  tryCatch(
-    {
+  safe_operation(
+    "Save data to local storage",
+    code = {
       # CRITICAL: Preserve data structure explicitly - improved method
       data_to_save <- list(
         values = lapply(data, function(x) as.vector(x)), # Convert each column to vector
@@ -49,40 +50,45 @@ saveDataLocally <- function(session, data, metadata = NULL) {
         )
       )
     },
-    error = function(e) {
+    fallback = function(e) {
       stop(paste("Failed to save data locally:", e$message))
-    }
+    },
+    error_type = "processing"
   )
 }
 
 ## Load data med logging
 loadDataLocally <- function(session) {
-  tryCatch(
-    {
+  safe_operation(
+    "Load data from local storage",
+    code = {
       # Anmod om data fra localStorage
       session$sendCustomMessage(
         type = "loadAppState",
         message = list(key = "current_session")
       )
     },
-    error = function(e) {
+    fallback = function(e) {
       # Load failed silently
-    }
+    },
+    error_type = "processing"
   )
 }
 
 ## Clear data med logging
 clearDataLocally <- function(session) {
-  tryCatch(
-    {
+  safe_operation(
+    "Clear data from local storage",
+    code = {
       session$sendCustomMessage(
         type = "clearAppState",
         message = list(key = "current_session")
       )
     },
-    error = function(e) {
+    fallback = function(e) {
       # Clear failed silently
-    }
+    },
+    error_type = "processing"
   )
 }
 
@@ -95,17 +101,19 @@ autoSaveAppState <- function(session, current_data, metadata) {
       data_size <- object.size(current_data)
 
       if (data_size < 1000000) { # 1MB limit
-        tryCatch(
-          {
+        safe_operation(
+          "Auto-save application state",
+          code = {
             saveDataLocally(session, current_data, metadata)
           },
-          error = function(e) {
+          fallback = function(e) {
             showNotification(
               paste("Auto-gem fejlede:", e$message),
               type = "error",
               duration = 3
             )
-          }
+          },
+          error_type = "processing"
         )
       } else {
         showNotification(
