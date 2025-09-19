@@ -501,15 +501,46 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
                  "(autodetect frozen:", freeze_state, ")\n"))
 
   tryCatch({
-    # RACE CONDITION FIX: Handle overlapping calls more intelligently
+    # FASE 2: QUEUE SYSTEM - Check for overlapping updates and queue if necessary
     current_flag_state <- isolate(app_state$ui$updating_programmatically)
     if (isTRUE(current_flag_state)) {
-      cat("DROPDOWN_DEBUG: ⚠️ Another update in progress - clearing flag and proceeding\n")
-      # Force clear the flag to handle race conditions between autodetect calls
+      cat("DROPDOWN_DEBUG: ⚠️ Another update in progress - adding to queue\n")
+
+      # QUEUE SYSTEM: Add this update to queue instead of clearing flag
+      queue_entry <- list(
+        func = update_function,
+        session = session,
+        timestamp = update_start_time,
+        delay_ms = delay_ms,
+        queue_id = paste0("queue_", update_start_time, "_", sample(1000:9999, 1))
+      )
+
+      # Add to queue
+      current_queue <- isolate(app_state$ui$queued_updates)
+      app_state$ui$queued_updates <- c(current_queue, list(queue_entry))
+
+      cat(paste("QUEUE_DEBUG: Added update to queue with ID:", queue_entry$queue_id,
+                "(queue size:", length(isolate(app_state$ui$queued_updates)), ")\n"))
+
+      # QUEUE SCHEDULING: Use later::later() to process queue after current update completes
+      later::later(function() {
+        process_ui_update_queue(app_state)
+      }, delay = (delay_ms + 100) / 1000)  # Convert to seconds and add buffer
+
+      return(list(
+        success = TRUE,
+        queued = TRUE,
+        queue_id = queue_entry$queue_id,
+        message = "Update queued successfully"
+      ))
+    }
+
+    # LEGACY RACE CONDITION FIX: If not queued, clear any residual flags
+    if (isTRUE(current_flag_state)) {
+      cat("DROPDOWN_DEBUG: ⚠️ Clearing residual flag before proceeding\n")
       app_state$ui$updating_programmatically <- FALSE
       app_state$ui$flag_reset_scheduled <- TRUE
-      # Small delay to ensure any pending callbacks complete
-      Sys.sleep(0.1)
+      Sys.sleep(0.05)  # Shorter delay since we're not in overlap situation
     }
 
     # Set protection flag to prevent input observers from firing
@@ -538,12 +569,14 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
       # TOKEN TRACKING: Record this programmatic input with token
       if (!is.null(selected)) {
         input_token <- paste0(session_token, "_", inputId)
-        app_state$ui$pending_programmatic_inputs[[inputId]] <- list(
-          token = input_token,
-          value = selected,
-          timestamp = Sys.time(),
-          session_token = session_token
-        )
+        isolate({
+          app_state$ui$pending_programmatic_inputs[[inputId]] <- list(
+            token = input_token,
+            value = selected,
+            timestamp = Sys.time(),
+            session_token = session_token
+          )
+        })
         cat(paste("TOKEN_DEBUG: Token", input_token, "assigned to", inputId, "with value", paste0("'", selected, "'"), "\n"))
       }
 
@@ -618,4 +651,128 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
     log_error(paste("LOOP_PROTECTION: Error after", round(total_error_time_ms, 2), "ms:", e$message), "LOOP_PROTECTION")
     stop(e)
   })
+}
+
+# FASE 2: QUEUE PROCESSING FUNCTIONS ============================================
+
+#' Process UI Update Queue
+#'
+#' Processes queued UI updates in order, ensuring only one update runs at a time.
+#' This function is called by later::later() after current UI update completes.
+#'
+#' @param app_state The centralized app state object
+#'
+#' @export
+process_ui_update_queue <- function(app_state) {
+  cat("QUEUE_DEBUG: ⚙️ Processing UI update queue...\n")
+
+  # SAFETY CHECK: Don't process queue if update is currently in progress
+  if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
+    cat("QUEUE_DEBUG: ⏳ Update still in progress, rescheduling queue processing\n")
+    later::later(function() {
+      process_ui_update_queue(app_state)
+    }, delay = 0.1)  # Try again in 100ms
+    return()
+  }
+
+  # GET QUEUE: Isolate to avoid reactive dependencies
+  current_queue <- isolate(app_state$ui$queued_updates)
+
+  if (length(current_queue) == 0) {
+    cat("QUEUE_DEBUG: ✅ Queue is empty, processing complete\n")
+    return()
+  }
+
+  cat(paste("QUEUE_DEBUG: Processing", length(current_queue), "queued updates\n"))
+
+  # CLEANUP EXPIRED: Remove old entries before processing
+  cleanup_expired_queue_updates(app_state, max_age_seconds = 30)
+
+  # GET FRESH QUEUE after cleanup
+  current_queue <- isolate(app_state$ui$queued_updates)
+
+  if (length(current_queue) == 0) {
+    cat("QUEUE_DEBUG: ✅ Queue empty after cleanup\n")
+    return()
+  }
+
+  # PROCESS NEXT: Take first item from queue
+  next_update <- current_queue[[1]]
+  remaining_queue <- if (length(current_queue) > 1) current_queue[-1] else list()
+
+  # UPDATE QUEUE: Remove processed item
+  app_state$ui$queued_updates <- remaining_queue
+
+  cat(paste("QUEUE_DEBUG: 🔄 Processing queued update with ID:", next_update$queue_id,
+            "(", length(remaining_queue), "remaining)\n"))
+
+  # EXECUTE UPDATE: Use recursive call to safe_programmatic_ui_update
+  tryCatch({
+    result <- safe_programmatic_ui_update(
+      session = next_update$session,
+      app_state = app_state,
+      update_function = next_update$func,
+      delay_ms = next_update$delay_ms
+    )
+
+    cat(paste("QUEUE_DEBUG: ✅ Queued update", next_update$queue_id, "completed successfully\n"))
+
+    # SCHEDULE NEXT: Process remaining queue items after this one completes
+    if (length(remaining_queue) > 0) {
+      later::later(function() {
+        process_ui_update_queue(app_state)
+      }, delay = (next_update$delay_ms + 50) / 1000)  # Add 50ms buffer between queue items
+    }
+
+  }, error = function(e) {
+    cat(paste("QUEUE_DEBUG: ❌ Error processing queued update", next_update$queue_id, ":", e$message, "\n"))
+
+    # CONTINUE PROCESSING: Don't let one error stop the queue
+    if (length(remaining_queue) > 0) {
+      later::later(function() {
+        process_ui_update_queue(app_state)
+      }, delay = 0.1)  # Quick retry for remaining items
+    }
+  })
+}
+
+#' Cleanup Expired Queue Updates
+#'
+#' Removes old queue entries that are likely no longer relevant.
+#' This prevents the queue from growing indefinitely with stale updates.
+#'
+#' @param app_state The centralized app state object
+#' @param max_age_seconds Maximum age of queue entries in seconds (default: 30)
+#'
+#' @export
+cleanup_expired_queue_updates <- function(app_state, max_age_seconds = 30) {
+  current_queue <- isolate(app_state$ui$queued_updates)
+
+  if (length(current_queue) == 0) {
+    return()
+  }
+
+  current_time <- Sys.time()
+  fresh_updates <- list()
+
+  for (i in seq_along(current_queue)) {
+    update_entry <- current_queue[[i]]
+    age_seconds <- as.numeric(difftime(current_time, update_entry$timestamp, units = "secs"))
+
+    if (age_seconds <= max_age_seconds) {
+      fresh_updates <- c(fresh_updates, list(update_entry))
+    } else {
+      cat(paste("QUEUE_CLEANUP: Removing expired update", update_entry$queue_id,
+                "(age:", round(age_seconds, 1), "seconds)\n"))
+    }
+  }
+
+  # UPDATE QUEUE with fresh entries only
+  app_state$ui$queued_updates <- fresh_updates
+
+  removed_count <- length(current_queue) - length(fresh_updates)
+  if (removed_count > 0) {
+    cat(paste("QUEUE_CLEANUP: ✅ Removed", removed_count, "expired updates,",
+              length(fresh_updates), "remaining\n"))
+  }
 }
