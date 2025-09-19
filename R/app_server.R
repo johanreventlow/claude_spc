@@ -38,13 +38,7 @@ app_server <- function(input, output, session) {
   source("R/mod_spc_chart.R", local = TRUE)
   log_debug("✅ All server components sourced", "APP_SERVER")
 
-  # LEGACY SYSTEM: Minimal reactive values for compatibility during transition
-  # PHASE 4: This will be removed when all components use unified state
-  log_debug("Initializing minimal legacy reactive values for compatibility...", "APP_SERVER")
-  debug_log("Creating minimal reactive values", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
-  values <- reactiveValues()  # Empty values for compatibility
-  log_debug("✅ Minimal legacy values initialized", "APP_SERVER")
-  session_debugger$event("reactive_values_initialized")
+  # PHASE 4: Legacy reactive values system removed - using unified app_state only
 
   # PHASE 4: Centraliseret state management (parallel til existing values)
   log_debug("Initializing centralized app state...", "APP_SERVER")
@@ -128,21 +122,7 @@ app_server <- function(input, output, session) {
     print(paste("Full error details:", e))
   })
 
-  # EMERGENCY FIX: Setup event listeners in observer ONLY if direct call failed
-  observeEvent(reactive(TRUE), {
-    if (!isolate(app_state$system$event_listeners_setup)) {
-      log_debug("🚨 EMERGENCY: Setting up event listeners in observer (direct call failed)", "APP_SERVER")
-      tryCatch({
-        setup_event_listeners(app_state, emit, input, output, session, ui_service)
-        app_state$system$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
-        log_debug("🚨 EMERGENCY: Event listeners setup SUCCESS", "APP_SERVER")
-      }, error = function(e) {
-        log_debug(paste("🚨 EMERGENCY ERROR:", e$message), "APP_SERVER")
-      })
-    } else {
-      log_debug("✅ Event listeners already setup - skipping emergency observer", "APP_SERVER")
-    }
-  }, once = TRUE, priority = OBSERVER_PRIORITIES$HIGH, ignoreInit = FALSE)
+  # Emergency observer removed - event listeners setup now reliable
 
   # Take initial state snapshot - delay to avoid reactive context issues
   observeEvent(reactive(TRUE), {

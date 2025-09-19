@@ -335,8 +335,7 @@ reset_app_to_clean_state <- function(app_state, session = NULL, emit = NULL) {
   # Monitor memory during reset
   memory_monitor <- start_memory_monitoring("app_reset")
 
-  # Clear all data
-  cleanup_reactive_values(values)
+  # Clear all data - legacy values cleanup removed
   if (!is.null(app_state)) {
     cleanup_app_state(app_state)
   }

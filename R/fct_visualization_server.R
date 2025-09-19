@@ -11,29 +11,7 @@ setup_visualization <- function(input, output, session, app_state) {
   log_debug("=======================================", "VISUALIZATION")
   log_debug("Setting up visualization system", "VISUALIZATION")
 
-  # HELPER FUNCTION: Robust input sanitization for character(0) and NA handling
-  sanitize_selection <- function(input_value) {
-    if (is.null(input_value) || length(input_value) == 0 || identical(input_value, character(0))) {
-      return(NULL)
-    }
-    # Handle vectors with all NA values
-    if (all(is.na(input_value))) {
-      return(NULL)
-    }
-    # Handle vectors - use first element only
-    if (length(input_value) > 1) {
-      input_value <- input_value[1]
-    }
-    # Handle single NA value
-    if (is.na(input_value)) {
-      return(NULL)
-    }
-    # Handle empty strings and whitespace-only strings
-    if (is.character(input_value) && (input_value == "" || trimws(input_value) == "")) {
-      return(NULL)
-    }
-    return(input_value)
-  }
+  # INPUT SANITIZATION: Using centralized sanitize_selection from utils_ui_helpers.R
 
   # UNIFIED EVENT SYSTEM: Direct access to app_state data instead of reactive dependencies
   # No need for app_data_reactive - visualization module uses its own event-driven data access
