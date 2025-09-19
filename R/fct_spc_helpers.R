@@ -129,8 +129,9 @@ validate_x_column_format <- function(data, x_col, x_axis_unit = "observation") {
       }
 
       # FALLBACK: Brug lubridate guess_formats for andre formater (med error handling)
-      tryCatch(
-        {
+      safe_operation(
+        "Parse dates using lubridate guess_formats",
+        code = {
           guessed_formats <- suppressWarnings(
             lubridate::guess_formats(test_sample, c("ymd", "dmy", "mdy", "dby", "dmY", "Ymd", "mdY"))
           )
@@ -163,10 +164,11 @@ validate_x_column_format <- function(data, x_col, x_axis_unit = "observation") {
             }
           }
         },
-        error = function(e) {
+        fallback = function(e) {
           # Skip denne parsing metode hvis den fejler
           log_debug(paste("WARNING: guess_formats parsing fejlede:", e$message), "DATE_CONVERSION")
-        }
+        },
+        error_type = "processing"
       )
     }
   }
@@ -359,26 +361,31 @@ get_optimal_formatting <- function(interval_info, debug = TRUE) {
 process_chart_title <- function(chart_title_reactive, config) {
   log_debug("Processing chart title...", "SPC_CALC_DEBUG")
 
-  custom_title <- tryCatch({
-    if (!is.null(chart_title_reactive) && is.function(chart_title_reactive)) {
-      log_debug("Calling chart_title_reactive function...", "SPC_CALC_DEBUG")
-      title <- chart_title_reactive()
-      log_debug(paste("chart_title_reactive returned:", if(is.null(title)) "NULL" else paste("'", title, "'", sep="")), "SPC_CALC_DEBUG")
-      if (!is.null(title) && title != "" && title != "SPC Analyse") {
-        log_debug("Using custom title", "SPC_CALC_DEBUG")
-        title
+  custom_title <- safe_operation(
+    "Process chart title reactive",
+    code = {
+      if (!is.null(chart_title_reactive) && is.function(chart_title_reactive)) {
+        log_debug("Calling chart_title_reactive function...", "SPC_CALC_DEBUG")
+        title <- chart_title_reactive()
+        log_debug(paste("chart_title_reactive returned:", if(is.null(title)) "NULL" else paste("'", title, "'", sep="")), "SPC_CALC_DEBUG")
+        if (!is.null(title) && title != "" && title != "SPC Analyse") {
+          log_debug("Using custom title", "SPC_CALC_DEBUG")
+          title
+        } else {
+          log_debug("Using default title (custom title empty or default)", "SPC_CALC_DEBUG")
+          NULL
+        }
       } else {
-        log_debug("Using default title (custom title empty or default)", "SPC_CALC_DEBUG")
+        log_debug("No chart_title_reactive function provided", "SPC_CALC_DEBUG")
         NULL
       }
-    } else {
-      log_debug("No chart_title_reactive function provided", "SPC_CALC_DEBUG")
+    },
+    fallback = function(e) {
+      log_debug(paste("ERROR in chart_title_reactive:", e$message), "SPC_CALC_DEBUG")
       NULL
-    }
-  }, error = function(e) {
-    log_debug(paste("ERROR in chart_title_reactive:", e$message), "SPC_CALC_DEBUG")
-    NULL
-  })
+    },
+    error_type = "processing"
+  )
 
   log_debug(paste("Final custom_title result:", if(is.null(custom_title)) "NULL" else paste("'", custom_title, "'", sep="")), "SPC_CALC_DEBUG")
 
