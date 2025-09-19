@@ -35,7 +35,7 @@ app_server <- function(input, output, session) {
   source("R/fct_data_processing.R", local = TRUE)
   source("R/fct_file_operations.R", local = TRUE)
   source("R/fct_visualization_server.R", local = TRUE)
-  source("R/mod_spc_chart.R", local = TRUE)
+  source("R/mod_spc_chart_server.R", local = TRUE)
   log_debug("✅ All server components sourced", "APP_SERVER")
 
   # PHASE 4: Legacy reactive values system removed - using unified app_state only

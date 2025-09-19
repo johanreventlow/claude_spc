@@ -2,7 +2,7 @@
 # Consolidated UI components for SPC app
 
 # Dependencies ----------------------------------------------------------------
-source("R/mod_spc_chart.R")
+source("R/mod_spc_chart_ui.R")
 source("R/mod_session_storage.R")
 
 # UI HEADER KOMPONENTER =======================================================
