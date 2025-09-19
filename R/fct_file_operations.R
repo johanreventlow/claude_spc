@@ -631,54 +631,73 @@ validate_uploaded_file <- function(file_info, session_id = NULL) {
 validate_excel_file <- function(file_path) {
   errors <- character(0)
 
-  tryCatch({
-    # Check if file can be read
-    sheets <- readxl::excel_sheets(file_path)
+  safe_operation(
+    "Validate Excel file structure",
+    code = {
+      # Check if file can be read
+      sheets <- readxl::excel_sheets(file_path)
 
-    if (length(sheets) == 0) {
-      errors <- c(errors, "Excel file contains no sheets")
-    }
+      if (length(sheets) == 0) {
+        errors <- c(errors, "Excel file contains no sheets")
+      }
 
-    # If this is a session restore file, check for required sheets
-    if (all(c("Data", "Metadata") %in% sheets)) {
-      # Validate Data sheet
-      data_validation <- tryCatch({
-        data <- readxl::read_excel(file_path, sheet = "Data", n_max = 1)
-        if (ncol(data) == 0) {
-          errors <- c(errors, "Data sheet is empty")
-        }
-        if (nrow(data) == 0) {
-          errors <- c(errors, "Data sheet contains no data rows")
-        }
-        TRUE
-      }, error = function(e) {
-        errors <<- c(errors, paste("Cannot read Data sheet:", e$message))
-        FALSE
-      })
+      # If this is a session restore file, check for required sheets
+      if (all(c("Data", "Metadata") %in% sheets)) {
+        # Validate Data sheet
+        data_validation <- safe_operation(
+          "Validate Excel Data sheet",
+          code = {
+            data <- readxl::read_excel(file_path, sheet = "Data", n_max = 1)
+            if (ncol(data) == 0) {
+              errors <- c(errors, "Data sheet is empty")
+            }
+            if (nrow(data) == 0) {
+              errors <- c(errors, "Data sheet contains no data rows")
+            }
+            TRUE
+          },
+          fallback = function(e) {
+            errors <<- c(errors, paste("Cannot read Data sheet:", e$message))
+            FALSE
+          },
+          error_type = "processing"
+        )
 
-      # Validate Metadata sheet
-      metadata_validation <- tryCatch({
-        metadata <- readxl::read_excel(file_path, sheet = "Metadata", n_max = 1)
-        TRUE
-      }, error = function(e) {
-        errors <<- c(errors, paste("Cannot read Metadata sheet:", e$message))
-        FALSE
-      })
-    } else {
-      # Regular Excel file - validate first sheet
-      tryCatch({
-        data <- readxl::read_excel(file_path, n_max = 1)
-        if (ncol(data) == 0) {
-          errors <- c(errors, "Excel file contains no columns")
-        }
-      }, error = function(e) {
-        errors <<- c(errors, paste("Cannot read Excel file:", e$message))
-      })
-    }
-
-  }, error = function(e) {
-    errors <<- c(errors, paste("Excel file is corrupted or invalid:", e$message))
-  })
+        # Validate Metadata sheet
+        metadata_validation <- safe_operation(
+          "Validate Excel Metadata sheet",
+          code = {
+            metadata <- readxl::read_excel(file_path, sheet = "Metadata", n_max = 1)
+            TRUE
+          },
+          fallback = function(e) {
+            errors <<- c(errors, paste("Cannot read Metadata sheet:", e$message))
+            FALSE
+          },
+          error_type = "processing"
+        )
+      } else {
+        # Regular Excel file - validate first sheet
+        safe_operation(
+          "Validate regular Excel file",
+          code = {
+            data <- readxl::read_excel(file_path, n_max = 1)
+            if (ncol(data) == 0) {
+              errors <- c(errors, "Excel file contains no columns")
+            }
+          },
+          fallback = function(e) {
+            errors <<- c(errors, paste("Cannot read Excel file:", e$message))
+          },
+          error_type = "processing"
+        )
+      }
+    },
+    fallback = function(e) {
+      errors <<- c(errors, paste("Excel file is corrupted or invalid:", e$message))
+    },
+    error_type = "processing"
+  )
 
   return(list(
     valid = length(errors) == 0,
@@ -690,42 +709,46 @@ validate_excel_file <- function(file_path) {
 validate_csv_file <- function(file_path) {
   errors <- character(0)
 
-  tryCatch({
-    # Try to read first few lines to validate structure
-    sample_data <- readr::read_csv2(
-      file_path,
-      locale = readr::locale(
-        decimal_mark = ",",
-        grouping_mark = ".",
-        encoding = "ISO-8859-1"
-      ),
-      n_max = 5,
-      show_col_types = FALSE
-    )
+  safe_operation(
+    "Validate CSV file structure",
+    code = {
+      # Try to read first few lines to validate structure
+      sample_data <- readr::read_csv2(
+        file_path,
+        locale = readr::locale(
+          decimal_mark = ",",
+          grouping_mark = ".",
+          encoding = "ISO-8859-1"
+        ),
+        n_max = 5,
+        show_col_types = FALSE
+      )
 
-    if (ncol(sample_data) == 0) {
-      errors <- c(errors, "CSV file contains no columns")
-    }
-
-    if (nrow(sample_data) == 0) {
-      errors <- c(errors, "CSV file contains no data rows")
-    }
-
-    # Check for proper column separation
-    if (ncol(sample_data) == 1 && nrow(sample_data) > 0) {
-      first_value <- as.character(sample_data[1, 1])
-      if (grepl("[,;\\t]", first_value)) {
-        errors <- c(errors, "CSV file may have incorrect delimiter. Expected semicolon (;) separated values")
+      if (ncol(sample_data) == 0) {
+        errors <- c(errors, "CSV file contains no columns")
       }
-    }
 
-  }, error = function(e) {
-    if (grepl("invalid", tolower(e$message)) || grepl("encoding", tolower(e$message))) {
-      errors <<- c(errors, "CSV file has encoding issues. Try saving as UTF-8 or ISO-8859-1")
-    } else {
-      errors <<- c(errors, paste("Cannot read CSV file:", e$message))
-    }
-  })
+      if (nrow(sample_data) == 0) {
+        errors <- c(errors, "CSV file contains no data rows")
+      }
+
+      # Check for proper column separation
+      if (ncol(sample_data) == 1 && nrow(sample_data) > 0) {
+        first_value <- as.character(sample_data[1, 1])
+        if (grepl("[,;\\t]", first_value)) {
+          errors <- c(errors, "CSV file may have incorrect delimiter. Expected semicolon (;) separated values")
+        }
+      }
+    },
+    fallback = function(e) {
+      if (grepl("invalid", tolower(e$message)) || grepl("encoding", tolower(e$message))) {
+        errors <<- c(errors, "CSV file has encoding issues. Try saving as UTF-8 or ISO-8859-1")
+      } else {
+        errors <<- c(errors, paste("Cannot read CSV file:", e$message))
+      }
+    },
+    error_type = "processing"
+  )
 
   return(list(
     valid = length(errors) == 0,
