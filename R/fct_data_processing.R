@@ -75,12 +75,18 @@ setup_column_management <- function(input, output, session, app_state, emit) {
   # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
     # FASE 3: Use event-driven manual trigger for consistency
-    tryCatch({
-      emit$manual_autodetect_button()  # This triggers the event listener with frozen state bypass
-    }, error = function(e) {
-      log_debug("Manual auto-detection error:", e$message, .context = "MANUAL_AUTODETECT")
-      showNotification("Auto-detektering fejlede. Prøv igen eller vælg kolonner manuelt.", type = "error")
-    })
+    safe_operation(
+      "Manual auto-detection trigger",
+      code = {
+        emit$manual_autodetect_button()  # This triggers the event listener with frozen state bypass
+      },
+      fallback = NULL,
+      session = session,
+      show_user = TRUE,
+      error_type = "processing",
+      emit = emit,
+      app_state = app_state
+    )
   })
 
   # Kolonnevaliderings output

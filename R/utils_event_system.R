@@ -64,28 +64,35 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     app_state$columns$auto_detect$in_progress <- TRUE
 
     # Perform auto-detection using unified engine
-    tryCatch({
-      if (!is.null(app_state$data$current_data)) {
-        # Use unified autodetect engine - data available, so full analysis
-        autodetect_engine(
-          data = app_state$data$current_data,
-          trigger_type = "file_upload",  # This event is triggered by data uploads
-          app_state = app_state,
-          emit = emit
-        )
-      } else {
-        # No data available - session start scenario (name-only)
-        autodetect_engine(
-          data = NULL,
-          trigger_type = "session_start",
-          app_state = app_state,
-          emit = emit
-        )
-      }
-    }, error = function(e) {
-      log_debug("Auto-detection error:", e$message, .context = "EVENT")
-      app_state$columns$auto_detect$in_progress <- FALSE
-    })
+    safe_operation(
+      "Auto-detection processing",
+      code = {
+        if (!is.null(app_state$data$current_data)) {
+          # Use unified autodetect engine - data available, so full analysis
+          autodetect_engine(
+            data = app_state$data$current_data,
+            trigger_type = "file_upload",  # This event is triggered by data uploads
+            app_state = app_state,
+            emit = emit
+          )
+        } else {
+          # No data available - session start scenario (name-only)
+          autodetect_engine(
+            data = NULL,
+            trigger_type = "session_start",
+            app_state = app_state,
+            emit = emit
+          )
+        }
+      },
+      fallback = {
+        app_state$columns$auto_detect$in_progress <- FALSE
+      },
+      session = NULL,
+      error_type = "processing",
+      emit = emit,
+      app_state = app_state
+    )
   })
 
   observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
@@ -120,13 +127,19 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     log_debug("About to call sync_ui_with_columns_unified", "DEBUG")
     log_debug("About to call sync_ui_with_columns_unified", .context = "EVENT")
 
-    tryCatch({
-      # Perform UI synchronization
-      sync_ui_with_columns_unified(app_state, input, output, session, ui_service)
-      log_debug("sync_ui_with_columns_unified completed successfully", .context = "EVENT")
-    }, error = function(e) {
-      log_debug(paste("sync_ui_with_columns_unified ERROR:", e$message), .context = "EVENT")
-    })
+    safe_operation(
+      "UI synchronization",
+      code = {
+        # Perform UI synchronization
+        sync_ui_with_columns_unified(app_state, input, output, session, ui_service)
+        log_debug("sync_ui_with_columns_unified completed successfully", .context = "EVENT")
+      },
+      fallback = NULL,
+      session = session,
+      error_type = "processing",
+      emit = emit,
+      app_state = app_state
+    )
 
     # Mark sync as completed
     emit$ui_sync_completed()
@@ -462,12 +475,16 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 #'
 sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_service = NULL) {
   log_debug("sync_ui_with_columns_unified function STARTED", "DEBUG")
-  tryCatch({
-    log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
-    log_debug("log_debug_block completed", "DEBUG")
-  }, error = function(e) {
-    log_debug(paste("log_debug_block ERROR:", e$message), "DEBUG")
-  })
+  safe_operation(
+    "UI sync debug block",
+    code = {
+      log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
+      log_debug("log_debug_block completed", "DEBUG")
+    },
+    fallback = NULL,
+    session = session,
+    error_type = "general"
+  )
 
   # DROPDOWN DEBUGGING: Log autodetect results that will be used
   log_debug("About to get auto_detect_results", "DEBUG")
