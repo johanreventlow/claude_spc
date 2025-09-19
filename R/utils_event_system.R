@@ -28,7 +28,7 @@ NULL
 #' and appropriate priorities to ensure correct execution order.
 #'
 setup_event_listeners <- function(app_state, emit, input, output, session, ui_service = NULL) {
-  cat("DEBUG: setup_event_listeners function started\n")
+  log_debug("setup_event_listeners function started", "EVENT_SYSTEM")
   log_debug("Setting up unified event listeners", .context = "EVENT_SYSTEM")
   log_debug("EVENT_SETUP: Starting data lifecycle events", .context = "EVENT_SYSTEM")
 
@@ -110,14 +110,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # UI SYNCHRONIZATION EVENTS
-  cat("DEBUG: About to register ui_sync_needed observer\n")
+  log_debug("About to register ui_sync_needed observer", "DEBUG")
   log_debug("Registering ui_sync_needed observer", .context = "EVENT_SETUP")
   observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
-    cat("DEBUG: ui_sync_needed observer triggered!\n")
+    log_debug("ui_sync_needed observer triggered!", "DEBUG")
     log_debug("ui_sync_needed event received", .context = "EVENT")
 
     # Add extra debugging
-    cat("DEBUG: About to call sync_ui_with_columns_unified\n")
+    log_debug("About to call sync_ui_with_columns_unified", "DEBUG")
     log_debug("About to call sync_ui_with_columns_unified", .context = "EVENT")
 
     tryCatch({
@@ -355,8 +355,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
       # DROPDOWN DEBUGGING: Log input change details
       old_value <- isolate(app_state$columns[[col]]) %||% ""
-      cat(paste("DROPDOWN_DEBUG: Input", col, "changed from", paste0("'", old_value, "'"),
-                     "to", paste0("'", new_value, "'"), "\n"))
+      log_debug(paste("Input", col, "changed from", paste0("'", old_value, "'"),
+                     "to", paste0("'", new_value, "'")), "DROPDOWN_DEBUG")
 
       # TIMING LOGGING: Calculate time since last programmatic update
       last_update_time <- isolate(app_state$ui$last_programmatic_update)
@@ -375,8 +375,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
       } else { FALSE }
 
-      cat(paste("DROPDOWN_DEBUG: LOOP_PROTECTION check for", col, ": updating_programmatically =", protection_active,
-                     ", autodetect frozen =", freeze_state, "\n"))
+      log_debug(paste("LOOP_PROTECTION check for", col, ": updating_programmatically =", protection_active,
+                     ", autodetect frozen =", freeze_state), "DROPDOWN_DEBUG")
 
       # TOKEN CONSUMPTION: Check for pending programmatic input tokens
       pending_token <- app_state$ui$pending_programmatic_inputs[[col]]
@@ -391,14 +391,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
           app_state$ui$performance_metrics$tokens_consumed <- app_state$ui$performance_metrics$tokens_consumed + 1L
         })
 
-        cat(paste("TOKEN_DEBUG: Programmatic input consumed for", col, "with token", pending_token$token, "- no events emitted\n"))
+        log_debug(paste("Programmatic input consumed for"), "TOKEN_DEBUG")
         return()
       }
 
       # LEGACY LOOP PROTECTION: Skip event emission if we're in the middle of programmatic updates
       if (protection_active) {
-        cat(paste("DROPDOWN_DEBUG: LOOP_PROTECTION ACTIVE - Skipping event emission for", col, "- programmatic update in progress\n"))
-        cat(paste("DROPDOWN_DEBUG: Programmatic update detected - value", paste0("'", new_value, "'"), "accepted but no events emitted for", col, "\n"))
+        log_debug(paste("LOOP_PROTECTION ACTIVE - Skipping event emission for"), "DROPDOWN_DEBUG")
+        log_debug(paste("Programmatic update detected - value", paste0("'", new_value, "'"), "accepted but no events emitted for", col), "DROPDOWN_DEBUG")
         # Still update app_state to keep it synchronized, but don't emit events
         app_state$columns[[col]] <- new_value
         return()
@@ -409,8 +409,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
       # Only emit events for user-driven changes (not programmatic updates)
       if (exists("column_choices_changed", envir = as.environment(emit))) {
-        cat(paste("DROPDOWN_DEBUG: USER-DRIVEN change detected for", col, "- emitting column_choices_changed event\n"))
-        cat(paste("DROPDOWN_DEBUG: User changed", col, "to", paste0("'", new_value, "'"), "- triggering column_choices_changed event\n"))
+        log_debug(paste("USER-DRIVEN change detected for"), "DROPDOWN_DEBUG")
+        log_debug(paste("User changed", col, "to", paste0("'", new_value, "'"), "- triggering column_choices_changed event"), "DROPDOWN_DEBUG")
         emit$column_choices_changed()
       }
 
@@ -461,27 +461,27 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 #' @param session Shiny session
 #'
 sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_service = NULL) {
-  cat("DEBUG: sync_ui_with_columns_unified function STARTED\n")
+  log_debug("sync_ui_with_columns_unified function STARTED", "DEBUG")
   tryCatch({
     log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
-    cat("DEBUG: log_debug_block completed\n")
+    log_debug("log_debug_block completed", "DEBUG")
   }, error = function(e) {
-    cat("DEBUG: log_debug_block ERROR:", e$message, "\n")
+    log_debug(paste("log_debug_block ERROR:", e$message), "DEBUG")
   })
 
   # DROPDOWN DEBUGGING: Log autodetect results that will be used
-  cat("DEBUG: About to get auto_detect_results\n")
+  log_debug("About to get auto_detect_results", "DEBUG")
   auto_detect_results <- isolate(app_state$columns$auto_detect_results)
-  cat("DEBUG: Got auto_detect_results, about to log_debug\n")
-  cat("DROPDOWN_DEBUG: sync_ui_with_columns_unified called\n")
-  cat("DEBUG: log_debug completed, continuing\n")
+  log_debug("Got auto_detect_results, about to log_debug", "DEBUG")
+  log_debug("sync_ui_with_columns_unified called", "DROPDOWN_DEBUG")
+  log_debug("log_debug completed, continuing", "DEBUG")
   if (!is.null(auto_detect_results)) {
-    cat("DROPDOWN_DEBUG: Using autodetect results:\n")
+    log_debug("Using autodetect results:", "DROPDOWN_DEBUG")
     for (col_name in names(auto_detect_results)) {
-      cat(paste("DROPDOWN_DEBUG:", col_name, "=", auto_detect_results[[col_name]], "\n"))
+      log_debug(paste(col_name, "=", auto_detect_results[[col_name]]), "DROPDOWN_DEBUG")
     }
   } else {
-    cat("DROPDOWN_DEBUG: No autodetect results available\n")
+    log_debug("No autodetect results available", "DROPDOWN_DEBUG")
   }
 
   # Use isolate() to access reactive values safely
@@ -496,11 +496,11 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
   columns_state <- isolate(app_state$columns)
 
   # Update UI controls with detected columns using centralized service
-  cat("DEBUG: About to check ui_service\n")
-  cat(paste("DEBUG: ui_service is null:", is.null(ui_service), "\n"))
+  log_debug("About to check ui_service", "DEBUG")
+  log_debug(paste("ui_service is null:", is.null(ui_service)), "DEBUG")
   tryCatch({
     if (!is.null(ui_service)) {
-      cat("DEBUG: ui_service is available, proceeding with UI updates\n")
+      log_debug("ui_service is available, proceeding with UI updates", "DEBUG")
       # Use centralized UI service with detected selections for all 6 columns
       col_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
       selected_columns <- list(
@@ -513,12 +513,12 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
       )
 
       # DROPDOWN DEBUGGING: Log alle 6 kolonner eksplicit
-      cat("DROPDOWN_DEBUG: All 6 column values being sent to UI:\n")
+      log_debug("All 6 column values being sent to UI:", "DROPDOWN_DEBUG")
       for (col_name in names(selected_columns)) {
-        cat(paste("DROPDOWN_DEBUG:", col_name, "=", paste0("'", selected_columns[[col_name]], "'"), "\n"))
+        log_debug(paste(col_name, "=", paste0("'", selected_columns[[col_name]], "'")), "DROPDOWN_DEBUG")
       }
 
-      cat("DEBUG: About to call ui_service$update_column_choices\n")
+      log_debug("About to call ui_service$update_column_choices", "DEBUG")
       ui_service$update_column_choices(
         choices = col_choices,
         selected = selected_columns,

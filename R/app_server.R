@@ -91,7 +91,7 @@ app_server <- function(input, output, session) {
   }
 
   # EVENT SYSTEM: Set up reactive event listeners AFTER shinylogs setup
-  cat("DEBUG: Line 94 executed - about to start event system setup\n")
+  log_debug("Line 94 executed - about to start event system setup", "DEBUG")
   tryCatch({
     log_debug("🔧 Starting event system setup...", "APP_SERVER")
   }, error = function(e) {
@@ -118,11 +118,11 @@ app_server <- function(input, output, session) {
   log_debug("About to set up event listeners AFTER shinylogs", "APP_SERVER")
   log_debug("Setting up event listeners with all required dependencies...", "APP_SERVER")
   tryCatch({
-    cat("DEBUG: About to call setup_event_listeners...\n")
+    log_debug("About to call setup_event_listeners...", "DEBUG")
     setup_event_listeners(app_state, emit, input, output, session, ui_service)
-    cat("DEBUG: setup_event_listeners call completed\n")
+    log_debug("setup_event_listeners call completed", "DEBUG")
     app_state$system$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
-    cat("DEBUG: Event listeners setup flag set to TRUE\n")
+    log_debug("Event listeners setup flag set to TRUE", "DEBUG")
   }, error = function(e) {
     cat("ERROR in setup_event_listeners:", e$message, "\n")
     print(paste("Full error details:", e))
@@ -152,7 +152,7 @@ app_server <- function(input, output, session) {
   }, once = TRUE, priority = OBSERVER_PRIORITIES$LOW, ignoreInit = FALSE)
 
   # FASE 5: Memory management setup
-  cat("DEBUG: Line 150 executed - about to setup memory management\n")
+  log_debug("Line 150 executed - about to setup memory management", "DEBUG")
   log_debug("Setting up memory management...", "APP_SERVER")
   setup_session_cleanup(session, app_state)
   log_debug("✅ Memory management configured", "APP_SERVER")

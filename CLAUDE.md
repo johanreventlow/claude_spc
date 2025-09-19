@@ -136,7 +136,51 @@ local_reactive <- reactiveVal(value)
 * **Data caching** - Genberegn ikke data unødvendigt
 * **Memory management** - Cleanup med `rm()` og garbage collection awareness
 
-### 3.3 Error Handling Patterns
+### 3.3 Logging & Debugging Standards
+
+**Centralized Logging System:**
+Al logging og debugging i projektet udføres med `log_debug()` funktionen fra `utils_logging.R`. Cat-baserede debug beskeder er konverteret til struktureret logging for bedre observability.
+
+**Logging Pattern:**
+```r
+# ✅ CORRECT: Brug log_debug() med komponent-tags
+log_debug("Operation started", "COMPONENT_NAME")
+log_debug(paste("Processing data with", nrow(data), "rows"), "DATA_PROCESSING")
+log_debug("✅ Operation completed successfully", "COMPONENT_NAME")
+
+# ❌ WRONG: Undgå cat() til debug-formål
+cat("DEBUG: message\n")
+cat(paste("DEBUG:", variable, "\n"))
+```
+
+**Logging Components & Tags:**
+* `"APP_SERVER"` - Main server flow og initialization
+* `"EVENT_SYSTEM"` - Reactive event system operations
+* `"AUTO_DETECT"` - Column auto-detection logic
+* `"DROPDOWN_DEBUG"` - UI dropdown og column selection
+* `"DATA_PROCESSING"` - Data loading og transformation
+* `"LOOP_PROTECTION"` - Loop protection mechanisms
+* `"UI_SYNC"` - UI synchronization operations
+* `"SESSION_LIFECYCLE"` - Session management
+* `"PERFORMANCE"` - Performance monitoring
+* `"ERROR_SYSTEM"` - Error handling og recovery
+
+**Debug Level Hierarchy:**
+* `log_debug()` - Detailed development information
+* `log_info()` - General application flow
+* `log_warn()` - Potential issues requiring attention
+* `log_error()` - Critical errors requiring intervention
+
+**Environment Configuration:**
+```r
+# Aktivér debug logging under udvikling
+Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+
+# Produktions-logging (kun warnings og errors)
+Sys.setenv(SPC_LOG_LEVEL = "WARN")
+```
+
+### 3.4 Error Handling Patterns
 
 **Robust error handling:**
 ```r
