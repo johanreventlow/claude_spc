@@ -158,13 +158,18 @@ debug_state_snapshot <- function(checkpoint_name, app_state, include_hash = TRUE
       data_summary <- list()
 
       # Safe access to reactive values
-      current_data <- tryCatch({
-        if (shiny::isRunning()) {
-          shiny::isolate(app_state$data$current_data)
-        } else {
-          NULL
-        }
-      }, error = function(e) NULL)
+      current_data <- safe_operation(
+        "Get current data for debug snapshot",
+        code = {
+          if (shiny::isRunning()) {
+            shiny::isolate(app_state$data$current_data)
+          } else {
+            NULL
+          }
+        },
+        fallback = function(e) NULL,
+        error_type = "processing"
+      )
 
       if (!is.null(current_data)) {
         data_summary$current_data <- list(
@@ -174,13 +179,18 @@ debug_state_snapshot <- function(checkpoint_name, app_state, include_hash = TRUE
         )
       }
 
-      original_data <- tryCatch({
-        if (shiny::isRunning()) {
-          shiny::isolate(app_state$data$original_data)
-        } else {
-          NULL
-        }
-      }, error = function(e) NULL)
+      original_data <- safe_operation(
+        "Get original data for debug snapshot",
+        code = {
+          if (shiny::isRunning()) {
+            shiny::isolate(app_state$data$original_data)
+          } else {
+            NULL
+          }
+        },
+        fallback = function(e) NULL,
+        error_type = "processing"
+      )
 
       if (!is.null(original_data)) {
         data_summary$original_data <- list(
@@ -194,73 +204,88 @@ debug_state_snapshot <- function(checkpoint_name, app_state, include_hash = TRUE
 
     # Session state summary - safe reactive access
     if (!is.null(app_state$session)) {
-      session_state <- tryCatch({
-        if (shiny::isRunning()) {
-          list(
-            file_uploaded = shiny::isolate(app_state$session$file_uploaded %||% FALSE),
-            user_started_session = shiny::isolate(app_state$session$user_started_session %||% FALSE),
-            auto_save_enabled = shiny::isolate(app_state$session$auto_save_enabled %||% TRUE)
-          )
-        } else {
+      session_state <- safe_operation(
+        "Get session state for debug snapshot",
+        code = {
+          if (shiny::isRunning()) {
+            list(
+              file_uploaded = shiny::isolate(app_state$session$file_uploaded %||% FALSE),
+              user_started_session = shiny::isolate(app_state$session$user_started_session %||% FALSE),
+              auto_save_enabled = shiny::isolate(app_state$session$auto_save_enabled %||% TRUE)
+            )
+          } else {
+            list(
+              file_uploaded = FALSE,
+              user_started_session = FALSE,
+              auto_save_enabled = TRUE
+            )
+          }
+        },
+        fallback = function(e) {
           list(
             file_uploaded = FALSE,
             user_started_session = FALSE,
             auto_save_enabled = TRUE
           )
-        }
-      }, error = function(e) {
-        list(
-          file_uploaded = FALSE,
-          user_started_session = FALSE,
-          auto_save_enabled = TRUE
-        )
-      })
+        },
+        error_type = "processing"
+      )
       snapshot$session_state <- session_state
     }
 
     # Column management state - safe reactive access
     if (!is.null(app_state$columns)) {
-      column_state <- tryCatch({
-        if (shiny::isRunning()) {
-          list(
-            auto_detect_completed = shiny::isolate(app_state$columns$auto_detect$completed %||% FALSE),
-            auto_detect_in_progress = shiny::isolate(app_state$columns$auto_detect$in_progress %||% FALSE)
-          )
-        } else {
+      column_state <- safe_operation(
+        "Get column state for debug snapshot",
+        code = {
+          if (shiny::isRunning()) {
+            list(
+              auto_detect_completed = shiny::isolate(app_state$columns$auto_detect$completed %||% FALSE),
+              auto_detect_in_progress = shiny::isolate(app_state$columns$auto_detect$in_progress %||% FALSE)
+            )
+          } else {
+            list(
+              auto_detect_completed = FALSE,
+              auto_detect_in_progress = FALSE
+            )
+          }
+        },
+        fallback = function(e) {
           list(
             auto_detect_completed = FALSE,
             auto_detect_in_progress = FALSE
           )
-        }
-      }, error = function(e) {
-        list(
-          auto_detect_completed = FALSE,
-          auto_detect_in_progress = FALSE
-        )
-      })
+        },
+        error_type = "processing"
+      )
       snapshot$column_state <- column_state
     }
 
     # UI state - safe reactive access
     if (!is.null(app_state$ui)) {
-      ui_state <- tryCatch({
-        if (shiny::isRunning()) {
-          list(
-            welcome_screen_active = shiny::isolate(app_state$ui$welcome_screen_active %||% TRUE),
-            current_chart_type = shiny::isolate(app_state$ui$current_chart_type %||% "unknown")
-          )
-        } else {
+      ui_state <- safe_operation(
+        "Get UI state for debug snapshot",
+        code = {
+          if (shiny::isRunning()) {
+            list(
+              welcome_screen_active = shiny::isolate(app_state$ui$welcome_screen_active %||% TRUE),
+              current_chart_type = shiny::isolate(app_state$ui$current_chart_type %||% "unknown")
+            )
+          } else {
+            list(
+              welcome_screen_active = TRUE,
+              current_chart_type = "unknown"
+            )
+          }
+        },
+        fallback = function(e) {
           list(
             welcome_screen_active = TRUE,
             current_chart_type = "unknown"
           )
-        }
-      }, error = function(e) {
-        list(
-          welcome_screen_active = TRUE,
-          current_chart_type = "unknown"
-        )
-      })
+        },
+        error_type = "processing"
+      )
       snapshot$ui_state <- ui_state
     }
 

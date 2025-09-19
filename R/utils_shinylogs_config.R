@@ -174,12 +174,17 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
     log_data <- reactive({
       invalidateLater(5000, session)  # Update every 5 seconds
 
-      tryCatch({
-        shinylogs::read_db_logs(log_directory)
-      }, error = function(e) {
-        # Could not read shinylogs data
-        return(data.frame())
-      })
+      safe_operation(
+        "Read shinylogs database",
+        code = {
+          shinylogs::read_db_logs(log_directory)
+        },
+        fallback = function(e) {
+          # Could not read shinylogs data
+          return(data.frame())
+        },
+        error_type = "processing"
+      )
     })
 
     # Live logs output
@@ -290,16 +295,21 @@ integrate_shinylogs_with_logging <- function(session) {
 
     # Send to shinylogs if session available
     if (!is.null(session) && exists("session") && !is.null(session$token)) {
-      tryCatch({
-        shinylogs::record_log(
-          session = session,
-          level = "DEBUG",
-          message = paste0("[", .context %||% "GENERAL", "] ", message),
-          timestamp = Sys.time()
-        )
-      }, error = function(e) {
-        # Fail silently to avoid breaking logging
-      })
+      safe_operation(
+        "Record debug log to shinylogs",
+        code = {
+          shinylogs::record_log(
+            session = session,
+            level = "DEBUG",
+            message = paste0("[", .context %||% "GENERAL", "] ", message),
+            timestamp = Sys.time()
+          )
+        },
+        fallback = function(e) {
+          # Fail silently to avoid breaking logging
+        },
+        error_type = "processing"
+      )
     }
   }
 
@@ -307,14 +317,19 @@ integrate_shinylogs_with_logging <- function(session) {
     original_log_info(message, .context = .context, ...)
 
     if (!is.null(session) && exists("session") && !is.null(session$token)) {
-      tryCatch({
-        shinylogs::record_log(
-          session = session,
-          level = "INFO",
-          message = paste0("[", .context %||% "GENERAL", "] ", message),
-          timestamp = Sys.time()
-        )
-      }, error = function(e) {})
+      safe_operation(
+        "Record info log to shinylogs",
+        code = {
+          shinylogs::record_log(
+            session = session,
+            level = "INFO",
+            message = paste0("[", .context %||% "GENERAL", "] ", message),
+            timestamp = Sys.time()
+          )
+        },
+        fallback = function(e) {},
+        error_type = "processing"
+      )
     }
   }
 
@@ -322,14 +337,19 @@ integrate_shinylogs_with_logging <- function(session) {
     original_log_warn(message, .context = .context, ...)
 
     if (!is.null(session) && exists("session") && !is.null(session$token)) {
-      tryCatch({
-        shinylogs::record_log(
-          session = session,
-          level = "WARN",
-          message = paste0("[", .context %||% "GENERAL", "] ", message),
-          timestamp = Sys.time()
-        )
-      }, error = function(e) {})
+      safe_operation(
+        "Record warn log to shinylogs",
+        code = {
+          shinylogs::record_log(
+            session = session,
+            level = "WARN",
+            message = paste0("[", .context %||% "GENERAL", "] ", message),
+            timestamp = Sys.time()
+          )
+        },
+        fallback = function(e) {},
+        error_type = "processing"
+      )
     }
   }
 
@@ -337,14 +357,19 @@ integrate_shinylogs_with_logging <- function(session) {
     original_log_error(message, .context = .context, ...)
 
     if (!is.null(session) && exists("session") && !is.null(session$token)) {
-      tryCatch({
-        shinylogs::record_log(
-          session = session,
-          level = "ERROR",
-          message = paste0("[", .context %||% "GENERAL", "] ", message),
-          timestamp = Sys.time()
-        )
-      }, error = function(e) {})
+      safe_operation(
+        "Record error log to shinylogs",
+        code = {
+          shinylogs::record_log(
+            session = session,
+            level = "ERROR",
+            message = paste0("[", .context %||% "GENERAL", "] ", message),
+            timestamp = Sys.time()
+          )
+        },
+        fallback = function(e) {},
+        error_type = "processing"
+      )
     }
   }
 

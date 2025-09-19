@@ -263,8 +263,9 @@ app_server <- function(input, output, session) {
       log_debug("✅ Test file found, starting auto-load...", "TEST_MODE")
       autoload_tracer$step("file_validation_complete")
 
-      tryCatch(
-        {
+      safe_operation(
+        "Test mode auto-load data",
+        code = {
           autoload_tracer$step("data_loading_started")
           # Bestem hvilken loader der skal bruges baseret på fil-extension
           file_extension <- tools::file_ext(test_file_path)
@@ -322,9 +323,10 @@ app_server <- function(input, output, session) {
 
           autoload_tracer$complete("test_data_autoload_complete")
         },
-        error = function(e) {
+        fallback = function(e) {
           log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), "TEST_MODE")
-        }
+        },
+        error_type = "processing"
       )
     } else {
       log_warn(paste("Fil ikke fundet:", test_file_path), "TEST_MODE")
@@ -425,15 +427,20 @@ app_server <- function(input, output, session) {
     obs_manager$cleanup_all()
 
     # LOOP PROTECTION CLEANUP: Ensure all flags are cleared and no dangling callbacks
-    tryCatch({
-      if (!is.null(app_state$ui)) {
-        app_state$ui$updating_programmatically <- FALSE
-        app_state$ui$flag_reset_scheduled <- TRUE
-        log_debug("LOOP_PROTECTION: Flags cleared during session cleanup", .context = "SESSION_CLEANUP")
-      }
-    }, error = function(e) {
-      log_debug(paste("Session cleanup: Could not clear loop protection flags:", e$message), .context = "SESSION_CLEANUP")
-    })
+    safe_operation(
+      "Clear loop protection flags during session cleanup",
+      code = {
+        if (!is.null(app_state$ui)) {
+          app_state$ui$updating_programmatically <- FALSE
+          app_state$ui$flag_reset_scheduled <- TRUE
+          log_debug("LOOP_PROTECTION: Flags cleared during session cleanup", .context = "SESSION_CLEANUP")
+        }
+      },
+      fallback = function(e) {
+        log_debug(paste("Session cleanup: Could not clear loop protection flags:", e$message), .context = "SESSION_CLEANUP")
+      },
+      error_type = "processing"
+    )
 
     # Cleanup waiter
     if (exists("waiter_file") && !is.null(waiter_file)) {
