@@ -9,7 +9,11 @@ test_that("R list modification scoping test", {
   # Function der modificerer list parameter
   modify_list <- function(input_list) {
     input_list$new_value <- "added"
-    cat("DEBUG: Inside function, input_list$new_value =", input_list$new_value, "\n")
+    if (exists("log_debug", mode = "function")) {
+      log_debug("Inside function, input_list$new_value =", input_list$new_value, .context = "TEST_SCOPING")
+    } else {
+      message("[TEST_SCOPING] Inside function, input_list$new_value =", input_list$new_value)
+    }
     return(input_list)
   }
 

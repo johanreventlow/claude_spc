@@ -7,7 +7,8 @@ library(shinyjs)
 
 # Source required helper functions
 source("R/fct_chart_helpers.R")
-source("R/fct_spc_calculations.R")
+source("R/fct_spc_helpers.R")
+source("R/fct_spc_plot_generation.R")
 
 # PLOT MODUL UI ===============================================================
 

@@ -3,7 +3,8 @@
 # Fokuserer på testable utility functions og qicharts2 integration
 
 # Source required functions
-source("../../R/fct_spc_calculations.R")
+source("../../R/fct_spc_helpers.R")
+source("../../R/fct_spc_plot_generation.R")
 source("../../R/utils_logging.R")
 
 test_that("qicharts2 basic functionality works", {

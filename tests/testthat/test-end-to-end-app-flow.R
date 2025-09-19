@@ -13,28 +13,36 @@ library(shinytest2)  # For advanced Shiny testing hvis tilgængelig, ellers skip
 library(dplyr)
 library(ggplot2)
 
-cat("DEBUG: Core libraries loaded successfully\n")
+test_debug_log <- function(..., context = "TEST_E2E_GENERIC") {
+  if (exists("log_debug", mode = "function")) {
+    log_debug(..., .context = context)
+  } else {
+    message(sprintf("[FALLBACK:%s] %s", context, paste(..., collapse = " ")))
+  }
+}
+
+test_debug_log("Core libraries loaded successfully", context = "TEST_E2E_SETUP")
 
 # Source nødvendige filer med error handling
 safe_source <- function(file_path) {
-  cat("DEBUG: Attempting to source:", file_path, "\n")
+  test_debug_log("Attempting to source:", file_path, context = "TEST_E2E_SOURCE")
   tryCatch({
     source(file_path, local = TRUE)
-    cat("DEBUG: Successfully sourced:", file_path, "\n")
+    test_debug_log("Successfully sourced:", file_path, context = "TEST_E2E_SOURCE")
     TRUE
   }, error = function(e) {
-    cat("DEBUG: Failed to source:", file_path, "- Error:", e$message, "\n")
+    test_debug_log("Failed to source:", file_path, "- Error:", e$message, context = "TEST_E2E_SOURCE")
     FALSE
   })
 }
 
 # Try sourcing from different locations
-cat("DEBUG: Sourcing global.R...\n")
+test_debug_log("Sourcing global.R...", context = "TEST_E2E_SOURCE")
 sourced_global <- FALSE
 for (path in c("../../global.R", "global.R")) {
-  cat("DEBUG: Checking path:", path, "- exists:", file.exists(path), "\n")
+  test_debug_log("Checking path:", path, "- exists:", file.exists(path), context = "TEST_E2E_SOURCE")
   if (file.exists(path)) {
-    cat("DEBUG: Attempting to source:", path, "\n")
+    test_debug_log("Attempting to source:", path, context = "TEST_E2E_SOURCE")
     tryCatch({
       # Change to correct directory before sourcing global.R
       old_wd <- getwd()
@@ -44,9 +52,9 @@ for (path in c("../../global.R", "global.R")) {
       source("global.R", local = TRUE)
       setwd(old_wd)
       sourced_global <- TRUE
-      cat("DEBUG: global.R sourced successfully from:", path, "\n")
+      test_debug_log("global.R sourced successfully from:", path, context = "TEST_E2E_SOURCE")
     }, error = function(e) {
-      cat("DEBUG: Failed to source:", path, "- Error:", e$message, "\n")
+      test_debug_log("Failed to source:", path, "- Error:", e$message, context = "TEST_E2E_SOURCE")
       if (exists("old_wd")) setwd(old_wd)
     })
     if (sourced_global) break
@@ -64,7 +72,7 @@ function_files <- c(
   "R/utils_danish_locale.R"
 )
 
-cat("DEBUG: Sourcing function files...\n")
+test_debug_log("Sourcing function files...", context = "TEST_E2E_SOURCE")
 for (file in function_files) {
   sourced_file <- FALSE
   for (prefix in c("../../", "")) {
@@ -82,7 +90,7 @@ for (file in function_files) {
 }
 
 # Test data setup - find correct path
-cat("DEBUG: Setting up test data paths...\n")
+test_debug_log("Setting up test data paths...", context = "TEST_E2E_DATA")
 test_data_candidates <- c(
   "R/data/spc_exampledata.csv",
   "../../R/data/spc_exampledata.csv"
@@ -90,10 +98,10 @@ test_data_candidates <- c(
 
 test_data_path <- NULL
 for (path in test_data_candidates) {
-  cat("DEBUG: Checking test data path:", path, "- exists:", file.exists(path), "\n")
+  test_debug_log("Checking test data path:", path, "- exists:", file.exists(path), context = "TEST_E2E_DATA")
   if (file.exists(path)) {
     test_data_path <- path
-    cat("DEBUG: Test data found at:", test_data_path, "\n")
+    test_debug_log("Test data found at:", test_data_path, context = "TEST_E2E_DATA")
     break
   }
 }
@@ -101,11 +109,11 @@ for (path in test_data_candidates) {
 if (is.null(test_data_path)) {
   cat("WARNING: No test data file found in any candidate location\n")
 } else {
-  cat("DEBUG: Test data file size:", file.size(test_data_path), "bytes\n")
+  test_debug_log("Test data file size:", file.size(test_data_path), "bytes", context = "TEST_E2E_DATA")
 }
 
 expected_columns <- c("Skift", "Frys", "Dato", "Tæller", "Nævner", "Kommentarer")
-cat("DEBUG: Expected columns:", paste(expected_columns, collapse = ", "), "\n")
+test_debug_log("Expected columns:", paste(expected_columns, collapse = ", "), context = "TEST_E2E_DATA")
 
 # TEST SUITE 1: APP INITIALIZATION ==========================================
 
@@ -114,30 +122,30 @@ test_that("App initialisering og setup fungerer korrekt", {
   cat("\n=== SUITE 1: APP INITIALIZATION ===\n")
 
   # Test global.R konfiguration
-  cat("DEBUG: Testing global.R configuration...\n")
-  cat("DEBUG: TEST_MODE_AUTO_LOAD exists:", exists("TEST_MODE_AUTO_LOAD"), "\n")
+  test_debug_log("Testing global.R configuration...\n")
+  test_debug_log("TEST_MODE_AUTO_LOAD exists:", exists("TEST_MODE_AUTO_LOAD"), "\n")
   if (exists("TEST_MODE_AUTO_LOAD")) {
-    cat("DEBUG: TEST_MODE_AUTO_LOAD value:", TEST_MODE_AUTO_LOAD, "\n")
+    test_debug_log("TEST_MODE_AUTO_LOAD value:", TEST_MODE_AUTO_LOAD, "\n")
     # Note: TEST_MODE_AUTO_LOAD may be FALSE during testing - this is ok
     if (TEST_MODE_AUTO_LOAD) {
-      cat("DEBUG: TEST_MODE is enabled\n")
+      test_debug_log("TEST_MODE is enabled\n")
     } else {
-      cat("DEBUG: TEST_MODE is disabled - this is ok for testing\n")
+      test_debug_log("TEST_MODE is disabled - this is ok for testing\n")
     }
     expect_true(TRUE, label = "TEST_MODE_AUTO_LOAD variable exists")
   } else {
     expect_true(exists("TEST_MODE_AUTO_LOAD"))
   }
 
-  cat("DEBUG: TEST_MODE_FILE_PATH exists:", exists("TEST_MODE_FILE_PATH"), "\n")
+  test_debug_log("TEST_MODE_FILE_PATH exists:", exists("TEST_MODE_FILE_PATH"), "\n")
   if (exists("TEST_MODE_FILE_PATH")) {
-    cat("DEBUG: TEST_MODE_FILE_PATH value:", TEST_MODE_FILE_PATH, "\n")
-    cat("DEBUG: TEST_MODE_FILE_PATH file exists:", file.exists(TEST_MODE_FILE_PATH), "\n")
+    test_debug_log("TEST_MODE_FILE_PATH value:", TEST_MODE_FILE_PATH, "\n")
+    test_debug_log("TEST_MODE_FILE_PATH file exists:", file.exists(TEST_MODE_FILE_PATH), "\n")
     # Note: TEST_MODE_FILE_PATH may point to non-existent file during testing - use our test_data_path instead
     if (file.exists(TEST_MODE_FILE_PATH)) {
-      cat("DEBUG: TEST_MODE file exists\n")
+      test_debug_log("TEST_MODE file exists\n")
     } else {
-      cat("DEBUG: TEST_MODE file doesn't exist - using test_data_path instead\n")
+      test_debug_log("TEST_MODE file doesn't exist - using test_data_path instead\n")
     }
     expect_true(TRUE, label = "TEST_MODE_FILE_PATH variable exists")
   } else {
@@ -145,17 +153,17 @@ test_that("App initialisering og setup fungerer korrekt", {
   }
 
   # Test hospital konfiguration
-  cat("DEBUG: Testing hospital configuration...\n")
-  cat("DEBUG: HOSPITAL_NAME exists:", exists("HOSPITAL_NAME"), "\n")
+  test_debug_log("Testing hospital configuration...\n")
+  test_debug_log("HOSPITAL_NAME exists:", exists("HOSPITAL_NAME"), "\n")
   if (exists("HOSPITAL_NAME")) {
-    cat("DEBUG: HOSPITAL_NAME value:", HOSPITAL_NAME, "\n")
+    test_debug_log("HOSPITAL_NAME value:", HOSPITAL_NAME, "\n")
   }
   expect_true(exists("HOSPITAL_NAME"))
 
-  cat("DEBUG: HOSPITAL_COLORS exists:", exists("HOSPITAL_COLORS"), "\n")
+  test_debug_log("HOSPITAL_COLORS exists:", exists("HOSPITAL_COLORS"), "\n")
   if (exists("HOSPITAL_COLORS")) {
-    cat("DEBUG: HOSPITAL_COLORS type:", typeof(HOSPITAL_COLORS), "\n")
-    cat("DEBUG: HOSPITAL_COLORS names:", paste(names(HOSPITAL_COLORS), collapse = ", "), "\n")
+    test_debug_log("HOSPITAL_COLORS type:", typeof(HOSPITAL_COLORS), "\n")
+    test_debug_log("HOSPITAL_COLORS names:", paste(names(HOSPITAL_COLORS), collapse = ", "), "\n")
     expect_type(HOSPITAL_COLORS, "list")
     expect_true("primary" %in% names(HOSPITAL_COLORS))
   } else {
@@ -163,15 +171,15 @@ test_that("App initialisering og setup fungerer korrekt", {
   }
 
   # Test chart type mappings
-  cat("DEBUG: Testing chart type mappings...\n")
-  cat("DEBUG: CHART_TYPES_DA exists:", exists("CHART_TYPES_DA"), "\n")
-  cat("DEBUG: get_qic_chart_type exists:", exists("get_qic_chart_type"), "\n")
+  test_debug_log("Testing chart type mappings...\n")
+  test_debug_log("CHART_TYPES_DA exists:", exists("CHART_TYPES_DA"), "\n")
+  test_debug_log("get_qic_chart_type exists:", exists("get_qic_chart_type"), "\n")
 
   if (exists("get_qic_chart_type")) {
     test_p_chart <- get_qic_chart_type("P-kort (Andele)")
     test_fallback <- get_qic_chart_type("")
-    cat("DEBUG: get_qic_chart_type('P-kort (Andele)') =", test_p_chart, "\n")
-    cat("DEBUG: get_qic_chart_type('') =", test_fallback, "\n")
+    test_debug_log("get_qic_chart_type('P-kort (Andele)') =", test_p_chart, "\n")
+    test_debug_log("get_qic_chart_type('') =", test_fallback, "\n")
     expect_equal(test_p_chart, "p")
     expect_equal(test_fallback, "run")
   } else {
@@ -179,15 +187,15 @@ test_that("App initialisering og setup fungerer korrekt", {
   }
 
   # Test helper functions are available
-  cat("DEBUG: Testing helper functions...\n")
+  test_debug_log("Testing helper functions...\n")
   helper_functions <- c("ensure_standard_columns", "validate_numeric_column", "safe_date_parse")
   for (func in helper_functions) {
     func_exists <- exists(func)
-    cat("DEBUG:", func, "exists:", func_exists, "\n")
+    test_debug_log("", func, "exists:", func_exists, "\n")
     expect_true(func_exists)
   }
 
-  cat("DEBUG: App initialization tests completed\n")
+  test_debug_log("App initialization tests completed\n")
 })
 
 test_that("Reactive values initialization fungerer", {
@@ -212,16 +220,16 @@ test_that("Test data kan læses og behandles korrekt", {
   cat("\n=== SUITE 2: TEST DATA AUTO-LOAD ===\n")
 
   # Skip if test data path not found
-  cat("DEBUG: Checking test data availability...\n")
-  cat("DEBUG: test_data_path:", if(is.null(test_data_path)) "NULL" else test_data_path, "\n")
+  test_debug_log("Checking test data availability...\n")
+  test_debug_log("test_data_path:", if(is.null(test_data_path)) "NULL" else test_data_path, "\n")
   skip_if(is.null(test_data_path), "Test data file not found")
 
   # Test fil eksistens
-  cat("DEBUG: Verifying file exists at:", test_data_path, "\n")
+  test_debug_log("Verifying file exists at:", test_data_path, "\n")
   expect_true(file.exists(test_data_path))
 
   # Test data indlæsning
-  cat("DEBUG: Reading CSV data with Danish locale...\n")
+  test_debug_log("Reading CSV data with Danish locale...\n")
   data <- readr::read_csv2(
     test_data_path,
     locale = readr::locale(
@@ -232,9 +240,9 @@ test_that("Test data kan læses og behandles korrekt", {
     show_col_types = FALSE
   )
 
-  cat("DEBUG: Data loaded - dimensions:", dim(data), "\n")
-  cat("DEBUG: Column names:", paste(names(data), collapse = ", "), "\n")
-  cat("DEBUG: Column types:", paste(sapply(data, class), collapse = ", "), "\n")
+  test_debug_log("Data loaded - dimensions:", dim(data), "\n")
+  test_debug_log("Column names:", paste(names(data), collapse = ", "), "\n")
+  test_debug_log("Column types:", paste(sapply(data, class), collapse = ", "), "\n")
 
   expect_s3_class(data, "data.frame")
   expect_gt(nrow(data), 0, label = "Data skal have rækker")
@@ -242,23 +250,23 @@ test_that("Test data kan læses og behandles korrekt", {
 
   # Test ensure_standard_columns funktionalitet
   if (exists("ensure_standard_columns")) {
-    cat("DEBUG: Processing data with ensure_standard_columns...\n")
+    test_debug_log("Processing data with ensure_standard_columns...\n")
     processed_data <- ensure_standard_columns(data)
-    cat("DEBUG: Processed data dimensions:", dim(processed_data), "\n")
-    cat("DEBUG: Processed column names:", paste(names(processed_data), collapse = ", "), "\n")
+    test_debug_log("Processed data dimensions:", dim(processed_data), "\n")
+    test_debug_log("Processed column names:", paste(names(processed_data), collapse = ", "), "\n")
 
     expect_true("Skift" %in% names(processed_data))
     expect_true("Frys" %in% names(processed_data))
 
     # Test kolonnerækkefølge
     first_two_cols <- names(processed_data)[1:2]
-    cat("DEBUG: First two columns:", paste(first_two_cols, collapse = ", "), "\n")
+    test_debug_log("First two columns:", paste(first_two_cols, collapse = ", "), "\n")
     expect_equal(first_two_cols, c("Skift", "Frys"))
   } else {
     cat("WARNING: ensure_standard_columns function not available\n")
   }
 
-  cat("DEBUG: Test data processing completed\n")
+  test_debug_log("Test data processing completed\n")
 })
 
 test_that("CSV encoding og parsing fungerer korrekt", {
@@ -304,7 +312,7 @@ test_that("Auto-detect identificerer kolonnetyper korrekt", {
   skip_if(is.null(test_data_path), "Test data file not found")
 
   # Load test data
-  cat("DEBUG: Loading test data for auto-detect testing...\n")
+  test_debug_log("Loading test data for auto-detect testing...\n")
   data <- readr::read_csv2(
     test_data_path,
     locale = readr::locale(decimal_mark = ",", grouping_mark = ".", encoding = "ISO-8859-1"),
@@ -313,19 +321,19 @@ test_that("Auto-detect identificerer kolonnetyper korrekt", {
 
   if (exists("ensure_standard_columns")) {
     data <- ensure_standard_columns(data)
-    cat("DEBUG: Data processed with ensure_standard_columns\n")
+    test_debug_log("Data processed with ensure_standard_columns\n")
   }
 
-  cat("DEBUG: Auto-detect test data - dimensions:", dim(data), "\n")
-  cat("DEBUG: Auto-detect columns:", paste(names(data), collapse = ", "), "\n")
+  test_debug_log("Auto-detect test data - dimensions:", dim(data), "\n")
+  test_debug_log("Auto-detect columns:", paste(names(data), collapse = ", "), "\n")
 
   # Test auto_detect_and_update_columns functionality (Shiny function)
-  cat("DEBUG: Testing auto_detect_and_update_columns function...\n")
-  cat("DEBUG: auto_detect_and_update_columns exists:", exists("auto_detect_and_update_columns"), "\n")
+  test_debug_log("Testing auto_detect_and_update_columns function...\n")
+  test_debug_log("auto_detect_and_update_columns exists:", exists("auto_detect_and_update_columns"), "\n")
 
   if (exists("auto_detect_and_update_columns")) {
-    cat("DEBUG: auto_detect_and_update_columns function exists but requires Shiny context\n")
-    cat("DEBUG: Testing the detection logic manually (simulating what the function does)\n")
+    test_debug_log("auto_detect_and_update_columns function exists but requires Shiny context\n")
+    test_debug_log("Testing the detection logic manually (simulating what the function does)\n")
 
     # Simulate the detection logic from auto_detect_and_update_columns
     detected <- list(
@@ -344,8 +352,8 @@ test_that("Auto-detect identificerer kolonnetyper korrekt", {
       }
     }
 
-    cat("DEBUG: Auto-detect result type:", typeof(detected), "\n")
-    cat("DEBUG: Auto-detect result names:", paste(names(detected), collapse = ", "), "\n")
+    test_debug_log("Auto-detect result type:", typeof(detected), "\n")
+    test_debug_log("Auto-detect result names:", paste(names(detected), collapse = ", "), "\n")
 
     expect_type(detected, "list")
     expect_true("date_column" %in% names(detected))
@@ -353,32 +361,32 @@ test_that("Auto-detect identificerer kolonnetyper korrekt", {
 
     # Test date detection
     if (!is.null(detected$date_column)) {
-      cat("DEBUG: Detected date column:", detected$date_column, "\n")
+      test_debug_log("Detected date column:", detected$date_column, "\n")
       expect_true(detected$date_column %in% names(data))
     } else {
-      cat("DEBUG: No date column detected\n")
+      test_debug_log("No date column detected\n")
     }
 
     # Test numeric detection
     if (length(detected$numeric_columns) > 0) {
-      cat("DEBUG: Detected numeric columns:", paste(detected$numeric_columns, collapse = ", "), "\n")
+      test_debug_log("Detected numeric columns:", paste(detected$numeric_columns, collapse = ", "), "\n")
       for (col in detected$numeric_columns) {
-        cat("DEBUG: Validating numeric column:", col, "- in data:", col %in% names(data), "- is numeric:", is.numeric(data[[col]]), "\n")
+        test_debug_log("Validating numeric column:", col, "- in data:", col %in% names(data), "- is numeric:", is.numeric(data[[col]]), "\n")
         expect_true(col %in% names(data))
         expect_true(is.numeric(data[[col]]))
       }
     } else {
-      cat("DEBUG: No numeric columns detected\n")
+      test_debug_log("No numeric columns detected\n")
     }
   } else {
     cat("INFO: auto_detect_and_update_columns kræver Shiny kontekst - testing manual detection logic\n")
     # Manual detection for testing
     numeric_cols <- names(data)[sapply(data, is.numeric)]
     numeric_cols <- setdiff(numeric_cols, c("Skift", "Frys"))
-    cat("DEBUG: Manual numeric detection found:", paste(numeric_cols, collapse = ", "), "\n")
+    test_debug_log("Manual numeric detection found:", paste(numeric_cols, collapse = ", "), "\n")
   }
 
-  cat("DEBUG: Auto-detect testing completed\n")
+  test_debug_log("Auto-detect testing completed\n")
 })
 
 test_that("Auto-detect håndterer dansk dato format", {
@@ -424,10 +432,10 @@ test_that("Auto-detect håndterer edge cases", {
 test_that("Column mapping logic fungerer korrekt", {
 
   cat("\n=== SUITE 4: INPUT FIELD UPDATES (KOLONNEMATCH TAB) ===\n")
-  cat("DEBUG: Testing the CRITICAL functionality - input field updates after auto-detect\n")
+  test_debug_log("Testing the CRITICAL functionality - input field updates after auto-detect\n")
 
   # Simuler detected columns resultat
-  cat("DEBUG: Creating simulated auto-detect result...\n")
+  test_debug_log("Creating simulated auto-detect result...\n")
   detected_columns <- list(
     date_column = "Dato",
     numeric_columns = c("Tæller", "Nævner"),
@@ -435,37 +443,37 @@ test_that("Column mapping logic fungerer korrekt", {
     suggested_n = "Nævner"
   )
 
-  cat("DEBUG: Simulated detection result:\n")
-  cat("DEBUG: - date_column:", detected_columns$date_column, "\n")
-  cat("DEBUG: - numeric_columns:", paste(detected_columns$numeric_columns, collapse = ", "), "\n")
-  cat("DEBUG: - suggested_y:", detected_columns$suggested_y, "\n")
-  cat("DEBUG: - suggested_n:", detected_columns$suggested_n, "\n")
+  test_debug_log("Simulated detection result:\n")
+  test_debug_log("- date_column:", detected_columns$date_column, "\n")
+  test_debug_log("- numeric_columns:", paste(detected_columns$numeric_columns, collapse = ", "), "\n")
+  test_debug_log("- suggested_y:", detected_columns$suggested_y, "\n")
+  test_debug_log("- suggested_n:", detected_columns$suggested_n, "\n")
 
   # Test mapping logic
-  cat("DEBUG: Validating column mapping logic...\n")
+  test_debug_log("Validating column mapping logic...\n")
 
-  cat("DEBUG: Testing date column mapping...\n")
+  test_debug_log("Testing date column mapping...\n")
   expect_equal(detected_columns$date_column, "Dato")
 
-  cat("DEBUG: Testing numeric columns presence...\n")
+  test_debug_log("Testing numeric columns presence...\n")
   expect_true("Tæller" %in% detected_columns$numeric_columns)
   expect_true("Nævner" %in% detected_columns$numeric_columns)
 
-  cat("DEBUG: Testing Y-axis suggestion...\n")
+  test_debug_log("Testing Y-axis suggestion...\n")
   expect_equal(detected_columns$suggested_y, "Tæller")
 
-  cat("DEBUG: Testing N (denominator) suggestion...\n")
+  test_debug_log("Testing N (denominator) suggestion...\n")
   expect_equal(detected_columns$suggested_n, "Nævner")
 
-  cat("DEBUG: Column mapping logic tests completed - ALL CRITICAL for input field updates!\n")
+  test_debug_log("Column mapping logic tests completed - ALL CRITICAL for input field updates!\n")
 })
 
 test_that("Selectize input choices genereres korrekt", {
 
-  cat("DEBUG: Testing selectize input choice generation - CRITICAL for UI updates\n")
+  test_debug_log("Testing selectize input choice generation - CRITICAL for UI updates\n")
 
   # Test data kolonner
-  cat("DEBUG: Creating test data for selectize choice testing...\n")
+  test_debug_log("Creating test data for selectize choice testing...\n")
   data <- data.frame(
     Skift = FALSE,
     Frys = FALSE,
@@ -475,29 +483,29 @@ test_that("Selectize input choices genereres korrekt", {
     Kommentarer = letters[1:5]
   )
 
-  cat("DEBUG: Test data columns:", paste(names(data), collapse = ", "), "\n")
-  cat("DEBUG: Test data types:", paste(sapply(data, class), collapse = ", "), "\n")
+  test_debug_log("Test data columns:", paste(names(data), collapse = ", "), "\n")
+  test_debug_log("Test data types:", paste(sapply(data, class), collapse = ", "), "\n")
 
   # Test available columns for selectize (excluding control columns)
-  cat("DEBUG: Filtering user columns (excluding control columns)...\n")
+  test_debug_log("Filtering user columns (excluding control columns)...\n")
   user_columns <- setdiff(names(data), c("Skift", "Frys"))
-  cat("DEBUG: Available user columns for selectize:", paste(user_columns, collapse = ", "), "\n")
+  test_debug_log("Available user columns for selectize:", paste(user_columns, collapse = ", "), "\n")
   expect_equal(user_columns, c("Dato", "Tæller", "Nævner", "Kommentarer"))
 
   # Test numeric columns filter
-  cat("DEBUG: Identifying numeric columns for Y-axis selectize...\n")
+  test_debug_log("Identifying numeric columns for Y-axis selectize...\n")
   numeric_cols <- user_columns[sapply(user_columns, function(col) is.numeric(data[[col]]))]
-  cat("DEBUG: Numeric columns found:", paste(numeric_cols, collapse = ", "), "\n")
+  test_debug_log("Numeric columns found:", paste(numeric_cols, collapse = ", "), "\n")
   expect_equal(numeric_cols, c("Tæller", "Nævner"))
 
   # Test character/date columns
-  cat("DEBUG: Identifying non-numeric columns for X-axis selectize...\n")
+  test_debug_log("Identifying non-numeric columns for X-axis selectize...\n")
   non_numeric_cols <- setdiff(user_columns, numeric_cols)
-  cat("DEBUG: Non-numeric columns found:", paste(non_numeric_cols, collapse = ", "), "\n")
+  test_debug_log("Non-numeric columns found:", paste(non_numeric_cols, collapse = ", "), "\n")
   expect_true("Dato" %in% non_numeric_cols)
   expect_true("Kommentarer" %in% non_numeric_cols)
 
-  cat("DEBUG: Selectize choice generation tests completed - CRITICAL for Phase 3-5!\n")
+  test_debug_log("Selectize choice generation tests completed - CRITICAL for Phase 3-5!\n")
 })
 
 # TEST SUITE 5: REACTIVE CHAIN TESTING ====================================
@@ -765,36 +773,36 @@ test_that("Edge case data håndteres korrekt", {
 test_that("End-to-end integration simulering", {
 
   cat("\n=== SUITE 8: END-TO-END INTEGRATION TEST ===\n")
-  cat("DEBUG: Running complete workflow simulation - app start to plot generation\n")
+  test_debug_log("Running complete workflow simulation - app start to plot generation\n")
 
   # Skip if test data path not found
   skip_if(is.null(test_data_path), "Test data file not found")
 
   # 1. Simuler app start og data load
-  cat("DEBUG: STEP 1 - Simulating app start and data load...\n")
+  test_debug_log("STEP 1 - Simulating app start and data load...\n")
   if (exists("TEST_MODE_AUTO_LOAD")) {
     original_test_mode <- TEST_MODE_AUTO_LOAD
-    cat("DEBUG: Original TEST_MODE_AUTO_LOAD:", original_test_mode, "\n")
+    test_debug_log("Original TEST_MODE_AUTO_LOAD:", original_test_mode, "\n")
     on.exit(assign("TEST_MODE_AUTO_LOAD", original_test_mode, envir = .GlobalEnv))
   }
 
   # 2. Load test data
-  cat("DEBUG: STEP 2 - Loading test data from:", test_data_path, "\n")
+  test_debug_log("STEP 2 - Loading test data from:", test_data_path, "\n")
   data <- readr::read_csv2(
     test_data_path,
     locale = readr::locale(decimal_mark = ",", grouping_mark = ".", encoding = "ISO-8859-1"),
     show_col_types = FALSE
   )
-  cat("DEBUG: Data loaded - rows:", nrow(data), "cols:", ncol(data), "\n")
-  cat("DEBUG: Raw column names:", paste(names(data), collapse = ", "), "\n")
+  test_debug_log("Data loaded - rows:", nrow(data), "cols:", ncol(data), "\n")
+  test_debug_log("Raw column names:", paste(names(data), collapse = ", "), "\n")
   expect_gt(nrow(data), 0)
 
   # 3. Process with standard columns
-  cat("DEBUG: STEP 3 - Processing with standard columns...\n")
+  test_debug_log("STEP 3 - Processing with standard columns...\n")
   if (exists("ensure_standard_columns")) {
     processed_data <- ensure_standard_columns(data)
-    cat("DEBUG: Processed data - rows:", nrow(processed_data), "cols:", ncol(processed_data), "\n")
-    cat("DEBUG: Processed column names:", paste(names(processed_data), collapse = ", "), "\n")
+    test_debug_log("Processed data - rows:", nrow(processed_data), "cols:", ncol(processed_data), "\n")
+    test_debug_log("Processed column names:", paste(names(processed_data), collapse = ", "), "\n")
     expect_true(all(c("Skift", "Frys") %in% names(processed_data)))
   } else {
     processed_data <- data
@@ -802,63 +810,63 @@ test_that("End-to-end integration simulering", {
   }
 
   # 4. Simuler auto-detect
-  cat("DEBUG: STEP 4 - Running auto-detect simulation...\n")
+  test_debug_log("STEP 4 - Running auto-detect simulation...\n")
 
-  cat("DEBUG: Detecting date columns using regex pattern...\n")
+  test_debug_log("Detecting date columns using regex pattern...\n")
   date_cols <- names(processed_data)[sapply(processed_data, function(x) {
     sample_values <- as.character(x)[1:min(5, length(x))]
     pattern_match <- any(grepl("\\d{2}-\\d{2}-\\d{4}", sample_values))
-    cat("DEBUG: Column", deparse(substitute(x)), "sample values:", paste(sample_values, collapse = ", "), "- matches date pattern:", pattern_match, "\n")
+    test_debug_log("Column", deparse(substitute(x)), "sample values:", paste(sample_values, collapse = ", "), "- matches date pattern:", pattern_match, "\n")
     pattern_match
   })]
-  cat("DEBUG: Date columns found:", paste(date_cols, collapse = ", "), "\n")
+  test_debug_log("Date columns found:", paste(date_cols, collapse = ", "), "\n")
 
-  cat("DEBUG: Detecting numeric columns...\n")
+  test_debug_log("Detecting numeric columns...\n")
   numeric_cols <- names(processed_data)[sapply(processed_data, is.numeric)]
   numeric_cols_filtered <- setdiff(numeric_cols, c("Skift", "Frys"))
-  cat("DEBUG: All numeric columns:", paste(numeric_cols, collapse = ", "), "\n")
-  cat("DEBUG: User numeric columns (excluding control):", paste(numeric_cols_filtered, collapse = ", "), "\n")
+  test_debug_log("All numeric columns:", paste(numeric_cols, collapse = ", "), "\n")
+  test_debug_log("User numeric columns (excluding control):", paste(numeric_cols_filtered, collapse = ", "), "\n")
 
   expect_length(date_cols, 1)
   expect_gte(length(numeric_cols_filtered), 2, "Should find at least 2 numeric columns")
 
   # 5. Simuler column mapping (CRITICAL for input field updates)
-  cat("DEBUG: STEP 5 - Simulating column mapping for input fields...\n")
+  test_debug_log("STEP 5 - Simulating column mapping for input fields...\n")
   suggested_x <- if (length(date_cols) > 0) date_cols[1] else numeric_cols_filtered[1]
   suggested_y <- if (length(numeric_cols_filtered) > 0) numeric_cols_filtered[1] else NULL
   suggested_n <- if (length(numeric_cols_filtered) > 1) numeric_cols_filtered[2] else NULL
 
-  cat("DEBUG: Suggested X-axis (time/date):", suggested_x, "\n")
-  cat("DEBUG: Suggested Y-axis (values):", suggested_y, "\n")
-  cat("DEBUG: Suggested N (denominator):", suggested_n, "\n")
+  test_debug_log("Suggested X-axis (time/date):", suggested_x, "\n")
+  test_debug_log("Suggested Y-axis (values):", suggested_y, "\n")
+  test_debug_log("Suggested N (denominator):", suggested_n, "\n")
 
   expect_false(is.null(suggested_x), label = "X-axis suggestion should not be null")
   expect_false(is.null(suggested_y), label = "Y-axis suggestion should not be null")
 
   # 6. Test chart type mapping
-  cat("DEBUG: STEP 6 - Testing chart type mapping...\n")
+  test_debug_log("STEP 6 - Testing chart type mapping...\n")
   chart_type_danish <- "P-kort (Andele)"
   if (exists("get_qic_chart_type")) {
     chart_type_english <- get_qic_chart_type(chart_type_danish)
-    cat("DEBUG: Chart type mapping:", chart_type_danish, "->", chart_type_english, "\n")
+    test_debug_log("Chart type mapping:", chart_type_danish, "->", chart_type_english, "\n")
     expect_equal(chart_type_english, "p")
   } else {
     cat("WARNING: get_qic_chart_type function not available\n")
   }
 
   # 7. Simulate input field update state
-  cat("DEBUG: STEP 7 - Simulating input field update state...\n")
+  test_debug_log("STEP 7 - Simulating input field update state...\n")
   simulated_input_state <- list(
     x_column = suggested_x,
     y_column = suggested_y,
     n_column = suggested_n,
     chart_type = chart_type_danish
   )
-  cat("DEBUG: Simulated input state after auto-detect:\n")
-  cat("DEBUG: - X column:", simulated_input_state$x_column, "\n")
-  cat("DEBUG: - Y column:", simulated_input_state$y_column, "\n")
-  cat("DEBUG: - N column:", simulated_input_state$n_column, "\n")
-  cat("DEBUG: - Chart type:", simulated_input_state$chart_type, "\n")
+  test_debug_log("Simulated input state after auto-detect:\n")
+  test_debug_log("- X column:", simulated_input_state$x_column, "\n")
+  test_debug_log("- Y column:", simulated_input_state$y_column, "\n")
+  test_debug_log("- N column:", simulated_input_state$n_column, "\n")
+  test_debug_log("- Chart type:", simulated_input_state$chart_type, "\n")
 
   cat("✅ DEBUG: End-to-end integration test completed successfully\n")
   cat("✅ DEBUG: ALL CRITICAL PATH STEPS VERIFIED for Phase 3-5 testing\n")
