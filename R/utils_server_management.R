@@ -90,17 +90,17 @@ setup_session_management <- function(input, output, session, waiter_file, app_st
                 }
               }
 
-              # PHASE 4: Unified state assignment only
-              app_state$data$current_data <- reconstructed_data
+              # PHASE 4: Dual-state sync during migration
+              set_current_data(app_state, reconstructed_data)
               app_state$data$original_data <- reconstructed_data
 
               # Emit event to trigger downstream effects
               emit$data_loaded()
             } else {
               # Fallback for older save format
-              # PHASE 4: Unified state assignment only
+              # PHASE 4: Dual-state sync during migration
               fallback_data <- as.data.frame(saved_state$data)
-              app_state$data$current_data <- fallback_data
+              set_current_data(app_state, fallback_data)
               app_state$data$original_data <- fallback_data
 
               # Emit event to trigger downstream effects

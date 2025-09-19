@@ -188,9 +188,9 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     metadata <- parse_session_metadata(session_lines, names(data))
 
     # Load data
-    # PHASE 4: Unified state assignment only - session restore
+    # PHASE 4: Dual-state sync during migration - session restore
     data_frame <- as.data.frame(data)
-    app_state$data$current_data <- data_frame
+    set_current_data(app_state, data_frame)
     app_state$data$original_data <- data_frame
 
     # Emit data_loaded event to trigger unified event system
@@ -229,9 +229,9 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     # Ensure standard columns are present and in correct order
     data <- ensure_standard_columns(data)
 
-    # PHASE 4: Unified state assignment only - Excel file loading
+    # PHASE 4: Dual-state sync during migration - Excel file loading
     data_frame <- as.data.frame(data)
-    app_state$data$current_data <- data_frame
+    set_current_data(app_state, data_frame)
     app_state$data$original_data <- data_frame
 
     # Emit data_loaded event to trigger unified event system
@@ -414,8 +414,8 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
                     app_state$data$current_data, data_frame,
                     "file_upload_processing", session_id)
 
-  app_state$data$current_data <- data_frame
-  log_debug("✅ Set current_data to unified state", "DATA_ASSIGNMENT")
+  set_current_data(app_state, data_frame)
+  log_debug("✅ Set current_data via dual-state sync", "DATA_ASSIGNMENT")
   app_state$data$original_data <- data_frame
   log_debug("✅ Set original_data to unified state", "DATA_ASSIGNMENT")
 
