@@ -719,22 +719,7 @@ create_app_state <- function() {
       needed = FALSE,
       last_sync_time = NULL,
       pending_updates = list()
-    ),
-
-    # Legacy flat access for backward compatibility (will be phased out)
-    auto_detect_in_progress = FALSE,
-    auto_detect_completed = FALSE,
-    auto_detect_results = NULL,
-    auto_detected_columns = NULL,
-    x_column = NULL,
-    y_column = NULL,
-    n_column = NULL,
-    cl_column = NULL,
-    skift_column = NULL,
-    frys_column = NULL,
-    kommentar_column = NULL,
-    ui_sync_needed = FALSE,
-    ui_sync_last_time = NULL
+    )
   )
 
   # Session Management - Hierarchical structure with sub-objects

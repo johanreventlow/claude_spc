@@ -61,7 +61,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     log_debug("auto_detection_started event received", .context = "EVENT")
 
     # Set auto-detection in progress
-    app_state$columns$auto_detect_in_progress <- TRUE
+    app_state$columns$auto_detect$in_progress <- TRUE
 
     # Perform auto-detection using unified engine
     tryCatch({
@@ -136,7 +136,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     log_debug("ui_sync_completed event received", .context = "EVENT")
 
     # Update timestamp
-    app_state$columns$ui_sync_last_time <- Sys.time()
+    app_state$columns$ui_sync$last_sync_time <- Sys.time()
 
     # Trigger navigation change to update plots
     emit$navigation_changed()
@@ -432,7 +432,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         } else { FALSE }
 
         autodetect_in_progress <- if (!is.null(app_state$columns)) {
-          isolate(app_state$columns$auto_detect_in_progress) %||% FALSE
+          isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
         } else { FALSE }
 
         log_debug(paste("TIMING_MONITOR: System state at update - frozen:", freeze_state,
@@ -471,7 +471,7 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
 
   # DROPDOWN DEBUGGING: Log autodetect results that will be used
   log_debug("About to get auto_detect_results", "DEBUG")
-  auto_detect_results <- isolate(app_state$columns$auto_detect_results)
+  auto_detect_results <- isolate(app_state$columns$auto_detect$results)
   log_debug("Got auto_detect_results, about to log_debug", "DEBUG")
   log_debug("sync_ui_with_columns_unified called", "DROPDOWN_DEBUG")
   log_debug("log_debug completed, continuing", "DEBUG")
@@ -610,13 +610,13 @@ update_column_choices_unified <- function(app_state, input, output, session, ui_
   }
 
   # Skip if auto-detect is in progress
-  if (app_state$columns$auto_detect_in_progress) {
+  if (app_state$columns$auto_detect$in_progress) {
     log_debug("Skipping - auto-detect in progress", .context = "COLUMN_CHOICES_UNIFIED")
     return()
   }
 
   # Skip if UI sync is needed (to avoid race conditions)
-  if (app_state$columns$ui_sync_needed) {
+  if (app_state$columns$ui_sync$needed) {
     log_debug("Skipping - UI sync pending", .context = "COLUMN_CHOICES_UNIFIED")
     return()
   }

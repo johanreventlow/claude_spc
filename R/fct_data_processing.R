@@ -694,7 +694,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
     # Using unified state management for auto-detected columns storage
     log_debug("Auto-detected columns handled by unified state management", .context = "PHASE4")
     # PHASE 4: Sync auto_detected_columns to centralized state - FIX: Use correct path that visualization expects
-    app_state$columns$auto_detected_columns <- list(
+    app_state$columns$auto_detect$results <- list(
       x_col = x_col,
       y_col = taeller_col,
       n_col = naevner_col,
@@ -737,7 +737,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
 
     # UNIFIED EVENT SYSTEM: UI sync is now handled by events (CRITICAL for UI sync)
     # Store results in app_state for unified event system access
-    app_state$columns$auto_detect_results <- sync_data
+    app_state$columns$auto_detect$results <- sync_data
     log_debug("FULL MODE: Results stored in app_state for unified event system", .context = "UI_SYNC_UNIFIED")
 
     log_debug_block("AUTO_DETECT_FUNC", "✅ Auto-detect completed successfully", type = "stop")

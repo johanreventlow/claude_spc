@@ -18,7 +18,7 @@ setup_test_app_state <- function() {
   )
 
   app_state$data$current_data <- test_data
-  app_state$columns$auto_detected_columns <- list(
+  app_state$columns$auto_detect$results <- list(
     x_col = "Observation",
     y_col = "Value",
     n_col = "Sample_Size",

@@ -32,15 +32,15 @@ test_that("autodetect opdaterer alle 6 dropdown kolonner", {
 
   # VERIFY: All 6 columns should be detected and stored in app_state
   # Use isolate() to access reactive values in test context
-  expect_equal(isolate(app_state$columns$x_column), "Dato")
-  expect_equal(isolate(app_state$columns$y_column), "Tæller")
-  expect_equal(isolate(app_state$columns$n_column), "Nævner")
-  expect_equal(isolate(app_state$columns$skift_column), "Skift")
-  expect_equal(isolate(app_state$columns$frys_column), "Frys")
-  expect_equal(isolate(app_state$columns$kommentar_column), "Kommentarer")
+  expect_equal(isolate(app_state$columns$mappings$x_column), "Dato")
+  expect_equal(isolate(app_state$columns$mappings$y_column), "Tæller")
+  expect_equal(isolate(app_state$columns$mappings$n_column), "Nævner")
+  expect_equal(isolate(app_state$columns$mappings$skift_column), "Skift")
+  expect_equal(isolate(app_state$columns$mappings$frys_column), "Frys")
+  expect_equal(isolate(app_state$columns$mappings$kommentar_column), "Kommentarer")
 
   # VERIFY: Autodetect results are preserved for backward compatibility
-  autodetect_results <- isolate(app_state$columns$auto_detect_results)
+  autodetect_results <- isolate(app_state$columns$auto_detect$results)
   expect_equal(autodetect_results$x_col, "Dato")
   expect_equal(autodetect_results$y_col, "Tæller")
   expect_equal(autodetect_results$n_col, "Nævner")
@@ -63,20 +63,20 @@ test_that("sync_ui_with_columns_unified læser alle 6 kolonner fra app_state", {
 
   app_state <- create_app_state()
   app_state$data$current_data <- test_data
-  app_state$columns$x_column <- "Dato"
-  app_state$columns$y_column <- "Tæller"
-  app_state$columns$n_column <- "Nævner"
-  app_state$columns$skift_column <- "Skift"
-  app_state$columns$frys_column <- "Frys"
-  app_state$columns$kommentar_column <- "Kommentarer"
+  app_state$columns$mappings$x_column <- "Dato"
+  app_state$columns$mappings$y_column <- "Tæller"
+  app_state$columns$mappings$n_column <- "Nævner"
+  app_state$columns$mappings$skift_column <- "Skift"
+  app_state$columns$mappings$frys_column <- "Frys"
+  app_state$columns$mappings$kommentar_column <- "Kommentarer"
 
   # VERIFY: All 6 columns are accessible in app_state
-  expect_equal(isolate(app_state$columns$x_column), "Dato")
-  expect_equal(isolate(app_state$columns$y_column), "Tæller")
-  expect_equal(isolate(app_state$columns$n_column), "Nævner")
-  expect_equal(isolate(app_state$columns$skift_column), "Skift")
-  expect_equal(isolate(app_state$columns$frys_column), "Frys")
-  expect_equal(isolate(app_state$columns$kommentar_column), "Kommentarer")
+  expect_equal(isolate(app_state$columns$mappings$x_column), "Dato")
+  expect_equal(isolate(app_state$columns$mappings$y_column), "Tæller")
+  expect_equal(isolate(app_state$columns$mappings$n_column), "Nævner")
+  expect_equal(isolate(app_state$columns$mappings$skift_column), "Skift")
+  expect_equal(isolate(app_state$columns$mappings$frys_column), "Frys")
+  expect_equal(isolate(app_state$columns$mappings$kommentar_column), "Kommentarer")
 
   # VERIFY: sync_ui_with_columns_unified doesn't crash with all 6 columns
   # This verifies the function can read all column states without error

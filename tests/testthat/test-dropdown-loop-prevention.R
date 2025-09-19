@@ -34,14 +34,14 @@ test_that("Loop protection flag forhindrer cirkulære events", {
   result <- mock_input_change("x_column", "Dato")
   expect_equal(result, "skipped")
   expect_equal(isolate(app_state$events$column_choices_changed), 0L)
-  expect_equal(isolate(app_state$columns$x_column), "Dato")
+  expect_equal(isolate(app_state$columns$mappings$x_column), "Dato")
 
   # VERIFY: Events emitted when protection is off
   app_state$ui$updating_programmatically <- FALSE
   result <- mock_input_change("y_column", "Tæller")
   expect_equal(result, "emitted")
   expect_equal(isolate(app_state$events$column_choices_changed), 1L)
-  expect_equal(isolate(app_state$columns$y_column), "Tæller")
+  expect_equal(isolate(app_state$columns$mappings$y_column), "Tæller")
 })
 
 test_that("Safe programmatic UI update wrapper virker", {
@@ -103,7 +103,7 @@ test_that("Auto-detection workflow ikke skaber loops", {
   app_state$data$current_data <- test_data
 
   # SETUP: Simulate auto-detection results
-  app_state$columns$auto_detect_results <- list(
+  app_state$columns$auto_detect$results <- list(
     x_column = "Dato",
     y_column = "Tæller",
     n_column = "Nævner"
@@ -124,9 +124,9 @@ test_that("Auto-detection workflow ikke skaber loops", {
   expect_lt(event_increase, 5)
 
   # VERIFY: Columns are set correctly
-  expect_equal(isolate(app_state$columns$x_column), "Dato")
-  expect_equal(isolate(app_state$columns$y_column), "Tæller")
-  expect_equal(isolate(app_state$columns$n_column), "Nævner")
+  expect_equal(isolate(app_state$columns$mappings$x_column), "Dato")
+  expect_equal(isolate(app_state$columns$mappings$y_column), "Tæller")
+  expect_equal(isolate(app_state$columns$mappings$n_column), "Nævner")
 })
 
 test_that("Event count benchmark - før/efter sammenligning", {
@@ -254,7 +254,7 @@ test_that("Iterativ stress test - column_choices_changed forbliver 0 ved autoloa
 
     # EXECUTE: Simulate autoload workflow with programmatic updates
     app_state$data$current_data <- test_data
-    app_state$columns$auto_detect_results <- list(
+    app_state$columns$auto_detect$results <- list(
       x_column = "Dato", y_column = "Tæller", n_column = "Nævner"
     )
 
@@ -579,16 +579,16 @@ test_that("UI sync med NULL columns bruger auto_detect_results som fallback", {
   emit <- create_emit_api(app_state)
 
   # Set up auto-detection results
-  app_state$columns$auto_detect_results <- list(
+  app_state$columns$auto_detect$results <- list(
     x_column = "Dato",
     y_column = "Tæller",
     n_column = "Nævner"
   )
 
   # Ensure columns are NULL (first sync scenario)
-  app_state$columns$x_column <- NULL
-  app_state$columns$y_column <- NULL
-  app_state$columns$n_column <- NULL
+  app_state$columns$mappings$x_column <- NULL
+  app_state$columns$mappings$y_column <- NULL
+  app_state$columns$mappings$n_column <- NULL
 
   # Track what values get used for UI sync
   ui_sync_values <- list()

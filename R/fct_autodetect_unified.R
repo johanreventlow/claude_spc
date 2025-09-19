@@ -378,7 +378,7 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
 
     # Store complete results for backward compatibility
     app_state$columns$auto_detect$results <- results
-    app_state$columns$auto_detected_columns <- results
+    # Note: results already stored above in auto_detect$results
 
     # Mark as completed
     app_state$columns$auto_detect$completed <- TRUE
