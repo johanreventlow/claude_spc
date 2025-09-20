@@ -23,19 +23,15 @@ library(shinyjs)
 visualizationModuleUI <- function(id) {
   ns <- NS(id)
 
-  # Kun plot området - ingen status info
+  # PRODUCTION VERSION: Restored original styling with fixes applied
   div(
     id = ns("plot_container"),
     class = "spc-plot-main-container",
-    style = "position: relative; border: 3px solid #ff6b6b; background-color: rgba(255, 107, 107, 0.1);",
-
-    # Plot Output -----------------------------------------------
+    style = "position: relative;",
     div(
       class = "spc-ggplot-output",
-      style = "border: 4px solid #45b7d1; background-color: rgba(69, 183, 209, 0.1); box-shadow: 0 0 15px rgba(69, 183, 209, 0.6); border-radius: 8px;",
-      plotOutput("spc_plot_actual", width = "100%", height = "500px")
-    ),
-
+      plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
+    )
   )
 }
 
