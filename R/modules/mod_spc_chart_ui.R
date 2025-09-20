@@ -30,10 +30,11 @@ visualizationModuleUI <- function(id) {
     style = "position: relative; border: 3px solid #ff6b6b; background-color: rgba(255, 107, 107, 0.1);",
 
     # Plot Output -----------------------------------------------
-    plotOutput("spc_plot_actual",
-               width = "100%",
-               height = "500px",
-               class = "spc-ggplot-output"),
+    div(
+      class = "spc-ggplot-output",
+      style = "border: 4px solid #45b7d1; background-color: rgba(69, 183, 209, 0.1); box-shadow: 0 0 15px rgba(69, 183, 209, 0.6); border-radius: 8px;",
+      plotOutput("spc_plot_actual", width = "100%", height = "500px")
+    ),
 
   )
 }
