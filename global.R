@@ -80,7 +80,7 @@ source_from_base("R/fct_chart_helpers.R")
 source_from_base("R/fct_spc_helpers.R")
 source_from_base("R/fct_spc_plot_generation.R")
 source_from_base("R/fct_file_io.R")
-source_from_base("R/fct_data_validation.R")
+# REMOVED: R/fct_data_validation.R - functionality integrated into R/fct_spc_helpers.R
 # DELETED: utils_local_storage_js.R - functionality moved to www/local-storage.js
 source_from_base("R/utils_local_storage.R")
 

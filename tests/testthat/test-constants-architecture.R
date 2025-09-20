@@ -182,21 +182,17 @@ test_that("integration med eksisterende kode", {
   }
 
   # Test data validation
-  if (file.exists("../../R/fct_data_validation.R")) {
-    source("../../R/fct_data_validation.R")
+  # Test validate_data_structure function (moved to fct_spc_helpers.R)
+  expect_true(exists("validate_data_structure"))
 
-    # Test at validateDataStructure eksisterer
-    expect_true(exists("validateDataStructure"))
+  # Test med mock data
+  test_data <- data.frame(
+    Dato = c("2023-01-01", "2023-01-02", "2023-01-03"),
+    Tæller = c(10, 15, 8),
+    Nævner = c(100, 120, 90)
+  )
 
-    # Test med mock data
-    test_data <- data.frame(
-      Dato = c("2023-01-01", "2023-01-02", "2023-01-03"),
-      Tæller = c(10, 15, 8),
-      Nævner = c(100, 120, 90)
-    )
-
-    result <- validateDataStructure(test_data)
-    expect_type(result, "list")
-    expect_true("valid" %in% names(result))
-  }
+  result <- validate_data_structure(test_data)
+  expect_type(result, "list")
+  expect_true("valid" %in% names(result))
 })
