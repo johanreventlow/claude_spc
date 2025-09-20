@@ -9,8 +9,6 @@
 ## Setup fil upload funktionalitet
 setup_file_upload <- function(input, output, session, app_state, emit, ui_service = NULL) {
   # Unified state: App state is always available
-  # log_debug("===========================================", "FILE_UPLOAD")
-  # log_debug("Setting up file upload handlers", "FILE_UPLOAD")
 
   # File upload handler
   observeEvent(input$data_file, {
@@ -21,18 +19,12 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
                                type = input$data_file$type),
                           session$token)
 
-  # log_debug("File upload triggered", "FILE_UPLOAD")
     req(input$data_file)
 
     # Start workflow tracer for file upload
     upload_tracer <- debug_workflow_tracer("file_upload_workflow", app_state, session$token)
     upload_tracer$step("upload_initiated")
 
-  # log_debug("File info:", "FILE_UPLOAD")
-  # log_debug(paste("- Name:", input$data_file$name), "FILE_UPLOAD")
-  # log_debug(paste("- Size:", input$data_file$size, "bytes"), "FILE_UPLOAD")
-  # log_debug(paste("- Type:", input$data_file$type), "FILE_UPLOAD")
-  # log_debug(paste("- Path:", input$data_file$datapath), "FILE_UPLOAD")
 
     debug_log("File upload started", "FILE_UPLOAD_FLOW", level = "INFO",
               context = list(
@@ -66,19 +58,15 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
     upload_tracer$step("file_validation_complete")
 
     # Show loading indicator (replaced waiter with simple logging)
-  # log_debug("Processing file upload...", "FILE_UPLOAD")
 
     # Close upload modal automatically
     on.exit(
       {
-  # log_debug("Removing modal on exit...", "FILE_UPLOAD")
         removeModal()
-  # log_debug("✅ Modal removed", "FILE_UPLOAD")
       },
       add = TRUE
     )
 
-  # log_debug("Setting updating_table flag...", "FILE_UPLOAD")
     upload_tracer$step("state_management_setup")
 
     # Unified state assignment only - Set table updating flag
@@ -89,10 +77,8 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
               session_id = session$token)
     on.exit(
       {
-  # log_debug("Clearing updating_table flag on exit...", "FILE_UPLOAD")
         # Unified state assignment only - Clear table updating flag
         app_state$data$updating_table <- FALSE
-  # log_debug("✅ updating_table flag cleared", "FILE_UPLOAD")
       },
       add = TRUE
     )
@@ -100,13 +86,9 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
     file_path <- input$data_file$datapath
     file_ext <- tools::file_ext(input$data_file$name)
 
-  # log_debug("File processing:", "FILE_UPLOAD")
-  # log_debug(paste("- Extension:", file_ext), "FILE_UPLOAD")
-  # log_debug(paste("- File exists:", file.exists(file_path)), "FILE_UPLOAD")
 
     if (file.exists(file_path)) {
       file_info <- file.info(file_path)
-  # log_debug(paste("- Actual file size:", file_info$size, "bytes"), "FILE_UPLOAD")
     }
 
     safe_operation(
@@ -115,19 +97,14 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
         upload_tracer$step("file_processing_started")
 
         if (file_ext %in% c("xlsx", "xls")) {
-  # log_debug("📊 Processing Excel file...", "FILE_UPLOAD")
           debug_log("Starting Excel file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
           handle_excel_upload(file_path, session, app_state, emit, ui_service)
-  # log_debug("✅ Excel file processed successfully", "FILE_UPLOAD")
           upload_tracer$step("excel_processing_complete")
         } else {
-  # log_debug("📄 Processing CSV file...", "FILE_UPLOAD")
           debug_log("Starting CSV file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
           handle_csv_upload(file_path, app_state, session$token, emit)
-  # log_debug("✅ CSV file processed successfully", "FILE_UPLOAD")
           upload_tracer$step("csv_processing_complete")
         }
-  # log_debug("File upload completed successfully", "FILE_UPLOAD")
 
         # Complete workflow tracing
         upload_tracer$complete("file_upload_workflow_complete")
@@ -140,8 +117,6 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
       show_user = TRUE
     )
 
-  # log_debug("File upload handler completed", "FILE_UPLOAD")
-  # log_debug("===========================================", "FILE_UPLOAD")
   })
 
   # UNIFIED EVENT SYSTEM: Auto-detection is now handled by data_loaded events
@@ -150,13 +125,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
 
 ## Håndter Excel fil upload
 handle_excel_upload <- function(file_path, session, app_state, emit, ui_service = NULL) {
-  # log_debug("========================================", "EXCEL_READ")
-  # log_debug("Starting Excel file processing", "EXCEL_READ")
-  # log_debug(paste("File path:", file_path), "EXCEL_READ")
-
-  # log_debug("Reading Excel sheets...", "EXCEL_READ")
   excel_sheets <- readxl::excel_sheets(file_path)
-  # log_debug(paste("Available sheets:", paste(excel_sheets, collapse = ", ")), "EXCEL_READ")
 
   if ("Data" %in% excel_sheets && "Metadata" %in% excel_sheets) {
     # Read data from Data sheet
@@ -196,7 +165,6 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
 
     # NAVIGATION TRIGGER: Emit navigation changed event to update reactive components
     emit$navigation_changed()
-  # log_debug("SESSION_RESTORE: navigation_changed event emitted", "SESSION_RESTORE")
 
     # Restore metadata with delay to ensure UI is ready
     invalidateLater(500)
@@ -204,7 +172,6 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
       if (!is.null(ui_service)) {
         restore_metadata(session, metadata, ui_service)
       } else {
-  # log_debug("No ui_service provided, skipping metadata restore", "EXCEL_READ")
       }
     })
 
@@ -237,7 +204,6 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
 
     # NAVIGATION TRIGGER: Navigation events are now handled by the unified event system
     emit$navigation_changed()
-  # log_debug("EXCEL_READ: navigation_changed event emitted", "EXCEL_READ")
 
 
     showNotification(
@@ -290,19 +256,12 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
 #'
 #' @seealso \code{\link{handle_excel_upload}}, \code{\link{ensure_standard_columns}}
 handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NULL) {
-  # log_debug("==========================================", "CSV_READ")
-  # log_debug("Starting CSV file processing", "CSV_READ")
-  # log_debug(paste("File path:", file_path), "CSV_READ")
 
   debug_log("CSV upload processing started", "FILE_UPLOAD_FLOW", level = "INFO",
             context = list(file_path = file_path),
             session_id = session_id)
 
   # CSV behandling med danske standarder
-  # log_debug("Reading CSV with Danish locale...", "CSV_READ")
-  # log_debug("- Decimal mark: ','", "CSV_READ")
-  # log_debug("- Grouping mark: '.'", "CSV_READ")
-  # log_debug("- Encoding: ISO-8859-1", "CSV_READ")
 
   data <- readr::read_csv2(
     file_path,
@@ -314,8 +273,6 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
     show_col_types = FALSE
   )
 
-  # log_debug(paste("CSV read successfully - dimensions:", nrow(data), "x", ncol(data)), "CSV_READ")
-  # log_debug(paste("Column names:", paste(names(data), collapse = ", ")), "CSV_READ")
 
   debug_log("CSV data loaded successfully", "FILE_UPLOAD_FLOW", level = "INFO",
             context = list(
@@ -326,14 +283,12 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
             session_id = session_id)
 
   # ENHANCED DATA PREPROCESSING: Clean and validate data
-  # log_debug("Starting data preprocessing...", "CSV_READ")
   preprocessing_result <- preprocess_uploaded_data(
     data,
     list(name = basename(file_path), size = file.info(file_path)$size),
     session_id
   )
   data <- preprocessing_result$data
-  # log_debug(paste("Preprocessing completed - dimensions:", nrow(data), "x", ncol(data)), "CSV_READ")
 
   # Show user notification if significant cleaning occurred
   if (!is.null(preprocessing_result$cleaning_log)) {
@@ -361,11 +316,8 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   }
 
   # Ensure standard columns are present and in correct order
-  # log_debug("Ensuring standard columns...", "CSV_READ")
   data <- ensure_standard_columns(data)
-  # log_debug(paste("Standard columns applied - dimensions:", nrow(data), "x", ncol(data)), "CSV_READ")
 
-  # log_debug("Setting reactive values...", "CSV_READ")
 
   # Take state snapshot before data assignment
   if (!is.null(app_state)) {
@@ -376,19 +328,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   data_frame <- as.data.frame(data)
 
   # Enhanced debugging: Data structure analysis before assignment
-  # log_debug("======================================", "DATA_ASSIGNMENT")
-  # log_debug("Preparing data for state assignment", "DATA_ASSIGNMENT")
-  # log_debug(paste("Final data dimensions:", nrow(data_frame), "x", ncol(data_frame)), "DATA_ASSIGNMENT")
-  # log_debug(paste("Column names:", paste(names(data_frame), collapse = ", ")), "DATA_ASSIGNMENT")
-  # log_debug(paste("Column types:", paste(sapply(data_frame, class), collapse = ", ")), "DATA_ASSIGNMENT")
 
-  # Sample data preview for debugging
-  if (nrow(data_frame) > 0) {
-  # log_debug("First 3 rows preview:", "DATA_ASSIGNMENT")
-    for (i in 1:min(3, nrow(data_frame))) {
-  # log_debug(paste("Row", i, ":", paste(data_frame[i, 1:min(5, ncol(data_frame))], collapse = " | ")), "DATA_ASSIGNMENT")
-    }
-  }
 
   # PHASE 8: Enhanced state change tracking
   debug_state_change("CSV_UPLOAD", "app_state$data$current_data",
@@ -396,15 +336,11 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
                     "file_upload_processing", session_id)
 
   set_current_data(app_state, data_frame)
-  # log_debug("✅ Set current_data via dual-state sync", "DATA_ASSIGNMENT")
   app_state$data$original_data <- data_frame
-  # log_debug("✅ Set original_data to unified state", "DATA_ASSIGNMENT")
 
   # Verify state assignment success
-  if (!is.null(app_state$data$current_data)) {
-  # log_debug(paste("✅ State verification: current_data has", nrow(app_state$data$current_data), "rows"), "DATA_ASSIGNMENT")
-  } else {
-  # log_debug("❌ State verification: current_data is NULL after assignment", "DATA_ASSIGNMENT")
+  if (is.null(app_state$data$current_data)) {
+    warning("State assignment failed: current_data is NULL")
   }
 
   # Emit data_loaded event to trigger unified event system
@@ -419,12 +355,9 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
 
   # NAVIGATION TRIGGER: Navigation events are now handled by the unified event system
   emit$navigation_changed()
-  # log_debug("CSV_READ: navigation_changed event emitted", "CSV_READ")
 
-  # log_debug("✅ Reactive values set successfully", "CSV_READ")
 
   # ROBUST AUTO-DETECT: Enhanced auto-detection triggering with validation
-  # log_debug("Setting auto-detect trigger with validation...", "CSV_READ")
 
   debug_log("Data loaded event emitted successfully", "FILE_UPLOAD_FLOW", level = "INFO",
             context = list(
@@ -921,20 +854,13 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
 
 ## Enhanced data cleaning and preprocessing
 preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
-  # log_debug("======================================", "DATA_PREPROCESSING")
-  # log_debug("Starting data preprocessing...", "DATA_PREPROCESSING")
-  # log_debug(paste("Input dimensions:", nrow(data), "x", ncol(data)), "DATA_PREPROCESSING")
-  # log_debug(paste("Input column names:", paste(names(data), collapse = ", ")), "DATA_PREPROCESSING")
 
   original_dims <- c(nrow(data), ncol(data))
   cleaning_log <- list()
 
   # Data quality analysis before preprocessing
-  # log_debug("Analyzing data quality before preprocessing...", "DATA_PREPROCESSING")
   na_counts <- sapply(data, function(col) sum(is.na(col)))
   empty_counts <- sapply(data, function(col) sum(col == "" | col == " ", na.rm = TRUE))
-  # log_debug(paste("NA counts per column:", paste(names(na_counts), na_counts, sep="=", collapse=", ")), "DATA_PREPROCESSING")
-  # log_debug(paste("Empty string counts per column:", paste(names(empty_counts), empty_counts, sep="=", collapse=", ")), "DATA_PREPROCESSING")
 
   # Handle completely empty rows
   if (nrow(data) > 0) {
@@ -942,22 +868,12 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
     if (sum(empty_rows) > 0) {
       data <- data[!empty_rows, ]
       cleaning_log$empty_rows_removed <- sum(empty_rows)
-  # log_debug(paste("Removed", sum(empty_rows), "completely empty rows"), "DATA_PREPROCESSING")
     }
   }
 
   # DISABLED: Handle columns with only missing values
   # Previously automatically removed empty columns, but users want to preserve them
   # Tomme kolonner bevares nu som ønsket af brugerne
-
-  # if (ncol(data) > 0) {
-  #   empty_cols <- sapply(data, function(col) all(is.na(col) | col == "" | col == " "))
-  #   if (sum(empty_cols) > 0) {
-  #     data <- data[, !empty_cols, drop = FALSE]
-  #     cleaning_log$empty_columns_removed <- sum(empty_cols)
-  # #     log_debug(paste("Removed", sum(empty_cols), "completely empty columns"), "DATA_PREPROCESSING")
-  #   }
-  # }
 
   # Clean column names
   if (ncol(data) > 0) {
@@ -972,7 +888,6 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
     if (!identical(original_names, cleaned_names)) {
       names(data) <- cleaned_names
       cleaning_log$column_names_cleaned <- TRUE
-  # log_debug("Cleaned column names for R compatibility", "DATA_PREPROCESSING")
     }
   }
 
@@ -983,31 +898,12 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
   )
 
   # Enhanced final analysis and logging
-  # log_debug("Preprocessing results summary:", "DATA_PREPROCESSING")
-  # log_debug(paste("✅ Final dimensions:", final_dims[1], "x", final_dims[2]), "DATA_PREPROCESSING")
-  # log_debug(paste("✅ Final column names:", paste(names(data), collapse = ", ")), "DATA_PREPROCESSING")
 
-  # Log changes made during preprocessing
-  if (length(cleaning_log) > 0) {
-  # log_debug("Changes made during preprocessing:", "DATA_PREPROCESSING")
-    if (!is.null(cleaning_log$empty_rows_removed)) {
-  # log_debug(paste("- Removed", cleaning_log$empty_rows_removed, "empty rows"), "DATA_PREPROCESSING")
-    }
-    if (!is.null(cleaning_log$column_names_cleaned) && cleaning_log$column_names_cleaned) {
-  # log_debug("- Cleaned column names for R compatibility", "DATA_PREPROCESSING")
-    }
-  } else {
-  # log_debug("- No cleaning required", "DATA_PREPROCESSING")
-  }
 
   # Data quality check after preprocessing
-  # log_debug("Final data quality check:", "DATA_PREPROCESSING")
   if (nrow(data) > 0 && ncol(data) > 0) {
     # Check for columns with all NA values
     all_na_cols <- sapply(data, function(col) all(is.na(col)))
-    if (any(all_na_cols)) {
-  # log_debug(paste("⚠️ Columns with all NA values:", paste(names(data)[all_na_cols], collapse = ", ")), "DATA_PREPROCESSING")
-    }
 
     # Check for potential numeric columns
     potential_numeric <- sapply(data, function(col) {
@@ -1018,7 +914,6 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
         is.numeric(col)
       }
     })
-  # log_debug(paste("Potential numeric columns:", paste(names(data)[potential_numeric], collapse = ", ")), "DATA_PREPROCESSING")
   }
 
   # Log preprocessing results
@@ -1031,7 +926,6 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
             ),
             session_id = session_id)
 
-  # log_debug("✅ Data preprocessing completed successfully", "DATA_PREPROCESSING")
 
   return(list(
     data = data,
