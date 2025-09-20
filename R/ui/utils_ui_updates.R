@@ -572,6 +572,8 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
         log_debug(paste("Added update to queue with ID:", queue_entry$queue_id,
                   "(queue size:", new_queue_size, "/", max_queue_size, ")"), "QUEUE_DEBUG")
 
+        # Process the queue immediately after enqueuing
+        process_ui_update_queue(app_state)
 
       # PURE TOKEN-BASED LOOP PROTECTION: No flags, no timing, just tokens
       log_debug("✅ TOKEN-BASED LOOP_PROTECTION: Starting UI update session", "DROPDOWN_DEBUG")

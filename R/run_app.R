@@ -11,7 +11,12 @@
 run_app <- function(#port = 3838,
                     port = NULL,
                     launch_browser = NULL, ...) {
-  # Global configuration loaded via app.R - no runtime sourcing needed
+  # Ensure global configuration is loaded (needed for package entry point)
+  if (!exists("HOSPITAL_NAME", envir = .GlobalEnv) ||
+      !exists("my_theme", envir = .GlobalEnv) ||
+      !exists("HOSPITAL_LOGO_PATH", envir = .GlobalEnv)) {
+    source("global.R", local = FALSE)
+  }
 
   # Server function now loaded globally for better performance
   

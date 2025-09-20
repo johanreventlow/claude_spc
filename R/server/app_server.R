@@ -149,7 +149,7 @@ app_server <- function(input, output, session) {
       schedule_periodic_cleanup <- function() {
         # Check if session is still active before continuing
         session_check <- isolate({
-          !app_state$session$lifecycle$session_active || !app_state$session$lifecycle$background_tasks_active
+          !app_state$session$session_active || !app_state$session$background_tasks_active
         })
         if (session_check) {
           log_debug("🧹 Stopping periodic cleanup - session ended", "BACKGROUND_CLEANUP")
@@ -172,7 +172,7 @@ app_server <- function(input, output, session) {
 
         # Schedule next cleanup only if session is still active
         should_continue <- isolate({
-          app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active
+          app_state$session$session_active && app_state$session$background_tasks_active
         })
         if (should_continue) {
           later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
@@ -196,7 +196,7 @@ app_server <- function(input, output, session) {
       schedule_periodic_reporting <- function() {
         # Check if session is still active before continuing
         session_check <- isolate({
-          !app_state$session$lifecycle$session_active || !app_state$session$lifecycle$background_tasks_active
+          !app_state$session$session_active || !app_state$session$background_tasks_active
         })
         if (session_check) {
           log_debug("📊 Stopping periodic reporting - session ended", "PERFORMANCE_MONITOR")
@@ -227,7 +227,7 @@ app_server <- function(input, output, session) {
 
         # Schedule next report only if session is still active
         should_continue <- isolate({
-          app_state$session$lifecycle$session_active && app_state$session$lifecycle$background_tasks_active
+          app_state$session$session_active && app_state$session$background_tasks_active
         })
         if (should_continue) {
           later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
@@ -411,10 +411,10 @@ app_server <- function(input, output, session) {
 
     # Stop background tasks immediately
     isolate({
-      if (!is.null(app_state$session$lifecycle)) {
-        app_state$session$lifecycle$session_active <- FALSE
-        app_state$session$lifecycle$background_tasks_active <- FALSE
-        app_state$session$lifecycle$cleanup_initiated <- TRUE
+      if (!is.null(app_state$session)) {
+        app_state$session$session_active <- FALSE
+        app_state$session$background_tasks_active <- FALSE
+        app_state$session$cleanup_initiated <- TRUE
         log_debug("🔄 Background tasks stopped", "SESSION_LIFECYCLE")
       }
     })
