@@ -6,15 +6,176 @@
 # UI HEADER KOMPONENTER =======================================================
 
 ## Hovedfunktion for UI header
-# Opretter alle header komponenter inklusive scripts, styles og waiter
+# Opretter alle header komponenter inklusive scripts og styles
 create_ui_header <- function() {
   tagList(
-    waiter::use_waiter(),
     # Aktivér shinyjs
     shinyjs::useShinyjs(),
     tags$head(
-      # External CSS and JavaScript files for better maintainability
-      tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
+      # Embedded CSS (previously external styles.css) for reliable loading
+      tags$style(HTML("
+        /* SPC App Main Styles */
+
+        /* Navigation and Tab Styling */
+        .nav-link {
+          padding: .5rem 1rem !important;
+        }
+
+        /* Tab styling - ikke-aktive tabs */
+        .nav-tabs .nav-link:not(.active) {
+          color: #009ce8 !important;
+        }
+
+        /* Tab styling - aktive tabs (behold standard) */
+        .nav-tabs .nav-link.active {
+          color: inherit;
+        }
+
+        /* --- Excel-lignende tema til excelR --- */
+        .jexcel_container {
+          /*font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+          font-size: 13px;*/
+          width: none !important;
+          height: auto !important;
+          padding-bottom: 25px !important;
+          position: none !important;
+          border: none !important;
+        }
+
+        .jexcel thead td {
+          background: #f3f3f3;
+          border-bottom: 2px solid #bfbfbf;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+
+        /* Excel-lignende styling */
+        .jexcel tbody tr:nth-child(odd) {
+          background-color: #f9f9f9;
+        }
+
+        .jexcel tbody tr:nth-child(even) {
+          background-color: #ffffff;
+        }
+
+        .jexcel tbody tr:hover {
+          background-color: #f0f8ff !important;
+        }
+
+        .jexcel td {
+          border: 1px solid #d9d9d9;
+          padding: 4px 8px;
+        }
+
+        /* Aktiv celle styling */
+        .jexcel .highlight {
+          background-color: #cce7ff !important;
+          border: 2px solid #0066cc !important;
+        }
+
+        .jexcel_content {
+          overflow-y: unset !important;
+          max-height: none !important;
+          margin-bottom: 25px !important;
+        }
+
+        .jexcel > thead > tr > td {
+          position: unset !important;
+        }
+
+        /* Neutraliser bslib spacing omkring textarea wrapper */
+        .bslib-grid:has(#indicator-description-wrapper) {
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+
+        .bslib-mb-spacing:has(#indicator-description-wrapper) {
+          margin-bottom: 0 !important;
+        }
+
+        /* Parent container skal være fleksibel */
+        #indicator-description-wrapper {
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 1 auto !important;
+          min-height: 0 !important;
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+
+        /* Textarea skal fylde tilgængelig højde */
+        #indicator_description {
+          flex: 1 1 auto !important;
+          min-height: 130px !important;
+          height: 100% !important;
+          resize: none !important;
+          overflow: auto !important;
+          margin-bottom: 0 !important;
+        }
+
+        /* Fjern margin på form-group omkring textarea */
+        #indicator-description-wrapper .form-group,
+        #indicator_div {
+          margin-bottom: 0 !important;
+          flex: 1 1 auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+
+        /* Selectize dropup styling */
+        .selectize-dropup .selectize-control .selectize-dropdown {
+          position: absolute !important;
+          top: auto !important;
+          bottom: 100% !important;
+          border-top: 1px solid #d0d7de !important;
+          border-bottom: none !important;
+          border-radius: 4px 4px 0 0 !important;
+          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1) !important;
+          margin-bottom: 2px !important;
+        }
+
+        .selectize-dropup {
+          position: relative !important;
+        }
+
+        .selectize-dropup .selectize-control {
+          position: relative !important;
+        }
+
+        .selectize-dropdown {
+          max-height: 200px !important;
+          overflow-y: auto !important;
+          z-index: 1050 !important;
+        }
+
+        /* Plot container height fixes for layout_columns */
+        .bslib-grid > .bslib-sidebar-layout,
+        .bslib-grid > .card,
+        .bslib-grid .card {
+          min-height: 600px !important;
+          height: auto !important;
+        }
+
+        /* Ensure plot containers have minimum height */
+        div[style*='position: relative; height: 100%'] {
+          min-height: 500px !important;
+        }
+
+        /* Plot output specific fixes */
+        .shiny-plot-output {
+          min-height: 500px !important;
+          height: auto !important;
+        }
+
+        /* Card body fillable content height */
+        .card-body[data-fillable='true'] {
+          min-height: 500px !important;
+        }
+        
+        #visualization-plot_container { min-height: 500px !important;}
+        
+        
+      ")),
       tags$script(src = "local-storage.js"),
       tags$script(src = "ui-helpers.js"),
       tags$script(src = "shiny-handlers.js"),
@@ -266,16 +427,9 @@ create_chart_settings_card <- function() {
 create_plot_only_card <- function() {
   card(
     full_screen = TRUE,
-    fillable = TRUE,
-    max_height = "100%",
-    min_height = "100%",
     card_header(div(icon("chart-line"), " SPC Graf", )),
     card_body(
-      div(
-        style = "height: 100%",
-        fill = TRUE,
-        visualizationModuleUI("visualization")
-      )
+      visualizationModuleUI("visualization")
     )
   )
 }

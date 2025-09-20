@@ -26,19 +26,12 @@ visualizationModuleUI <- function(id) {
   # Kun plot området - ingen status info
   div(
     id = ns("plot_container"),
-    style = "position: relative; height: 100%;",
+    style = "position: relative;",
 
     # Static Plot Output -----------------------------------------------
     # Always present - visibility controlled via shinyjs::toggle()
-    plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%"),
+    plotOutput(ns("spc_plot_actual"), width = "100%", height = "500px"),
 
-    # Message Overlay --------------------------------------------------
-    # Shown when plot is not ready or has errors
-    div(
-      id = ns("message_overlay"),
-      style = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000;",
-      uiOutput(ns("plot_messages"))
-    )
   )
 }
 
