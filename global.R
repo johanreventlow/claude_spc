@@ -92,6 +92,11 @@ source_from_base("R/fct_file_operations.R")
 source_from_base("R/fct_visualization_server.R")
 source_from_base("R/modules/mod_spc_chart_server.R")
 
+# PERFORMANCE OPTIMIZATIONS - reactive consolidation og caching
+source_from_base("R/server/performance_helpers.R")
+source_from_base("R/server/performance_optimizations.R")
+source_from_base("R/server/plot_optimizations.R")
+
 # UI COMPONENTS - moved from runtime to global initialization
 source_from_base("R/modules/mod_spc_chart_ui.R")
 source_from_base("R/modules/mod_session_storage.R")
