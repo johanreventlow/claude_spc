@@ -40,9 +40,9 @@
 #' @seealso \code{\link{autodetect_engine}}, \code{\link{ensure_standard_columns}}
 setup_column_management <- function(input, output, session, app_state, emit) {
   log_debug_block("COLUMN_MGMT", "Setting up column management")
-  log_debug("Received app_state environment address:", capture.output(print(app_state)), .context = "COLUMN_MGMT")
+  # log_debug("Received app_state environment address:", capture.output(print(app_state)), .context = "COLUMN_MGMT")
 
-  log_debug("Centralized state available for column management", .context = "COLUMN_MGMT")
+  # log_debug("Centralized state available for column management", .context = "COLUMN_MGMT")
 
   # LEGACY: Column choices update observer moved to unified event system
   # Now handled by emit$data_changed() -> update_column_choices_unified()
@@ -69,7 +69,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
   # UNIFIED EVENT SYSTEM: Auto-detection and UI sync are now handled through events
   # emit$auto_detection_started() triggers auto-detection -> emit$ui_sync_needed() -> sync_ui_with_columns_unified()
   # The complete UI sync logic is implemented in utils_event_system.R
-  log_debug("Auto-detection and UI sync handled by unified event system", .context = "AUTODETECT_SETUP")
+  # log_debug("Auto-detection and UI sync handled by unified event system", .context = "AUTODETECT_SETUP")
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
   observeEvent(input$auto_detect_columns, {
@@ -180,7 +180,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
   # UNIFIED EVENT SYSTEM: No longer returning autodetect_trigger
   # Auto-detection is handled through emit$auto_detection_started() events
-  log_debug("Auto-detection now handled by unified event system", .context = "COLUMN_MGMT")
+  # log_debug("Auto-detection now handled by unified event system", .context = "COLUMN_MGMT")
 }
 
 # AUTO-DETEKTION FUNKTIONER ==================================================
@@ -199,7 +199,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   autodetect_tracer$step("auto_detect_initiated")
 
   log_debug_block("AUTO_DETECT_FUNC", "Starting auto_detect_and_update_columns")
-  log_debug("app_state hash:", if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL", .context = "AUTO_DETECT_FUNC")
+  # log_debug("app_state hash:", if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL", .context = "AUTO_DETECT_FUNC")
 
   debug_log("Auto-detect columns process started", "AUTO_DETECT_FLOW", level = "INFO",
             context = list(
@@ -210,7 +210,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   # Centralized state availability check
   use_centralized_state <- !is.null(app_state)
   if (use_centralized_state) {
-    log_debug("Centralized state available for auto-detect function", .context = "PHASE4")
+  # log_debug("Centralized state available for auto-detect function", .context = "PHASE4")
   }
 
   autodetect_tracer$step("data_source_validation")
@@ -233,10 +233,10 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
             session_id = session_id)
 
   # DEBUGGING: Verificer hvilke data auto-detection faktisk læser
-  log_debug("DATA SOURCE VERIFICATION:", .context = "AUTO_DETECT_FUNC")
-  log_debug("- use_centralized_state:", use_centralized_state, .context = "AUTO_DETECT_FUNC")
+  # log_debug("DATA SOURCE VERIFICATION:", .context = "AUTO_DETECT_FUNC")
+  # log_debug("- use_centralized_state:", use_centralized_state, .context = "AUTO_DETECT_FUNC")
   if (!is.null(app_state)) {
-    log_debug("- Reading from app_state$data$current_data", .context = "AUTO_DETECT_FUNC")
+  # log_debug("- Reading from app_state$data$current_data", .context = "AUTO_DETECT_FUNC")
     if (!is.null(app_state$data$current_data)) {
       log_debug_kv(
         data_dims = paste(dim(app_state$data$current_data), collapse = "x"),
@@ -246,14 +246,14 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
     }
   } else {
     # Using unified state management only
-    log_debug("- Using unified state management for data access", .context = "AUTO_DETECT_FUNC")
+  # log_debug("- Using unified state management for data access", .context = "AUTO_DETECT_FUNC")
   }
 
   autodetect_tracer$step("data_inspection_started")
 
   # Tjek for tomme datasæt - skift til name-only mode
   if (is.null(data) || ncol(data) == 0) {
-    log_debug("⚠️ Tomt datasæt (NULL eller ingen kolonner) - afbryder auto-detection", .context = "AUTO_DETECT_FUNC")
+  # log_debug("⚠️ Tomt datasæt (NULL eller ingen kolonner) - afbryder auto-detection", .context = "AUTO_DETECT_FUNC")
     debug_log("Auto-detect aborted - empty dataset", "AUTO_DETECT_FLOW", level = "WARN",
               context = list(reason = "null_or_no_columns"),
               session_id = session_id)
@@ -264,7 +264,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   # Name-only mode for datasæt med 0 rækker men med kolonneoverskrifter
   name_only_mode <- nrow(data) == 0
   if (name_only_mode) {
-    log_debug("Tomt datasæt (0 rækker) - skifter til name-only detection", .context = "AUTO_DETECT_FUNC")
+  # log_debug("Tomt datasæt (0 rækker) - skifter til name-only detection", .context = "AUTO_DETECT_FUNC")
     debug_log("Switching to name-only detection mode", "AUTO_DETECT_FLOW", level = "INFO",
               context = list(rows = 0, columns = ncol(data)),
               session_id = session_id)
@@ -311,22 +311,22 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   # Forbedret detektering af potentielle dato-kolonner
   # Evaluer ALLE kolonner og find den bedste dato-kandidat
 
-  log_debug("Starting date candidate analysis...", .context = "AUTO_DETECT_FUNC")
+  # log_debug("Starting date candidate analysis...", .context = "AUTO_DETECT_FUNC")
   date_candidates <- list()
 
   for (col_name in col_names) {
-    log_debug("Analyzing column:", col_name, .context = "AUTO_DETECT_FUNC")
+  # log_debug("Analyzing column:", col_name, .context = "AUTO_DETECT_FUNC")
     col_data <- data[[col_name]]
 
     # Skip ikke-dato kolonner baseret på navn
     if (grepl("^(nr|id|count|antal|total|sum)$", col_name, ignore.case = TRUE)) {
-      log_debug("Skipping", col_name, "- excluded by name pattern", .context = "AUTO_DETECT_FUNC")
+  # log_debug("Skipping", col_name, "- excluded by name pattern", .context = "AUTO_DETECT_FUNC")
       next
     }
 
     # Skip kolonner der kun indeholder NA værdier
     if (all(is.na(col_data)) || length(col_data) == 0) {
-      log_debug("Skipping", col_name, "- all NA or empty", .context = "AUTO_DETECT_FUNC")
+  # log_debug("Skipping", col_name, "- all NA or empty", .context = "AUTO_DETECT_FUNC")
       next
     }
 
@@ -340,7 +340,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
 
     # HØJESTE PRIORITET: Allerede parsede dato-objekter
     if (inherits(col_data, c("Date", "POSIXct", "POSIXt"))) {
-      log_debug("⭐", col_name, "- Already parsed date object (score: 100)", .context = "AUTO_DETECT_FUNC")
+  # log_debug("⭐", col_name, "- Already parsed date object (score: 100)", .context = "AUTO_DETECT_FUNC")
       candidate$score <- 100
       candidate$type <- "parsed_date"
       candidate$success_rate <- 1.0
@@ -431,19 +431,19 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   }
 
   # Vælg bedste kandidat baseret på score
-  log_debug("📊 Date candidate selection results:", .context = "AUTO_DETECT_FUNC")
+  # log_debug("📊 Date candidate selection results:", .context = "AUTO_DETECT_FUNC")
   x_col <- NULL
   best_score <- 0
 
   if (length(date_candidates) > 0) {
-    log_debug("Found", length(date_candidates), "date candidates:", .context = "AUTO_DETECT_FUNC")
+  # log_debug("Found", length(date_candidates), "date candidates:", .context = "AUTO_DETECT_FUNC")
     # Log kandidater for debugging
     for (name in names(date_candidates)) {
       cand <- date_candidates[[name]]
-      log_debug(sprintf(
-        "- %s: score=%.1f (%s, success=%.2f) - %s",
-        name, cand$score, cand$type, cand$success_rate, cand$reason
-      ), .context = "AUTO_DETECT_FUNC")
+  # log_debug(sprintf(
+      #  "- %s: score=%.1f (%s, success=%.2f) - %s",
+      #  name, cand$score, cand$type, cand$success_rate, cand$reason
+      # ), .context = "AUTO_DETECT_FUNC")
     }
     # Find bedste kandidat
     for (name in names(date_candidates)) {
@@ -453,20 +453,20 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
         x_col <- name
       }
     }
-    log_debug("🎯 Best date candidate:", x_col, "(score:", best_score, ")", .context = "AUTO_DETECT_FUNC")
+  # log_debug("🎯 Best date candidate:", x_col, "(score:", best_score, ")", .context = "AUTO_DETECT_FUNC")
   } else {
-    log_debug("⚠️ No date candidates found", .context = "AUTO_DETECT_FUNC")
+  # log_debug("⚠️ No date candidates found", .context = "AUTO_DETECT_FUNC")
   }
 
   # Fallback til første kolonne hvis ingen dato-kandidater
   if (is.null(x_col) && length(col_names) > 0) {
     x_col <- col_names[1]
-    log_debug("📝 Fallback X column:", x_col, .context = "AUTO_DETECT_FUNC")
+  # log_debug("📝 Fallback X column:", x_col, .context = "AUTO_DETECT_FUNC")
   }
 
   # Tjek om vi har en gyldig X kolonne
   if (is.null(x_col)) {
-    log_debug("⚠️ Ingen gyldig X kolonne fundet - afbryder auto-detection", .context = "AUTO_DETECT_FUNC")
+  # log_debug("⚠️ Ingen gyldig X kolonne fundet - afbryder auto-detection", .context = "AUTO_DETECT_FUNC")
     return(NULL)
   }
 
@@ -558,7 +558,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   )
 
   # Detekter numeriske kolonner
-  log_debug("🔢 Detecting numeric columns...", .context = "AUTO_DETECT_FUNC")
+  # log_debug("🔢 Detecting numeric columns...", .context = "AUTO_DETECT_FUNC")
   numeric_cols <- character(0)
   for (col_name in col_names) {
     if (col_name != x_col) {
@@ -568,18 +568,18 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
 
       if (is_numeric || danish_parse_success) {
         numeric_cols <- c(numeric_cols, col_name)
-        log_debug("✅", col_name, "- numeric (native:", is_numeric, ", danish:", danish_parse_success, ")", .context = "AUTO_DETECT_FUNC")
+  # log_debug("✅", col_name, "- numeric (native:", is_numeric, ", danish:", danish_parse_success, ")", .context = "AUTO_DETECT_FUNC")
       } else {
-        log_debug("❌", col_name, "- not numeric", .context = "AUTO_DETECT_FUNC")
+  # log_debug("❌", col_name, "- not numeric", .context = "AUTO_DETECT_FUNC")
       }
     } else {
-      log_debug("⏭️", col_name, "- skipped (X column)", .context = "AUTO_DETECT_FUNC")
+  # log_debug("⏭️", col_name, "- skipped (X column)", .context = "AUTO_DETECT_FUNC")
     }
   }
-  log_debug("Found", length(numeric_cols), "numeric columns:", paste(numeric_cols, collapse = ", "), .context = "AUTO_DETECT_FUNC")
+  # log_debug("Found", length(numeric_cols), "numeric columns:", paste(numeric_cols, collapse = ", "), .context = "AUTO_DETECT_FUNC")
 
   # Smart detektion af tæller/nævner
-  log_debug("🎯 Smart detection for Y/N columns...", .context = "AUTO_DETECT_FUNC")
+  # log_debug("🎯 Smart detection for Y/N columns...", .context = "AUTO_DETECT_FUNC")
   col_names_lower <- tolower(col_names)
   taeller_col <- NULL
   naevner_col <- NULL
@@ -592,16 +592,16 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   if (length(taeller_idx) > 0 && length(naevner_idx) > 0) {
     taeller_col <- col_names[taeller_idx[1]]
     naevner_col <- col_names[naevner_idx[1]]
-    log_debug("📝 Name-based assignment - Y:", taeller_col, ", N:", naevner_col, .context = "AUTO_DETECT_FUNC")
+  # log_debug("📝 Name-based assignment - Y:", taeller_col, ", N:", naevner_col, .context = "AUTO_DETECT_FUNC")
   } else if (length(numeric_cols) >= 2) {
     taeller_col <- numeric_cols[1]
     naevner_col <- numeric_cols[2]
-    log_debug("📊 Fallback assignment (first two numerics) - Y:", taeller_col, ", N:", naevner_col, .context = "AUTO_DETECT_FUNC")
+  # log_debug("📊 Fallback assignment (first two numerics) - Y:", taeller_col, ", N:", naevner_col, .context = "AUTO_DETECT_FUNC")
   } else if (length(numeric_cols) >= 1) {
     taeller_col <- numeric_cols[1]
-    log_debug("📊 Single numeric assignment - Y:", taeller_col, ", N: NULL", .context = "AUTO_DETECT_FUNC")
+  # log_debug("📊 Single numeric assignment - Y:", taeller_col, ", N: NULL", .context = "AUTO_DETECT_FUNC")
   } else {
-    log_debug("⚠️ No numeric columns found for Y/N assignment", .context = "AUTO_DETECT_FUNC")
+  # log_debug("⚠️ No numeric columns found for Y/N assignment", .context = "AUTO_DETECT_FUNC")
   }
 
   # Detekter skift/fase kolonne (boolean eller tekst med skift-relaterede termer)
@@ -660,7 +660,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
   }
 
   # Opdater dropdowns til at VISE de detekterede værdier
-  log_debug("📋 Final column assignments:", .context = "AUTO_DETECT_FUNC")
+  # log_debug("📋 Final column assignments:", .context = "AUTO_DETECT_FUNC")
   log_debug_kv(
     X_date_time = x_col %||% "NULL",
     Y_taeller = taeller_col %||% "NULL",
@@ -697,7 +697,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
     )
 
     # Using unified state management for auto-detected columns storage
-    log_debug("Auto-detected columns handled by unified state management", .context = "PHASE4")
+  # log_debug("Auto-detected columns handled by unified state management", .context = "PHASE4")
     # Sync auto_detected_columns to centralized state - FIX: Use correct path that visualization expects
     app_state$columns$auto_detect$results <- list(
       x_col = x_col,
@@ -708,10 +708,10 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
       kommentar_col = kommentar_col,
       timestamp = Sys.time()
     )
-    log_debug("Synced auto_detected_columns to centralized state (FIXED PATH)", .context = "PHASE4")
+  # log_debug("Synced auto_detected_columns to centralized state (FIXED PATH)", .context = "PHASE4")
 
     # Trigger UI sync for visual feedback on Kolonnematch tab using reactive trigger
-    log_debug("🎯 CRITICAL: Setting ui_sync_needed with:", .context = "AUTO_DETECT_FUNC")
+  # log_debug("🎯 CRITICAL: Setting ui_sync_needed with:", .context = "AUTO_DETECT_FUNC")
     log_debug_kv(
       x_col = x_col %||% "NULL",
       taeller_col = taeller_col %||% "NULL",
@@ -721,7 +721,7 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
     )
 
     # Use reactive trigger with timestamp to force reactivity
-    log_debug("🔄 Triggering UI sync - should update input fields!", .context = "AUTO_DETECT_FUNC")
+  # log_debug("🔄 Triggering UI sync - should update input fields!", .context = "AUTO_DETECT_FUNC")
     sync_data <- list(
       x_col = x_col,
       taeller_col = taeller_col,
@@ -738,12 +738,12 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
 
     # CRITICAL: Set debounce timestamp BEFORE triggering UI sync to prevent race condition
     app_state$columns$ui_sync$last_sync_time <- Sys.time()
-    log_debug("⏰ Debounce timestamp set BEFORE UI sync to prevent column mgmt override", .context = "UI_SYNC_TRIGGER")
+  # log_debug("⏰ Debounce timestamp set BEFORE UI sync to prevent column mgmt override", .context = "UI_SYNC_TRIGGER")
 
     # UNIFIED EVENT SYSTEM: UI sync is now handled by events (CRITICAL for UI sync)
     # Store results in app_state for unified event system access
     app_state$columns$auto_detect$results <- sync_data
-    log_debug("FULL MODE: Results stored in app_state for unified event system", .context = "UI_SYNC_UNIFIED")
+  # log_debug("FULL MODE: Results stored in app_state for unified event system", .context = "UI_SYNC_UNIFIED")
 
     log_debug_block("AUTO_DETECT_FUNC", "✅ Auto-detect completed successfully", type = "stop")
 
@@ -753,9 +753,9 @@ auto_detect_and_update_columns <- function(input, session, app_state = NULL, emi
 
     # CRITICAL: Trigger navigation update efter autodetect completion
     # UNIFIED EVENTS: Trigger navigation change through event system
-    log_debug("Emitting navigation_changed event", .context = "AUTO_DETECT")
+  # log_debug("Emitting navigation_changed event", .context = "AUTO_DETECT")
     emit$navigation_changed()
-    log_debug("AUTO_DETECT: navigation_changed event emitted", "AUTO_DETECT")
+  # log_debug("AUTO_DETECT: navigation_changed event emitted", "AUTO_DETECT")
 
     debug_log("Auto-detect process completed successfully", "AUTO_DETECT_FLOW", level = "INFO",
               context = list(
@@ -927,7 +927,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
   log_debug_block("DATA_TABLE", "Setting up data table with unified state")
 
   # UNIFIED EVENT SYSTEM: Direct access to app_state data instead of reactive pattern
-  log_debug("Using unified event system for data table setup", .context = "DATA_TABLE")
+  # log_debug("Using unified event system for data table setup", .context = "DATA_TABLE")
 
   # Hovedtabel rendering med excelR
   output$main_data_table <- excelR::renderExcel({
@@ -935,7 +935,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     current_data_check <- app_state$data$current_data
     req(current_data_check)
 
-    log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
+  # log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
 
     # Inkluder table_version for at tvinge re-render efter gendannelse
     # Use unified state management

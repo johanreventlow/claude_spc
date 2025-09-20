@@ -24,7 +24,7 @@ create_optimized_data_pipeline <- function(app_state, emit) {
   data_processing_pipeline <- debounce(reactive({
     req(app_state$data$current_data)
 
-    log_debug("Starting optimized data processing pipeline", "PERFORMANCE_OPT")
+  # log_debug("Starting optimized data processing pipeline", "PERFORMANCE_OPT")
 
     # Batch all data operations together
     raw_data <- app_state$data$current_data
@@ -64,7 +64,7 @@ create_optimized_data_pipeline <- function(app_state, emit) {
     # Prepare UI updates
     ui_updates <- prepare_batch_ui_updates(autodetect_results)
 
-    log_debug("Optimized data processing pipeline completed", "PERFORMANCE_OPT")
+  # log_debug("Optimized data processing pipeline completed", "PERFORMANCE_OPT")
 
     list(
       processed_data = processed_data,
@@ -95,12 +95,12 @@ detect_columns_with_cache <- function(data, app_state) {
   cached_result <- get_cache_value(cache_key)
 
   if (!is.null(cached_result)) {
-    log_debug("Using cached auto-detection result", "PERFORMANCE_OPT")
+  # log_debug("Using cached auto-detection result", "PERFORMANCE_OPT")
     return(cached_result)
   }
 
   # Perform auto-detection
-  log_debug("Performing fresh auto-detection", "PERFORMANCE_OPT")
+  # log_debug("Performing fresh auto-detection", "PERFORMANCE_OPT")
   autodetect_result <- autodetect_engine_unified(
     data = data,
     trigger_type = "optimized_pipeline",
@@ -171,13 +171,13 @@ set_cache_value <- function(key, value, timeout_minutes = 15) {
 #' @param data The data frame to process
 #'
 detect_and_convert_types_batch <- function(data) {
-  log_debug("Starting batch type detection and conversion", "PERFORMANCE_OPT")
+  # log_debug("Starting batch type detection and conversion", "PERFORMANCE_OPT")
 
   # Identify columns that need conversion
   columns_to_convert <- identify_conversion_candidates(data)
 
   if (length(columns_to_convert) == 0) {
-    log_debug("No columns need type conversion", "PERFORMANCE_OPT")
+  # log_debug("No columns need type conversion", "PERFORMANCE_OPT")
     return(data)
   }
 
@@ -198,7 +198,7 @@ detect_and_convert_types_batch <- function(data) {
     )
   }
 
-  log_debug(paste("Converted", length(columns_to_convert), "columns"), "PERFORMANCE_OPT")
+  # log_debug(paste("Converted", length(columns_to_convert), "columns"), "PERFORMANCE_OPT")
   return(data)
 }
 
@@ -264,14 +264,14 @@ prepare_batch_ui_updates <- function(autodetect_results) {
 #' @param session Shiny session
 #'
 setup_optimized_event_listeners <- function(app_state, emit, session) {
-  log_debug("Setting up optimized event listeners", "PERFORMANCE_OPT")
+  # log_debug("Setting up optimized event listeners", "PERFORMANCE_OPT")
 
   # Create optimized pipeline
   data_pipeline <- create_optimized_data_pipeline(app_state, emit)
 
   # Single consolidated observer for data changes
   observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = get_priority("STATE_MANAGEMENT"), {
-    log_debug("Optimized data_loaded handler triggered", "PERFORMANCE_OPT")
+  # log_debug("Optimized data_loaded handler triggered", "PERFORMANCE_OPT")
 
     # Process through optimized pipeline
     result <- data_pipeline()
@@ -289,11 +289,11 @@ setup_optimized_event_listeners <- function(app_state, emit, session) {
       emit$auto_detection_completed()
       emit$ui_sync_completed()
 
-      log_debug("Optimized pipeline completed successfully", "PERFORMANCE_OPT")
+  # log_debug("Optimized pipeline completed successfully", "PERFORMANCE_OPT")
     }
   })
 
-  log_debug("Optimized event listeners setup completed", "PERFORMANCE_OPT")
+  # log_debug("Optimized event listeners setup completed", "PERFORMANCE_OPT")
 }
 
 #' Apply Batch UI Updates
@@ -306,11 +306,11 @@ setup_optimized_event_listeners <- function(app_state, emit, session) {
 apply_batch_ui_updates <- function(session, updates) {
   if (length(updates) == 0) return()
 
-  log_debug(paste("Applying", length(updates), "UI updates in batch"), "PERFORMANCE_OPT")
+  # log_debug(paste("Applying", length(updates), "UI updates in batch"), "PERFORMANCE_OPT")
 
   # Use session$onFlushed to ensure updates are applied together
   session$onFlushed(function() {
-    log_debug("Batch UI updates completed", "PERFORMANCE_OPT")
+  # log_debug("Batch UI updates completed", "PERFORMANCE_OPT")
   })
 
   # Apply all updates

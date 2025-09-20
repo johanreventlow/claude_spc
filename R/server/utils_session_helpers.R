@@ -18,11 +18,11 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   evaluate_dataLoaded_status <- function() {
     current_data_check <- app_state$data$current_data
 
-    log_debug("Evaluating dataLoaded status", .context = "NAVIGATION_UNIFIED")
-    log_debug("current_data_check is null:", is.null(current_data_check), .context = "NAVIGATION_UNIFIED")
+  # log_debug("Evaluating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+  # log_debug("current_data_check is null:", is.null(current_data_check), .context = "NAVIGATION_UNIFIED")
 
     result <- if (is.null(current_data_check)) {
-      log_debug("No current data - showing welcome screen", .context = "NAVIGATION_UNIFIED")
+  # log_debug("No current data - showing welcome screen", .context = "NAVIGATION_UNIFIED")
       "FALSE"
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
@@ -61,33 +61,33 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
       )
 
       final_result <- if (meaningful_data || user_has_started) "TRUE" else "FALSE"
-      log_debug("Final dataLoaded result:", final_result, .context = "NAVIGATION_UNIFIED")
+  # log_debug("Final dataLoaded result:", final_result, .context = "NAVIGATION_UNIFIED")
       final_result
     }
-    log_debug("Returning dataLoaded:", result, .context = "NAVIGATION_UNIFIED")
+  # log_debug("Returning dataLoaded:", result, .context = "NAVIGATION_UNIFIED")
     return(result)
   }
 
   # UNIFIED EVENT LISTENERS: Update dataLoaded status when relevant events occur
   observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
-    log_debug("data_loaded event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+  # log_debug("data_loaded event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
     dataLoaded_status(new_status)
-    log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
-    log_debug("session_reset event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+  # log_debug("session_reset event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
     dataLoaded_status(new_status)
-    log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
-    log_debug("navigation_changed event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+  # log_debug("navigation_changed event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
     dataLoaded_status(new_status)
-    log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   # Data indlæsnings status flags - følger BFH UTH mønster
@@ -128,19 +128,19 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
     has_data_status(new_status)
-    log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
     has_data_status(new_status)
-    log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
     has_data_status(new_status)
-    log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
+  # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   # Initial evaluation to set correct startup state
@@ -149,7 +149,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     initial_has_data <- evaluate_has_data_status()
     dataLoaded_status(initial_dataLoaded)
     has_data_status(initial_has_data)
-    log_debug("Initial status set - dataLoaded:", initial_dataLoaded, "has_data:", initial_has_data, .context = "NAVIGATION_UNIFIED")
+  # log_debug("Initial status set - dataLoaded:", initial_dataLoaded, "has_data:", initial_has_data, .context = "NAVIGATION_UNIFIED")
   }, priority = 2000)  # High priority to run early
 
   output$has_data <- renderText({

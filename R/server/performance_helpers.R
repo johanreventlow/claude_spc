@@ -245,7 +245,7 @@ should_gc <- function() {
 #'
 start_perf_timer <- function(operation_name) {
   start_time <- Sys.time()
-  log_debug(paste("Started:", operation_name), "PERFORMANCE_TIMER")
+  # log_debug(paste("Started:", operation_name), "PERFORMANCE_TIMER")
   return(start_time)
 }
 
@@ -257,7 +257,7 @@ start_perf_timer <- function(operation_name) {
 end_perf_timer <- function(start_time, operation_name) {
   end_time <- Sys.time()
   duration <- as.numeric(difftime(end_time, start_time, units = "secs"))
-  log_debug(paste("Completed:", operation_name, "in", round(duration, 3), "seconds"), "PERFORMANCE_TIMER")
+  # log_debug(paste("Completed:", operation_name, "in", round(duration, 3), "seconds"), "PERFORMANCE_TIMER")
   return(duration)
 }
 
@@ -297,5 +297,5 @@ clear_performance_caches <- function() {
   # Run garbage collection
   gc(verbose = FALSE)
 
-  log_debug("Performance caches cleared", "PERFORMANCE")
+  # log_debug("Performance caches cleared", "PERFORMANCE")
 }

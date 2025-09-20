@@ -59,7 +59,7 @@ create_app_state <- function() {
   # CRITICAL FIX: Environment passes by reference, solving scope isolation
   app_state <- new.env(parent = emptyenv())
 
-  log_debug(paste("Environment created with address:", capture.output(print(app_state))), "CREATE_APP_STATE")
+  # log_debug(paste("Environment created with address:", capture.output(print(app_state))), "CREATE_APP_STATE")
 
   # REACTIVE EVENT BUS: Central event system for all triggers
   # STREAMLINED EVENT-BUS: Reduced noise, consolidated events
@@ -267,7 +267,7 @@ create_app_state <- function() {
 set_current_data <- function(app_state, value) {
   isolate({
     app_state$data$current_data <- value
-    log_debug(paste("Data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
+  # log_debug(paste("Data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
   })
 }
 
@@ -275,7 +275,7 @@ set_current_data <- function(app_state, value) {
 set_original_data <- function(app_state, value) {
   isolate({
     app_state$data$original_data <- value
-    log_debug(paste("Original data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
+  # log_debug(paste("Original data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
   })
 }
 
