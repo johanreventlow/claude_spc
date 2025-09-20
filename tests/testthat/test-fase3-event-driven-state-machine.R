@@ -36,7 +36,7 @@ test_that("manual_autodetect_button trigger bypasser frozen state", {
   )
 
   # Should be frozen now
-  expect_true(isolate(app_state$autodetect$frozen_until_next_trigger))
+  expect_true(isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
 
   # TEST: Smart unfreeze gør det muligt at køre endnu et file_upload-trigger
   results2 <- autodetect_engine(
@@ -62,22 +62,22 @@ test_that("manual_autodetect_button trigger bypasser frozen state", {
 test_that("data_loaded event unfreezer autodetect systemet", {
   # SETUP: Create frozen app_state
   app_state <- create_test_ready_app_state()
-  app_state$autodetect$frozen_until_next_trigger <- TRUE
+  isolate(app_state$columns$auto_detect$frozen_until_next_trigger <- TRUE)
   emit <- create_emit_api(app_state)
 
   # Verify system is frozen
-  expect_true(isolate(app_state$autodetect$frozen_until_next_trigger))
+  expect_true(isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
 
   # TEST: data_loaded event should unfreeze system
   emit$data_loaded()
 
   # System should still be frozen until event is processed
   # (In real app, this would be handled by event listener)
-  expect_true(isolate(app_state$autodetect$frozen_until_next_trigger))
+  expect_true(isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
 
   # Simulate event listener unfreezing the system
-  app_state$autodetect$frozen_until_next_trigger <- FALSE
-  expect_false(isolate(app_state$autodetect$frozen_until_next_trigger))
+  isolate(app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE)
+  expect_false(isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
 })
 
 test_that("trigger isolation fungerer korrekt", {
@@ -123,10 +123,10 @@ test_that("frozen state metadata gemmes korrekt", {
   )
 
   # Check frozen state metadata
-  expect_true(isolate(app_state$autodetect$frozen_until_next_trigger))
-  expect_false(is.null(isolate(app_state$autodetect$last_run)))
+  expect_true(isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
+  expect_false(is.null(isolate(app_state$columns$auto_detect$last_run)))
 
-  last_run <- isolate(app_state$autodetect$last_run)
+  last_run <- isolate(app_state$columns$auto_detect$last_run)
   expect_equal(last_run$trigger, "file_upload")
   expect_equal(last_run$data_rows, 2)
   expect_equal(last_run$data_cols, 3)
@@ -151,9 +151,9 @@ test_that("session_start trigger virker uden data", {
 
   # Should detect based on names only
   expect_false(is.null(results))
-  expect_true(isolate(app_state$autodetect$frozen_until_next_trigger))
-  expect_equal(isolate(app_state$autodetect$last_run$trigger), "session_start")
-  expect_equal(isolate(app_state$autodetect$last_run$data_rows), 0)
+  expect_true(isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
+  expect_equal(isolate(app_state$columns$auto_detect$last_run$trigger), "session_start")
+  expect_equal(isolate(app_state$columns$auto_detect$last_run$data_rows), 0)
 })
 
 test_that("error handling i event-driven architecture", {
@@ -209,7 +209,7 @@ test_that("event flow konsistens mellem triggers", {
 
   for (trigger in triggers) {
     # Reset frozen state for each test
-    isolate(app_state$autodetect$frozen_until_next_trigger <- FALSE)
+    isolate(app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE)
 
     results_list[[trigger]] <- autodetect_engine(
       data = if (trigger == "session_start") NULL else test_data,

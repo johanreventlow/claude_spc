@@ -28,13 +28,8 @@ autodetect_engine <- function(data = NULL,
     stop("emit functions are required for unified autodetect engine")
   }
 
-  # Initialize autodetect state if not exists
-  if (is.null(app_state$autodetect)) {
-    app_state$autodetect <- list(
-      frozen_until_next_trigger = FALSE,
-      last_run = NULL
-    )
-  }
+  # Use centralized reactive state system - no initialization needed
+  # State is handled by app_state$columns$auto_detect reactiveValues
 
   # Session ID for logging
   session_id <- if (exists("session", envir = parent.frame())) {
@@ -47,17 +42,17 @@ autodetect_engine <- function(data = NULL,
   log_debug_kv(
     trigger_type = trigger_type,
     data_available = !is.null(data),
-    frozen_state = isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE,
+    frozen_state = isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE,
     .context = "UNIFIED_AUTODETECT"
   )
 
   # 1. TRIGGER VALIDATION - smart unfreezing when data is available
-  frozen_state <- isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
+  frozen_state <- isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
   # SMART UNFREEZE: If we have data available and we're frozen, automatically unfreeze
   if (frozen_state && !is.null(data) && nrow(data) > 0 && trigger_type == "file_upload") {
   # log_debug("SMART UNFREEZE: Data available, unfreezing autodetect system automatically", .context = "UNIFIED_AUTODETECT")
-    app_state$autodetect$frozen_until_next_trigger <- FALSE
+    isolate(app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE)
     frozen_state <- FALSE
   }
 
@@ -93,8 +88,9 @@ autodetect_engine <- function(data = NULL,
   app_state$columns <- update_all_column_mappings(results, app_state$columns, app_state)
 
   # Set frozen state to prevent re-running until next legitimate trigger
-  app_state$autodetect$frozen_until_next_trigger <- TRUE
-  app_state$autodetect$last_run <- list(
+  isolate({
+    app_state$columns$auto_detect$frozen_until_next_trigger <- TRUE
+    app_state$columns$auto_detect$last_run <- list(
     trigger = trigger_type,
     timestamp = Sys.time(),
     data_rows = if (!is.null(data)) nrow(data) else 0,
@@ -106,6 +102,7 @@ autodetect_engine <- function(data = NULL,
       cl_column = results$cl_col
     )
   )
+  })
 
   log_debug_kv(
     frozen_state = "TRUE",
@@ -378,12 +375,14 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
       }
 
       # Store complete results for backward compatibility
-      app_state$columns$auto_detect$results <- results
-      # Note: results already stored above in auto_detect$results
+      isolate({
+        app_state$columns$auto_detect$results <- results
+        # Note: results already stored above in auto_detect$results
 
-      # Mark as completed
-      app_state$columns$auto_detect$completed <- TRUE
-      app_state$columns$auto_detect$in_progress <- FALSE
+        # Mark as completed
+        app_state$columns$auto_detect$completed <- TRUE
+        app_state$columns$auto_detect$in_progress <- FALSE
+      })
     })
 
   # log_debug("✅ Direct app_state update completed", .context = "UPDATE_MAPPINGS")

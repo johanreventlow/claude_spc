@@ -35,10 +35,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     # Data loaded event handler
 
     # FASE 3: Unfreeze autodetect system when new data is loaded
-    if (!is.null(app_state$autodetect)) {
-      app_state$autodetect$frozen_until_next_trigger <- FALSE
-      # Autodetect system unfrozen
-    }
+    app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
+    # Autodetect system unfrozen
 
     # Trigger auto-detection after data is loaded
     if (!is.null(app_state$data$current_data)) {
@@ -208,8 +206,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     app_state$columns$auto_detect$results <- NULL
 
     # FASE 3: Reset frozen state
-    app_state$autodetect$frozen_until_next_trigger <- FALSE
-    app_state$autodetect$last_run <- NULL
+    app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
+    app_state$columns$auto_detect$last_run <- NULL
 
   # log_debug("Session state reset completed", .context = "EVENT")
   })
@@ -380,9 +378,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       #         .context = "LOOP_PROTECTION")
 
       # FREEZE-AWARE LOGGING: Observe freeze state without modification
-      freeze_state <- if (!is.null(app_state$autodetect)) {
-        isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
-      } else { FALSE }
+      freeze_state <- isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
   # log_debug(paste("TOKEN-BASED LOOP_PROTECTION check for", col,
       #               ", autodetect frozen =", freeze_state), "DROPDOWN_DEBUG")
@@ -429,9 +425,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
       if (!is.null(last_update)) {
         # FREEZE-AWARE TIMING: Track performance metrics with context
-        freeze_state <- if (!is.null(app_state$autodetect)) {
-          isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
-        } else { FALSE }
+        freeze_state <- isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
         autodetect_in_progress <- if (!is.null(app_state$columns)) {
           isolate(app_state$columns$auto_detect$in_progress) %||% FALSE

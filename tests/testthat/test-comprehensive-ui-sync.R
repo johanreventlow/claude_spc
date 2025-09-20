@@ -56,7 +56,7 @@ test_that("autodetect_engine kortlægger alle kernekolonner ved filupload", {
   expect_equal(app_state$columns$mappings$frys_column, "Frys")
   expect_equal(app_state$columns$mappings$kommentar_column, "Kommentarer")
 
-  expect_true(app_state$autodetect$frozen_until_next_trigger)
+  expect_true(app_state$columns$auto_detect$frozen_until_next_trigger)
   expect_equal(recorder$calls(), "auto_detection_completed")
 })
 
@@ -64,7 +64,7 @@ test_that("autodetect_engine smart-unfreezer kører filupload trods frossen tils
   app_state <- create_test_app_state()
   recorder <- make_emit_recorder()
 
-  app_state$autodetect$frozen_until_next_trigger <- TRUE
+  app_state$columns$auto_detect$frozen_until_next_trigger <- TRUE
 
   upload_data <- data.frame(
     Dato = as.Date(c("2025-03-01", "2025-03-02")),
@@ -90,7 +90,7 @@ test_that("manual trigger overstyrer frossen tilstand", {
   app_state <- create_test_app_state()
   recorder <- make_emit_recorder()
 
-  app_state$autodetect$frozen_until_next_trigger <- TRUE
+  app_state$columns$auto_detect$frozen_until_next_trigger <- TRUE
   minimal_data <- data.frame(
     Dato = as.Date(c("2025-02-01", "2025-02-02")),
     Tæller = c(5, 9),
@@ -108,7 +108,7 @@ test_that("manual trigger overstyrer frossen tilstand", {
   expect_equal(result$x_col, "Dato")
   expect_equal(result$y_col, "Tæller")
   expect_equal(recorder$calls(), "auto_detection_completed")
-  expect_true(app_state$autodetect$frozen_until_next_trigger)
+  expect_true(app_state$columns$auto_detect$frozen_until_next_trigger)
 })
 
 test_that("detect_columns_name_based bruger robuste navnemønstre", {

@@ -71,7 +71,6 @@ create_app_state <- function() {
     # KOLONNEDETEKTION -----------------------------------------------------
     auto_detection_started = 0L,
     auto_detection_completed = 0L,
-    columns_detected = 0L,
 
     # UI SYNKRONISERING ----------------------------------------------------
     ui_sync_needed = 0L,
@@ -216,13 +215,8 @@ create_app_state <- function() {
     )
   )
 
-  # Autodetect State - Unified autodetect engine state management
-  app_state$autodetect <- reactiveValues(
-    frozen_until_next_trigger = FALSE,
-    last_run = NULL,
-    in_progress = FALSE,
-    completed = FALSE
-  )
+  # REMOVED: Autodetect state consolidated into app_state$columns$auto_detect
+  # This eliminates state duplication and maintenance burden
 
   # Navigation State - For eventReactive patterns
   app_state$navigation <- reactiveValues(
@@ -335,11 +329,6 @@ create_emit_api <- function(app_state) {
       })
     },
 
-    columns_detected = function() {
-      isolate({
-        app_state$events$columns_detected <- app_state$events$columns_detected + 1L
-      })
-    },
 
     # UI synchronization events
     ui_sync_needed = function() {

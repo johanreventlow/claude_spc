@@ -526,9 +526,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
   performance_start <- update_start_time
 
   # FREEZE-AWARE LOGGING: Observe freeze state without modification
-  freeze_state <- if (!is.null(app_state$autodetect)) {
-    isolate(app_state$autodetect$frozen_until_next_trigger) %||% FALSE
-  } else { FALSE }
+  freeze_state <- isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
   log_debug(paste("⭐ Starting safe programmatic UI update with", delay_ms, "ms delay",
                  "(autodetect frozen:", freeze_state, ")"), "DROPDOWN_DEBUG")

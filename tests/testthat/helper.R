@@ -96,7 +96,7 @@ ensure_event_counters <- function(app_state, required_events = NULL) {
   if (is.null(required_events)) {
     required_events <- c(
       "data_loaded", "data_changed",
-      "auto_detection_started", "auto_detection_completed", "columns_detected",
+      "auto_detection_started", "auto_detection_completed",
       "ui_sync_needed", "ui_sync_completed", "ui_update_needed",
       "navigation_changed",
       "session_started", "session_reset", "manual_autodetect_button",
