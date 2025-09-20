@@ -156,9 +156,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # INGEN AUTO-DETECTION her - dropdown values respekteres altid
       # Auto-detection sker kun ved data upload i server_column_management.R
 
-      # Explicit validation: y_col is required for plotting
-      req(config$y_col)
-      req(config$y_col %in% names(data))
+      # FIXED: Replace blocking req() with safe validation
+      # If y_col is not available, return NULL instead of hanging with req()
+      if (is.null(config$y_col) || !(config$y_col %in% names(data))) {
+        log_debug("chart_config: y_col not available, returning NULL to prevent hang", "CHART_CONFIG")
+        return(NULL)
+      }
 
       return(list(
         x_col = config$x_col,
@@ -178,11 +181,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Hovedfunktion for SPC plot generering med caching
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- reactive({
-      # Proper req() guards - rely on chart_config() validation
-      req(chart_config())  # This already validates data_reactive() and column_config_reactive()
+      # FIXED: Safe chart_config validation without hanging req()
+      config <- chart_config()
+      if (is.null(config)) {
+        log_debug("spc_plot: chart_config returned NULL, plot not ready", "SPC_PLOT")
+        return(NULL)
+      }
 
       data <- module_data_reactive()
-      config <- chart_config()
 
       # Generate cache key based on data and config
       current_cache_key <- digest::digest(list(
@@ -353,131 +359,23 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     ## Faktisk Plot Rendering
     # Separat renderPlot for det faktiske SPC plot
-    output$spc_plot_actual <- renderPlot(
-      {
-        log_debug("=====================================", "RENDER_PLOT")
-        log_debug("Plot rendering triggered", "RENDER_PLOT")
+    # PRODUCTION VERSION with fixes applied
+    output$spc_plot_actual <- renderPlot({
+      log_debug("Starting SPC plot rendering", "PLOT_RENDER")
 
-        # CRITICAL FIX: Force dependency on column config to trigger render after auto-detection
-        config_dependency <- column_config_reactive()
-        log_debug(paste("Column config dependency check:", !is.null(config_dependency)), "RENDER_PLOT")
-        if (!is.null(config_dependency)) {
-          log_debug(paste("Y column from config:", config_dependency$y_col), "RENDER_PLOT")
-        }
+      # Use the fixed spc_plot() reactive which handles NULL chart_config gracefully
+      plot_result <- spc_plot()
 
-        # Debug reactive chain dependencies
-        log_debug("Checking dependencies...", "RENDER_PLOT")
-
-        data <- safe_operation(
-          "Get module data for plot",
-          code = {
-            log_debug("Using pure function approach to bypass reactive scope issues...", "RENDER_PLOT")
-
-            # PRIORITY 1: Try cached data (most reliable, populated by reactive)
-            cached_result <- cached_data()
-            log_debug(paste("Cached data is.null:", is.null(cached_result)), "RENDER_PLOT")
-
-            if (!is.null(cached_result)) {
-              log_debug("✅ Using cached data successfully", "RENDER_PLOT")
-              if (is.data.frame(cached_result)) {
-                log_debug(paste("Cached data dimensions:", nrow(cached_result), "x", ncol(cached_result)), "RENDER_PLOT")
-              }
-              return(cached_result)
-            }
-
-            # PRIORITY 2: Try pure function approach (fallback during timing issues)
-            log_debug("No cached data found, using pure function approach...", "RENDER_PLOT")
-            pure_result <- get_module_data()
-            log_debug("Pure function call completed", "RENDER_PLOT")
-
-            if (!is.null(pure_result)) {
-              log_debug("✅ Pure function returned data successfully", "RENDER_PLOT")
-              if (is.data.frame(pure_result)) {
-                log_debug(paste("Pure function data dimensions:", nrow(pure_result), "x", ncol(pure_result)), "RENDER_PLOT")
-              }
-              # Cache this result for future calls
-              cached_data(pure_result)
-              log_debug("✅ Pure function result cached for future use", "RENDER_PLOT")
-              return(pure_result)
-            }
-
-            # PRIORITY 3: Wait for next reactive cycle
-            log_debug("⚠️ Both cached and pure function returned NULL - will retry on next reactive cycle", "RENDER_PLOT")
-            return(NULL)
-          },
-          fallback = function(e) {
-            log_debug(paste("❌ Pure function approach failed:", e$message), "RENDER_PLOT")
-            log_debug(paste("Error class:", class(e)), "RENDER_PLOT")
-            if (length(e$message) == 0 || e$message == "") {
-              log_debug("Empty error message detected", "RENDER_PLOT")
-              log_debug(paste("Error call:", deparse(e$call)), "RENDER_PLOT")
-            }
-            return(NULL)
-          },
-          error_type = "processing"
-        )
-        log_debug("Pure function approach completed", "RENDER_PLOT")
-        log_debug(paste("Data reactive result:", !is.null(data)), "RENDER_PLOT")
-
-        if (is.null(data)) {
-          log_debug("❌ No data available, showing empty plot", "RENDER_PLOT")
-          print(ggplot2::ggplot() + ggplot2::theme_void() + ggplot2::labs(title = "No Data Available"))
-          return()
-        }
-
-        column_config <- column_config_reactive()
-        log_debug(paste("Column config reactive:", !is.null(column_config)), "RENDER_PLOT")
-        if (!is.null(column_config)) {
-          log_debug(paste("X col:", column_config$x_col), "RENDER_PLOT")
-          log_debug(paste("Y col:", column_config$y_col), "RENDER_PLOT")
-        }
-
-        chart_config_result <- safe_operation(
-          "Get chart config",
-          code = {
-            chart_config()
-          },
-          fallback = function(e) {
-            log_debug(paste("Chart config error:", e$message), "RENDER_PLOT")
-            return(NULL)
-          },
-          error_type = "processing"
-        )
-        log_debug(paste("Chart config:", !is.null(chart_config_result)), "RENDER_PLOT")
-
-        plot_ready <- get_plot_state("plot_ready")
-        log_debug(paste("Plot ready status:", plot_ready), "RENDER_PLOT")
-
-        # Try to get plot
-        plot <- safe_operation(
-          "Get SPC plot",
-          code = {
-            spc_plot()
-          },
-          fallback = function(e) {
-            log_debug(paste("SPC plot error:", e$message), "RENDER_PLOT")
-            return(NULL)
-          },
-          error_type = "processing"
-        )
-
-        log_debug(paste("Plot object result:", !is.null(plot)), "RENDER_PLOT")
-
-        if (!is.null(plot) && inherits(plot, "ggplot")) {
-          log_debug("✅ Valid ggplot object confirmed", "RENDER_PLOT")
-          log_debug(paste("Plot layers count:", length(plot$layers)), "RENDER_PLOT")
-          log_debug("Showing plot with print()", "RENDER_PLOT")
-          print(plot)
-        } else {
-          log_debug("❌ Plot not ready, showing empty plot", "RENDER_PLOT")
-          # Show empty ggplot to avoid errors
-          print(ggplot2::ggplot() + ggplot2::theme_void())
-        }
-      },
-      res = 96,
-      width = 800,
-      height = 600
-    )
+      if (!is.null(plot_result)) {
+        log_debug("SPC plot generated successfully", "PLOT_RENDER")
+        print(plot_result)
+        return(plot_result)
+      } else {
+        log_debug("SPC plot returned NULL - configuration not ready", "PLOT_RENDER")
+        # Return NULL for now - UI will show loading state
+        return(NULL)
+      }
+    }, width = 800, height = 600)
 
     # Status og Information ---------------------------------------------------
 
