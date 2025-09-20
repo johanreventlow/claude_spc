@@ -12,8 +12,12 @@ create_ui_header <- function() {
     # Aktivér shinyjs
     shinyjs::useShinyjs(),
     tags$head(
-      # Embedded CSS (previously external styles.css) for reliable loading
-      tags$style(HTML("
+      # JavaScript files
+      tags$script(src = "local-storage.js"),
+      tags$script(src = "ui-helpers.js"),
+      tags$script(src = "shiny-handlers.js"),
+      # Inline CSS styles
+      tags$style(HTML(paste0("
         /* SPC App Main Styles */
 
         /* Navigation and Tab Styling */
@@ -148,46 +152,12 @@ create_ui_header <- function() {
           z-index: 1050 !important;
         }
 
-        /* Plot container height fixes for layout_columns */
-        .bslib-grid > .bslib-sidebar-layout,
-        .bslib-grid > .card,
-        .bslib-grid .card {
-          min-height: 600px !important;
-          height: auto !important;
-        }
-
-        /* Ensure plot containers have minimum height */
-        div[style*='position: relative; height: 100%'] {
-          min-height: 500px !important;
-        }
-
-        /* Plot output specific fixes */
-        .shiny-plot-output {
-          min-height: 500px !important;
-          height: auto !important;
-        }
-
-        /* Card body fillable content height */
-        .card-body[data-fillable='true'] {
-          min-height: 500px !important;
-        }
-        
-        #visualization-plot_container { min-height: 500px !important;}
-        
-        
-      ")),
-      tags$script(src = "local-storage.js"),
-      tags$script(src = "ui-helpers.js"),
-      tags$script(src = "shiny-handlers.js"),
-      tags$style(HTML(
-        paste0("
         /* Dynamic hospital color styles that need R variables */
         .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }
         .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
         .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
         .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
-        ")
-      ))
+        ")))
     )
   )
 }

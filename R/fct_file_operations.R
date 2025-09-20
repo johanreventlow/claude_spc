@@ -7,7 +7,7 @@
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
-setup_file_upload <- function(input, output, session, waiter_file, app_state, emit, ui_service = NULL) {
+setup_file_upload <- function(input, output, session, app_state, emit, ui_service = NULL) {
   # Unified state: App state is always available
   log_debug("===========================================", "FILE_UPLOAD")
   log_debug("Setting up file upload handlers", "FILE_UPLOAD")
@@ -65,17 +65,8 @@ setup_file_upload <- function(input, output, session, waiter_file, app_state, em
 
     upload_tracer$step("file_validation_complete")
 
-    # Show loading
-    log_debug("Showing waiter...", "FILE_UPLOAD")
-    waiter_file$show()
-    log_debug("✅ Waiter displayed", "FILE_UPLOAD")
-
-    # Ensure loading is hidden no matter what happens
-    on.exit({
-      log_debug("Hiding waiter on exit...", "FILE_UPLOAD")
-      waiter_file$hide()
-      log_debug("✅ Waiter hidden", "FILE_UPLOAD")
-    })
+    # Show loading indicator (replaced waiter with simple logging)
+    log_debug("Processing file upload...", "FILE_UPLOAD")
 
     # Close upload modal automatically
     on.exit(

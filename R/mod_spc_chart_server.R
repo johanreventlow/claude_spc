@@ -120,12 +120,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       return(app_state$visualization[[key]])
     }
 
-    # Waiter til plot loading feedback
-    waiter_plot <- waiter::Waiter$new(
-      id = ns("plot_container"),
-      html = WAITER_CONFIG$plot_generation$html,
-      color = WAITER_CONFIG$plot_generation$color
-    )
+    # Plot generation logging (replaced waiter)
 
     # Konfiguration og Validering ---------------------------------------------
 
@@ -214,11 +209,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       set_plot_state("plot_warnings", character(0))
       set_plot_state("anhoej_results", NULL)
 
-      waiter_plot$show()
+      log_debug("Starting plot generation...", "PLOT_GENERATION")
 
       on.exit(
         {
-          waiter_plot$hide()
+          log_debug("Plot generation completed", "PLOT_GENERATION")
           # Unified state assignment using helper function
           set_plot_state("is_computing", FALSE)
         },
@@ -354,116 +349,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # UI Output Funktioner ----------------------------------------------------
 
-    ## Plot Messages Logic
-    # Simple messages function for overlay display
-    output$plot_messages <- renderUI({
-      log_debug_block("PLOT_VISIBILITY", "Rendering plot messages")
 
-      # Safe data access - don't use req() here as we need to handle NULL states
-      data <- module_data_reactive()
-      config <- chart_config()
-      plot <- spc_plot()
-      plot_ready <- get_plot_state("plot_ready")
-
-      log_debug_kv(
-        data_is_null = is.null(data),
-        config_is_null = is.null(config),
-        plot_is_null = is.null(plot),
-        .context = "PLOT_VISIBILITY"
-      )
-      log_debug_kv(plot_ready = plot_ready, .context = "PLOT_VISIBILITY")
-
-      # Smart besked logik baseret på app tilstand
-      if (is.null(data) || nrow(data) == 0) {
-        log_debug("Showing welcome message", .context = "PLOT_VISIBILITY")
-        return(createPlotMessage("welcome"))
-      }
-
-      # Check om bruger har meningsfuldt data vs empty session template
-      # Ekskluder "Skift" kolonnen som altid er FALSE i nye sessioner
-      data_without_skift <- data[, !names(data) %in% "Skift", drop = FALSE]
-      has_meaningful_data <- any(!is.na(data_without_skift), na.rm = TRUE) &&
-        !all(sapply(data_without_skift, function(col) all(is.na(col))))
-
-      # Hvis tabel er helt tom (alle NA undtagen Skift kolonne), vis velkomst besked
-      if (!has_meaningful_data) {
-        log_debug("No meaningful data, showing welcome", .context = "PLOT_VISIBILITY")
-        return(createPlotMessage("welcome"))
-      }
-
-      if (is.null(config) || is.null(config$y_col)) {
-        log_debug("Config needed", .context = "PLOT_VISIBILITY")
-        return(createPlotMessage("config_needed"))
-      }
-
-      if (is.null(plot)) {
-        log_debug("Plot is null, showing error message", .context = "PLOT_VISIBILITY")
-        # Bestem specifik fejl type
-        plot_warnings <- get_plot_state("plot_warnings")
-        if (length(plot_warnings) > 0) {
-          warning_details <- paste(plot_warnings, collapse = " • ")
-
-          # Check for utilstrækkelig data
-          if (any(grepl("datapunkter", plot_warnings, ignore.case = TRUE)) ||
-            any(grepl("points", plot_warnings, ignore.case = TRUE))) {
-            return(createPlotMessage("insufficient_data", details = warning_details))
-          }
-
-          # Check for validerings fejl
-          if (any(grepl("kolonne|column|påkrævet|required", plot_warnings, ignore.case = TRUE))) {
-            return(createPlotMessage("validation_error", details = warning_details))
-          }
-
-          # Generisk validerings fejl
-          return(createPlotMessage("validation_error", details = warning_details))
-        } else {
-          return(createPlotMessage("technical_error"))
-        }
-      }
-
-      if (!inherits(plot, "ggplot")) {
-        log_debug("Invalid plot object", .context = "PLOT_VISIBILITY")
-        return(createPlotMessage("technical_error"))
-      }
-
-      # If we get here, we should show the plot, so return NULL (no message)
-      log_debug("Plot ready, returning NULL (no message)", .context = "PLOT_VISIBILITY")
-      return(NULL)
-    })
-
-    ## Plot Visibility Control
-    # Control visibility of plot vs. message overlay
-    observe({
-      log_debug_block("PLOT_VISIBILITY", "Checking plot visibility conditions")
-
-      # Get current state
-      data <- module_data_reactive()
-      config <- chart_config()
-      plot <- spc_plot()
-      plot_ready <- get_plot_state("plot_ready")
-
-      # Determine if plot should be shown
-      show_plot <- !is.null(data) &&
-                   nrow(data) > 0 &&
-                   !is.null(config) &&
-                   !is.null(config$y_col) &&
-                   !is.null(plot) &&
-                   inherits(plot, "ggplot") &&
-                   plot_ready
-
-      log_debug_kv(show_plot_condition = show_plot, .context = "PLOT_VISIBILITY")
-
-      # Toggle visibility using shinyjs
-      if (show_plot) {
-        log_debug("✅ Showing plot, hiding messages", .context = "PLOT_VISIBILITY")
-        shinyjs::show(ns("spc_plot_actual"))
-        shinyjs::hide(ns("message_overlay"))
-      } else {
-        log_debug("❌ Hiding plot, showing messages", .context = "PLOT_VISIBILITY")
-        shinyjs::hide(ns("spc_plot_actual"))
-        shinyjs::show(ns("message_overlay"))
-      }
-    }, priority = OBSERVER_PRIORITIES$medium)
 
     ## Faktisk Plot Rendering
     # Separat renderPlot for det faktiske SPC plot

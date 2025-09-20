@@ -7,7 +7,7 @@
 
 ## Hovedfunktion for session management
 # Opsætter al server logik relateret til session håndtering
-setup_session_management <- function(input, output, session, waiter_file, app_state, emit, ui_service = NULL) {
+setup_session_management <- function(input, output, session, app_state, emit, ui_service = NULL) {
   log_debug_block("SESSION_MGMT", "Initializing session management observers")
   log_debug("Received app_state environment address:", capture.output(print(app_state)), .context = "SESSION_MGMT")
 
@@ -545,7 +545,7 @@ show_clear_confirmation_modal <- function(has_data, has_settings) {
 
 ## Hovedfunktion for velkomstside
 # Opsætter alle handlers for velkomstside interaktioner
-setup_welcome_page_handlers <- function(input, output, session, waiter_file, app_state, emit, ui_service = NULL) {
+setup_welcome_page_handlers <- function(input, output, session, app_state, emit, ui_service = NULL) {
   log_debug("Setting up welcome page handlers", .context = "WELCOME_PAGE_SETUP")
   log_debug("app_state provided:", !is.null(app_state), .context = "WELCOME_PAGE_SETUP")
 
@@ -630,8 +630,8 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
         code = {
           log_debug("Welcome page: Starting demo data load...", "SERVER_MGMT")
 
-          # Vis indlæsnings waiter
-          waiter_file$show()
+          # Loading demo data
+          log_debug("Loading demo data...", "SERVER_MGMT")
 
           # Indlæs demo data med readr::read_csv2 (samme som fungerende fil upload)
           log_debug("Loading demo data with readr::read_csv2...", "SERVER_MGMT")
@@ -682,10 +682,8 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
           # Legacy session_file_name assignment removed - not used elsewhere
           app_state$session$file_name <- "Eksempel data (SPC demo)"
 
-          # Skjul waiter
-          later::later(function() {
-            waiter_file$hide()
-          }, 0.5)
+          # Demo data processing complete
+          log_debug("Demo data processing complete", "SERVER_MGMT")
 
           log_debug("Welcome page: Demo data loaded successfully", "SERVER_MGMT")
 
@@ -697,7 +695,7 @@ setup_welcome_page_handlers <- function(input, output, session, waiter_file, app
           )
         },
         fallback = {
-          waiter_file$hide()
+          log_debug("Demo data loading failed, fallback executed", "SERVER_MGMT")
         },
         session = session,
         error_type = "processing",

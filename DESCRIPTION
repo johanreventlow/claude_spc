@@ -26,7 +26,6 @@ Imports:
     readxl (>= 1.4.0),
     writexl (>= 1.4.0),
     excelR (>= 0.4.0),
-    waiter (>= 0.2.0),
     shinylogs (>= 0.2.0),
     rstudioapi (>= 0.13),
     yaml (>= 2.3.0),

@@ -337,24 +337,18 @@ app_server <- function(input, output, session) {
   # Initialiser observer manager til tracking af alle observers
   obs_manager <- observer_manager()
 
-  # Waiter Konfiguration -----------------------------------------------------
-  # Initialiser fil upload waiter
-  waiter_file <- waiter::Waiter$new(
-    html = WAITER_CONFIG$file_upload$html,
-    color = WAITER_CONFIG$file_upload$color
-  )
 
   # Server Setup ------------------------------------------------------------
   # Opsæt alle server-komponenter
 
   ## Velkomstside interaktioner
-  setup_welcome_page_handlers(input, output, session, waiter_file, app_state, emit, ui_service)
+  setup_welcome_page_handlers(input, output, session, app_state, emit, ui_service)
 
   ## Session management logik
-  setup_session_management(input, output, session, waiter_file, app_state, emit, ui_service)
+  setup_session_management(input, output, session, app_state, emit, ui_service)
 
   ## Fil upload logik
-  setup_file_upload(input, output, session, waiter_file, app_state, emit, ui_service)
+  setup_file_upload(input, output, session, app_state, emit, ui_service)
 
   ## Data tabel logik
   setup_data_table(input, output, session, app_state, emit)
@@ -444,10 +438,6 @@ app_server <- function(input, output, session) {
       error_type = "processing"
     )
 
-    # Cleanup waiter
-    if (exists("waiter_file") && !is.null(waiter_file)) {
-      waiter_file$hide()
-    }
 
     # Complete session lifecycle debugging
     session_lifecycle_result <- session_debugger$complete()

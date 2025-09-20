@@ -28,9 +28,8 @@ visualizationModuleUI <- function(id) {
     id = ns("plot_container"),
     style = "position: relative;",
 
-    # Static Plot Output -----------------------------------------------
-    # Always present - visibility controlled via shinyjs::toggle()
-    plotOutput(ns("spc_plot_actual"), width = "100%", height = "500px"),
+    # Plot Output -----------------------------------------------
+    plotOutput("spc_plot_actual", width = "100%", height = "500px"),
 
   )
 }

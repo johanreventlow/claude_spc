@@ -205,20 +205,20 @@ get_x_format_string <- function(x_axis_unit) {
 ## Intelligent dato-interval detektion
 detect_date_interval <- function(dates, debug = TRUE) {
   if (length(dates) < 2) {
-    return(list(type = "insufficient_data", consistency = 0, timespan_days = 0))
+    return(list(type = "unknown", consistency = 0, timespan_days = 0))
   }
 
   # Sorter datoer og beregn intervaller
   sorted_dates <- sort(dates[!is.na(dates)])
   if (length(sorted_dates) < 2) {
-    return(list(type = "insufficient_data", consistency = 0, timespan_days = 0))
+    return(list(type = "unknown", consistency = 0, timespan_days = 0))
   }
 
   # Beregn forskelle mellem konsekutive datoer (i dage)
   intervals <- as.numeric(diff(sorted_dates))
 
   if (length(intervals) == 0) {
-    return(list(type = "insufficient_data", consistency = 0, timespan_days = 0))
+    return(list(type = "unknown", consistency = 0, timespan_days = 0))
   }
 
   median_interval <- median(intervals, na.rm = TRUE)

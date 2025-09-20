@@ -20,7 +20,6 @@ library(scales) # Til procent-formatering i plots
 library(rlang) # Til %||% operatoren
 library(lubridate)
 library(openxlsx) # Til Excel export funktionalitet
-library(waiter)
 library(yaml) # Til læsning af brand.yml
 library(shinylogs) # Advanced web-based logging and monitoring
 library(later) # Til forsinket udførelse
@@ -221,58 +220,6 @@ HOSPITAL_COLORS <- list(
   lightgrey = brand_config$color$palette$lightgrey,
   mediumgrey = brand_config$color$palette$mediumgrey,
   regionhblue = brand_config$color$palette$regionhblue
-)
-
-# WAITER KONFIGURATION ================================
-
-## Hospital branding til loading screens -----
-WAITER_CONFIG <- list(
-  # App start loading - FULDSKÆRM OVERLAY
-  app_start = list(
-    html = tagList(
-      div(
-        style = "text-align: center; padding: 50px;",
-        img(src = basename(HOSPITAL_LOGO_PATH), height = "80px", style = "margin-bottom: 30px;"),
-        h2(paste(HOSPITAL_NAME, "SPC App"),
-          style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 300; margin-bottom: 20px;")
-        ),
-        h4("Indlæser...",
-          style = paste("color:", HOSPITAL_COLORS$secondary, "; font-weight: 300; margin-bottom: 30px;")
-        ),
-        waiter::spin_6(), # Hospital-venligt spinner
-        br(), br(), br(),
-        p("Vent venligst mens appen initialiseres",
-          style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.9rem;")
-        )
-      )
-    )
-  ),
-
-  # File upload loading
-  file_upload = list(
-    html = tagList(
-      h4("Behandler fil...", style = paste("color:", HOSPITAL_COLORS$primary)),
-      br(),
-      waiter::spin_3(),
-      br(), br(),
-      p("Læser og validerer data", style = paste("color:", HOSPITAL_COLORS$secondary))
-    ),
-    color = "rgba(255,255,255,0.9)"
-  ),
-
-  # Plot generation loading
-  plot_generation = list(
-    html = tagList(
-      h4("Genererer SPC graf...", style = paste("color:", HOSPITAL_COLORS$primary)),
-      br(),
-      waiter::spin_4(),
-      br(), br(),
-      p("Anvender Anhøj-regler og beregner kontrolgrænser",
-        style = paste("color:", HOSPITAL_COLORS$secondary, "; font-size: 0.9rem;")
-      )
-    ),
-    color = "rgba(248,249,250,0.95)"
-  )
 )
 
 # GRAFIK TEMAER ================================
