@@ -147,11 +147,11 @@ test_that("konstanter konsistens med eksisterende global.R", {
 
 test_that("UI helpers module funktionalitet", {
   # Test at UI helpers fil eksisterer
-  expect_true(file.exists("../../R/utils_ui_helpers.R"))
+  expect_true(file.exists("../../R/ui/utils_ui_helpers.R"))
 
   # Source både constants og UI helpers
   source("../../R/constants.R")
-  source("../../R/utils_ui_helpers.R")
+  source("../../R/ui/utils_ui_helpers.R")
 
   # Test helper funktioner
   expect_true(exists("get_flex_column_style"))

@@ -74,6 +74,7 @@ create_test_app_state <- function() {
   state$ui$updating_programmatically <- FALSE
   state$ui$flag_reset_scheduled <- FALSE
   state$ui$queued_updates <- list()
+  state$ui$queue_processing <- FALSE
   state$ui$pending_programmatic_inputs <- list()
   state$ui$memory_limits <- list(
     max_queue_size = 5L,

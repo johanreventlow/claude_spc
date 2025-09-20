@@ -395,8 +395,10 @@ safe_operation <- function(operation_name, code,
   )
 }
 
-# DEVELOPMENT LOG LEVEL - Activate all DEBUG messages during development
-set_log_level_development()
+# DEVELOPMENT LOG LEVEL - Sæt kun automatisk niveau hvis ikke allerede defineret
+if (!nzchar(Sys.getenv("SPC_LOG_LEVEL", ""))) {
+  Sys.setenv(SPC_LOG_LEVEL = "INFO")
+}
 
 # REACTIVE PERFORMANCE HJÆLPEFUNKTIONER =============================
 

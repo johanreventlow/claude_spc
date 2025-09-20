@@ -515,165 +515,178 @@ add_ui_update_emit_functions <- function(emit, app_state) {
 #'
 #' @export
 safe_programmatic_ui_update <- function(session, app_state, update_function, delay_ms = NULL) {
-  # Use configured delay from constants if not specified
   if (is.null(delay_ms)) {
     delay_ms <- LOOP_PROTECTION_DELAYS$default
   }
 
-  update_start_time <- Sys.time()
-
-  # FASE 3: PERFORMANCE TRACKING - Initialize performance measurement
-  performance_start <- update_start_time
-
-  # FREEZE-AWARE LOGGING: Observe freeze state without modification
   freeze_state <- isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
+  log_debug(paste("⭐ Starting safe programmatic UI update med", delay_ms, "ms forsinkelse",
+                  "(autodetect frozen:", freeze_state, ")"), "DROPDOWN_DEBUG")
 
-  log_debug(paste("⭐ Starting safe programmatic UI update with", delay_ms, "ms delay",
-                 "(autodetect frozen:", freeze_state, ")"), "DROPDOWN_DEBUG")
+  run_update <- function() {
+    execution_start <- Sys.time()
+    performance_start <- execution_start
+
+    isolate(app_state$ui$updating_programmatically <- TRUE)
+    on.exit({
+      isolate(app_state$ui$updating_programmatically <- FALSE)
+
+      pending_queue <- length(isolate(app_state$ui$queued_updates))
+      queue_idle <- !isTRUE(isolate(app_state$ui$queue_processing))
+
+      if (pending_queue > 0 && queue_idle) {
+        log_debug("🚀 Direct run færdig – starter queued updates", "QUEUE_DEBUG")
+        if (requireNamespace("later", quietly = TRUE)) {
+          later::later(function() {
+            process_ui_update_queue(app_state)
+          }, delay = 0)
+        } else {
+          process_ui_update_queue(app_state)
+        }
+      }
+    }, add = TRUE)
+
+    log_debug("✅ TOKEN-BASED LOOP_PROTECTION: Starter UI opdatering", "DROPDOWN_DEBUG")
+
+    app_state$ui$programmatic_token_counter <- isolate(app_state$ui$programmatic_token_counter) + 1L
+    session_token <- paste0(
+      "token_",
+      isolate(app_state$ui$programmatic_token_counter),
+      "_",
+      format(execution_start, "%H%M%S_%f")
+    )
+    log_debug(paste("Generated session token:", session_token), "TOKEN_DEBUG")
+
+    original_updateSelectizeInput <- updateSelectizeInput
+    on.exit({
+      updateSelectizeInput <- original_updateSelectizeInput
+    }, add = TRUE)
+
+    updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
+      log_debug(paste("Updating", inputId,
+                      "med valg:", if (!is.null(choices)) paste0("[", length(choices), " elementer]") else "NULL",
+                      "selected:", if (!is.null(selected)) paste0("'", selected, "'") else "NULL"),
+                "DROPDOWN_DEBUG")
+
+      if (!is.null(choices) && length(choices) > 0) {
+        log_debug(paste("Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", ")), "DROPDOWN_DEBUG")
+      }
+
+      if (!is.null(selected)) {
+        input_token <- paste0(session_token, "_", inputId)
+        isolate({
+          app_state$ui$pending_programmatic_inputs[[inputId]] <- list(
+            token = input_token,
+            value = selected,
+            timestamp = Sys.time(),
+            session_token = session_token
+          )
+        })
+        log_debug(paste("Token", input_token, "tilknyttet", inputId, "med værdi", paste0("'", selected, "'")), "TOKEN_DEBUG")
+      }
+
+      result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
+      log_debug(paste("updateSelectizeInput afsluttet for", inputId), "DROPDOWN_DEBUG")
+      return(result)
+    }
+
+    safe_operation(
+      "Execute update function",
+      code = {
+        update_function()
+      },
+      fallback = function(e) {
+        stop(e)
+      },
+      error_type = "processing"
+    )
+
+    update_completed_time <- Sys.time()
+    execution_time_ms <- as.numeric(difftime(update_completed_time, execution_start, units = "secs")) * 1000
+    log_debug(paste("LOOP_PROTECTION: UI opdatering gennemført på", round(execution_time_ms, 2), "ms"),
+              .context = "LOOP_PROTECTION")
+
+    performance_end <- Sys.time()
+    update_duration_ms <- as.numeric(difftime(performance_end, performance_start, units = "secs")) * 1000
+
+    isolate({
+      app_state$ui$performance_metrics$total_updates <- app_state$ui$performance_metrics$total_updates + 1L
+
+      current_avg <- app_state$ui$performance_metrics$avg_update_duration_ms
+      total_updates <- app_state$ui$performance_metrics$total_updates
+
+      if (total_updates == 1) {
+        app_state$ui$performance_metrics$avg_update_duration_ms <- update_duration_ms
+      } else {
+        app_state$ui$performance_metrics$avg_update_duration_ms <-
+          (current_avg * (total_updates - 1) + update_duration_ms) / total_updates
+      }
+    })
+
+    log_debug(paste("Update completed in", round(update_duration_ms, 2), "ms",
+                    "(avg:", round(isolate(app_state$ui$performance_metrics$avg_update_duration_ms), 2), "ms)"),
+              "PERFORMANCE_DEBUG")
+
+    invisible(NULL)
+  }
 
   safe_operation(
     "Execute programmatic UI update",
     code = {
-      # TOKEN-BASED CONCURRENCY: Multiple updates can run concurrently with unique tokens
-      # No need for queueing since each update gets its own token scope
-      log_debug("🚀 TOKEN-BASED CONCURRENCY: Direct execution (no queue needed)", "TOKEN_DEBUG")
+      busy <- isTRUE(isolate(app_state$ui$queue_processing)) ||
+        isTRUE(isolate(app_state$ui$updating_programmatically))
 
-        # QUEUE SYSTEM: Add this update to queue instead of clearing flag
+      if (busy) {
         queue_entry <- list(
-          func = update_function,
+          func = run_update,
           session = session,
-          timestamp = update_start_time,
+          timestamp = Sys.time(),
           delay_ms = delay_ms,
-          queue_id = paste0("queue_", update_start_time, "_", sample(1000:9999, 1))
+          queue_id = paste0("queue_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1000:9999, 1))
         )
 
-        # FASE 3: QUEUE SIZE LIMITS - Check if queue is at capacity
         current_queue <- isolate(app_state$ui$queued_updates)
         max_queue_size <- isolate(app_state$ui$memory_limits$max_queue_size)
 
         if (length(current_queue) >= max_queue_size) {
-          log_debug(paste("⚠️ Queue at capacity (", length(current_queue), "/", max_queue_size, "), dropping oldest entry"), "QUEUE_DEBUG")
-          # Remove oldest entry (first in list)
+          log_debug(paste("⚠️ Queue på maksimum (", length(current_queue), "/", max_queue_size, "), fjerner ældste"), "QUEUE_DEBUG")
           current_queue <- current_queue[-1]
         }
 
-        # Add to queue
-        app_state$ui$queued_updates <- c(current_queue, list(queue_entry))
+        new_queue <- c(current_queue, list(queue_entry))
+        app_state$ui$queued_updates <- new_queue
 
-        # FASE 3: PERFORMANCE METRICS - Update queue metrics
-        new_queue_size <- length(isolate(app_state$ui$queued_updates))
         isolate({
           app_state$ui$performance_metrics$queued_updates <- app_state$ui$performance_metrics$queued_updates + 1L
-          if (new_queue_size > app_state$ui$performance_metrics$queue_max_size) {
-            app_state$ui$performance_metrics$queue_max_size <- new_queue_size
+          queue_size <- length(app_state$ui$queued_updates)
+          if (queue_size > app_state$ui$performance_metrics$queue_max_size) {
+            app_state$ui$performance_metrics$queue_max_size <- queue_size
           }
         })
 
-        log_debug(paste("Added update to queue with ID:", queue_entry$queue_id,
-                  "(queue size:", new_queue_size, "/", max_queue_size, ")"), "QUEUE_DEBUG")
+        log_debug(paste("Tilføjede opdatering til queue med ID:", queue_entry$queue_id,
+                        "(queue størrelse:", length(new_queue), "/", max_queue_size, ")"),
+                  "QUEUE_DEBUG")
 
-        # Use clean queue API instead of direct processing
-        enqueue_ui_update(app_state, queue_entry)
-
-      # PURE TOKEN-BASED LOOP PROTECTION: No flags, no timing, just tokens
-      log_debug("✅ TOKEN-BASED LOOP_PROTECTION: Starting UI update session", "DROPDOWN_DEBUG")
-
-      # TOKEN GENERATION: Generate unique token for this UI update session
-      app_state$ui$programmatic_token_counter <- isolate(app_state$ui$programmatic_token_counter) + 1L
-      session_token <- paste0("token_", isolate(app_state$ui$programmatic_token_counter), "_", format(update_start_time, "%H%M%S_%f"))
-      log_debug(paste("Generated session token:", session_token), "TOKEN_DEBUG")
-
-      # DROPDOWN DEBUGGING + TOKEN TRACKING: Wrap updateSelectizeInput to log and track tokens
-      original_updateSelectizeInput <- updateSelectizeInput
-      updateSelectizeInput <- function(session, inputId, choices = NULL, selected = NULL, ...) {
-        log_debug(paste("Updating", inputId,
-                       "with choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
-                       "selected:", if(!is.null(selected)) paste0("'", selected, "'") else "NULL"), "DROPDOWN_DEBUG")
-
-        if (!is.null(choices) && length(choices) > 0) {
-          log_debug(paste("Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", ")), "DROPDOWN_DEBUG")
+        if (isTRUE(isolate(app_state$ui$queue_processing))) {
+          enqueue_ui_update(app_state, queue_entry)
         }
 
-        # TOKEN TRACKING: Record this programmatic input with token
-        if (!is.null(selected)) {
-          input_token <- paste0(session_token, "_", inputId)
-          isolate({
-            app_state$ui$pending_programmatic_inputs[[inputId]] <- list(
-              token = input_token,
-              value = selected,
-              timestamp = Sys.time(),
-              session_token = session_token
-            )
-          })
-          log_debug(paste("Token", input_token, "assigned to", inputId, "with value", paste0("'", selected, "'")), "TOKEN_DEBUG")
-        }
-
-        result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
-        log_debug(paste("updateSelectizeInput completed for", inputId), "DROPDOWN_DEBUG")
-        return(result)
+        return(invisible(NULL))
       }
 
-      # Execute the UI updates with debugging wrapper
-      safe_operation(
-        "Execute update function",
-        code = {
-          update_function()
-        },
-        fallback = function(e) {
-          # Restore original function on error
-          updateSelectizeInput <- original_updateSelectizeInput
-          stop(e)
-        },
-        error_type = "processing"
-      )
-
-      # Restore original function
-      updateSelectizeInput <- original_updateSelectizeInput
-
-      update_completed_time <- Sys.time()
-      execution_time_ms <- as.numeric(difftime(update_completed_time, update_start_time, units = "secs")) * 1000
-      log_debug(paste("LOOP_PROTECTION: UI updates completed in", round(execution_time_ms, 2), "ms"), .context = "LOOP_PROTECTION")
-
-      # TOKEN-BASED PROTECTION: No cleanup needed!
-      # Tokens are automatically consumed when observers fire.
-      # This eliminates all timing dependencies and complex flag management.
-      log_debug("✅ TOKEN-BASED UI updates completed - no cleanup required", "TOKEN_DEBUG")
-
-      # FASE 3: PERFORMANCE TRACKING - Record successful update completion
-      performance_end <- Sys.time()
-      update_duration_ms <- as.numeric(difftime(performance_end, performance_start, units = "secs")) * 1000
-
-      isolate({
-        # Update total updates counter
-        app_state$ui$performance_metrics$total_updates <- app_state$ui$performance_metrics$total_updates + 1L
-
-        # Update average duration (rolling average)
-        current_avg <- app_state$ui$performance_metrics$avg_update_duration_ms
-        total_updates <- app_state$ui$performance_metrics$total_updates
-
-        if (total_updates == 1) {
-          app_state$ui$performance_metrics$avg_update_duration_ms <- update_duration_ms
-        } else {
-          # Weighted average: (old_avg * (n-1) + new_value) / n
-          app_state$ui$performance_metrics$avg_update_duration_ms <-
-            (current_avg * (total_updates - 1) + update_duration_ms) / total_updates
-        }
-      })
-
-      log_debug(paste("Update completed in", round(update_duration_ms, 2), "ms",
-                "(avg:", round(isolate(app_state$ui$performance_metrics$avg_update_duration_ms), 2), "ms)"), "PERFORMANCE_DEBUG")
+      run_update()
     },
     fallback = function(e) {
-      # ENSURE CLEANUP: Always clear protection flag on error
       app_state$ui$updating_programmatically <- FALSE
       app_state$ui$flag_reset_scheduled <- TRUE
-      error_time <- Sys.time()
-      total_error_time_ms <- as.numeric(difftime(error_time, update_start_time, units = "secs")) * 1000
-      log_error(paste("LOOP_PROTECTION: Error after", round(total_error_time_ms, 2), "ms:", e$message), "LOOP_PROTECTION")
+      log_error(paste("LOOP_PROTECTION: Fejl under programmatisk UI opdatering:", e$message), "LOOP_PROTECTION")
       stop(e)
     },
     error_type = "processing"
   )
+
+  invisible(NULL)
 }
 
 # FASE 2: QUEUE PROCESSING FUNCTIONS ============================================

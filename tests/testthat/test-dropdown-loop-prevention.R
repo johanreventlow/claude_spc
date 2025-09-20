@@ -41,12 +41,14 @@ test_that("safe_programmatic_ui_update bruger token-baseret beskyttelse og opdat
   expect_gte(app_state$ui$performance_metrics$avg_update_duration_ms, 0)
   expect_equal(app_state$ui$programmatic_token_counter, 1L)
   expect_false(isTRUE(app_state$ui$updating_programmatically))
-  expect_true(length(app_state$ui$queued_updates) >= 1L)
+  expect_equal(length(app_state$ui$queued_updates), 0L)
+  expect_equal(app_state$ui$performance_metrics$queued_updates, 0L)
 })
 
 test_that("safe_programmatic_ui_update køer opdateringer når en kører", {
   app_state <- create_test_app_state()
   app_state$ui$updating_programmatically <- TRUE
+  app_state$ui$queue_processing <- TRUE
   app_state$ui$memory_limits$max_queue_size <- 2L
 
   queued <- safe_programmatic_ui_update(
@@ -86,4 +88,5 @@ test_that("safe_programmatic_ui_update registrerer tokens for programatiske inpu
   expect_equal(length(recorded), 2L)
   expect_equal(recorded[[1]]$selected, "Dato")
   expect_equal(recorded[[2]]$selected, "Tæller")
+  expect_equal(length(app_state$ui$queued_updates), 0L)
 })

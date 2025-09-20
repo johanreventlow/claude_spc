@@ -204,21 +204,31 @@ get_x_format_string <- function(x_axis_unit) {
 
 ## Intelligent dato-interval detektion
 detect_date_interval <- function(dates, debug = TRUE) {
+  insufficient_response <- function(n_obs) {
+    list(
+      type = "insufficient_data",
+      median_days = NA_real_,
+      consistency = 0,
+      timespan_days = 0,
+      n_obs = n_obs
+    )
+  }
+
   if (length(dates) < 2) {
-    return(list(type = "unknown", consistency = 0, timespan_days = 0))
+    return(insufficient_response(length(dates)))
   }
 
   # Sorter datoer og beregn intervaller
   sorted_dates <- sort(dates[!is.na(dates)])
   if (length(sorted_dates) < 2) {
-    return(list(type = "unknown", consistency = 0, timespan_days = 0))
+    return(insufficient_response(length(sorted_dates)))
   }
 
   # Beregn forskelle mellem konsekutive datoer (i dage)
   intervals <- as.numeric(diff(sorted_dates))
 
   if (length(intervals) == 0) {
-    return(list(type = "unknown", consistency = 0, timespan_days = 0))
+    return(insufficient_response(length(sorted_dates)))
   }
 
   median_interval <- median(intervals, na.rm = TRUE)
