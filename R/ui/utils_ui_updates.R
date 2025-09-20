@@ -31,16 +31,6 @@ create_ui_update_service <- function(session, app_state) {
   #' @param clear_selections If TRUE, clear all selections
   #'
   update_column_choices <- function(choices = NULL, selected = NULL, columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column"), clear_selections = FALSE) {
-    log_debug(paste("update_column_choices called for:", paste(columns, collapse = ", ")), "DROPDOWN_DEBUG")
-    log_debug(paste("Parameters - choices:", if(!is.null(choices)) paste0("[", length(choices), " items]") else "NULL",
-                   "selected:", if(!is.null(selected)) paste0("[", length(selected), " items]") else "NULL",
-                   "clear_selections:", clear_selections), "DROPDOWN_DEBUG")
-
-    if (!is.null(selected)) {
-      for (col in names(selected)) {
-        log_debug(paste("Selected value for", col, ":", selected[[col]]), "DROPDOWN_DEBUG")
-      }
-    }
 
     # Generate choices from current data if not provided
     if (is.null(choices)) {
@@ -51,17 +41,14 @@ create_ui_update_service <- function(session, app_state) {
           c("", all_cols),
           c("Vælg kolonne...", all_cols)
         )
-        log_debug("Generated", length(all_cols), "column choices from current data", .context = "UI_SERVICE")
       } else {
         choices <- setNames("", "Vælg kolonne...")
-        log_debug("No current data available, using empty choices", .context = "UI_SERVICE")
       }
     }
 
     # Handle selections
     if (clear_selections) {
       selected <- setNames(rep("", length(columns)), columns)
-      log_debug("Clearing all selections", .context = "UI_SERVICE")
     } else if (is.null(selected)) {
       # AUTO-READ FROM APP_STATE: When no selections provided, read current values from app_state
       selected <- list()
@@ -83,7 +70,6 @@ create_ui_update_service <- function(session, app_state) {
           error_type = "general"
         )
         selected[[col]] <- current_val
-        log_debug(paste("Auto-read selection for", col, ":", current_val), .context = "UI_SERVICE")
       }
     }
 
@@ -95,9 +81,7 @@ create_ui_update_service <- function(session, app_state) {
           for (col in columns) {
             selected_value <- if (!is.null(selected) && col %in% names(selected)) selected[[col]] else ""
             updateSelectizeInput(session, col, choices = choices, selected = selected_value)
-            log_debug("Updated", col, "with selected:", selected_value, .context = "UI_SERVICE")
           }
-          log_debug("✅ Column choices updated successfully", .context = "UI_SERVICE")
         },
         fallback = NULL,
         session = session,
@@ -115,7 +99,6 @@ create_ui_update_service <- function(session, app_state) {
   #' @param fields Vector of field names to update. If NULL, updates all available fields
   #'
   update_form_fields <- function(metadata, fields = NULL) {
-    log_debug("Updating form fields from metadata", .context = "UI_SERVICE")
 
     if (is.null(fields)) {
       # Default fields to update
@@ -143,10 +126,8 @@ create_ui_update_service <- function(session, app_state) {
               } else if (field %in% c("unit_select", "chart_type", "x_column", "y_column", "n_column", "y_axis_unit")) {
                 updateSelectizeInput(session, field, selected = metadata[[field]])
               }
-              log_debug("Updated", field, "to:", metadata[[field]], .context = "UI_SERVICE")
             }
           }
-          log_debug("✅ Form fields updated successfully", .context = "UI_SERVICE")
         },
         fallback = function(e) {
           log_error("Error updating form fields:", e$message, "UI_SERVICE")
@@ -162,7 +143,6 @@ create_ui_update_service <- function(session, app_state) {
   #' Used for "Start ny session" and similar reset operations.
   #'
   reset_form_fields <- function() {
-    log_debug("Resetting form fields to defaults", .context = "UI_SERVICE")
 
     isolate({
       safe_operation(

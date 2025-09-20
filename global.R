@@ -62,27 +62,31 @@ source_from_base <- function(relative_path) {
   stop(paste("Could not find file:", relative_path, "from directory:", base_dir))
 }
 
-source_from_base("R/utils_logging.R")
+source_from_base("R/utils/logging.R")
 # DELETED: utils_app_setup.R - dependencies moved to DESCRIPTION
-source_from_base("R/utils_shinylogs_config.R")  # Advanced web-based logging with shinylogs
-source_from_base("R/utils_advanced_debug.R")  # Advanced debug infrastructure
-source_from_base("R/utils_end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing
-source_from_base("R/constants.R")
+source_from_base("R/utils/shinylogs_config.R")  # Advanced web-based logging with shinylogs
+source_from_base("R/utils/advanced_debug.R")  # Advanced debug infrastructure
+source_from_base("R/utils/end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing
+# constants.R removed - all constants now in modular config files
 
 # CONFIGURATION - modularized from global.R
 source_from_base("R/config/hospital_branding.R")
 source_from_base("R/config/chart_types.R")
 source_from_base("R/config/observer_priorities.R")
 source_from_base("R/config/state_management.R")
+source_from_base("R/config/ui_config.R")
+source_from_base("R/config/spc_config.R")
+source_from_base("R/config/system_config.R")
 
 # CORE FUNCTIONS - moved from runtime to global initialization
 # REMOVED: R/fct_chart_helpers.R - functions moved to fct_spc_helpers.R and fct_spc_plot_generation.R
-source_from_base("R/fct_spc_helpers.R")
+source_from_base("R/core/spc_helpers.R")
 source_from_base("R/fct_spc_plot_generation.R")
-source_from_base("R/fct_file_io.R")
+source_from_base("R/core/file_io.R")
+source_from_base("R/core/autodetect_helpers.R")
 # REMOVED: R/fct_data_validation.R - functionality integrated into R/fct_spc_helpers.R
 # DELETED: utils_local_storage_js.R - functionality moved to www/local-storage.js
-source_from_base("R/utils_local_storage.R")
+source_from_base("R/utils/local_storage.R")
 
 # SERVER COMPONENTS - moved from runtime to global initialization
 source_from_base("R/server/utils_session_helpers.R")
@@ -105,6 +109,7 @@ source_from_base("R/modules/mod_spc_chart_ui.R")
 # MAIN APP COMPONENTS - moved from runtime to global initialization
 source_from_base("R/server/app_server.R")
 source_from_base("R/ui/app_ui.R")
+source_from_base("R/run_app.R")
 
 # ENHANCED DEBUGGING UTILITIES --------------------------------
 # Enhanced reactive context logging for Shiny fejlidentifikation
@@ -188,18 +193,18 @@ SHINY_DEBUG_MODE <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
 
 # HJÆLPEFUNKTIONER --------------------------------
 
-source_from_base("R/utils_danish_locale.R")
+source_from_base("R/utils/danish_locale.R")
 source_from_base("R/ui/utils_ui_helpers.R")
 source_from_base("R/ui/utils_ui_components.R")
 source_from_base("R/ui/utils_ui_updates.R")
 source_from_base("R/server/utils_event_system.R")
 source_from_base("R/server/utils_server_management.R")
-source_from_base("R/utils_performance.R")
-source_from_base("R/utils_memory_management.R")
+source_from_base("R/utils/performance.R")
+source_from_base("R/utils/memory_management.R")
 
 # UNIFIED AUTODETECT ENGINE
 source_from_base("R/fct_autodetect_unified.R")    # Main unified autodetect engine
-source_from_base("R/fct_autodetect_helpers.R")    # Supporting functions for robust detection
+# autodetect helpers now loaded in core section above
 
 # Hospital branding and themes moved to R/config/hospital_branding.R
 

@@ -30,7 +30,7 @@ visualizationModuleUI <- function(id) {
     style = "position: relative;",
     div(
       class = "spc-ggplot-output",
-      plotOutput(ns("spc_plot_actual"), width = "100%", height = "500px")
+      plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
     )
   )
 }

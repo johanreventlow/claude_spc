@@ -1,0 +1,129 @@
+# System Configuration
+# System-level constants for performance, logging, and operation timeouts
+
+# APPLICATION CONFIGURATION ===================================================
+
+#' Standard port for development server
+#'
+#' Port number brugt til udvikling af Shiny applikationen.
+#' @export
+DEFAULT_PORT <- 3838
+
+#' Auto restore funktion
+#'
+#' Bestemmer om session data automatisk skal gendannes ved app start.
+#' @export
+AUTO_RESTORE_ENABLED <- FALSE
+
+# FILE PROCESSING CONSTANTS ===================================================
+
+#' Standard encoding for Windows kompatibilitet
+#'
+#' ISO-8859-1 encoding bruges for at sikre kompatibilitet med Windows systemer
+#' og danske specialtegn i CSV filer.
+#' @export
+DEFAULT_ENCODING <- "ISO-8859-1"
+
+#' Alternative encoding for UTF-8 filer
+#'
+#' UTF-8 encoding til moderne tekst filer og internationale tegnsæt.
+#' @export
+UTF8_ENCODING <- "UTF-8"
+
+#' Standard CSV separators
+#'
+#' Liste over understøttede kolonne separatorer til CSV fil parsing.
+#' @format Named list med separator karakterer
+#' @export
+CSV_SEPARATORS <- list(
+  semicolon = ";",
+  comma = ",",
+  tab = "\t"
+)
+
+#' Standard decimal separators
+#'
+#' Liste over understøttede decimal separatorer til numerisk parsing.
+#' @format Named list med decimal separator karakterer
+#' @export
+DECIMAL_SEPARATORS <- list(
+  comma = ",",
+  period = "."
+)
+
+# OBSERVER PRIORITIES ===========================================================
+
+#' Shiny observer prioriteter for kontrolleret execution orden
+#' Enhanced with wider gaps to prevent race conditions
+#' @export
+OBSERVER_PRIORITIES <- list(
+  # Generic priorities (for compatibility)
+  highest = 2000,    # Critical state management
+  high = 1500,       # Data processing
+  medium = 1000,     # Auto-detection
+  low = 500,         # UI sync and updates
+  lowest = 100,      # Cleanup operations
+
+  # Specific named priorities used in event system
+  STATE_MANAGEMENT = 1800,   # Data loading and state changes
+  DATA_PROCESSING = 1500,    # Data transformation and processing
+  AUTO_DETECT = 1200,        # Auto-detection operations
+  UI_SYNC = 800,             # UI synchronization
+  STATUS_UPDATES = 600,      # Status and navigation updates
+  CLEANUP = 200,             # Cleanup operations
+  MEDIUM = 1000              # Used in new input observers
+)
+
+# LOGGING CONSTANTS =============================================================
+
+#' Logging komponenter for organiseret fejlfinding
+#' @export
+LOG_COMPONENTS <- list(
+  DATA_PROC = "DATA_PROC",
+  AUTO_DETECT = "AUTO_DETECT",
+  FILE_UPLOAD = "FILE_UPLOAD",
+  VISUALIZATION = "VISUALIZATION",
+  ERROR_HANDLING = "ERROR_HANDLING",
+  TEST_MODE = "TEST_MODE",
+  SESSION_MGMT = "SESSION_MGMT",
+  UI_SYNC = "UI_SYNC",
+  STATE_MGMT = "STATE_MGMT"
+)
+
+# PERFORMANCE CONSTANTS =========================================================
+
+#' Timeout værdier for forskellige operationer (millisekunder)
+#' @export
+OPERATION_TIMEOUTS <- list(
+  file_read = 30000,      # 30 sekunder
+  chart_render = 10000,   # 10 sekunder
+  auto_detect = 5000,     # 5 sekunder
+  ui_update = 2000        # 2 sekunder
+)
+
+#' Debounce delays for reactive operations
+#' @export
+DEBOUNCE_DELAYS <- list(
+  input_change = 300,     # 300ms
+  file_select = 500,      # 500ms
+  chart_update = 800      # 800ms
+)
+
+#' Loop protection delays for UI updates (milliseconds)
+#' @export
+LOOP_PROTECTION_DELAYS <- list(
+  default = 500,              # Standard delay for programmatic UI updates
+  conservative = 800,         # Conservative delay for slower browsers
+  minimal = 200,              # Minimal delay for fast responses
+  onFlushed_fallback = 1000   # Fallback delay if session$onFlushed not available
+)
+
+#' Performance monitoring thresholds
+#' @export
+PERFORMANCE_THRESHOLDS <- list(
+  reactive_warning = 0.5,    # 500ms for reactive expressions
+  debounce_warning = 1.0,    # 1 second for debounced operations
+  memory_warning = 10,       # 10MB memory change warning
+  cache_timeout_default = 300, # 5 minutes default cache
+  max_cache_entries = 50     # Maximum cached reactive results
+)
