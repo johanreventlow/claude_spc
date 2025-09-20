@@ -63,7 +63,7 @@ source_from_base <- function(relative_path) {
 }
 
 source_from_base("R/utils_logging.R")
-# source_from_base("R/utils_app_setup.R")  # App setup - temporarily disabled due to logging dependency issue
+# DELETED: utils_app_setup.R - dependencies moved to DESCRIPTION
 source_from_base("R/utils_shinylogs_config.R")  # Advanced web-based logging with shinylogs
 source_from_base("R/utils_advanced_debug.R")  # Advanced debug infrastructure
 source_from_base("R/utils_end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing
@@ -81,7 +81,7 @@ source_from_base("R/fct_spc_helpers.R")
 source_from_base("R/fct_spc_plot_generation.R")
 source_from_base("R/fct_file_io.R")
 source_from_base("R/fct_data_validation.R")
-# source_from_base("R/utils_local_storage_js.R")  # Moved to www/local-storage.js
+# DELETED: utils_local_storage_js.R - functionality moved to www/local-storage.js
 source_from_base("R/utils_local_storage.R")
 
 # SERVER COMPONENTS - moved from runtime to global initialization
@@ -99,8 +99,8 @@ source_from_base("R/server/plot_optimizations.R")
 
 # UI COMPONENTS - moved from runtime to global initialization
 source_from_base("R/modules/mod_spc_chart_ui.R")
-source_from_base("R/modules/mod_session_storage.R")
-source_from_base("R/mod_data_upload.R")
+# DELETED: mod_session_storage.R - functionality integrated into session helpers
+# DELETED: mod_data_upload.R - functionality integrated into file upload system
 
 # MAIN APP COMPONENTS - moved from runtime to global initialization
 source_from_base("R/server/app_server.R")
