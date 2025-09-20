@@ -718,3 +718,92 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     error_type = "processing"
   )
 }
+
+# PLOT STYLING ===============================================================
+
+## Hospital Tema til Plots
+# Anvender hospital branding og farvepalette på SPC plots
+applyHospitalTheme <- function(plot) {
+  if (is.null(plot) || !inherits(plot, "ggplot")) {
+    return(plot)
+  }
+
+  safe_operation(
+    "Apply hospital theme to plot",
+    code = {
+      footer_text <- safe_operation(
+        "Create plot footer",
+        code = {
+          create_plot_footer(
+            afdeling = "",
+            data_kilde = "Upload",
+            dato = Sys.Date()
+          )
+        },
+        fallback = function(e) {
+          "SPC Analyse" # fallback text
+        },
+        error_type = "processing"
+      )
+
+      themed_plot <- plot +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(color = HOSPITAL_COLORS$primary, size = 14, face = "bold"),
+          plot.subtitle = element_text(color = HOSPITAL_COLORS$secondary, size = 12),
+          axis.title = element_text(color = HOSPITAL_COLORS$dark, size = 11),
+          axis.text = element_text(color = HOSPITAL_COLORS$dark, size = 10),
+          legend.title = element_text(color = HOSPITAL_COLORS$dark, size = 11),
+          legend.text = element_text(color = HOSPITAL_COLORS$dark, size = 10),
+          panel.grid.major = element_line(color = HOSPITAL_COLORS$light),
+          panel.grid.minor = element_line(color = HOSPITAL_COLORS$light),
+          strip.text = element_text(color = HOSPITAL_COLORS$primary, face = "bold")
+        ) +
+        labs(caption = footer_text) +
+        theme(
+          plot.caption = element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
+        )
+
+      return(themed_plot)
+    },
+    fallback = function(e) {
+      return(plot)
+    },
+    error_type = "processing"
+  )
+}
+
+## Y-akse Skalering
+# Automatisk detektering af passende Y-akse format (decimal, procent, heltal)
+detectYAxisScale <- function(y_data) {
+  if (is.null(y_data) || length(y_data) == 0) {
+    return("integer")
+  }
+
+  # Remove NA values
+  y_clean <- y_data[!is.na(y_data)]
+
+  if (length(y_clean) == 0) {
+    return("integer")
+  }
+
+  max_val <- max(y_clean)
+  min_val <- min(y_clean)
+
+  # Rule 1: Decimal scale (0-1)
+  if (max_val <= 1.0) {
+    return("decimal")
+  }
+
+  # Rule 2: Percent scale (0-100+ with most values looking like percentages)
+  if (min_val >= 0 && max_val <= 200) {
+    # Check if most values look like percentages (0-100 range)
+    percent_like_count <- sum(y_clean >= 0 & y_clean <= 100)
+    if (percent_like_count / length(y_clean) >= 0.7) { # 70% threshold
+      return("percent")
+    }
+  }
+
+  # Rule 3: Integer/rate scale
+  return("integer")
+}

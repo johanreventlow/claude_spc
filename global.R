@@ -76,7 +76,7 @@ source_from_base("R/config/observer_priorities.R")
 source_from_base("R/config/state_management.R")
 
 # CORE FUNCTIONS - moved from runtime to global initialization
-source_from_base("R/fct_chart_helpers.R")
+# REMOVED: R/fct_chart_helpers.R - functions moved to fct_spc_helpers.R and fct_spc_plot_generation.R
 source_from_base("R/fct_spc_helpers.R")
 source_from_base("R/fct_spc_plot_generation.R")
 source_from_base("R/fct_file_io.R")

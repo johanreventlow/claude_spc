@@ -590,4 +590,44 @@ process_phase_freeze_config <- function(data, show_phases, skift_column, frys_co
   )
 }
 
+# CHART VALIDATION ============================================================
+
+## Validering af Data til Chart Generering
+# Tjekker data kvalitet og kompatibilitet med valgt chart type
+validateDataForChart <- function(data, config, chart_type) {
+  warnings <- character(0)
+
+  if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
+    warnings <- c(warnings, "Ingen data tilgængelig")
+    return(list(valid = FALSE, warnings = warnings))
+  }
+
+  if (is.null(config$y_col) || !config$y_col %in% names(data)) {
+    warnings <- c(warnings, "Ingen numerisk kolonne fundet til Y-akse")
+    return(list(valid = FALSE, warnings = warnings))
+  }
+
+  if (chart_type %in% c("p", "pp", "u", "up")) {
+    if (is.null(config$n_col) || !config$n_col %in% names(data)) {
+      warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne"))
+      return(list(valid = FALSE, warnings = warnings))
+    }
+  }
+
+  # Check for missing values
+  y_data <- data[[config$y_col]]
+  if (all(is.na(y_data))) {
+    warnings <- c(warnings, "Alle værdier i Y-kolonnen er tomme")
+    return(list(valid = FALSE, warnings = warnings))
+  }
+
+  # Skift column validation handled by qicharts2::qic() internally
+
+  if (nrow(data) < 8) {
+    warnings <- c(warnings, paste("Kun", nrow(data), "datapunkter - SPC analyse er mest pålidelig med mindst 15-20 punkter"))
+  }
+
+  return(list(valid = TRUE, warnings = warnings))
+}
+
 ## Generér SPC plot med tilpasset styling
