@@ -79,21 +79,21 @@ source_from_base("R/fct_data_validation.R")
 source_from_base("R/utils_local_storage.R")
 
 # SERVER COMPONENTS - moved from runtime to global initialization
-source_from_base("R/utils_session_helpers.R")
-source_from_base("R/utils_server_management.R")
+source_from_base("R/server/utils_session_helpers.R")
+source_from_base("R/server/utils_server_management.R")
 source_from_base("R/fct_data_processing.R")
 source_from_base("R/fct_file_operations.R")
 source_from_base("R/fct_visualization_server.R")
-source_from_base("R/mod_spc_chart_server.R")
+source_from_base("R/modules/mod_spc_chart_server.R")
 
 # UI COMPONENTS - moved from runtime to global initialization
-source_from_base("R/mod_spc_chart_ui.R")
-source_from_base("R/mod_session_storage.R")
+source_from_base("R/modules/mod_spc_chart_ui.R")
+source_from_base("R/modules/mod_session_storage.R")
 source_from_base("R/mod_data_upload.R")
 
 # MAIN APP COMPONENTS - moved from runtime to global initialization
-source_from_base("R/app_server.R")
-source_from_base("R/app_ui.R")
+source_from_base("R/server/app_server.R")
+source_from_base("R/ui/app_ui.R")
 
 # ENHANCED DEBUGGING UTILITIES --------------------------------
 # Enhanced reactive context logging for Shiny fejlidentifikation
@@ -178,11 +178,11 @@ SHINY_DEBUG_MODE <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
 # HJÆLPEFUNKTIONER --------------------------------
 
 source_from_base("R/utils_danish_locale.R")
-source_from_base("R/utils_ui_helpers.R")
-source_from_base("R/utils_ui_components.R")
-source_from_base("R/utils_ui_updates.R")
-source_from_base("R/utils_event_system.R")
-source_from_base("R/utils_server_management.R")
+source_from_base("R/ui/utils_ui_helpers.R")
+source_from_base("R/ui/utils_ui_components.R")
+source_from_base("R/ui/utils_ui_updates.R")
+source_from_base("R/server/utils_event_system.R")
+source_from_base("R/server/utils_server_management.R")
 source_from_base("R/utils_performance.R")
 source_from_base("R/utils_memory_management.R")
 
