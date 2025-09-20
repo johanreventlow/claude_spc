@@ -26,10 +26,14 @@ visualizationModuleUI <- function(id) {
   # Kun plot området - ingen status info
   div(
     id = ns("plot_container"),
-    style = "position: relative;",
+    class = "spc-plot-main-container",
+    style = "position: relative; border: 3px solid #ff6b6b; background-color: rgba(255, 107, 107, 0.1);",
 
     # Plot Output -----------------------------------------------
-    plotOutput("spc_plot_actual", width = "100%", height = "500px"),
+    plotOutput("spc_plot_actual",
+               width = "100%",
+               height = "500px",
+               class = "spc-ggplot-output"),
 
   )
 }

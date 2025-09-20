@@ -12,6 +12,9 @@ create_ui_header <- function() {
     # Aktivér shinyjs
     shinyjs::useShinyjs(),
     tags$head(
+      # CSS files for plot debugging
+      tags$link(rel = "stylesheet", type = "text/css", href = "plot-debug.css"),
+
       # JavaScript files
       tags$script(src = "local-storage.js"),
       tags$script(src = "ui-helpers.js"),
@@ -397,9 +400,17 @@ create_chart_settings_card <- function() {
 create_plot_only_card <- function() {
   card(
     full_screen = TRUE,
-    card_header(div(icon("chart-line"), " SPC Graf", )),
+    class = "spc-plot-card-wrapper",
+    style = "border: 3px solid #4ecdc4; margin: 5px;",
+    card_header(
+      div(icon("chart-line"), " SPC Graf"),
+      class = "spc-plot-card-header",
+      style = "border-bottom: 2px solid #4ecdc4; background-color: rgba(78, 205, 196, 0.1);"
+    ),
     card_body(
-      visualizationModuleUI("visualization")
+      visualizationModuleUI("visualization"),
+      class = "spc-plot-card-body",
+      style = "background-color: rgba(78, 205, 196, 0.05);"
     )
   )
 }
