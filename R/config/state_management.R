@@ -195,6 +195,7 @@ create_app_state <- function() {
     pending_programmatic_inputs = list(), # TOKEN TRACKING: Map of inputId -> {token, value, timestamp}
     programmatic_token_counter = 0L,      # TOKEN GENERATION: Counter for unique token generation
     queued_updates = list(),              # QUEUE SYSTEM: Queued UI updates for overlapping calls
+    queue_processing = FALSE,             # QUEUE SYSTEM: Flag to prevent multiple processors
 
     # FASE 3: PERFORMANCE MONITORING - Track system performance metrics
     performance_metrics = list(

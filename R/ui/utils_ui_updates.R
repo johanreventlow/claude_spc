@@ -572,12 +572,8 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
         log_debug(paste("Added update to queue with ID:", queue_entry$queue_id,
                   "(queue size:", new_queue_size, "/", max_queue_size, ")"), "QUEUE_DEBUG")
 
-        # Schedule queue processing asynchronously to avoid recursion
-        if (requireNamespace("later", quietly = TRUE)) {
-          later::later(function() {
-            process_ui_update_queue(app_state)
-          }, delay = 0.05)  # Small delay to break recursion cycle
-        }
+        # Use clean queue API instead of direct processing
+        enqueue_ui_update(app_state, queue_entry)
 
       # PURE TOKEN-BASED LOOP PROTECTION: No flags, no timing, just tokens
       log_debug("✅ TOKEN-BASED LOOP_PROTECTION: Starting UI update session", "DROPDOWN_DEBUG")
@@ -682,6 +678,31 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 
 # FASE 2: QUEUE PROCESSING FUNCTIONS ============================================
 
+#' Enqueue UI Update
+#'
+#' @description
+#' Clean API for enqueueing UI updates with automatic processor start
+#'
+#' @param app_state Application state containing queue
+#' @param queue_entry Queue entry to add
+#' @return Invisibly returns success status
+#'
+#' @export
+enqueue_ui_update <- function(app_state, queue_entry) {
+  # Add to queue (already done in calling function, but kept for API completeness)
+  # This function focuses on starting processor if needed
+
+  # Start processor if not already running
+  if (!isTRUE(isolate(app_state$ui$queue_processing))) {
+    log_debug("🚀 Starting queue processor", "QUEUE_DEBUG")
+    process_ui_update_queue(app_state)
+  } else {
+    log_debug("📋 Queue processor already running", "QUEUE_DEBUG")
+  }
+
+  return(invisible(TRUE))
+}
+
 #' Process UI Update Queue
 #'
 #' Processes queued UI updates in order, ensuring only one update runs at a time.
@@ -693,78 +714,63 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 process_ui_update_queue <- function(app_state) {
   log_debug("⚙️ Processing UI update queue...", "QUEUE_DEBUG")
 
-  # SAFETY CHECK: Don't process queue if update is currently in progress
-  if (isTRUE(isolate(app_state$ui$updating_programmatically))) {
-    log_debug("⏳ Update still in progress, rescheduling queue processing", "QUEUE_DEBUG")
-    later::later(function() {
-      process_ui_update_queue(app_state)
-    }, delay = 0.1)  # Try again in 100ms
-    return()
-  }
-
-  # GET QUEUE: Isolate to avoid reactive dependencies
-  current_queue <- isolate(app_state$ui$queued_updates)
-
-  if (length(current_queue) == 0) {
-    log_debug("✅ Queue is empty, processing complete", "QUEUE_DEBUG")
-    return()
-  }
-
-  log_debug(paste("Processing", length(current_queue), "queued updates"), "QUEUE_DEBUG")
-
-  # CLEANUP EXPIRED: Remove old entries before processing
-  cleanup_expired_queue_updates(app_state, max_age_seconds = 30)
-
-  # GET FRESH QUEUE after cleanup
-  current_queue <- isolate(app_state$ui$queued_updates)
-
-  if (length(current_queue) == 0) {
-    log_debug("✅ Queue empty after cleanup", "QUEUE_DEBUG")
-    return()
-  }
-
-  # PROCESS NEXT: Take first item from queue
-  next_update <- current_queue[[1]]
-  remaining_queue <- if (length(current_queue) > 1) current_queue[-1] else list()
-
-  # UPDATE QUEUE: Remove processed item
-  app_state$ui$queued_updates <- remaining_queue
-
-  log_debug(paste("🔄 Processing queued update with ID:", next_update$queue_id,
-            "(", length(remaining_queue), "remaining)"), "QUEUE_DEBUG")
-
-  # EXECUTE UPDATE: Use recursive call to safe_programmatic_ui_update
-  safe_operation(
-    "Execute queued UI update",
-    code = {
-      result <- safe_programmatic_ui_update(
-        session = next_update$session,
-        app_state = app_state,
-        update_function = next_update$func,
-        delay_ms = next_update$delay_ms
-      )
-
-      log_debug(paste("✅ Queued update", next_update$queue_id, "completed successfully"), "QUEUE_DEBUG")
-
-      # SCHEDULE NEXT: Process remaining queue items after this one completes
-      if (length(remaining_queue) > 0) {
+  # Set processing flag and ensure cleanup
+  isolate(app_state$ui$queue_processing <- TRUE)
+  on.exit({
+    isolate(app_state$ui$queue_processing <- FALSE)
+    # Schedule next run if queue still has items
+    if (length(isolate(app_state$ui$queued_updates)) > 0) {
+      if (requireNamespace("later", quietly = TRUE)) {
         later::later(function() {
           process_ui_update_queue(app_state)
-        }, delay = (next_update$delay_ms + 50) / 1000)  # Add 50ms buffer between queue items
+        }, delay = 0)  # No delay for immediate processing
       }
-    },
-    fallback = function(e) {
-      log_debug(paste("❌ Error processing queued update", next_update$queue_id, ":", e$message), "QUEUE_DEBUG")
+    }
+  })
 
-      # CONTINUE PROCESSING: Don't let one error stop the queue
-      if (length(remaining_queue) > 0) {
-        later::later(function() {
-          process_ui_update_queue(app_state)
-        }, delay = 0.1)  # Quick retry for remaining items
-      }
-    },
-    error_type = "processing"
-  )
+  while (TRUE) {
+    # GET QUEUE: Check current state
+    current_queue <- isolate(app_state$ui$queued_updates)
+
+    # EMPTY CHECK: Exit if no items to process
+    if (length(current_queue) == 0) {
+      log_debug("Queue is empty, processor stopping", "QUEUE_DEBUG")
+      break
+    }
+
+    # PROCESS NEXT: Take first item from queue
+    next_update <- current_queue[[1]]
+    remaining_queue <- if (length(current_queue) > 1) current_queue[-1] else list()
+
+    # UPDATE QUEUE: Remove processed item immediately
+    isolate(app_state$ui$queued_updates <- remaining_queue)
+
+    log_debug(paste("🔄 Processing queued update with ID:", next_update$queue_id,
+              "(", length(remaining_queue), "remaining)"), "QUEUE_DEBUG")
+
+    # EXECUTE UPDATE: Run function directly without wrapper recursion
+    safe_operation(
+      "Execute queued UI update",
+      code = {
+        # Execute the stored function directly
+        next_update$func()
+        log_debug(paste("✅ Queued update", next_update$queue_id, "completed successfully"), "QUEUE_DEBUG")
+      },
+      fallback = function(e) {
+        log_debug(paste("❌ Error processing queued update", next_update$queue_id, ":", e$message), "QUEUE_DEBUG")
+      },
+      session = next_update$session,
+      show_user = FALSE
+    )
+
+    # Limit processing to prevent runaway loops
+    if (length(isolate(app_state$ui$queued_updates)) > 100) {
+      log_debug("⚠️ Queue size exceeded safety limit, deferring remaining items", "QUEUE_DEBUG")
+      break
+    }
+  }
+
+  return(invisible(NULL))
 }
 
 #' Cleanup Expired Queue Updates
