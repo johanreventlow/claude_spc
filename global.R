@@ -87,7 +87,7 @@ source_from_base("R/utils_local_storage.R")
 # SERVER COMPONENTS - moved from runtime to global initialization
 source_from_base("R/server/utils_session_helpers.R")
 source_from_base("R/server/utils_server_management.R")
-source_from_base("R/fct_data_processing.R")
+source_from_base("R/server/utils_column_management.R")
 source_from_base("R/fct_file_operations.R")
 source_from_base("R/fct_visualization_server.R")
 source_from_base("R/modules/mod_spc_chart_server.R")
