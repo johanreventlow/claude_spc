@@ -171,7 +171,7 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
 
   # Clear saved handler
   shiny::observeEvent(input$clear_saved, {
-    handle_clear_saved_request(input, session, app_state, emit)
+    handle_clear_saved_request(input, session, app_state, emit, ui_service)
   })
 
   # Upload modal handler
@@ -290,7 +290,7 @@ collect_metadata <- function(input) {
   })
 }
 
-handle_clear_saved_request <- function(input, session, app_state, emit) {
+handle_clear_saved_request <- function(input, session, app_state, emit, ui_service = NULL) {
   # Check if there's data or settings to lose - Use unified state
   current_data_check <- app_state$data$current_data
   has_data <- !is.null(current_data_check) &&
@@ -312,7 +312,7 @@ handle_clear_saved_request <- function(input, session, app_state, emit) {
   }
 
   # If there IS data or settings, show confirmation dialog
-  show_clear_confirmation_modal(has_data, has_settings)
+  show_clear_confirmation_modal(has_data, has_settings, app_state)
 }
 
 handle_confirm_clear_saved <- function(session, app_state, emit, ui_service = NULL) {
@@ -480,7 +480,7 @@ show_upload_modal <- function() {
   ))
 }
 
-show_clear_confirmation_modal <- function(has_data, has_settings) {
+show_clear_confirmation_modal <- function(has_data, has_settings, app_state) {
   shiny::showModal(shiny::modalDialog(
     title = "Start ny session?",
     size = "m",

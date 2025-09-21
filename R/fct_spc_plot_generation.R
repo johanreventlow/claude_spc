@@ -744,21 +744,21 @@ applyHospitalTheme <- function(plot) {
       )
 
       themed_plot <- plot +
-        theme_minimal() +
-        theme(
-          plot.title = element_text(color = HOSPITAL_COLORS$primary, size = 14, face = "bold"),
-          plot.subtitle = element_text(color = HOSPITAL_COLORS$secondary, size = 12),
-          axis.title = element_text(color = HOSPITAL_COLORS$dark, size = 11),
-          axis.text = element_text(color = HOSPITAL_COLORS$dark, size = 10),
-          legend.title = element_text(color = HOSPITAL_COLORS$dark, size = 11),
-          legend.text = element_text(color = HOSPITAL_COLORS$dark, size = 10),
-          panel.grid.major = element_line(color = HOSPITAL_COLORS$light),
-          panel.grid.minor = element_line(color = HOSPITAL_COLORS$light),
-          strip.text = element_text(color = HOSPITAL_COLORS$primary, face = "bold")
+        ggplot2::theme_minimal() +
+        ggplot2::theme(
+          plot.title = ggplot2::element_text(color = HOSPITAL_COLORS$primary, size = 14, face = "bold"),
+          plot.subtitle = ggplot2::element_text(color = HOSPITAL_COLORS$secondary, size = 12),
+          axis.title = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 11),
+          axis.text = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 10),
+          legend.title = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 11),
+          legend.text = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 10),
+          panel.grid.major = ggplot2::element_line(color = HOSPITAL_COLORS$light),
+          panel.grid.minor = ggplot2::element_line(color = HOSPITAL_COLORS$light),
+          strip.text = ggplot2::element_text(color = HOSPITAL_COLORS$primary, face = "bold")
         ) +
-        labs(caption = footer_text) +
-        theme(
-          plot.caption = element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
+        ggplot2::labs(caption = footer_text) +
+        ggplot2::theme(
+          plot.caption = ggplot2::element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
         )
 
       return(themed_plot)

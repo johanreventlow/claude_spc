@@ -225,19 +225,19 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
 
       if (nrow(perf_logs) == 0) {
         return(ggplot() +
-               labs(title = "No performance data available") +
-               theme_minimal())
+               ggplot2::labs(title = "No performance data available") +
+               ggplot2::theme_minimal())
       }
 
       ggplot(perf_logs, aes(x = as.POSIXct(timestamp), y = duration)) +
         geom_line(color = "steelblue") +
         geom_point(color = "steelblue", alpha = 0.7) +
-        labs(
+        ggplot2::labs(
           title = "Application Performance Over Time",
           x = "Time",
           y = "Duration (seconds)"
         ) +
-        theme_minimal()
+        ggplot2::theme_minimal()
     })
 
     # Session statistics
