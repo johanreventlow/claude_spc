@@ -168,7 +168,7 @@ validate_state_consistency <- function(values, app_state) {
 # Legacy function kept for compatibility
 detect_environment <- function() {
   # Check for explicit environment variable first
-  env_var <- Sys.getenv("TEST_MODE_AUTO_LOAD", "")
+  env_var <- Sys.getenv("TEST_MODE_AUTO_LOAD", "TRUE")
   if (env_var != "") {
     normalized_env_var <- tolower(trimws(env_var))
     true_values <- c("true", "t", "1", "yes", "y", "on")
