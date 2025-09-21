@@ -24,7 +24,7 @@ initialize_app <- function(force_reload = FALSE, config_override = NULL) {
   init_results$config <- if (!is.null(config_override)) {
     config_override
   } else {
-    initialize_app_config()
+    initialize_runtime_config()
   }
 
   # 3. Manage dependencies with config awareness
@@ -341,27 +341,26 @@ setup_performance_optimizations <- function(config) {
 
   optimizations <- list()
 
-  # Setup global variables based on config
-  if (!is.null(config$features)) {
-    # Set global feature flags
-    assign("TEST_MODE_AUTO_LOAD", config$features$test_mode_auto_load, envir = .GlobalEnv)
-    assign("AUTO_RESTORE_ENABLED", config$features$auto_restore_enabled, envir = .GlobalEnv)
-    # SHINY_DEBUG_MODE now managed by environment profiles
-
-    optimizations$feature_flags_set <- TRUE
-  }
-
-  # Setup development-specific configurations
-  if (!is.null(config$development)) {
-    assign("TEST_MODE_FILE_PATH", config$development$test_file_path, envir = .GlobalEnv)
-    optimizations$dev_config_set <- TRUE
-  }
-
-  # Memory management setup
-  if (!is.null(config$performance)) {
-    if (config$performance$aggressive_cleanup) {
-      optimizations$aggressive_cleanup_enabled <- TRUE
+  # Setup global variables based on new config structure
+  if (!is.null(config$testing)) {
+    # Set global feature flags from new structure
+    assign("TEST_MODE_AUTO_LOAD", config$testing$auto_load_enabled, envir = .GlobalEnv)
+    if (!is.null(config$testing$test_file_path)) {
+      assign("TEST_MODE_FILE_PATH", config$testing$test_file_path, envir = .GlobalEnv)
     }
+    optimizations$testing_config_set <- TRUE
+  }
+
+  if (!is.null(config$development)) {
+    assign("AUTO_RESTORE_ENABLED", config$development$auto_restore_enabled, envir = .GlobalEnv)
+    optimizations$development_config_set <- TRUE
+  }
+
+  # SHINY_DEBUG_MODE now managed by environment profiles - no assignment needed
+
+  # Performance configuration available but not used for aggressive cleanup
+  if (!is.null(config$performance)) {
+    optimizations$performance_config_available <- TRUE
   }
 
   log_debug("Performance optimizations configured", "PERFORMANCE_SETUP")
@@ -417,7 +416,7 @@ verify_initialization_completeness <- function() {
     "app_ui", "app_server", "run_app",           # Main app functions
     "safe_operation", "log_debug", "log_error",  # Utility functions
     "create_app_state",                           # State management (emit created in server)
-    "initialize_app_config"                       # Configuration
+    "initialize_runtime_config"                   # Configuration
   )
 
   verification$missing_functions <- c()
