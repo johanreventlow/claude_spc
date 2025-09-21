@@ -80,11 +80,14 @@ Transformere det nuværende legacy-projekt til en moderne, vedligeholdelsesvenli
 - **Commit:** `refactor: opdel global.R i modulære komponenter`
 
 ### 3.3 Refaktorér run_app() funktionen
-- **Problem:** Afhængig af global state og manual source() kald
-- **Løsning:** Gør `run_app()` selvstændig med eksplicitte parametre
-- **Fjern:** `.rs.invokeShinyWindowViewer` RStudio-specifik kode
-- **Test:** App kan startes i forskellige miljøer
-- **Commit:** `refactor: gør run_app() uafhængig af global state`
+- **Problem:** Afhængig af global state og `.rs.invokeShinyWindowViewer` fejler i production
+- **Løsning:** Miljøafhængig browser launch pattern:
+  - Development (RStudio): Brug `.rs.invokeShinyWindowViewer` for convenience
+  - Production/Test: Brug standard `launch.browser` parameter
+  - Graceful fallback: Hvis RStudio internals fejler, fall back til browser
+- **Benefit:** Behold development convenience, sikre production stability
+- **Test:** App kan startes sikkert i alle miljøer
+- **Commit:** `fix: implementer miljøafhængig browser launch i run_app()`
 
 ### 3.4 Implementer proper golem pattern
 - **Handling:** Brug `golem::with_golem_options()` for konfiguration

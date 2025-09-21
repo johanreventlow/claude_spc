@@ -30,12 +30,25 @@ run_app <- function(#port = 3838,
     ...
   )
 
-  # Determine launch behavior
+  # Determine launch behavior with environment-aware fallback
   browser_option <- if (is.null(launch_browser)) {
-    # Default: RStudio window if available, otherwise browser
-    if (rstudioapi::isAvailable()) {
-      .rs.invokeShinyWindowViewer
+    # Check if we're in a development environment where RStudio internals are safe
+    is_development <- (
+      Sys.getenv("RSTUDIO") == "1" ||                 # RStudio IDE
+      Sys.getenv("R_CONFIG_ACTIVE") == "development"  # Explicit development
+    )
+
+    # Only use RStudio internals in development environments
+    if (is_development && rstudioapi::isAvailable()) {
+      # Try RStudio viewer with graceful fallback
+      tryCatch({
+        .rs.invokeShinyWindowViewer
+      }, error = function(e) {
+        # If RStudio internals fail, fall back to browser
+        TRUE
+      })
     } else {
+      # Production/test environments: use standard browser launch
       TRUE
     }
   } else {
