@@ -12,19 +12,27 @@ En professionel Shiny applikation til **Statistical Process Control (SPC)** anal
 - **Interactive UI**: Moderne Bootstrap interface med real-time feedback
 
 ### Tekniske Highlights
-- **Centraliseret State Management**: Phase 4 arkitektur med dual-state compatibility
+- **Modular Architecture**: Clean separation med event-driven design patterns
+- **Environment-Aware Config**: Development/production/testing specific behavior
+- **Centraliseret State Management**: Unified app_state med reactive event bus
 - **Test-Driven Development**: >95% test coverage med comprehensive integration tests
-- **Robust Error Handling**: Graceful degradation og brugervenlig fejlhåndtering
-- **Performance Optimized**: Debounced operations og memory management
+- **Golem-Style Patterns**: Standard R package structure med best practices
+- **Robust Error Handling**: Graceful degradation og centralized logging
+- **Performance Optimized**: Debounced operations, caching og memory management
 - **Danish Locale**: ISO-8859-1 encoding, komma decimal separator, danske labels
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 ```r
-# Required R packages
-install.packages(c("shiny", "DT", "qicharts2", "readr", "readxl",
-                   "bslib", "shinyWidgets", "shinycssloaders", "waiter"))
+# Required R packages (automatically managed via DESCRIPTION)
+install.packages(c(
+  "shiny", "bslib", "dplyr", "readr", "readxl",
+  "qicharts2", "ggplot2", "ggrepel", "scales",
+  "shinyWidgets", "shinycssloaders", "shinyjs",
+  "excelR", "stringi", "zoo", "lubridate",
+  "openxlsx", "yaml", "shinylogs", "later"
+))
 ```
 
 ### Start Application
@@ -33,21 +41,29 @@ install.packages(c("shiny", "DT", "qicharts2", "readr", "readxl",
 git clone <repository-url>
 cd claude_spc
 
-# Start app
-R -e "shiny::runApp('.', port = 3838)"
+# Production mode (recommended)
+R -e "source('global.R'); run_app()"
 
-# Alternative med development settings
-R -e "source('global.R'); shiny::runApp('.', port = 4040)"
+# Specify port
+R -e "source('global.R'); run_app(port = 3838)"
+
+# Development mode med enhanced debugging
+R -e "source('global.R'); run_dev(port = 4040)"
 ```
 
-### Development Mode
+### Environment-Specific Usage
 ```r
-# Enable development features
-TEST_MODE_AUTO_LOAD <- TRUE
-AUTO_RESTORE_ENABLED <- FALSE
+# Development environment (auto-load test data, debug logging)
+R_CONFIG_ACTIVE=development R -e "source('global.R'); run_app()"
 
-# Start med debug logging
-SPC_LOG_LEVEL=DEBUG R -e "shiny::runApp('.', port = 5050)"
+# Production environment (secure defaults)
+R_CONFIG_ACTIVE=production R -e "source('global.R'); run_app()"
+
+# Testing environment (controlled conditions)
+R_CONFIG_ACTIVE=testing R -e "source('global.R'); run_app()"
+
+# Manual debug logging
+SHINY_DEBUG_MODE=TRUE SPC_LOG_LEVEL=DEBUG R -e "source('global.R'); run_app()"
 ```
 
 ## 📊 Usage Examples
@@ -122,9 +138,8 @@ R -e "testthat::test_file('tests/testthat/test-end-to-end-app-flow.R')"
 
 ### Developer Resources
 - **[CLAUDE.md](CLAUDE.md)**: Comprehensive development guide
-- **[TECHNICAL_IMPROVEMENTS_PLAN.md](TECHNICAL_IMPROVEMENTS_PLAN.md)**: Roadmap og progress tracking
-- **[docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md)**: System architecture
-- **[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)**: Detailed development patterns
+- **[REFACTORING_PLAN.md](REFACTORING_PLAN.md)**: Roadmap og progress tracking
+- **[ARCHITECTURE.md](ARCHITECTURE.md)**: System architecture
 
 ### API Documentation
 ```r
@@ -243,7 +258,7 @@ testthat::test_file('tests/testthat/test-data-consistency.R')
 
 ## 📝 Changelog
 
-Se [TECHNICAL_IMPROVEMENTS_PLAN.md](TECHNICAL_IMPROVEMENTS_PLAN.md) for detaljeret progress tracking.
+Se [REFACTORING_PLAN.md](REFACTORING_PLAN.md) for detaljeret progress tracking.
 
 ### Recent Updates
 - ✅ **Phase 4**: Centraliseret state management implementation
@@ -260,11 +275,11 @@ Dette projekt er udviklet til intern hospitalsbrug. Kontakt udviklingsteam for l
 ### Development Team
 - **Technical Lead**: Se [CLAUDE.md](CLAUDE.md) for development guidelines
 - **Issues**: Rapporter via GitHub Issues eller internal ticketing system
-- **Documentation**: Konsulter [docs/](docs/) directory for detaljeret guidance
+- **Documentation**: Konsulter ARCHITECTURE.md og CLAUDE.md for detaljeret guidance
 
 ### Resources
 - **qicharts2 Documentation**: https://github.com/anhoej/qicharts2
-- **Shiny Best Practices**: Se [SHINY_BEST_PRACTICES_FASER.md](SHINY_BEST_PRACTICES_FASER.md)
+- **Shiny Best Practices**: Se [CLAUDE.md](CLAUDE.md) for development guidelines
 - **Danish R Community**: Integration med lokale R brugergrupper
 
 ---

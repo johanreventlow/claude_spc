@@ -340,10 +340,10 @@ get_safe_default_profile <- function() {
       capture_errors = TRUE
     ),
 
-    # Testing and data (disabled by default)
+    # Testing and data (basic test support for unknown environment)
     testing = list(
       auto_load_test_data = FALSE,     # Safe default
-      test_data_file = NULL,
+      test_data_file = "R/data/spc_exampledata.csv",  # Enable basic test support
       enable_test_endpoints = FALSE,
       mock_external_services = FALSE,
       validate_test_data = FALSE

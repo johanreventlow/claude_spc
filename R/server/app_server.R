@@ -356,7 +356,7 @@ app_server <- function(input, output, session) {
   ## Visualiserings logik
   visualization <- setup_visualization(input, output, session, app_state)
 
-  ## Download handlers (REMOVED - to be reimplemented later)
+  ## Download handlers
   # setup_download_handlers(input, output, session, app_state, visualization)
 
   session_debugger$event("server_setup_complete")

@@ -57,7 +57,7 @@ run_app <- function(port = NULL,
     # Check golem-style options first
     option_browser <- get_app_option("browser_launch", NULL)
     if (!is.null(option_browser)) {
-      if (option_browser == "rstudio_viewer" && rstudioapi::isAvailable()) {
+      if (option_browser == "rstudio_viewer" && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
         tryCatch({
           .rs.invokeShinyWindowViewer
         }, error = function(e) {
@@ -74,7 +74,7 @@ run_app <- function(port = NULL,
       if (exists("is_prod_mode", mode = "function") && is_prod_mode()) {
         # Production: Always use standard browser launch for stability
         TRUE
-      } else if (exists("is_dev_mode", mode = "function") && is_dev_mode() && rstudioapi::isAvailable()) {
+      } else if (exists("is_dev_mode", mode = "function") && is_dev_mode() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
         # Development: Try RStudio viewer with graceful fallback
         tryCatch({
           .rs.invokeShinyWindowViewer

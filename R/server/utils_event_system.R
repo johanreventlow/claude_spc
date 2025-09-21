@@ -396,10 +396,10 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
 }
 
-# OVERFLØDIGT: Fjernet duplikeret sync_ui_with_columns_unified funktion
-# Den korrekte funktion findes længere nede i filen (linje 427)
+# NOTE: Duplikeret sync_ui_with_columns_unified funktion fjernet
+# Den korrekte funktion findes længere nede i filen
 
-# NOTE: auto_detect_and_update_columns_unified REMOVED
+# NOTE: auto_detect_and_update_columns_unified deprecated
 # Replaced with unified autodetect_engine() for consistency and better functionality
 
 #' Sync UI with columns (Unified Event Version)

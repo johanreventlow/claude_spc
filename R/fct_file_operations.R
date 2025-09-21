@@ -12,7 +12,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
 
   # File upload handler
   observeEvent(input$data_file, {
-    # PHASE 8: Enhanced debug tracking for comprehensive testing
+    # Enhanced debug tracking for comprehensive testing
     debug_user_interaction("file_upload_initiated",
                           list(filename = input$data_file$name,
                                size = input$data_file$size,
@@ -330,7 +330,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   # Enhanced debugging: Data structure analysis before assignment
 
 
-  # PHASE 8: Enhanced state change tracking
+  # Enhanced state change tracking
   debug_state_change("CSV_UPLOAD", "app_state$data$current_data",
                     app_state$data$current_data, data_frame,
                     "file_upload_processing", session_id)
@@ -346,11 +346,11 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   # Emit data_loaded event to trigger unified event system
   emit$data_loaded()
 
-  # PHASE 4B: Unified state assignment only - Set file uploaded flag
+  # Unified state assignment - Set file uploaded flag
   app_state$session$file_uploaded <- TRUE
-  # PHASE 4B: Unified state assignment only - Set auto detect flag
+  # Unified state assignment - Set auto detect flag
   app_state$columns$auto_detect$completed <- FALSE
-  # PHASE 4B: Unified state assignment only - Re-enable Anhøj rules when real data is uploaded
+  # Unified state assignment - Re-enable Anhøj rules when real data is uploaded
   app_state$ui$hide_anhoej_rules <- FALSE
 
   # NAVIGATION TRIGGER: Navigation events are now handled by the unified event system

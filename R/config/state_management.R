@@ -216,7 +216,7 @@ create_app_state <- function() {
     )
   )
 
-  # REMOVED: Autodetect state consolidated into app_state$columns$auto_detect
+  # NOTE: Autodetect state consolidated into app_state$columns$auto_detect
   # This eliminates state duplication and maintenance burden
 
   # Navigation State - For eventReactive patterns

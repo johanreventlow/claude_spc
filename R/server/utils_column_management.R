@@ -27,7 +27,7 @@
 #'   \item Fejlhåndtering og user feedback
 #' }
 #'
-#' PHASE 4 compatibility: Funktionen detekterer automatisk om centraliseret
+#' Compatibility: Funktionen detekterer automatisk om centraliseret
 #' state management er tilgængeligt og tilpasser sig entsprechend.
 #'
 #' @return NULL (side effects via observers)
@@ -189,7 +189,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 ## Vis kolonne-redigeré modal
 # Viser modal dialog for redigering af kolonnenavne
 show_column_edit_modal <- function(session, app_state = NULL) {
-  # PHASE 4: Use unified state management
+  # Use unified state management
   current_data_check <- app_state$data$current_data
   req(current_data_check)
 
@@ -226,7 +226,7 @@ show_column_edit_modal <- function(session, app_state = NULL) {
 ## Håndtér kolonnenavn ændringer
 # Behandler ændringer af kolonnenavne fra modal dialog
 handle_column_name_changes <- function(input, session, app_state = NULL, emit = NULL) {
-  # PHASE 4: Use unified state management
+  # Use unified state management
   current_data_check <- app_state$data$current_data
   req(current_data_check)
 
@@ -297,7 +297,7 @@ show_add_column_modal <- function() {
 ## Håndtér tilføjelse af kolonne
 # Behandler tilføjelse af nye kolonner til data
 handle_add_column <- function(input, session, app_state = NULL, emit = NULL) {
-  # PHASE 4: Use unified state management
+  # Use unified state management
   current_data_check <- app_state$data$current_data
   req(input$new_col_name, current_data_check)
 

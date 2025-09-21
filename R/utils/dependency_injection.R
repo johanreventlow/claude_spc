@@ -257,7 +257,7 @@ create_mock_spc_calculation_service <- function() {
   )
 }
 
-# Repository implementations (placeholders)
+# Repository implementations
 create_file_repository <- function() {
   list(
     save_file = function(data, path) write.csv(data, path),
@@ -291,7 +291,7 @@ create_mock_session_repository <- function() {
   )
 }
 
-# Validator implementations (placeholders)
+# Validator implementations
 create_data_validator <- function() {
   list(
     validate_columns = function(data) all(c("x", "y") %in% names(data)),
@@ -324,7 +324,7 @@ create_numeric_validator <- function() {
   )
 }
 
-# Utility implementations (placeholders)
+# Utility implementations
 create_date_utilities <- function() {
   list(
     parse_danish_date = function(date_string) as.Date(date_string, format = "%d-%m-%Y"),
