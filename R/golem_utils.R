@@ -282,6 +282,15 @@ get_app_info <- function() {
 #' @param prefix Prefix for the resource path
 #' @return Invisibly returns TRUE if successful
 add_resource_path <- function(path = "www", prefix = "www") {
+  # Use system.file() for packaged apps, fallback for development
+  if (path == "www") {
+    www_path <- system.file("app", "www", package = "claudespc")
+    if (www_path == "") {
+      www_path <- file.path("inst", "app", "www")
+    }
+    path <- www_path
+  }
+
   if (dir.exists(path)) {
     shiny::addResourcePath(prefix, path)
     log_debug(paste("✅ Added resource path:", prefix, "->", path), "RESOURCE_PATHS")
@@ -300,7 +309,18 @@ add_resource_path <- function(path = "www", prefix = "www") {
 #' @param path Path to favicon file
 #' @return HTML tags for favicon
 favicon <- function(path = "www/favicon.ico") {
-  if (file.exists(path)) {
+  # For packaged apps, adjust favicon path
+  if (path == "www/favicon.ico") {
+    favicon_path <- system.file("app", "www", "favicon.ico", package = "claudespc")
+    if (favicon_path == "") {
+      favicon_path <- file.path("inst", "app", "www", "favicon.ico")
+    }
+    if (file.exists(favicon_path)) {
+      path <- "www/favicon.ico"  # Keep relative path for href
+    }
+  }
+
+  if (file.exists(path) || grepl("^www/", path)) {
     return(shiny::tags$head(shiny::tags$link(rel = "icon", href = path)))
   } else {
     log_debug(paste("Favicon not found:", path), "FAVICON")

@@ -1,7 +1,16 @@
 # helper.R
 # Test setup og fælles funktioner
 
-library(shinytest2)
+# Only load shinytest2 if available to avoid breaking tests
+if (requireNamespace("shinytest2", quietly = TRUE)) {
+  library(shinytest2)
+} else {
+  # Graceful fallback - define dummy functions for shinytest2 dependencies
+  AppDriver <- function(...) {
+    skip("shinytest2 not available")
+  }
+}
+
 library(testthat)
 
 # Alias Shiny core functions for tests uden global library()

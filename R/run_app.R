@@ -43,7 +43,13 @@ run_app <- function(port = NULL,
   # Server function now loaded globally for better performance
   
   # Setup static resource paths for Golem structure
-  shiny::addResourcePath("www", "www")
+  # Use system.file() to ensure resources work after packaging
+  www_path <- system.file("app", "www", package = "claudespc")
+  if (www_path == "") {
+    # Fallback for development (package not installed)
+    www_path <- file.path("inst", "app", "www")
+  }
+  shiny::addResourcePath("www", www_path)
   
   # Create the Shiny app
   app <- shiny::shinyApp(
