@@ -107,6 +107,9 @@ source_from_base("R/modules/mod_spc_chart_ui.R")
 # DELETED: mod_session_storage.R - functionality integrated into session helpers
 # DELETED: mod_data_upload.R - functionality integrated into file upload system
 
+# GOLEM-STYLE UTILITIES - proper package patterns
+source_from_base("R/golem_utils.R")
+
 # MAIN APP COMPONENTS - moved from runtime to global initialization
 source_from_base("R/server/app_server.R")
 source_from_base("R/ui/app_ui.R")

@@ -2,15 +2,37 @@
 # Main app launcher following Golem conventions
 
 #' Run the SPC Shiny Application
-#' 
-#' @param port Port number for the application (default: 3838)
-#' @param launch_browser TRUE for browser, FALSE for no launch, or leave default for RStudio Viewer
+#'
+#' @param port Port number for the application (default: NULL for auto-assignment)
+#' @param launch_browser TRUE for browser, FALSE for no launch, or leave default for environment-aware decision
+#' @param options List of application options (golem-style configuration)
 #' @param ... Additional arguments to pass to shinyApp()
 #'
+#' @details
+#' This function implements golem-inspired patterns for robust Shiny app deployment.
+#' It supports environment-aware configuration and graceful fallbacks for different
+#' deployment contexts (development, production, testing).
+#'
+#' @examples
+#' \dontrun{
+#' # Basic usage
+#' run_app()
+#'
+#' # Development with specific options
+#' run_app(port = 4040, options = list(test_mode = TRUE))
+#'
+#' # Production deployment
+#' run_app(launch_browser = TRUE, options = list(production_mode = TRUE))
+#' }
+#'
 #' @export
-run_app <- function(#port = 3838,
-                    port = NULL,
-                    launch_browser = NULL, ...) {
+run_app <- function(port = NULL,
+                    launch_browser = NULL,
+                    options = list(),
+                    ...) {
+  # Golem-style options management
+  set_app_options(options)
+
   # Ensure global configuration is loaded (needed for package entry point)
   if (!exists("HOSPITAL_NAME", envir = .GlobalEnv) ||
       !exists("my_theme", envir = .GlobalEnv) ||
@@ -30,40 +52,40 @@ run_app <- function(#port = 3838,
     ...
   )
 
-  # Determine launch behavior with environment-aware fallback using modular config
+  # Determine launch behavior using golem-style options and environment detection
   browser_option <- if (is.null(launch_browser)) {
-    # Use modular environment detection from app_config.R
-    if (exists("detect_development_environment", mode = "function")) {
-      is_development <- detect_development_environment()
-      is_production <- detect_production_environment()
-    } else {
-      # Fallback to original detection for backward compatibility
-      is_development <- (
-        Sys.getenv("RSTUDIO") == "1" ||                 # RStudio IDE
-        Sys.getenv("R_CONFIG_ACTIVE") == "development"  # Explicit development
-      )
-      is_production <- (
-        Sys.getenv("SHINY_SERVER_VERSION") != "" ||     # Shiny Server
-        Sys.getenv("R_CONFIG_ACTIVE") == "production"   # Explicit production
-      )
-    }
-
-    # Environment-aware browser launch strategy
-    if (is_production) {
-      # Production: Always use standard browser launch for stability
-      TRUE
-    } else if (is_development && rstudioapi::isAvailable()) {
-      # Development: Try RStudio viewer with graceful fallback
-      tryCatch({
-        .rs.invokeShinyWindowViewer
-      }, error = function(e) {
-        # If RStudio internals fail, fall back to browser
-        log_debug(paste("RStudio viewer not available, using browser:", e$message), "APP_LAUNCH")
+    # Check golem-style options first
+    option_browser <- get_app_option("browser_launch", NULL)
+    if (!is.null(option_browser)) {
+      if (option_browser == "rstudio_viewer" && rstudioapi::isAvailable()) {
+        tryCatch({
+          .rs.invokeShinyWindowViewer
+        }, error = function(e) {
+          log_debug(paste("RStudio viewer not available, falling back to browser:", e$message), "APP_LAUNCH")
+          TRUE
+        })
+      } else if (option_browser == "browser") {
         TRUE
-      })
+      } else {
+        FALSE
+      }
     } else {
-      # Other environments: use standard browser launch
-      TRUE
+      # Fall back to environment-aware detection
+      if (exists("is_prod_mode", mode = "function") && is_prod_mode()) {
+        # Production: Always use standard browser launch for stability
+        TRUE
+      } else if (exists("is_dev_mode", mode = "function") && is_dev_mode() && rstudioapi::isAvailable()) {
+        # Development: Try RStudio viewer with graceful fallback
+        tryCatch({
+          .rs.invokeShinyWindowViewer
+        }, error = function(e) {
+          log_debug(paste("RStudio viewer not available, using browser:", e$message), "APP_LAUNCH")
+          TRUE
+        })
+      } else {
+        # Other environments: use standard browser launch
+        TRUE
+      }
     }
   } else {
     launch_browser
