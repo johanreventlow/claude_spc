@@ -372,34 +372,34 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         # Return NULL for now - UI will show loading state
         return(NULL)
       }
-    }, height = function(width = NULL) {
-      output_id <- ns("spc_plot_actual")
-      client_height <- session$clientData[[paste0("output_", output_id, "_height")]]
-      client_width <- width
+    #}, height = function(width = NULL) {
+      # output_id <- ns("spc_plot_actual")
+      # client_height <- session$clientData[[paste0("output_", output_id, "_height")]]
+      # client_width <- width
 
-      if (is.null(client_width)) {
-        client_width <- session$clientData[[paste0("output_", output_id, "_width")]]
-      }
+      # if (is.null(client_width)) {
+      #   client_width <- session$clientData[[paste0("output_", output_id, "_width")]]
+      # }
 
-      resolved_height <- compute_spc_plot_height(
-        width = client_width,
-        client_height = client_height,
-        aspect_ratio = 0.75,
-        min_height = 420,
-        default_height = 600
-      )
+      # resolved_height <- compute_spc_plot_height(
+      #   width = client_width,
+      #   client_height = client_height,
+      #   aspect_ratio = 0.75,
+      #   min_height = 420,
+      #   default_height = 600
+      # )
 
-      log_debug(
-        "Plot height resolved",
-        list(
-          width = client_width,
-          client_height = client_height,
-          resolved_height = resolved_height
-        ),
-        .context = "PLOT_DIMENSIONS"
-      )
+      # log_debug(
+      #   "Plot height resolved",
+      #   list(
+      #     width = client_width,
+      #     client_height = client_height,
+      #     resolved_height = resolved_height
+      #   ),
+      #   .context = "PLOT_DIMENSIONS"
+      # )
 
-      resolved_height
+      # resolved_height
     })
 
     # Status og Information ---------------------------------------------------
