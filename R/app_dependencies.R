@@ -8,7 +8,7 @@
 #' Centraliseret dependency management som kan erstatte library() kald i global.R.
 #' Inkluderer environment-aware loading og fallback-strategier.
 #'
-#' @param config App configuration from initialize_app_config()
+#' @param config App configuration from initialize_runtime_config()
 #' @return List with dependency loading results
 #' @export
 manage_app_dependencies <- function(config = NULL) {
@@ -17,8 +17,8 @@ manage_app_dependencies <- function(config = NULL) {
   # Default config if not provided
   if (is.null(config)) {
     config <- list(
-      environment = list(is_development = TRUE, is_production = FALSE),
-      features = list(debug_mode_enabled = FALSE)
+      environment = list(is_development = TRUE, is_production = FALSE, environment_type = "development"),
+      logging = list(debug_mode_enabled = FALSE)
     )
   }
 
