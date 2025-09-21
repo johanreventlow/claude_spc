@@ -107,7 +107,7 @@ get_development_profile <- function() {
       enable_hot_reload = FALSE,      # Not implemented yet
       show_debug_panel = TRUE,
       enable_dev_tools = TRUE,
-      browser_launch = "rstudio_viewer",
+      browser_launch = "browser",     # Midlertidigt ændret til browser
       show_performance_metrics = TRUE
     ),
 

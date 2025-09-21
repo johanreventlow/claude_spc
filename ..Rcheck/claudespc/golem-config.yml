@@ -67,7 +67,7 @@ default:
     enable_hot_reload: false
     show_debug_panel: false
     enable_dev_tools: false
-    browser_launch: true              # Midlertidigt ændret til browser
+    browser_launch: "browser"
     show_performance_metrics: false
 
   # Session management

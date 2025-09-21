@@ -79,14 +79,9 @@ run_app <- function(port = NULL,
       if (exists("is_prod_mode", mode = "function") && is_prod_mode()) {
         # Production: Always use standard browser launch for stability
         TRUE
-      } else if (exists("is_dev_mode", mode = "function") && is_dev_mode() && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-        # Development: Try RStudio viewer with graceful fallback
-        tryCatch({
-          .rs.invokeShinyWindowViewer
-        }, error = function(e) {
-          log_debug(paste("RStudio viewer not available, using browser:", e$message), "APP_LAUNCH")
-          TRUE
-        })
+      } else if (exists("is_dev_mode", mode = "function") && is_dev_mode()) {
+        # Development: Use browser instead of RStudio viewer (midlertidigt ændret)
+        TRUE
       } else {
         # Other environments: use standard browser launch
         TRUE

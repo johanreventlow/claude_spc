@@ -681,11 +681,11 @@ test_that("Basic ggplot generation fungerer med test data", {
     if (nrow(qic_result) > 0) {
       expect_silent({
         # Nu kan vi lave ggplot fra qic dataframe som forventet
-        custom_plot <- ggplot(qic_result, aes(x = x, y = y)) +
-          geom_line() +
-          geom_point() +
+        custom_plot <- ggplot2::ggplot(qic_result, ggplot2::aes(x = x, y = y)) +
+          ggplot2::geom_line() +
+          ggplot2::geom_point() +
           HOSPITAL_THEME() +
-          labs(title = "Custom SPC Plot from QIC Data")
+          ggplot2::labs(title = "Custom SPC Plot from QIC Data")
       })
       expect_s3_class(custom_plot, "ggplot")
       expect_equal(custom_plot$labels$title, "Custom SPC Plot from QIC Data")
@@ -702,8 +702,8 @@ test_that("Hospital theme application fungerer", {
   expect_s3_class(theme, "theme")
 
   # Test at theme kan anvendes på plot
-  p <- ggplot(data.frame(x = 1:3, y = 1:3), aes(x, y)) +
-    geom_point() +
+  p <- ggplot2::ggplot(data.frame(x = 1:3, y = 1:3), ggplot2::aes(x, y)) +
+    ggplot2::geom_point() +
     HOSPITAL_THEME()
 
   expect_s3_class(p, "ggplot")
@@ -723,19 +723,19 @@ test_that("QIC-til-ggplot workflow simulation", {
 
   # Test at vi kan lave komplet SPC ggplot fra qic data
   expect_silent({
-    spc_plot <- ggplot(mock_qic_data, aes(x = x)) +
+    spc_plot <- ggplot2::ggplot(mock_qic_data, ggplot2::aes(x = x)) +
       # Main data line
-      geom_line(aes(y = y), color = HOSPITAL_COLORS$primary, linewidth = 1) +
-      geom_point(aes(y = y), color = HOSPITAL_COLORS$primary, size = 2) +
+      ggplot2::geom_line(ggplot2::aes(y = y), color = HOSPITAL_COLORS$primary, linewidth = 1) +
+      ggplot2::geom_point(ggplot2::aes(y = y), color = HOSPITAL_COLORS$primary, size = 2) +
 
       # Control limits
-      geom_line(aes(y = cl), color = HOSPITAL_COLORS$secondary, linetype = "solid") +
-      geom_line(aes(y = lcl), color = HOSPITAL_COLORS$danger, linetype = "dashed") +
-      geom_line(aes(y = ucl), color = HOSPITAL_COLORS$danger, linetype = "dashed") +
+      ggplot2::geom_line(ggplot2::aes(y = cl), color = HOSPITAL_COLORS$secondary, linetype = "solid") +
+      ggplot2::geom_line(ggplot2::aes(y = lcl), color = HOSPITAL_COLORS$danger, linetype = "dashed") +
+      ggplot2::geom_line(ggplot2::aes(y = ucl), color = HOSPITAL_COLORS$danger, linetype = "dashed") +
 
       # Hospital theme og labels
       HOSPITAL_THEME() +
-      labs(
+      ggplot2::labs(
         title = "SPC Analyse",
         x = "Dato",
         y = "Andel (%)",

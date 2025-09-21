@@ -53,6 +53,7 @@ source_from_base("R/utils/dependency_injection.R")
 source_from_base("R/utils/shinylogs_config.R")
 source_from_base("R/utils/advanced_debug.R")  # Advanced debug infrastructure
 source_from_base("R/utils/end_to_end_debug.R")
+source_from_base("R/utils/visualization_dimensions.R")
 
 # CONFIGURATION
 source_from_base("R/config/hospital_branding.R")
