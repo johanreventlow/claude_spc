@@ -194,7 +194,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         target = target_value_reactive(),
         centerline = centerline_value_reactive(),
         skift = skift_config_reactive(),
-        frys = frys_config_reactive()
+        frys = frys_config_reactive(),
+        chart_title = if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL,
+        y_axis_unit = if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL
       ))
 
       # Check if we can use cached plot

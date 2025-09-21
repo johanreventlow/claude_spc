@@ -414,7 +414,7 @@ create_plot_only_card <- function() {
     bslib::card_header(
       shiny::div(shiny::icon("chart-line"), " SPC Preview")
     ),
-    bslib::card_body_fill(
+    bslib::card_body(
       fill = TRUE,
       shiny::div(
         style = "height: 100%",
