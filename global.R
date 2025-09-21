@@ -63,6 +63,7 @@ source_from_base <- function(relative_path) {
 }
 
 source_from_base("R/utils/logging.R")
+source_from_base("R/utils/dependency_injection.R")  # Dependency injection framework
 # DELETED: utils_app_setup.R - dependencies moved to DESCRIPTION
 source_from_base("R/utils/shinylogs_config.R")  # Advanced web-based logging with shinylogs
 source_from_base("R/utils/advanced_debug.R")  # Advanced debug infrastructure
@@ -212,19 +213,7 @@ source_from_base("R/fct_autodetect_unified.R")    # Main unified autodetect engi
 
 ## Akseenhedsvalg -----
 
-# Y-akse enheder (værdier)
-Y_AXIS_UNITS_DA <- list(
-  "Antal" = "count",
-  "Procent (%)" = "percent",
-  "Promille (‰)" = "permille",
-  "Rate pr. 1000" = "rate_1000",
-  "Rate pr. 100.000" = "rate_100000",
-  "Dage" = "days",
-  "Timer" = "hours",
-  "Gram" = "grams",
-  "Kilogram" = "kg",
-  "Kroner" = "dkk"
-)
+# Y_AXIS_UNITS_DA now defined in R/config/spc_config.R to avoid duplication
 
 # DATABEHANDLING ================================
 

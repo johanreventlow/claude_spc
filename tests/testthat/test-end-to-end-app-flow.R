@@ -69,7 +69,7 @@ if (!sourced_global) {
 function_files <- c(
   "R/fct_data_processing.R",
   "R/fct_visualization_server.R",
-  "R/utils_danish_locale.R"
+  "R/utils/danish_locale.R"
 )
 
 test_debug_log("Sourcing function files...", context = "TEST_E2E_SOURCE")

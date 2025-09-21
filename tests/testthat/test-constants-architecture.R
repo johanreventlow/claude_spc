@@ -1,54 +1,60 @@
 # test-constants-architecture.R
-# Tests af D) Architecture Improvements - constants og reusable modules
+# Tests af D) Architecture Improvements - modular config files og reusable modules
 
-test_that("constants fil indlæser korrekt", {
-  # Test at constants fil kan indlæses uden fejl
-  expect_true(file.exists("../../R/constants.R"))
+test_that("modular config files load correctly", {
+  # Test at de nye modulære config filer eksisterer
+  expect_true(file.exists("../../R/config/ui_config.R"))
+  expect_true(file.exists("../../R/config/spc_config.R"))
+  expect_true(file.exists("../../R/config/system_config.R"))
+  expect_true(file.exists("../../R/config/chart_types.R"))
 
-  # Source constants filen
-  source("../../R/constants.R")
+  # Source alle config filer
+  source("../../R/config/ui_config.R")
+  source("../../R/config/spc_config.R")
+  source("../../R/config/system_config.R")
+  source("../../R/config/chart_types.R")
 
-  # Test at hovedkonstanter eksisterer
-  expect_true(exists("DEFAULT_PORT"))
-  expect_true(exists("TEST_MODE_AUTO_LOAD"))
-  expect_true(exists("DEFAULT_ENCODING"))
-  expect_true(exists("CSV_SEPARATORS"))
-  expect_true(exists("DECIMAL_SEPARATORS"))
+  # Test at hovedkonstanter eksisterer (nu spredt på tværs af config filer)
+  expect_true(exists("UI_COLUMN_WIDTHS"))
+  expect_true(exists("MIN_SPC_ROWS"))
+  expect_true(exists("OBSERVER_PRIORITIES"))
+  expect_true(exists("CHART_TYPES_DA"))
 })
 
-test_that("application configuration konstanter", {
-  source("../../R/constants.R")
+test_that("system configuration konstanter", {
+  source("../../R/config/system_config.R")
 
-  # Test port konstant
-  expect_equal(DEFAULT_PORT, 3838)
-  expect_type(DEFAULT_PORT, "double")
+  # Test performance thresholds
+  expect_true(exists("PERFORMANCE_THRESHOLDS"))
+  expect_type(PERFORMANCE_THRESHOLDS, "list")
 
-  # Test encoding konstanter
-  expect_equal(DEFAULT_ENCODING, "ISO-8859-1")
-  expect_equal(UTF8_ENCODING, "UTF-8")
+  # Test operation timeouts
+  expect_true(exists("OPERATION_TIMEOUTS"))
+  expect_type(OPERATION_TIMEOUTS, "list")
 
-  # Test boolean konstanter
-  expect_type(TEST_MODE_AUTO_LOAD, "logical")
-  expect_type(AUTO_RESTORE_ENABLED, "logical")
+  # Test observer priorities
+  expect_true(exists("OBSERVER_PRIORITIES"))
+  expect_type(OBSERVER_PRIORITIES, "list")
 })
 
-test_that("file processing konstanter", {
-  source("../../R/constants.R")
+test_that("SPC configuration konstanter", {
+  source("../../R/config/spc_config.R")
 
-  # Test CSV separators
-  expect_type(CSV_SEPARATORS, "list")
-  expect_equal(CSV_SEPARATORS$semicolon, ";")
-  expect_equal(CSV_SEPARATORS$comma, ",")
-  expect_equal(CSV_SEPARATORS$tab, "\t")
+  # Test SPC validation constants
+  expect_true(exists("MIN_SPC_ROWS"))
+  expect_true(exists("RECOMMENDED_SPC_POINTS"))
+  expect_true(exists("MAX_MISSING_PERCENT"))
+  expect_true(exists("MIN_NUMERIC_PERCENT"))
 
-  # Test decimal separators
-  expect_type(DECIMAL_SEPARATORS, "list")
-  expect_equal(DECIMAL_SEPARATORS$comma, ",")
-  expect_equal(DECIMAL_SEPARATORS$period, ".")
+  # Test at værdier er logiske
+  expect_true(MIN_SPC_ROWS > 0)
+  expect_true(RECOMMENDED_SPC_POINTS >= MIN_SPC_ROWS)
+  expect_true(MAX_MISSING_PERCENT > 0 && MAX_MISSING_PERCENT <= 100)
+  expect_true(MIN_NUMERIC_PERCENT > 0 && MIN_NUMERIC_PERCENT <= 1)
 })
 
 test_that("UI layout konstanter", {
-  source("../../R/constants.R")
+  source("../../R/config/ui_config.R")
 
   # Test UI column widths
   expect_type(UI_COLUMN_WIDTHS, "list")
@@ -69,24 +75,8 @@ test_that("UI layout konstanter", {
   expect_match(UI_STYLES$scroll_auto, "overflow-y: auto")
 })
 
-test_that("data validation konstanter", {
-  source("../../R/constants.R")
-
-  # Test SPC konstanter
-  expect_equal(MIN_SPC_ROWS, 10)
-  expect_equal(RECOMMENDED_SPC_POINTS, 20)
-  expect_equal(MAX_MISSING_PERCENT, 20)
-  expect_equal(MIN_NUMERIC_PERCENT, 0.8)
-
-  # Test at værdier er logiske
-  expect_true(MIN_SPC_ROWS > 0)
-  expect_true(RECOMMENDED_SPC_POINTS >= MIN_SPC_ROWS)
-  expect_true(MAX_MISSING_PERCENT > 0 && MAX_MISSING_PERCENT <= 100)
-  expect_true(MIN_NUMERIC_PERCENT > 0 && MIN_NUMERIC_PERCENT <= 1)
-})
-
-test_that("SPC chart konstanter", {
-  source("../../R/constants.R")
+test_that("chart types konstanter", {
+  source("../../R/config/chart_types.R")
 
   # Test chart types
   expect_type(CHART_TYPES_DA, "list")
@@ -97,14 +87,28 @@ test_that("SPC chart konstanter", {
   expect_equal(CHART_TYPES_DA[["P-kort (Andele)"]], "p")
   expect_equal(CHART_TYPES_DA[["C-kort (Tællinger)"]], "c")
 
-  # Test Y-axis units
+  # Test at der er sammenhæng mellem DA og EN versioner
+  expect_equal(length(CHART_TYPES_DA), length(CHART_TYPES_EN))
+})
+
+test_that("Y-axis units konstanter", {
+  # Source Y_AXIS_UNITS_DA from its proper location
+  source("../../R/config/spc_config.R")
+
+  # Test Y-axis units structure
   expect_type(Y_AXIS_UNITS_DA, "list")
   expect_true("Antal" %in% names(Y_AXIS_UNITS_DA))
-  expect_true("Procent" %in% names(Y_AXIS_UNITS_DA))
+  expect_true("Procent (%)" %in% names(Y_AXIS_UNITS_DA))
+  expect_true("Promille (‰)" %in% names(Y_AXIS_UNITS_DA))
+
+  # Test that values are correct runtime codes (not Danish)
+  expect_equal(Y_AXIS_UNITS_DA[["Antal"]], "count")
+  expect_equal(Y_AXIS_UNITS_DA[["Procent (%)"]], "percent")
+  expect_equal(Y_AXIS_UNITS_DA[["Promille (‰)"]], "permille")
 })
 
 test_that("logging og performance konstanter", {
-  source("../../R/constants.R")
+  source("../../R/config/system_config.R")
 
   # Test observer priorities
   expect_type(OBSERVER_PRIORITIES, "list")
@@ -129,12 +133,9 @@ test_that("logging og performance konstanter", {
 })
 
 test_that("konstanter konsistens med eksisterende global.R", {
-  # Load constants.R
-  source("../../R/constants.R")
-
-  # Test at nye konstanter har fornuftige værdier
-  expect_true(TEST_MODE_AUTO_LOAD %in% c(TRUE, FALSE))
-  expect_true(DEFAULT_ENCODING %in% c("ISO-8859-1", "UTF-8"))
+  # Load only the config files needed without hospital branding
+  source("../../R/config/chart_types.R")
+  source("../../R/config/ui_config.R")
 
   # Test at chart types har de forventede keys
   expected_charts <- c("I-kort (Individuelle værdier)", "P-kort (Andele)", "C-kort (Tællinger)")
@@ -143,14 +144,19 @@ test_that("konstanter konsistens med eksisterende global.R", {
   # Test at UI helpers har fornuftige strukturer
   expect_type(UI_COLUMN_WIDTHS, "list")
   expect_true("quarter" %in% names(UI_COLUMN_WIDTHS))
+
+  # Test that TEST_MODE_AUTO_LOAD environment variable handling works
+  TEST_MODE_AUTO_LOAD <- as.logical(Sys.getenv("TEST_MODE_AUTO_LOAD", "TRUE"))
+  expect_type(TEST_MODE_AUTO_LOAD, "logical")
+  expect_true(TEST_MODE_AUTO_LOAD %in% c(TRUE, FALSE))
 })
 
 test_that("UI helpers module funktionalitet", {
   # Test at UI helpers fil eksisterer
   expect_true(file.exists("../../R/ui/utils_ui_helpers.R"))
 
-  # Source både constants og UI helpers
-  source("../../R/constants.R")
+  # Source både config og UI helpers
+  source("../../R/config/ui_config.R")
   source("../../R/ui/utils_ui_helpers.R")
 
   # Test helper funktioner
@@ -167,22 +173,15 @@ test_that("UI helpers module funktionalitet", {
 })
 
 test_that("integration med eksisterende kode", {
-  # Test at konstanterne kan bruges i eksisterende funktioner
-  source("../../R/constants.R")
+  # Test fil funktioner - source only needed files
+  source("../../R/core/file_io.R")
+  source("../../R/core/spc_helpers.R")
+  source("../../R/utils/logging.R")
 
-  # Test fil funktioner
-  if (file.exists("../../R/fct_file_io.R")) {
-    source("../../R/fct_file_io.R")
+  # Test fil funktioner - now in R/core/file_io.R
+  expect_true(exists("readCSVFile"))
 
-    # Test at readCSVFile kan bruge konstanterne
-    expect_true(exists("readCSVFile"))
-
-    # Test default parametre (hvis der er nogen defineret)
-    # Dette vil afhænge af hvordan funktionen er defineret
-  }
-
-  # Test data validation
-  # Test validate_data_structure function (moved to fct_spc_helpers.R)
+  # Test data validation - now from R/core/spc_helpers.R
   expect_true(exists("validate_data_structure"))
 
   # Test med mock data

@@ -2,8 +2,8 @@
 # Performance tests for Fase 5 optimizations
 
 # Source required functions
-source("../../R/utils_performance.R")
-source("../../R/utils_memory_management.R")
+source("../../R/utils/performance.R")
+source("../../R/utils/memory_management.R")
 
 # Fase 5 Performance Optimization Tests
 
