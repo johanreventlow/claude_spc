@@ -78,6 +78,8 @@ source_from_base("R/config/state_management.R")
 source_from_base("R/config/ui_config.R")
 source_from_base("R/config/spc_config.R")
 source_from_base("R/config/system_config.R")
+source_from_base("R/config/environment_profiles.R")  # Phase 4.2: Environment-specific configuration profiles
+source_from_base("R/config/app_runtime_config.R")
 
 # CORE FUNCTIONS - moved from runtime to global initialization
 # REMOVED: R/fct_chart_helpers.R - functions moved to fct_spc_helpers.R and fct_spc_plot_generation.R
@@ -116,9 +118,25 @@ source_from_base("R/ui/app_ui.R")
 source_from_base("R/run_app.R")
 
 # ENHANCED DEBUGGING UTILITIES --------------------------------
+
+# Centralized debug mode status check
+get_debug_mode_status <- function() {
+  # Check runtime configuration first
+  if (exists("runtime_config") && !is.null(runtime_config$logging$debug_mode_enabled)) {
+    return(runtime_config$logging$debug_mode_enabled)
+  }
+
+  # Fallback to environment variable
+  env_debug <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE")
+  return(env_debug == "TRUE")
+}
+
 # Enhanced reactive context logging for Shiny fejlidentifikation
 log_reactive_context <- function(message, component = "REACTIVE", reactive_name = NULL) {
-  if (SHINY_DEBUG_MODE) {
+  # Use environment-aware debug mode detection
+  debug_enabled <- get_debug_mode_status()
+
+  if (debug_enabled) {
     context_info <- ""
     if (!is.null(reactive_name)) {
       context_info <- paste0(" [", reactive_name, "]")
@@ -138,7 +156,8 @@ log_reactive_context <- function(message, component = "REACTIVE", reactive_name 
 
 # State consistency validator for dual-state debugging
 validate_state_consistency <- function(values, app_state) {
-  if (!SHINY_DEBUG_MODE) return(TRUE)
+  debug_enabled <- get_debug_mode_status()
+  if (!debug_enabled) return(TRUE)
 
   inconsistencies <- c()
 
@@ -167,58 +186,14 @@ validate_state_consistency <- function(values, app_state) {
   return(length(inconsistencies) == 0)
 }
 
-# UDVIKLINGSINDSTILLINGER --------------------------------
-
-## Testmodus -----
-# TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
-# Smart environment detection for sikker default-adfærd
-
-# Detect deployment environment
+# Legacy function kept for compatibility
 detect_environment <- function() {
-  # Check for explicit environment variable first
-  env_var <- Sys.getenv("TEST_MODE_AUTO_LOAD", "")
-  if (env_var != "") {
-    return(as.logical(env_var))
+  if (exists("runtime_config") && !is.null(runtime_config$testing)) {
+    return(get_app_option("test_mode", runtime_config$testing$auto_load_enabled))
+  } else {
+    return(FALSE)  # Safe default before runtime_config is initialized
   }
-
-  # Production environments (safe default: FALSE)
-  if (Sys.getenv("SHINY_SERVER_VERSION") != "" ||     # Shiny Server
-      Sys.getenv("CONNECT_SERVER") != "" ||           # Posit Connect
-      Sys.getenv("SHINYAPPS_SERVER") != "" ||         # shinyapps.io
-      Sys.getenv("R_CONFIG_ACTIVE") == "production") { # Explicit production
-    return(FALSE)
-  }
-
-  # Development environments (convenient default: TRUE)
-  if (Sys.getenv("RSTUDIO") == "1" ||                 # RStudio IDE
-      interactive() ||                                # Interactive R session
-      Sys.getenv("R_CONFIG_ACTIVE") == "development") { # Explicit development
-    return(TRUE)
-  }
-
-  # Test environments and unknown contexts (safe default: FALSE)
-  return(FALSE)
 }
-
-TEST_MODE_AUTO_LOAD <- detect_environment()
-
-# Specificer hvilken fil der skal indlæses automatisk i test mode
-# Filsti skal være relativ til app root-mappen
-# TEST_MODE_FILE_PATH <- "R/data/spc_exampledata1.csv"
-
-# Alternative test filer (udkommenterede):
-TEST_MODE_FILE_PATH <- "R/data/spc_exampledata.csv"
-# TEST_MODE_FILE_PATH <- "R/data/test_infection.csv"
-# TEST_MODE_FILE_PATH <- "R/data/SPC_test_data_forskellige.xlsx"
-
-## Auto-gendannelse -----
-# AUTO-RESTORE: Gendan automatisk tidligere sessioner
-# Sæt til FALSE under udvikling, TRUE til produktion
-AUTO_RESTORE_ENABLED <- FALSE
-
-## Enhanced debugging til Shiny-kontekst fejl -----
-# SHINY_DEBUG_MODE: Enhanced debugging for fejlidentifikation
-SHINY_DEBUG_MODE <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
 
 ## Tabeltype -----
 # TABLE TYPE: Bruger excelR til Excel-lignende redigerbare tabeller
@@ -419,6 +394,11 @@ safe_operation <- function(operation_name, code,
     }
   )
 }
+
+# RUNTIME CONFIGURATION INITIALIZATION --------------------------------
+# Initialize centralized runtime configuration after all dependencies are loaded
+# This replaces scattered constants and provides environment-aware defaults
+runtime_config <- initialize_runtime_config()
 
 # DEVELOPMENT LOG LEVEL - Sæt kun automatisk niveau hvis ikke allerede defineret
 if (!nzchar(Sys.getenv("SPC_LOG_LEVEL", ""))) {

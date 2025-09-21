@@ -346,7 +346,7 @@ setup_performance_optimizations <- function(config) {
     # Set global feature flags
     assign("TEST_MODE_AUTO_LOAD", config$features$test_mode_auto_load, envir = .GlobalEnv)
     assign("AUTO_RESTORE_ENABLED", config$features$auto_restore_enabled, envir = .GlobalEnv)
-    assign("SHINY_DEBUG_MODE", config$features$debug_mode_enabled, envir = .GlobalEnv)
+    # SHINY_DEBUG_MODE now managed by environment profiles
 
     optimizations$feature_flags_set <- TRUE
   }
@@ -429,7 +429,8 @@ verify_initialization_completeness <- function() {
 
   # Check critical global variables
   critical_globals <- c(
-    "TEST_MODE_AUTO_LOAD", "AUTO_RESTORE_ENABLED", "SHINY_DEBUG_MODE"
+    "TEST_MODE_AUTO_LOAD", "AUTO_RESTORE_ENABLED"
+    # SHINY_DEBUG_MODE now managed by environment profiles
   )
 
   verification$missing_globals <- c()
