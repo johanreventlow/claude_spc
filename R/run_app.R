@@ -92,11 +92,18 @@ run_app <- function(port = NULL,
   }
 
   # Run the app
-  runApp(
-    app,
-    # port = port,
-    launch.browser = browser_option
-  )
+  if (is.null(port)) {
+    runApp(
+      app,
+      launch.browser = browser_option
+    )
+  } else {
+    runApp(
+      app,
+      port = port,
+      launch.browser = browser_option
+    )
+  }
 }
 
 #' Get the UI function

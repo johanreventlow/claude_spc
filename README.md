@@ -44,11 +44,17 @@ cd claude_spc
 # Production mode (recommended)
 R -e "source('global.R'); run_app()"
 
-# Specify port
+# Specify custom port
 R -e "source('global.R'); run_app(port = 3838)"
 
 # Development mode med enhanced debugging
 R -e "source('global.R'); run_dev(port = 4040)"
+
+# Alternative med direct shiny launch
+R -e "source('global.R'); shiny::runApp('.', port = 4040)"
+
+# Kør via pakkefunktionen
+R -e "claudespc::run_app(port = 5050)"
 ```
 
 ### Environment-Specific Usage
