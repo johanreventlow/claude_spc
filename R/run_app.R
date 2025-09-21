@@ -30,25 +30,39 @@ run_app <- function(#port = 3838,
     ...
   )
 
-  # Determine launch behavior with environment-aware fallback
+  # Determine launch behavior with environment-aware fallback using modular config
   browser_option <- if (is.null(launch_browser)) {
-    # Check if we're in a development environment where RStudio internals are safe
-    is_development <- (
-      Sys.getenv("RSTUDIO") == "1" ||                 # RStudio IDE
-      Sys.getenv("R_CONFIG_ACTIVE") == "development"  # Explicit development
-    )
+    # Use modular environment detection from app_config.R
+    if (exists("detect_development_environment", mode = "function")) {
+      is_development <- detect_development_environment()
+      is_production <- detect_production_environment()
+    } else {
+      # Fallback to original detection for backward compatibility
+      is_development <- (
+        Sys.getenv("RSTUDIO") == "1" ||                 # RStudio IDE
+        Sys.getenv("R_CONFIG_ACTIVE") == "development"  # Explicit development
+      )
+      is_production <- (
+        Sys.getenv("SHINY_SERVER_VERSION") != "" ||     # Shiny Server
+        Sys.getenv("R_CONFIG_ACTIVE") == "production"   # Explicit production
+      )
+    }
 
-    # Only use RStudio internals in development environments
-    if (is_development && rstudioapi::isAvailable()) {
-      # Try RStudio viewer with graceful fallback
+    # Environment-aware browser launch strategy
+    if (is_production) {
+      # Production: Always use standard browser launch for stability
+      TRUE
+    } else if (is_development && rstudioapi::isAvailable()) {
+      # Development: Try RStudio viewer with graceful fallback
       tryCatch({
         .rs.invokeShinyWindowViewer
       }, error = function(e) {
         # If RStudio internals fail, fall back to browser
+        log_debug(paste("RStudio viewer not available, using browser:", e$message), "APP_LAUNCH")
         TRUE
       })
     } else {
-      # Production/test environments: use standard browser launch
+      # Other environments: use standard browser launch
       TRUE
     }
   } else {

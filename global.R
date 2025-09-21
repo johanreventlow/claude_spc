@@ -227,7 +227,7 @@ source_from_base("R/ui/utils_ui_helpers.R")
 source_from_base("R/ui/utils_ui_components.R")
 source_from_base("R/ui/utils_ui_updates.R")
 source_from_base("R/server/utils_event_system.R")
-source_from_base("R/server/utils_server_management.R")
+# NOTE: utils_server_management.R already loaded at line 94
 source_from_base("R/utils/performance.R")
 source_from_base("R/utils/memory_management.R")
 
