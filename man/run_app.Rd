@@ -4,15 +4,35 @@
 \alias{run_app}
 \title{Run the SPC Shiny Application}
 \usage{
-run_app(port = NULL, launch_browser = NULL, ...)
+run_app(port = NULL, launch_browser = NULL, options = list(), ...)
 }
 \arguments{
-\item{port}{Port number for the application (default: 3838)}
+\item{port}{Port number for the application (default: NULL for auto-assignment)}
 
-\item{launch_browser}{TRUE for browser, FALSE for no launch, or leave default for RStudio Viewer}
+\item{launch_browser}{TRUE for browser, FALSE for no launch, or leave default for environment-aware decision}
 
-\item{...}{Additional arguments to pass to shinyApp()}
+\item{options}{List of application options (golem-style configuration)}
+
+\item{...}{Additional arguments to pass to shiny::shinyApp()}
 }
 \description{
 Run the SPC Shiny Application
+}
+\details{
+This function implements golem-inspired patterns for robust Shiny app deployment.
+It supports environment-aware configuration and graceful fallbacks for different
+deployment contexts (development, production, testing).
+}
+\examples{
+\dontrun{
+# Basic usage
+run_app()
+
+# Development with specific options
+run_app(port = 4040, options = list(test_mode = TRUE))
+
+# Production deployment
+run_app(launch_browser = TRUE, options = list(production_mode = TRUE))
+}
+
 }

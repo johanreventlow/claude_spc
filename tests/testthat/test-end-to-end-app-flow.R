@@ -9,7 +9,7 @@ cat("Timestamp:", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n")
 
 library(testthat)
 library(shinytest2)  # For advanced Shiny testing hvis tilgængelig, ellers skip
-library(ggplot2)
+# library(ggplot2) # NOTE: Bruger ggplot2:: namespace pattern
 
 test_debug_log <- function(..., context = "TEST_E2E_GENERIC") {
   if (exists("log_debug", mode = "function")) {

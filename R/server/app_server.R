@@ -86,14 +86,14 @@ app_server <- function(input, output, session) {
   # SESSION FLAG: Prevent duplicate event listener registration
   log_debug("🔧 Checking app_state$system exists...", "APP_SERVER")
 
-  # Initialize event listeners setup flag in app_state to prevent double registration
+  # Initialize event listeners setup flag in infrastructure state to prevent double registration
   safe_operation(
     "Initialize event listeners setup flag",
     code = {
       log_debug("🔧 Checking event_listeners_setup flag...", "APP_SERVER")
-      if (is.null(app_state$system$event_listeners_setup)) {
+      if (is.null(app_state$infrastructure$event_listeners_setup)) {
         log_debug("🔧 Setting event_listeners_setup = FALSE", "APP_SERVER")
-        app_state$system$event_listeners_setup <- FALSE
+        app_state$infrastructure$event_listeners_setup <- FALSE
       }
       log_debug("🔧 Event listeners setup flag initialized successfully", "APP_SERVER")
     },
@@ -113,7 +113,7 @@ app_server <- function(input, output, session) {
       log_debug("About to call setup_event_listeners...", "DEBUG")
       setup_event_listeners(app_state, emit, input, output, session, ui_service)
       log_debug("setup_event_listeners call completed", "DEBUG")
-      app_state$system$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
+      app_state$infrastructure$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
       log_debug("Event listeners setup flag set to TRUE", "DEBUG")
     },
     fallback = function(e) {
@@ -145,10 +145,11 @@ app_server <- function(input, output, session) {
   if (requireNamespace("later", quietly = TRUE)) {
     cleanup_interval_minutes <- 5
     later::later(function() {
-      # Recursive cleanup scheduler
-      schedule_periodic_cleanup <- function() {
+      shiny::withReactiveDomain(session, {
+        # Recursive cleanup scheduler
+        schedule_periodic_cleanup <- function() {
         # Check if session is still active before continuing
-        session_check <- !app_state$session$session_active || !app_state$session$background_tasks_active
+        session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
         if (session_check) {
           log_debug("🧹 Stopping periodic cleanup - session ended", "BACKGROUND_CLEANUP")
           return()
@@ -169,14 +170,15 @@ app_server <- function(input, output, session) {
         )
 
         # Schedule next cleanup only if session is still active
-        should_continue <- app_state$session$session_active && app_state$session$background_tasks_active
+        should_continue <- app_state$infrastructure$session_active && app_state$infrastructure$background_tasks_active
         if (should_continue) {
           later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
         }
       }
 
-      # Start the periodic cleanup cycle
-      schedule_periodic_cleanup()
+        # Start the periodic cleanup cycle
+        schedule_periodic_cleanup()
+      })
     }, delay = cleanup_interval_minutes * 60)  # Initial delay
 
     log_debug(paste("✅ Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), "APP_SERVER")
@@ -188,10 +190,11 @@ app_server <- function(input, output, session) {
   if (requireNamespace("later", quietly = TRUE)) {
     report_interval_minutes <- 15
     later::later(function() {
-      # Recursive performance reporting
-      schedule_periodic_reporting <- function() {
+      shiny::withReactiveDomain(session, {
+        # Recursive performance reporting
+        schedule_periodic_reporting <- function() {
         # Check if session is still active before continuing
-        session_check <- !app_state$session$session_active || !app_state$session$background_tasks_active
+        session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
         if (session_check) {
           log_debug("📊 Stopping periodic reporting - session ended", "PERFORMANCE_MONITOR")
           return()
@@ -220,14 +223,15 @@ app_server <- function(input, output, session) {
         )
 
         # Schedule next report only if session is still active
-        should_continue <- app_state$session$session_active && app_state$session$background_tasks_active
+        should_continue <- app_state$infrastructure$session_active && app_state$infrastructure$background_tasks_active
         if (should_continue) {
           later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
         }
       }
 
-      # Start the periodic reporting cycle
-      schedule_periodic_reporting()
+        # Start the periodic reporting cycle
+        schedule_periodic_reporting()
+      })
     }, delay = report_interval_minutes * 60)  # Initial delay
 
     log_debug(paste("✅ Performance monitoring scheduled every", report_interval_minutes, "minutes"), "APP_SERVER")
@@ -401,11 +405,13 @@ app_server <- function(input, output, session) {
     debug_log("Session cleanup initiated", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
 
     # Stop background tasks immediately
-    if (!is.null(app_state$session)) {
-      app_state$session$session_active <- FALSE
-      app_state$session$background_tasks_active <- FALSE
-      app_state$session$cleanup_initiated <- TRUE
+    if (!is.null(app_state$infrastructure)) {
+      app_state$infrastructure$session_active <- FALSE
+      app_state$infrastructure$background_tasks_active <- FALSE
       log_debug("🔄 Background tasks stopped", "SESSION_LIFECYCLE")
+    }
+    if (!is.null(app_state$session)) {
+      app_state$session$cleanup_initiated <- TRUE
     }
 
     # Cleanup alle observers

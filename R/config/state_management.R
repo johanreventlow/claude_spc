@@ -242,10 +242,13 @@ create_app_state <- function() {
     last_recovery_time = NULL   # Timestamp of last recovery
   )
 
-  # System Management - Infrastructure flags and state
-  app_state$system <- shiny::reactiveValues(
-    event_listeners_setup = FALSE     # Prevent double registration of event listeners
-  )
+  # Infrastructure Management - Non-reactive system state for background tasks
+  # NOTE: Using regular environment instead of reactiveValues for infrastructure
+  # flags that need to be accessed from later::later() callbacks without reactive context
+  app_state$infrastructure <- new.env(parent = emptyenv())
+  app_state$infrastructure$event_listeners_setup <- FALSE     # Prevent double registration of event listeners
+  app_state$infrastructure$session_active <- TRUE            # Session lifecycle tracking
+  app_state$infrastructure$background_tasks_active <- TRUE   # Background task control
 
   return(app_state)
 }
