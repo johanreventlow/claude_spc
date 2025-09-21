@@ -1,10 +1,10 @@
-# Claude Code Instruktioner – SPC App
+# Codex Instruktioner – SPC App
 
 ## 1) Projektoversigt
 
 Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** med **qicharts2**. Appen anvendes i klinisk kvalitetsarbejde og skal forblive stabil, forståelig og på dansk.
 
-**Udviklingsstatus:** Projektet følger industristandard mønstre for Shiny-udvikling med test-driven development, centraliseret state management og robust error handling.
+**Udviklingsstatus:** Projektet følger industristandard mønstre for Shiny-udvikling med test-driven development, centraliseret state management, robust error handling og moden build-/deploy-automation.
 
 ---
 
@@ -14,10 +14,10 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 
 **OBLIGATORISK:** Al udvikling følger Test-Driven Development:
 
-1. **Skriv tests først** - Før enhver kodeændring skrives tests for ønsket adfærd
-2. **Kør tests kontinuerligt** - Tests skal køre efter hver ændring og altid bestå
-3. **Refactor med test-sikkerhed** - Ingen kodeændring uden test-coverage
-4. **Aldrig breaking changes** - Tests må ikke brydes uden eksplicit begrundelse
+1. **Skriv tests først** – Definér den forventede adfærd, før kode ændres
+2. **Kør tests kontinuerligt** – Tests køres efter hver ændring og skal altid bestå
+3. **Refactor med test-sikkerhed** – Ingen kodeændring uden test-coverage
+4. **Ingen breaking changes** – Eksisterende tests må ikke brydes uden eksplicit godkendelse
 
 **Test-kommandoer:**
 ```r
@@ -25,6 +25,7 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 R -e "source('global.R'); testthat::test_dir('tests/testthat')"
 
 # Kør specifik test-fil
+grep "^test-.*\\.R$" tests/testthat -n
 R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refactoring.R')"
 
 # Test-coverage verification
@@ -33,42 +34,38 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 
 ### 2.2 Defensive Programming
 
-* **Input validation** - Valider alle inputs ved entry points
-* **Error handling** - Explicit fejlhåndtering med `tryCatch()` og `safe_operation()`
-* **Scope guards** - Brug `exists()` checks for variabel-scope sikkerhed
-* **Graceful degradation** - Fallback-mønstre når komponenter fejler
-* **State consistency** - Dual-state sync patterns for migrationskompatibilitet
+* **Input validation** – Valider alle inputs ved entry points
+* **Error handling** – Brug `safe_operation()` og eksplicit `tryCatch()` blokke
+* **Scope guards** – Benyt `exists()` checks ved migrations/logiske skift
+* **Graceful degradation** – Implementér fallback-mønstre hvor komponenter kan fejle
+* **State consistency** – Sikr dual-state synkronisering for kompatibilitet
 
 ### 2.3 Observability & Debugging
 
 **DEBUG-FIRST Approach:**
 
-* **Detaljeret logging** - Strukturerede `cat()` statements med prefixes:
+* **Struktureret logging** – Brug det centrale logger-API i `R/utils/logging.R` (`log_debug()`, `log_info()`, `log_warn()`, `log_error()`). Rå `cat()`-kald må ikke anvendes.
+* **Kontekst-tags** – Angiv `component`-felt (fx `[APP_SERVER]`, `[FILE_UPLOAD]`, `[COLUMN_MGMT]`, `[PHASE4]`, `[AUTO_DETECT]`, `[PLOT_DATA]`) for alle log-beskeder.
+* **Struktureret payload** – Tilføj relevante data som named list i `details`-argumentet, så logs kan aggregeres.
+* **Systematisk fejlsporing** – Brug `log_error()` og `safe_operation()` til konsistent fejlrapportering.
+* **Reaktiv inspektion** – Debug reactive chains via `inspect_state()` utilities og målrettede test helpers.
+
+**Logging eksempel:**
 ```r
-cat("DEBUG: [COMPONENT] ===========================================\n")
-cat("DEBUG: [COMPONENT] Status description\n")
-cat("DEBUG: [COMPONENT] Variable name:", variable_value, "\n")
-cat("DEBUG: [COMPONENT] ✅ Success message\n")
+log_debug(
+  component = "[APP_SERVER]",
+  message = "Initialiserer data-upload observer",
+  details = list(session_id = session$token)
+)
 ```
-
-* **Kategoriserede debug-tags:**
-  - `[APP_SERVER]` - Main server flow
-  - `[FILE_UPLOAD]` - File operations
-  - `[COLUMN_MGMT]` - Column management
-  - `[PHASE4]` - Centralized state operations
-  - `[AUTO_DETECT]` - Auto-detection logic
-  - `[PLOT_DATA]` - Data processing for plots
-
-* **Systematic error tracking** - Centralized logging med `log_error()` functionen
-* **State inspection** - Debug reactive chains med value dumps
 
 ### 2.4 Modularity & Architecture
 
-* **Single Responsibility** - Hver funktion har én klar opgave
-* **Immutable data flow** - Undgå at mutere data in-place
-* **Centralized state management** - Brug `app_state` schema i stedet for spredt `values$`
-* **Event-driven patterns** - Erstat timing-baserede operationer med reactive events
-* **Dependency injection** - Functions modtager dependencies som parameters
+* **Single Responsibility** – Hver funktion løser én klart defineret opgave
+* **Immutable data flow** – Undgå in-place mutation; returnér nye objekter
+* **Centralized state management** – Brug `app_state` schema fremfor spredte `values$`
+* **Event-driven patterns** – Udløs events via den fælles event-bus i stedet for ad-hoc triggers
+* **Dependency injection** – Funktioner modtager deres afhængigheder som argumenter (se `R/utils/dependency_injection.R`)
 
 ---
 
@@ -78,129 +75,71 @@ cat("DEBUG: [COMPONENT] ✅ Success message\n")
 
 **Unified Event Architecture (OBLIGATORISK for al ny udvikling):**
 ```r
-# ✅ CORRECT: Brug unified reactive event-bus
+# ✅ Korrekt brug af event-bus
 emit$data_loaded()
 emit$columns_detected()
 emit$ui_sync_needed()
 
-observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
-  # Your logic here
+observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
+  handle_data_loaded()
 })
 
-# ❌ WRONG: Ad-hoc reactiveVal triggers
-my_trigger <- reactiveVal(NULL)
-observeEvent(old_system$trigger, { new_system$trigger(value) })
+# ❌ Forkert: Ad-hoc reactiveVal triggers
+legacy_trigger <- reactiveVal(NULL)
+observeEvent(legacy_trigger(), { shiny::showNotification("Undgå dette mønster") })
 ```
 
-**Event Architecture Pattern:**
-* **Data Change** → **Emit Event** → **Centralized Listeners** → **State Update** → **Cascade Events**
-* **Events**: Add to `app_state$events` i `global.R`
-* **Emit functions**: Add to `create_emit_api()` i `global.R`
-* **Listeners**: Add to `setup_event_listeners()` i `utils_event_system.R`
+**Event-arkitektur:**
+* **Data change** → **Emit event** → **Centralized listener** → **State update** → **Cascade events**
+* **Events** defineres i `global.R` (`app_state$events`)
+* **Emit-funktioner** tilføjes i `create_emit_api()`
+* **Lyttere** registreres i `R/utils_event_system.R` via `setup_event_listeners()`
 
 **Unified State Management (OBLIGATORISK for al data):**
 ```r
-# ✅ CORRECT: Brug centralized app_state
+# ✅ App state som single source of truth
 app_state$data$current_data <- new_data
 app_state$columns$x_column <- detected_column
 app_state$session$file_uploaded <- TRUE
 
-# ❌ WRONG: Scattered reactive values
+# ❌ Forkert: Lokale reactiveVal til delt state
 values$some_data <- data
-local_reactive <- reactiveVal(value)
 ```
 
-**State Management Patterns:**
-* **Single source of truth** - Alt data i `app_state` structure
-* **Reactive consistency** - Brug `reactiveValues()` for proper Shiny reactivity
-* **Event-driven updates** - State changes trigger events, ikke direkte observere
-* **Environment-based sharing** - By-reference sharing via `new.env()` for scope safety
-
 **Reactive Programming Patterns:**
-* **Event-based triggers** - Use event-bus instead of direct reactive dependencies
-* **Priority-based execution** - `priority = OBSERVER_PRIORITIES$HIGH/MEDIUM/LOW`
-* **Explicit dependencies** - Use `req()` guards for conditional execution
-* **Dependency isolation** - Use `isolate()` for breaking reactive dependencies when needed
-* **Error boundaries** - Wrap reactive expressions in error handling
+* **Event-baserede triggere** – Undgå implicitte afhængigheder
+* **Prioritetsstyring** – Brug `priority = OBSERVER_PRIORITIES$HIGH/MEDIUM/LOW`
+* **Explicit dependencies** – `req()` og `validate()` før logik
+* **Isolation når nødvendigt** – Brug `isolate()` med omtanke og kun i reaktiverede kontekster
+* **Error boundaries** – Wrap komplekse reactive udtryk i `safe_operation()`
 
 ### 3.2 R Code Quality
 
-**Coding Standards:**
-* **Danish comments** - Al funktionalitetsbeskrivelse på dansk
-* **English function names** - Funktionsnavne og variable på engelsk
-* **Consistent naming** - snake_case for funktioner, camelCase for UI komponenter
-* **Type safety** - Explicit type checks med `is.numeric()`, `is.character()` osv.
+* **Danske kommentarer** – Beskriv funktionalitet på dansk
+* **Engelske funktionsnavne** – Funktioner, variabler mv. navngives på engelsk
+* **Navngivningskonvention** – snake_case for logik, camelCase for UI-komponenter
+* **Type safety** – Brug `is.numeric()`, `is.character()` etc. før beregninger
+* **Statisk analyse** – Kør `lintr` via `devtools::lint()` før commits
 
-**Performance Patterns:**
-* **Lazy evaluation** - `reactive()` expressions der kun evalueres ved ændringer
-* **Data caching** - Genberegn ikke data unødvendigt
-* **Memory management** - Cleanup med `rm()` og garbage collection awareness
+### 3.3 Error Handling Patterns
 
-### 3.3 Logging & Debugging Standards
-
-**Centralized Logging System:**
-Al logging og debugging i projektet udføres med `log_debug()` funktionen fra `utils_logging.R`. Cat-baserede debug beskeder er konverteret til struktureret logging for bedre observability.
-
-**Logging Pattern:**
 ```r
-# ✅ CORRECT: Brug log_debug() med komponent-tags
-log_debug("Operation started", "COMPONENT_NAME")
-log_debug(paste("Processing data with", nrow(data), "rows"), "DATA_PROCESSING")
-log_debug("✅ Operation completed successfully", "COMPONENT_NAME")
-
-# ❌ WRONG: Undgå cat() til debug-formål
-cat("DEBUG: message\n")
-cat(paste("DEBUG:", variable, "\n"))
-```
-
-**Logging Components & Tags:**
-* `"APP_SERVER"` - Main server flow og initialization
-* `"EVENT_SYSTEM"` - Reactive event system operations
-* `"AUTO_DETECT"` - Column auto-detection logic
-* `"DROPDOWN_DEBUG"` - UI dropdown og column selection
-* `"DATA_PROCESSING"` - Data loading og transformation
-* `"LOOP_PROTECTION"` - Loop protection mechanisms
-* `"UI_SYNC"` - UI synchronization operations
-* `"SESSION_LIFECYCLE"` - Session management
-* `"PERFORMANCE"` - Performance monitoring
-* `"ERROR_SYSTEM"` - Error handling og recovery
-
-**Debug Level Hierarchy:**
-* `log_debug()` - Detailed development information
-* `log_info()` - General application flow
-* `log_warn()` - Potential issues requiring attention
-* `log_error()` - Critical errors requiring intervention
-
-**Environment Configuration:**
-```r
-# Aktivér debug logging under udvikling
-Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
-
-# Produktions-logging (kun warnings og errors)
-Sys.setenv(SPC_LOG_LEVEL = "WARN")
-```
-
-### 3.4 Error Handling Patterns
-
-**Robust error handling:**
-```r
-# Centralized error wrapper
 safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE) {
   tryCatch({
     code
   }, error = function(e) {
     log_error(
-      paste(operation_name, "fejlede:", e$message),
-      level = "error",
-      show_user = show_user,
-      session = session
+      component = "[ERROR_HANDLER]",
+      message = paste(operation_name, "fejlede"),
+      details = list(error_message = e$message),
+      session = session,
+      show_user = show_user
     )
     return(fallback)
   })
 }
 
-# Scope-safe variable access during transitions
-variable_check <- if (exists("feature_flag") && feature_flag && exists("new_system")) {
+variable_check <- if (exists("feature_flag") && isTRUE(feature_flag) && exists("new_system")) {
   new_system$section$variable
 } else {
   legacy_system$variable
@@ -213,67 +152,82 @@ variable_check <- if (exists("feature_flag") && feature_flag && exists("new_syst
 
 ### 4.1 Development Lifecycle
 
-**Obligatorisk arbejdsgang:**
-
-1. **Problem definition** - Start med én linje problem statement
-2. **Test design** - Skriv tests for ønsket adfærd FØRST
-3. **Minimal implementation** - Implementer mindste mulige ændring
-4. **Test verification** - Verificer at alle tests består
-5. **Integration testing** - Test full application flow
-6. **Commit preparation** - Dokumenter ændringer og rationale
-7. **Code review** - Self-review via diff inspection
+1. **Problem definition** – Én linje der beskriver problemet
+2. **Test design** – Skriv tests der dokumenterer ønsket adfærd
+3. **Minimal implementation** – Implementér mindste nødvendige ændring
+4. **Test verification** – Kør hele test-suiten og dokumentér resultat
+5. **Integration testing** – Test full app flow (manuelt og automatisk)
+6. **Commit preparation** – Ryd op, opdater dokumentation, gennemfør self-review
+7. **Code review** – Inspicér diffs, valider naming/arkitektur og log-niveauer
 
 ### 4.2 Testing Strategy
 
-**Multi-Layer Testing:**
+* **Unit tests** – Fokus på pure functions og service-lag
+* **Integration tests** – Reactive chains, event-bus og state transitions
+* **Snapshot tests** – Brug `shinytest2::AppDriver` til UI-regression
+* **Performance tests** – Profilér kritiske flows (`profvis`, `bench::mark`)
+* **User scenario tests** – Reproducer kliniske workflows i test scripts
 
-* **Unit tests** - Individuelle funktioner og components
-* **Integration tests** - Reactive chains og data flow
-* **Regression tests** - Sikre at tidligere fejl ikke genoptræder
-* **Performance tests** - Memory usage og response times
-* **User scenario tests** - End-to-end workflows
-
-**Test Coverage Goals:**
-* **100% critical path** - Core functionality skal være 100% testet
-* **90%+ overall** - Generel test coverage
-* **Edge case coverage** - Null values, empty data, error conditions
-* **Cross-browser compatibility** - Test på different user agents
+**Coverage-mål:**
+* **100%** på kritiske stier (data load, plot generation, state sync)
+* **≥90%** samlet test coverage
+* **Edge cases** – Null values, tomme datasæt, fejlbehæftede uploads, store filer
 
 ### 4.3 Version Control & Deployment
 
-**Git Strategy:**
-* **Atomic commits** - Hver commit repræsenterer én logisk ændring
-* **Descriptive messages** - Følg conventional commit format på dansk
-* **Test verification** - Commits inkluderer kun kode hvor tests består
-* **No breaking changes** - Backward compatibility maintained
-
-**Deployment Pipeline:**
-* **Feature flags** - Test nye features sikkert med `TEST_MODE_*` flags
-* **Staged rollout** - Test på separate ports før production
-* **Monitoring** - Log-based monitoring af production issues
-* **Rollback capability** - Altid mulighed for at revertrere til previous stable version
+* **Atomic commits** – Én logisk ændring pr. commit
+* **Conventional commits (dansk)** – Se sektion 9.2 for format
+* **Tests før commit** – Ingen commits uden grønt test-resultat
+* **Ingen breaking changes** – Backward compatibility er default
+* **Feature flags** – Brug `TEST_MODE_*` og `FEATURE_FLAG_*` i konfiguration
+* **Staged rollout** – Test på separate porte (4040, 5050, 6060) før produktion
+* **CI/CD** – Integrér `devtools::check()`, tests og `lintr` i pipeline
 
 ---
 
 ## 5) Configuration & Environment
 
-### 5.1 Development Environment
+### 5.1 Miljøkonfiguration med `golem::get_golem_options()`
 
-**OBLIGATORISKE indstillinger under udvikling:**
+* **Konfiguration lagres i `inst/golem-config.yml`** (eller alternativt `config/production.yml` m.fl.).
+* **Opsæt defaults** i `golem-config.yml` under sektionerne `default`, `dev`, `test`, `prod`.
+* **Læsning af konfiguration:**
+```r
+config_value <- golem::get_golem_options("test_mode_auto_load", default = FALSE)
+```
+* **Initialisering:** I `global.R` eller `R/app_initialization.R`, kald `golem::set_golem_options()` baseret på miljø (fx `Sys.getenv("GOLEM_CONFIG_ACTIVE")`).
+* **Miljøvælger:** Brug `Sys.setenv(GOLEM_CONFIG_ACTIVE = "dev")` i udvikling og efterlad blankt i produktion (default = `prod`).
 
-* `TEST_MODE_AUTO_LOAD <- TRUE` - Auto-load test data
-* `AUTO_RESTORE_ENABLED <- FALSE` - Disable session restore for clean testing
-* **Debug logging enabled** - Verbose output for troubleshooting
-* **Multiple port testing** - Test på ports 4040, 5050, 6060 etc.
+### 5.2 Standardindstillinger pr. miljø
 
-### 5.2 Data Integrity
+* **DEV:**
+  * `test_mode_auto_load = TRUE`
+  * `auto_restore_enabled = FALSE`
+  * `logging.level = "debug"`
+  * `api_endpoints.mock = TRUE`
+* **TEST:**
+  * `test_mode_auto_load = TRUE`
+  * `logging.level = "info"`
+  * `ui.launch_browser = FALSE`
+* **PROD:**
+  * `test_mode_auto_load = FALSE`
+  * `logging.level = "warn"`
+  * `ui.launch_browser = TRUE`
 
-**Kritiske data-regler:**
+### 5.3 Dependency- og miljøstyring
 
-* **CSV format preservation** - ALDRIG ændre encoding, CRLF, delimiter eller BOM
-* **Windows compatibility** - Al CSV-håndtering skal virke på Windows
-* **Unicode safety** - Danish characters (æ, ø, å) skal preserved
-* **Backup før changes** - Git commits før enhver data-related ændring
+* **`renv`** – Hold projektet låst til versionsspecifikke pakker
+* **`pak::pkg_install()`** – Brug deterministisk installation i CI
+* **`DESCRIPTION`** – Alle runtime-dependencies skal stå i `Imports`
+* **Namespace calls** – Brug `pkg::fun()` fremfor `library()` i runtime-kode
+* **`Sys.getenv()`** – Alle secrets indlæses via miljøvariabler
+
+### 5.4 Data Integrity
+
+* **CSV format preservation** – Ingen ændring af encoding, delimiter eller BOM
+* **Windows compatibility** – Tests inkluderer Windows-lignende konfigurationer
+* **Unicode safety** – Bevar æ/ø/å og andre locale-tegn uændret
+* **Backup før dataændringer** – Git commits eller manuelle kopier før manipulation
 
 ---
 
@@ -281,15 +235,14 @@ variable_check <- if (exists("feature_flag") && feature_flag && exists("new_syst
 
 ### 6.1 Baseline Rules
 
-* **ALDRIG** ændre globale konfigurationer uden eksplicit aftale
+* **Ingen ændring af globale konfigurationer** uden eksplicit godkendelse
 * Bevar **dansk interface** og **danske kommentarer**
-* Udelad **kommentarer om claude i commit-beskeder**
-* Reference commit `f05a97f` for stabil baseline version
+* Reference commit `f05a97f` som stabil baseline
 
 ### 6.2 Architecture Boundaries
 
 * `/R/modules/` – Shiny-moduler (visualisering, status mv.)
-* `/R/server/` – Server-logik, opdelt i filer
+* `/R/server/` – Server-logik
 * `/R/ui/` – UI-komponenter
 * `/R/data/` – Eksempeldata og testfiler
 * `/tests/testthat/` – Test suites og fixtures
@@ -299,7 +252,7 @@ variable_check <- if (exists("feature_flag") && feature_flag && exists("new_syst
 * Ingen automatiske commits uden eksplicit aftale
 * Ingen stor refaktorering uden godkendelse
 * Ingen ændringer af `brand.yml` eller hospitalskonfiguration
-* Ingen nye dependencies (pakker) uden godkendelse
+* Ingen nye dependencies uden godkendelse
 * Bevar eksisterende API'er medmindre opgaven kræver andet
 
 ---
@@ -308,36 +261,31 @@ variable_check <- if (exists("feature_flag") && feature_flag && exists("new_syst
 
 ### 7.1 Pre-Commit Checklist
 
-**OBLIGATORISK før hver commit:**
-
-- [ ] **Tests kørt og bestået** - All tests green
-- [ ] **Manual functionality test** - Core user flows verified
-- [ ] **Debug logging reviewed** - Log statements provide adequate information
-- [ ] **Error handling verified** - Edge cases handled gracefully
-- [ ] **Performance impact assessed** - No significant regression
-- [ ] **Documentation updated** - Code comments and README updated if needed
-- [ ] **Data integrity confirmed** - No CSV or configuration file corruption
+- [ ] **Tests kørt og bestået** – Hele test-suiten
+- [ ] **Manual functionality test** – Kerneflows verificeret
+- [ ] **Logging output valideret** – Strukturerede logs uden rå `cat()`
+- [ ] **Error handling verificeret** – Edge cases dækket
+- [ ] **Performance vurderet** – Ingen regressioner
+- [ ] **Dokumentation opdateret** – README, comments, ADRs
+- [ ] **Data integrity** – Ingen utilsigtede dataændringer
+- [ ] **`lintr`/`styler`** – Kør `devtools::lint()` og `styler::style_file()` hvis nødvendigt
 
 ### 7.2 Code Review Criteria
 
-**Self-review standards:**
-
-* **Correctness** - Logic is sound and handles edge cases
-* **Readability** - Code is self-documenting with appropriate comments
-* **Maintainability** - Future developers can understand and modify
-* **Performance** - No obvious inefficiencies or memory leaks
-* **Security** - No hardcoded secrets or vulnerable patterns
-* **Consistency** - Follows established patterns in codebase
+* **Correctness** – Logik, edge cases og reaktive afhængigheder er konsistente
+* **Readability** – Selvforklarende struktur, korte funktioner, tydelige navne
+* **Maintainability** – Ingen skjulte sideeffekter, solid testdækning
+* **Performance** – Effektive dataoperationer, caching anvendt hvor relevant
+* **Security** – Input valideret, ingen secrets i kode
+* **Consistency** – Færre mønstre, mere genbrug af utils og event-bus
 
 ### 7.3 Production Readiness
 
-**Deployment criteria:**
-
-* **Zero failing tests** - Complete test suite passes
-* **Performance benchmarks met** - Response times within acceptable range
-* **Error monitoring configured** - Proper logging and alerting
-* **Rollback plan documented** - Clear procedure for reverting changes
-* **User acceptance** - Key workflows tested by stakeholders
+* **Zero failing tests** – inkl. integration/snapshot tests
+* **Performance benchmarks** – Responstid og memory under tærskler
+* **Error monitoring** – `shinylogs` eller ekstern log-monitoring aktiveret
+* **Rollback plan** – Dokumenteret procedure i `docs/DEPLOYMENT.md`
+* **User acceptance** – Kliniske nøgleflows godkendt af fagpersoner
 
 ---
 
@@ -345,71 +293,67 @@ variable_check <- if (exists("feature_flag") && feature_flag && exists("new_syst
 
 ### 8.1 Debugging Methodology
 
-**Systematic debugging approach:**
-
-1. **Reproduce consistently** - Create minimal reproducible example
-2. **Isolate component** - Identify specific module or function causing issue
-3. **Check logs** - Review debug output and error messages
-4. **Test assumptions** - Verify input data and state conditions
-5. **Add instrumentation** - Insert additional logging if needed
-6. **Test systematically** - Binary search through code to locate issue
-7. **Document resolution** - Record solution for future reference
+1. **Reproducer** – Opret minimal reproduktion
+2. **Isolér komponent** – Identificér modul/funktion
+3. **Analyser logs** – Læs strukturerede log entries
+4. **Test antagelser** – Verificér input og state
+5. **Instrumentér** – Tilføj midlertidige `log_debug()`-kald
+6. **Binary search** – Deaktiver dele for at finde fault isolation point
+7. **Dokumentér** – Opdater `docs/KNOWN_ISSUES.md` eller tests
 
 ### 8.2 Common Issues & Solutions
 
 **Reactive chain problems:**
-* **Infinite loops** - Check for circular dependencies
-* **Race conditions** - Implement proper observer priorities
-* **State inconsistency** - Verify dual-state sync patterns
+* **Infinite loops** – Tjek cirkulære event-afhængigheder
+* **Race conditions** – Brug `priority` og `req()` guards
+* **State inconsistency** – Sikr at `app_state` opdateres atomisk og via events
 
 **Performance issues:**
-* **Memory leaks** - Profile with `profvis` and check for retained objects
-* **Slow reactives** - Add debouncing and caching
-* **UI blocking** - Move heavy computation to background processes
+* **Memory leaks** – Profilér med `profvis`, ryd store objekter ved `session$onSessionEnded`
+* **Slow reactives** – Debounce/throttle, cache dyre operationer
+* **UI blocking** – Flyt tunge beregninger til futurobjekter eller baggrundsjobs
 
 **Data issues:**
-* **CSV parsing failures** - Verify encoding and delimiter settings
-* **Missing values** - Check `na.strings` and `colClasses` parameters
-* **Type conversion errors** - Explicit type checking and conversion
+* **CSV parsing** – Valider delimiter/encoding via `readr::problems()`
+* **Missing values** – Tilføj eksplicit NA-håndtering
+* **Type conversion** – Brug `col_types` og valider efter upload
 
 ---
 
-## 9) Communication & Documentation
+## 9) Kommunikation & Dokumentation
 
-### 9.1 User Communication
+### 9.1 Udviklerkommunikation
 
-* **Precise action items** - "Gør X i fil Y, linje Z"
-* **Clear manual steps** - Mark with **[MANUELT TRIN]**
-* **Factual reporting** - No filler, stick to diffs and checklists
-* **Problem-solution format** - What was wrong, how it was fixed
+* **Præcise action items** – "Gør X i fil Y, linje Z"
+* **[MANUELT TRIN]** – Marker manuelle skridt tydeligt
+* **Faktuel rapportering** – Fokus på diffs, tests og next steps
+* **Problem-løsning format** – Beskriv problem, analyse, løsning, tests
+* **ADR'er** – Arkitekturvalg dokumenteres i `docs/adr/`
 
-### 9.2 Commit Message Format
-
-**Danish conventional commits:**
+### 9.2 Commit Message Format (uden eksterne referencer)
 
 ```
 type(scope): kort handle-orienteret beskrivelse
 
-Længere beskrivelse af ændringen og dens rationale.
-Inkluder kontekst for fremtidige udviklere.
+Fritekst med kontekst, testresultater og rationale.
 
-- Bullet points for multiple changes
-- Reference til issue numbers hvis relevant
-- Breaking changes markeret tydeligt
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
+- Bullet points for flere ændringer
+- Referencer til issues eller ADR'er
+- Breaking changes markeres eksplicit
 ```
 
-**Types:**
-* `feat` - Ny funktionalitet
-* `fix` - Bug fixes
-* `refactor` - Code refactoring uden funktionalitetsændring
-* `test` - Test tilføjelser eller ændringer
-* `docs` - Documentation ændringer
-* `chore` - Maintenance opgaver
-* `perf` - Performance forbedringer
+**Typer:**
+* `feat` – Ny funktionalitet
+* `fix` – Bugfix
+* `refactor` – Omstrukturering uden funktionel ændring
+* `test` – Nye eller ændrede tests
+* `docs` – Dokumentation
+* `chore` – Vedligehold
+* `perf` – Performanceforbedring
+
+**Test-noter i commit body:**
+* `Tests: R -e "source('global.R'); testthat::test_dir('tests/testthat')"`
+* `Lintr: devtools::lint()`
 
 ---
 
@@ -417,12 +361,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ### 10.1 State Management Patterns
 
-**Unified State Architecture Schema:**
 ```r
-# Created via create_app_state() function
-app_state <- new.env(parent = emptyenv())  # Environment for by-reference sharing
+# Oprettes via create_app_state()
+app_state <- new.env(parent = emptyenv())
 
-# Reactive Event Bus - Central event system for all triggers
 app_state$events <- reactiveValues(
   data_loaded = 0L,
   auto_detection_started = 0L,
@@ -435,7 +377,6 @@ app_state$events <- reactiveValues(
   test_mode_ready = 0L
 )
 
-# Data Management - ReactiveValues for proper Shiny reactivity
 app_state$data <- reactiveValues(
   current_data = NULL,
   original_data = NULL,
@@ -445,7 +386,6 @@ app_state$data <- reactiveValues(
   table_version = 0
 )
 
-# Column Management - ReactiveValues for consistency
 app_state$columns <- reactiveValues(
   auto_detect_in_progress = FALSE,
   auto_detect_completed = FALSE,
@@ -456,7 +396,6 @@ app_state$columns <- reactiveValues(
   cl_column = NULL
 )
 
-# Session Management
 app_state$session <- reactiveValues(
   auto_save_enabled = TRUE,
   restoring_session = FALSE,
@@ -469,79 +408,68 @@ app_state$session <- reactiveValues(
 
 **Event-Driven State Update Pattern:**
 ```r
-# ✅ CORRECT: Event-driven state updates
-handle_data_upload <- function(new_data) {
-  # 1. Update state
-  app_state$data$current_data <- new_data
-  app_state$data$file_info <- attr(new_data, "file_info")
-
-  # 2. Emit event to trigger downstream effects
-  emit$data_loaded()  # This triggers auto-detection, UI sync, etc.
+handle_data_upload <- function(new_data, emit) {
+  safe_operation(
+    operation_name = "Data upload state update",
+    code = {
+      app_state$data$current_data <- new_data
+      app_state$data$file_info <- attr(new_data, "file_info")
+      emit$data_loaded()
+    }
+  )
 }
 
-# ✅ CORRECT: Event listeners with proper priorities
-observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
-  if (!is.null(app_state$data$current_data)) {
-    emit$auto_detection_started()
-  }
+observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
+  req(app_state$data$current_data)
+  emit$auto_detection_started()
 })
 
-observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = 800, {
-  if (!is.null(app_state$columns$auto_detect_results)) {
-    emit$ui_sync_needed()
-  }
-})
-
-# ❌ WRONG: Direct state observation (creates tight coupling)
-observeEvent(app_state$data$current_data, {
-  # Direct reactive dependency - avoid this pattern
+observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$MEDIUM, {
+  req(app_state$columns$auto_detect_results)
+  emit$ui_sync_needed()
 })
 ```
 
 ### 10.2 Performance Optimization Patterns
 
-**Lazy Loading:**
 ```r
-# Create reactive that only updates when truly needed
-expensive_computation <- debounce(reactive({
-  req(input$data_source)
-  # Heavy computation here
-}), millis = 1000)
-```
+expensive_computation <- shiny::debounce(
+  reactive({
+    req(app_state$data$current_data)
+    calculate_complex_metrics(app_state$data$current_data)
+  }),
+  millis = 750
+)
 
-**Memory Management:**
-```r
-# Cleanup observers on session end
 session$onSessionEnded(function() {
-  # Destroy observers
-  # Clear large objects
-  # Release resources
+  remove_observers()
+  clear_large_objects()
 })
 ```
 
 ### 10.3 Extension Points
 
-**Adding New Features:**
-1. **Start with tests** - Define expected behavior
-2. **Implement incrementally** - Small, testable changes
-3. **Follow existing patterns** - Maintain consistency
-4. **Document thoroughly** - Update this file if needed
-5. **Monitor impact** - Watch for performance regressions
+1. **Start med tests** – Definér forventet adfærd
+2. **Implementér inkrementelt** – Små, testbare commits
+3. **Følg eksisterende patterns** – Event-bus, `app_state`, logging
+4. **Dokumentér** – ADR, README, inline-kommentarer hvor nødvendigt
+5. **Monitorér** – Profilér og log performance-impact
 
 ---
 
 ## 11) Final Reminders
 
 ### Development Philosophy
-* **Quality over speed** - Robust code is more valuable than fast delivery
-* **Test-driven confidence** - Tests provide safety net for refactoring
-* **Observability first** - Debug information is crucial for maintenance
-* **User-focused design** - Clinical quality work demands reliability
-* **Continuous improvement** - Always look for opportunities to improve code quality
+* **Quality over speed** – Klinisk software kræver robusthed
+* **Test-driven confidence** – Tests som sikkerhedsnet ved refaktorering
+* **Observability først** – Logs og metrics sikrer hurtig fejlfindingscyklus
+* **User-focused design** – UX og sprog skal understøtte danske klinikere
+* **Continuous improvement** – Opsaml læring i ADR'er og retrospektiver
 
 ### Project Goals
-* **Stability** - System must be reliable for clinical quality work
-* **Maintainability** - Code must be understandable and modifiable
-* **Performance** - Responsive user experience
-* **Danish language support** - Cultural and linguistic requirements
-* **Best practice compliance** - Industry standard development patterns
+* **Stabilitet** – Systemet skal være driftsikkert
+* **Maintainability** – Koden skal være forståelig og udvidbar
+* **Performance** – Responsiv brugeroplevelse selv med større datasæt
+* **Danish language support** – Terminologi og labels på dansk
+* **Best practice compliance** – Moderne Shiny- og softwareudviklingsstandarder
+

@@ -1,6 +1,5 @@
 # utils_end_to_end_debug.R
 # Enhanced debug utilities for comprehensive end-to-end testing
-# Phase 8: Detailed debugging infrastructure for complete system visibility
 
 # END-TO-END DEBUG INFRASTRUCTURE ==========================================
 

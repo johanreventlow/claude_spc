@@ -405,6 +405,5 @@ log_autodetect_decisions <- function(results, trigger_type, session_id = NULL) {
     .context = "AUTODETECT_DECISIONS"
   )
 
-  # TODO: Integration with lgr for structured logging when implemented
-  # lgr::lgr$info("Autodetect completed", trigger = trigger_type, results = results)
+  # Autodetect logging handled by existing log_debug() system
 }

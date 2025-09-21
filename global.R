@@ -63,14 +63,12 @@ source_from_base <- function(relative_path) {
 }
 
 source_from_base("R/utils/logging.R")
-source_from_base("R/utils/dependency_injection.R")  # Dependency injection framework
-# DELETED: utils_app_setup.R - dependencies moved to DESCRIPTION
-source_from_base("R/utils/shinylogs_config.R")  # Advanced web-based logging with shinylogs
+source_from_base("R/utils/dependency_injection.R")
+source_from_base("R/utils/shinylogs_config.R")
 source_from_base("R/utils/advanced_debug.R")  # Advanced debug infrastructure
-source_from_base("R/utils/end_to_end_debug.R")  # PHASE 8: Enhanced debugging for comprehensive testing
-# constants.R removed - all constants now in modular config files
+source_from_base("R/utils/end_to_end_debug.R")
 
-# CONFIGURATION - modularized from global.R
+# CONFIGURATION
 source_from_base("R/config/hospital_branding.R")
 source_from_base("R/config/chart_types.R")
 source_from_base("R/config/observer_priorities.R")
@@ -81,17 +79,14 @@ source_from_base("R/config/system_config.R")
 source_from_base("R/config/environment_profiles.R")  # Phase 4.2: Environment-specific configuration profiles
 source_from_base("R/config/app_runtime_config.R")
 
-# CORE FUNCTIONS - moved from runtime to global initialization
-# REMOVED: R/fct_chart_helpers.R - functions moved to fct_spc_helpers.R and fct_spc_plot_generation.R
+# CORE FUNCTIONS
 source_from_base("R/core/spc_helpers.R")
 source_from_base("R/fct_spc_plot_generation.R")
 source_from_base("R/core/file_io.R")
 source_from_base("R/core/autodetect_helpers.R")
-# REMOVED: R/fct_data_validation.R - functionality integrated into R/fct_spc_helpers.R
-# DELETED: utils_local_storage_js.R - functionality moved to www/local-storage.js
 source_from_base("R/utils/local_storage.R")
 
-# SERVER COMPONENTS - moved from runtime to global initialization
+# SERVER COMPONENTS
 source_from_base("R/server/utils_session_helpers.R")
 source_from_base("R/server/utils_server_management.R")
 source_from_base("R/server/utils_column_management.R")
@@ -99,20 +94,18 @@ source_from_base("R/fct_file_operations.R")
 source_from_base("R/fct_visualization_server.R")
 source_from_base("R/modules/mod_spc_chart_server.R")
 
-# PERFORMANCE OPTIMIZATIONS - reactive consolidation og caching
+# PERFORMANCE OPTIMIZATIONS
 source_from_base("R/server/performance_helpers.R")
 source_from_base("R/server/performance_optimizations.R")
 source_from_base("R/server/plot_optimizations.R")
 
-# UI COMPONENTS - moved from runtime to global initialization
+# UI COMPONENTS
 source_from_base("R/modules/mod_spc_chart_ui.R")
-# DELETED: mod_session_storage.R - functionality integrated into session helpers
-# DELETED: mod_data_upload.R - functionality integrated into file upload system
 
-# GOLEM-STYLE UTILITIES - proper package patterns
+# GOLEM-STYLE UTILITIES
 source_from_base("R/golem_utils.R")
 
-# MAIN APP COMPONENTS - moved from runtime to global initialization
+# MAIN APP COMPONENTS
 source_from_base("R/server/app_server.R")
 source_from_base("R/ui/app_ui.R")
 source_from_base("R/run_app.R")
@@ -205,7 +198,6 @@ source_from_base("R/ui/utils_ui_helpers.R")
 source_from_base("R/ui/utils_ui_components.R")
 source_from_base("R/ui/utils_ui_updates.R")
 source_from_base("R/server/utils_event_system.R")
-# NOTE: utils_server_management.R already loaded at line 94
 source_from_base("R/utils/performance.R")
 source_from_base("R/utils/memory_management.R")
 

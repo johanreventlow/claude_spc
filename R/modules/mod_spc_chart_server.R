@@ -226,7 +226,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         add = TRUE
       )
 
-      # PHASE 4: Unified state assignment using helper function
+      # Use unified state assignment
       set_plot_state("is_computing", TRUE)
 
       # Get chart type from config (already validated)
