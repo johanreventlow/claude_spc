@@ -198,6 +198,52 @@ test_that("App initialisering og setup fungerer korrekt", {
   test_debug_log("App initialization tests completed\n")
 })
 
+test_that("TEST_MODE_AUTO_LOAD environment toggles auto-load sikkert", {
+
+  env_vars <- c(
+    "TEST_MODE_AUTO_LOAD",
+    "SHINY_SERVER_VERSION",
+    "CONNECT_SERVER",
+    "SHINYAPPS_SERVER",
+    "R_CONFIG_ACTIVE",
+    "RSTUDIO"
+  )
+
+  old_env <- setNames(vector("list", length(env_vars)), env_vars)
+  for (nm in env_vars) {
+    old_env[[nm]] <- Sys.getenv(nm, NA_character_)
+  }
+
+  on.exit({
+    for (nm in names(old_env)) {
+      value <- old_env[[nm]]
+      if (is.na(value)) {
+        Sys.unsetenv(nm)
+      } else {
+        do.call(Sys.setenv, setNames(list(value), nm))
+      }
+    }
+  }, add = TRUE)
+
+  # Neutraliser andre miljødetektorer for deterministiske tests
+  Sys.setenv(
+    SHINY_SERVER_VERSION = "",
+    CONNECT_SERVER = "",
+    SHINYAPPS_SERVER = "",
+    R_CONFIG_ACTIVE = "",
+    RSTUDIO = "0"
+  )
+
+  Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
+  expect_true(detect_environment())
+
+  Sys.setenv(TEST_MODE_AUTO_LOAD = "FALSE")
+  expect_false(detect_environment())
+
+  Sys.setenv(TEST_MODE_AUTO_LOAD = "MAYBE")
+  expect_false(detect_environment())
+})
+
 test_that("Unified state system initialization fungerer", {
 
   # Test at create_app_state eksisterer og fungerer (erstatter legacy initialize_reactive_values)

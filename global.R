@@ -178,7 +178,20 @@ detect_environment <- function() {
   # Check for explicit environment variable first
   env_var <- Sys.getenv("TEST_MODE_AUTO_LOAD", "")
   if (env_var != "") {
-    return(as.logical(env_var))
+    normalized_env_var <- tolower(trimws(env_var))
+    true_values <- c("true", "t", "1", "yes", "y", "on")
+    false_values <- c("false", "f", "0", "no", "n", "off")
+
+    if (normalized_env_var %in% true_values) {
+      return(TRUE)
+    }
+
+    if (normalized_env_var %in% false_values) {
+      return(FALSE)
+    }
+
+    # Unknown inputs fall back to safe default
+    return(FALSE)
   }
 
   # Production environments (safe default: FALSE)
