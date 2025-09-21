@@ -96,60 +96,60 @@ initialize_shinylogs_tracking <- function(session,
 #' @param title Dashboard titel
 #'
 shinylogs_dashboard_ui <- function(id, title = "Application Logs") {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
 
-  tagList(
-    h3(title),
+  shiny::tagList(
+    shiny::h3(title),
 
     # Log viewer tabs
-    tabsetPanel(
+    shiny::tabsetPanel(
       id = ns("log_tabs"),
 
       # Real-time logs
-      tabPanel(
+      shiny::tabPanel(
         "Live Logs",
         value = "live",
-        div(
+        shiny::div(
           style = "margin-top: 15px;",
           # This will be replaced with shinylogs viewer
           shinylogs::use_tracking(),
-          uiOutput(ns("live_logs"))
+          shiny::uiOutput(ns("live_logs"))
         )
       ),
 
       # Performance metrics
-      tabPanel(
+      shiny::tabPanel(
         "Performance",
         value = "performance",
-        div(
+        shiny::div(
           style = "margin-top: 15px;",
-          plotOutput(ns("performance_plot"), height = "300px"),
-          br(),
+          shiny::plotOutput(ns("performance_plot"), height = "300px"),
+          shiny::br(),
           DT::dataTableOutput(ns("performance_table"))
         )
       ),
 
       # Error tracking
-      tabPanel(
+      shiny::tabPanel(
         "Errors",
         value = "errors",
-        div(
+        shiny::div(
           style = "margin-top: 15px;",
           DT::dataTableOutput(ns("error_table"))
         )
       ),
 
       # Session statistics
-      tabPanel(
+      shiny::tabPanel(
         "Sessions",
         value = "sessions",
-        div(
+        shiny::div(
           style = "margin-top: 15px;",
-          fluidRow(
-            column(6, valueBoxOutput(ns("total_sessions"), width = 12)),
-            column(6, valueBoxOutput(ns("active_sessions"), width = 12))
+          shiny::fluidRow(
+            shiny::column(6, valueBoxOutput(ns("total_sessions"), width = 12)),
+            shiny::column(6, valueBoxOutput(ns("active_sessions"), width = 12))
           ),
-          br(),
+          shiny::br(),
           DT::dataTableOutput(ns("session_table"))
         )
       )
@@ -166,13 +166,13 @@ shinylogs_dashboard_ui <- function(id, title = "Application Logs") {
 #' @param log_directory Directory med log filer
 #'
 shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     # Starting shinylogs dashboard server
 
     # Reactive log data
-    log_data <- reactive({
-      invalidateLater(5000, session)  # Update every 5 seconds
+    log_data <- shiny::reactive({
+      shiny::invalidateLater(5000, session)  # Update every 5 seconds
 
       safe_operation(
         "Read shinylogs database",
@@ -188,38 +188,38 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
     })
 
     # Live logs output
-    output$live_logs <- renderUI({
+    output$live_logs <- shiny::renderUI({
       logs <- log_data()
 
       if (nrow(logs) == 0) {
-        return(div("No logs available yet...", class = "text-muted"))
+        return(shiny::div("No logs available yet...", class = "text-muted"))
       }
 
       # Show recent 50 log entries
       recent_logs <- tail(logs, 50)
 
-      div(
+      shiny::div(
         style = "max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px;",
         lapply(seq_len(nrow(recent_logs)), function(i) {
           entry <- recent_logs[i, ]
-          div(
+          shiny::div(
             style = "margin-bottom: 5px; font-family: monospace; font-size: 12px;",
-            span(
+            shiny::span(
               style = "color: #666;",
               paste0("[", entry$timestamp, "] ")
             ),
-            span(
+            shiny::span(
               style = "font-weight: bold;",
               paste0(entry$type, ": ")
             ),
-            span(entry$message)
+            shiny::span(entry$message)
           )
         })
       )
     })
 
     # Performance plot
-    output$performance_plot <- renderPlot({
+    output$performance_plot <- shiny::renderPlot({
       logs <- log_data()
       perf_logs <- logs[logs$type == "performance" & !is.na(logs$duration), ]
 
@@ -248,7 +248,7 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
       valueBox(
         value = session_count,
         subtitle = "Total Sessions",
-        icon = icon("users"),
+        icon = shiny::icon("users"),
         color = "blue"
       )
     })
@@ -262,7 +262,7 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
       valueBox(
         value = active_count,
         subtitle = "Active Sessions",
-        icon = icon("user-clock"),
+        icon = shiny::icon("user-clock"),
         color = "green"
       )
     })

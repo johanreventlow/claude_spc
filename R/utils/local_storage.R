@@ -2,9 +2,6 @@
 # Server-side funktioner til localStorage integration og databehandling
 
 # Dependencies ----------------------------------------------------------------
-library(shiny)
-library(jsonlite)
-
 # LOCAL STORAGE FUNKTIONER ===================================================
 
 ## Local Storage funktioner til server med datastruktur preservation
@@ -107,7 +104,7 @@ autoSaveAppState <- function(session, current_data, metadata) {
             saveDataLocally(session, current_data, metadata)
           },
           fallback = function(e) {
-            showNotification(
+            shiny::showNotification(
               paste("Auto-gem fejlede:", e$message),
               type = "error",
               duration = 3
@@ -116,7 +113,7 @@ autoSaveAppState <- function(session, current_data, metadata) {
           error_type = "processing"
         )
       } else {
-        showNotification(
+        shiny::showNotification(
           "Data for stor til automatisk gem - brug Download funktion",
           type = "warning",
           duration = 3

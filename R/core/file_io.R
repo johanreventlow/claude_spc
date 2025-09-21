@@ -2,8 +2,6 @@
 # Modul til læsning af datafiler med støtte for danske formater og separatorer
 
 # Dependencies ----------------------------------------------------------------
-library(readr)
-library(readxl)
 
 # CSV LÆSNING =================================================================
 

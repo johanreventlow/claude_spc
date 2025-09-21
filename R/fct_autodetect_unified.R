@@ -42,16 +42,16 @@ autodetect_engine <- function(data = NULL,
   log_debug_kv(
     trigger_type = trigger_type,
     data_available = !is.null(data),
-    frozen_state = isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE,
+    frozen_state = shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE,
     .context = "UNIFIED_AUTODETECT"
   )
 
   # 1. TRIGGER VALIDATION - smart unfreezing when data is available
-  frozen_state <- isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
+  frozen_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
   # SMART UNFREEZE: If we have data available and we're frozen, automatically unfreeze
   if (frozen_state && !is.null(data) && nrow(data) > 0 && trigger_type == "file_upload") {
-    isolate(app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE)
+    shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE)
     frozen_state <- FALSE
   }
 
@@ -79,7 +79,7 @@ autodetect_engine <- function(data = NULL,
   app_state$columns <- update_all_column_mappings(results, app_state$columns, app_state)
 
   # Set frozen state to prevent re-running until next legitimate trigger
-  isolate({
+  shiny::isolate({
     app_state$columns$auto_detect$frozen_until_next_trigger <- TRUE
     app_state$columns$auto_detect$last_run <- list(
     trigger = trigger_type,
@@ -144,7 +144,7 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
 
   col_names_lower <- tolower(col_names)
 
-  # X-column (date/time detection) - FASE 4: Enhanced tidsspecifikke patterns
+  # X-shiny::column(date/time detection) - FASE 4: Enhanced tidsspecifikke patterns
   dato_patterns <- c("dato", "date", "tid", "time", "år", "year", "måned", "month",
                      "uge", "week", "dag", "day", "periode", "period", "kvartal", "quarter",
                      "jan", "feb", "mar", "apr", "maj", "jun",
@@ -164,7 +164,7 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
     log_debug_kv(x_column_fallback = x_col, .context = "NAME_BASED_DETECT")
   }
 
-  # Y-column (count/value detection) - enhanced patterns
+  # Y-shiny::column(count/value detection) - enhanced patterns
   count_patterns <- c("tæller", "tael", "num", "count", "værdi", "value", "antal")
   for (pattern in count_patterns) {
     count_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
@@ -175,7 +175,7 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
     }
   }
 
-  # N-column (denominator detection) - enhanced patterns
+  # N-shiny::column(denominator detection) - enhanced patterns
   denom_patterns <- c("nævner", "naev", "denom", "total", "samlet")
   for (pattern in denom_patterns) {
     denom_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
@@ -328,7 +328,7 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
   # DIRECT APP_STATE UPDATE: If app_state is provided, update it directly
   if (!is.null(app_state)) {
     # Update individual column mappings directly in app_state (with isolate for reactive safety)
-    isolate({
+    shiny::isolate({
       if (!is.null(results$x_col)) {
         app_state$columns$mappings$x_column <- results$x_col
       }
@@ -349,7 +349,7 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
       }
 
       # Store complete results for backward compatibility
-      isolate({
+      shiny::isolate({
         app_state$columns$auto_detect$results <- results
         # Note: results already stored above in auto_detect$results
 

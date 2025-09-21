@@ -3,9 +3,6 @@
 # Extracted from mod_spc_chart.R for better maintainability
 
 # Dependencies ----------------------------------------------------------------
-library(shiny)
-library(shinyjs)
-
 # Source required helper functions
 # Helper functions now loaded globally in global.R for better performance
 
@@ -21,16 +18,16 @@ library(shinyjs)
 #' @family visualization_modules
 #' @export
 visualizationModuleUI <- function(id) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
 
   # PRODUCTION VERSION: Restored original styling with fixes applied
-  div(
+  shiny::div(
     id = ns("plot_container"),
     class = "spc-plot-main-container",
     style = "position: relative;",
-    div(
+    shiny::div(
       class = "spc-ggplot-output",
-      plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
+      shiny::plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
     )
   )
 }
@@ -47,40 +44,34 @@ visualizationModuleUI <- function(id) {
 #' @family visualization_modules
 #' @export
 visualizationStatusUI <- function(id) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
 
   # Value Box Layout --------------------------------------------------------
   # Brug layout_column_wrap for korrekt value box visning
-  layout_column_wrap(
+  bslib::layout_column_wrap(
     width = 1 / 2,
     heights_equal = "row",
 
     ## Anhøj Rules Value Boxes
     # Hovedmetrics: Serielængde og Antal Kryds for alle chart typer
-    uiOutput(ns("anhoej_rules_boxes")),
+    shiny::uiOutput(ns("anhoej_rules_boxes")),
 
     ## Data Summary Box
     # Data oversigt og fejl kontrol (udkommenteret)
-    # uiOutput(ns("data_summary_box"))
+    # shiny::uiOutput(ns("data_summary_box"))
   )
 }
 # R/modules/visualization_module_server.R
 # Server logik for visualiseringsmodulet
 
 # Dependencies ----------------------------------------------------------------
-library(shiny)
-library(bslib)
-library(qicharts2)
-library(ggplot2)
-library(dplyr)
-library(scales)
 
 # SPC Ikoner ------------------------------------------------------------------
 # Tilpassede SVG ikoner til SPC value boxes
 # Defineret som HTML-variabler for genbrugelige visualiseringer
 
 ## Run Chart Ikon
-spc_run_chart_icon <- HTML('
+spc_run_chart_icon <- htmltools::HTML('
   <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
     <path fill-rule="evenodd" d="M0 0h1v15h15v1H0z"/>
     <path d="M2 8h12" stroke="currentColor" stroke-width="0.5" stroke-dasharray="1,1" opacity="0.5" fill="none"/>
@@ -97,7 +88,7 @@ spc_run_chart_icon <- HTML('
 ')
 
 ## Median Crossings Ikon
-spc_median_crossings_icon <- HTML('
+spc_median_crossings_icon <- htmltools::HTML('
   <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
     <path fill-rule="evenodd" d="M0 0h1v15h15v1H0z"/>
     <path d="M2 8h12" stroke="currentColor" stroke-width="0.5" stroke-dasharray="1,1" opacity="0.6" fill="none"/>
@@ -114,7 +105,7 @@ spc_median_crossings_icon <- HTML('
 ')
 
 ## Out-of-Control Ikon
-spc_out_of_control_icon <- HTML('
+spc_out_of_control_icon <- htmltools::HTML('
   <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
     <path fill-rule="evenodd" d="M0 0h1v15h15v1H0z"/>
     <path d="M2 4h12" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2,1" opacity="0.6" fill="none"/>

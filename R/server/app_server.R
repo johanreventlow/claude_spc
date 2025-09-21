@@ -126,8 +126,8 @@ app_server <- function(input, output, session) {
   # Emergency observer removed - event listeners setup now reliable
 
   # Take initial state snapshot - delay to avoid reactive context issues
-  observeEvent(reactive(TRUE), {
-    isolate({
+  shiny::observeEvent(shiny::reactive(TRUE), {
+    shiny::isolate({
       initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = session$token)
     })
   }, once = TRUE, priority = OBSERVER_PRIORITIES$LOW, ignoreInit = FALSE)
@@ -297,7 +297,7 @@ app_server <- function(input, output, session) {
           app_state$session$file_uploaded <- TRUE
           app_state$session$user_started_session <- TRUE
           # Reset auto-detection state
-          isolate(app_state$columns$auto_detect$completed <- FALSE)
+          shiny::isolate(app_state$columns$auto_detect$completed <- FALSE)
           # Legacy assignments removed - managed by unified state
           app_state$ui$hide_anhoej_rules <- FALSE
 
@@ -363,7 +363,7 @@ app_server <- function(input, output, session) {
   debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
 
   # FASE 3: Emit session_started event for name-only detection
-  observeEvent(reactive(TRUE), {
+  shiny::observeEvent(shiny::reactive(TRUE), {
     log_debug("Session started, emitting session_started event", "SESSION_LIFECYCLE")
     emit$session_started()
     log_debug("✅ Session started event emitted", "SESSION_LIFECYCLE")
@@ -371,7 +371,7 @@ app_server <- function(input, output, session) {
 
   # TEST MODE: Emit test_mode_ready event AFTER all observers are set up
   if (TEST_MODE_AUTO_LOAD) {
-    observe({
+    shiny::observe({
       # Unified state: Use centralized state as primary data source
       current_data_check <- app_state$data$current_data
 
@@ -380,7 +380,7 @@ app_server <- function(input, output, session) {
         emit$test_mode_ready()
         log_debug("✅ Test mode ready event emitted", "TEST_MODE")
       }
-    }) %>% bindEvent({
+    }) |> bindEvent({
       # Unified state: Use centralized state for reactive triggers
       app_state$data$current_data
     }, once = TRUE, ignoreNULL = TRUE)
@@ -388,12 +388,11 @@ app_server <- function(input, output, session) {
 
   # Initial UI Setup --------------------------------------------------------
   # Sæt standard chart_type når appen starter
-  observe({
+  shiny::observe({
     log_debug("Setting initial chart_type to 'run'", "APP_SERVER")
-    updateSelectizeInput(session, "chart_type", selected = "run")
+    shiny::updateSelectizeInput(session, "chart_type", selected = "run")
     log_debug("✅ Initial chart_type set", "APP_SERVER")
-  }) %>%
-    bindEvent(TRUE, once = TRUE)
+  }) |> bindEvent(TRUE, once = TRUE)
 
   # Session Cleanup ---------------------------------------------------------
   # Additional cleanup når session lukker

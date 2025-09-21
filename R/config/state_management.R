@@ -63,7 +63,7 @@ create_app_state <- function() {
 
   # REACTIVE EVENT BUS: Central event system for all triggers
   # STREAMLINED EVENT-BUS: Reduced noise, consolidated events
-  app_state$events <- reactiveValues(
+  app_state$events <- shiny::reactiveValues(
     # DATA-LIVSCYKLUS ------------------------------------------------------
     data_loaded = 0L,                  # Triggeres når ny data er indlæst eller uploadet
     data_changed = 0L,                 # Triggeres ved eksplicit dataændringer
@@ -99,7 +99,7 @@ create_app_state <- function() {
   )
 
   # Data Management - Simplified unified structure
-  app_state$data <- reactiveValues(
+  app_state$data <- shiny::reactiveValues(
     # Core data
     current_data = NULL,
     original_data = NULL,
@@ -121,9 +121,9 @@ create_app_state <- function() {
   )
 
   # Column Management - Hierarchical structure with sub-objects
-  app_state$columns <- reactiveValues(
+  app_state$columns <- shiny::reactiveValues(
     # Auto-detection sub-system
-    auto_detect = reactiveValues(
+    auto_detect = shiny::reactiveValues(
       in_progress = FALSE,
       completed = FALSE,
       results = NULL,
@@ -133,7 +133,7 @@ create_app_state <- function() {
     ),
 
     # Column mappings sub-system
-    mappings = reactiveValues(
+    mappings = shiny::reactiveValues(
       x_column = NULL,
       y_column = NULL,
       n_column = NULL,
@@ -144,7 +144,7 @@ create_app_state <- function() {
     ),
 
     # UI synchronization sub-system
-    ui_sync = reactiveValues(
+    ui_sync = shiny::reactiveValues(
       needed = FALSE,
       last_sync_time = NULL,
       pending_updates = list()
@@ -152,7 +152,7 @@ create_app_state <- function() {
   )
 
   # Session Management - Simplified unified structure
-  app_state$session <- reactiveValues(
+  app_state$session <- shiny::reactiveValues(
     # State management
     auto_save_enabled = TRUE,
     restoring_session = FALSE,
@@ -177,7 +177,7 @@ create_app_state <- function() {
   )
 
   # Test Mode Management
-  app_state$test_mode <- reactiveValues(
+  app_state$test_mode <- shiny::reactiveValues(
     enabled = FALSE,
     auto_load = FALSE,
     file_path = NULL,
@@ -185,7 +185,7 @@ create_app_state <- function() {
   )
 
   # UI State - Convert to reactiveValues for consistency
-  app_state$ui <- reactiveValues(
+  app_state$ui <- shiny::reactiveValues(
     hide_anhoej_rules = FALSE,
     updating_programmatically = FALSE,    # LOOP PROTECTION: Flag to prevent circular events during UI updates
     last_programmatic_update = NULL,      # LOOP PROTECTION: Timestamp of last programmatic update
@@ -220,12 +220,12 @@ create_app_state <- function() {
   # This eliminates state duplication and maintenance burden
 
   # Navigation State - For eventReactive patterns
-  app_state$navigation <- reactiveValues(
+  app_state$navigation <- shiny::reactiveValues(
     trigger = 0  # Counter for triggering navigation-dependent reactives
   )
 
   # Visualization State - Convert to reactiveValues for consistency
-  app_state$visualization <- reactiveValues(
+  app_state$visualization <- shiny::reactiveValues(
     plot_ready = FALSE,
     plot_warnings = character(0),
     anhoej_results = NULL,
@@ -234,7 +234,7 @@ create_app_state <- function() {
   )
 
   # Error State - Convert to reactiveValues for consistency
-  app_state$errors <- reactiveValues(
+  app_state$errors <- shiny::reactiveValues(
     last_error = NULL,           # Last error details
     error_count = 0L,           # Total error count
     error_history = list(),     # Recent error history (max 10)
@@ -243,7 +243,7 @@ create_app_state <- function() {
   )
 
   # System Management - Infrastructure flags and state
-  app_state$system <- reactiveValues(
+  app_state$system <- shiny::reactiveValues(
     event_listeners_setup = FALSE     # Prevent double registration of event listeners
   )
 
@@ -260,7 +260,7 @@ create_app_state <- function() {
 
 # Data helper (simplified)
 set_current_data <- function(app_state, value) {
-  isolate({
+  shiny::isolate({
     app_state$data$current_data <- value
   # log_debug(paste("Data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
   })
@@ -268,7 +268,7 @@ set_current_data <- function(app_state, value) {
 
 # Original data helper (simplified)
 set_original_data <- function(app_state, value) {
-  isolate({
+  shiny::isolate({
     app_state$data$original_data <- value
   # log_debug(paste("Original data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
   })
@@ -276,7 +276,7 @@ set_original_data <- function(app_state, value) {
 
 # Get data helper (simplified)
 get_current_data <- function(app_state) {
-  isolate({
+  shiny::isolate({
     return(app_state$data$current_data)
   })
 }
@@ -293,39 +293,39 @@ get_current_data <- function(app_state) {
 #'
 #' @details
 #' Each emit function increments the corresponding event counter in
-#' app_state$events, triggering any observeEvent() listeners.
-#' Using isolate() ensures the emit functions don't create
+#' app_state$events, triggering any shiny::observeEvent() listeners.
+#' Using shiny::isolate() ensures the emit functions don't create
 #' unintended reactive dependencies.
 #'
 #' @examples
 #' \dontrun{
 #' emit <- create_emit_api(app_state)
-#' emit$data_loaded()  # Triggers observeEvent(app_state$events$data_loaded, ...)
+#' emit$data_loaded()  # Triggers shiny::observeEvent(app_state$events$data_loaded, ...)
 #' }
 create_emit_api <- function(app_state) {
   list(
     # Data lifecycle events
     data_loaded = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$data_loaded <- app_state$events$data_loaded + 1L
       })
     },
 
     data_changed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$data_changed <- app_state$events$data_changed + 1L
       })
     },
 
     # Column detection events
     auto_detection_started = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$auto_detection_started <- app_state$events$auto_detection_started + 1L
       })
     },
 
     auto_detection_completed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$auto_detection_completed <- app_state$events$auto_detection_completed + 1L
       })
     },
@@ -333,101 +333,101 @@ create_emit_api <- function(app_state) {
 
     # UI synchronization events
     ui_sync_needed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$ui_sync_needed <- app_state$events$ui_sync_needed + 1L
       })
     },
 
     ui_sync_completed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$ui_sync_completed <- app_state$events$ui_sync_completed + 1L
       })
     },
 
     # Navigation events
     navigation_changed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$navigation_changed <- app_state$events$navigation_changed + 1L
       })
     },
 
     # Session lifecycle events
     session_started = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$session_started <- app_state$events$session_started + 1L
       })
     },
 
     session_reset = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$session_reset <- app_state$events$session_reset + 1L
       })
     },
 
     manual_autodetect_button = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$manual_autodetect_button <- app_state$events$manual_autodetect_button + 1L
       })
     },
 
     test_mode_ready = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$test_mode_ready <- app_state$events$test_mode_ready + 1L
       })
     },
 
     # Error handling events
     error_occurred = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$error_occurred <- app_state$events$error_occurred + 1L
       })
     },
 
     validation_error = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$validation_error <- app_state$events$validation_error + 1L
       })
     },
 
     processing_error = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$processing_error <- app_state$events$processing_error + 1L
       })
     },
 
     network_error = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$network_error <- app_state$events$network_error + 1L
       })
     },
 
     recovery_completed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$recovery_completed <- app_state$events$recovery_completed + 1L
       })
     },
 
     # UI update events
     ui_update_needed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$ui_update_needed <- app_state$events$ui_update_needed + 1L
       })
     },
 
     column_choices_changed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$column_choices_changed <- app_state$events$column_choices_changed + 1L
       })
     },
 
     form_reset_needed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$form_reset_needed <- app_state$events$form_reset_needed + 1L
       })
     },
 
     form_restore_needed = function() {
-      isolate({
+      shiny::isolate({
         app_state$events$form_restore_needed <- app_state$events$form_restore_needed + 1L
       })
     }

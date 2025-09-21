@@ -3,9 +3,6 @@
 # Extracted from fct_spc_calculations.R for better maintainability
 
 # Dependencies ----------------------------------------------------------------
-library(qicharts2)
-library(ggplot2)
-library(lubridate)
 
 # HJÆLPEFUNKTIONER ============================================================
 

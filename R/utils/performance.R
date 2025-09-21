@@ -41,7 +41,7 @@ measure_reactive_performance <- function(expr, operation_name = "unknown") {
 
 #' Create cached reactive expression with session-local cache
 #'
-#' Wrapper omkring reactive() der tilføjer intelligent caching
+#' Wrapper omkring shiny::reactive() der tilføjer intelligent caching
 #' for expensive operations. Cache invalideres automatisk
 #' når dependencies ændres. Bruger session-local cache for isolation.
 #'
@@ -218,7 +218,7 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session
 
   if (in_reactive_context) {
     # Return reactive expression if in reactive context
-    return(reactive(cache_logic()))
+    return(shiny::reactive(cache_logic()))
   } else {
     # Return function if not in reactive context (e.g., tests)
     return(cache_logic)
@@ -301,9 +301,9 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
 
   if (in_reactive_context) {
     # Use debounce if in reactive context
-    debounced_reactive <- debounce(r, millis)
+    debounced_reactive <- shiny::debounce(r, millis)
 
-    return(reactive({
+    return(shiny::reactive({
       track_performance(function() debounced_reactive())
     }))
   } else {
@@ -314,7 +314,7 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
       if (is.function(r) && "reactiveExpr" %in% class(r)) {
         # It's a reactive expression - create a temporary reactive domain for execution
         track_performance(function() {
-          isolate(r())
+          shiny::isolate(r())
         })
       } else {
         # It's a regular function

@@ -32,7 +32,7 @@
 create_column_selectize <- function(inputId, label, choices = NULL, selected = NULL,
                                    placeholder = "Vælg kolonne...", multiple = FALSE,
                                    width = UI_INPUT_WIDTHS$full) {
-  selectizeInput(
+  shiny::selectizeInput(
     inputId = inputId,
     label = label,
     choices = choices,
@@ -75,7 +75,7 @@ create_column_selectize <- function(inputId, label, choices = NULL, selected = N
 #' @export
 create_text_input <- function(inputId, label, value = "", placeholder = "",
                              width = UI_INPUT_WIDTHS$full, pattern = NULL) {
-  input_elem <- textInput(
+  input_elem <- shiny::textInput(
     inputId = inputId,
     label = label,
     value = value,
@@ -119,7 +119,7 @@ create_text_input <- function(inputId, label, value = "", placeholder = "",
 #' @export
 create_numeric_input <- function(inputId, label, value = NULL, min = NA, max = NA,
                                 step = 1, width = UI_INPUT_WIDTHS$full) {
-  numericInput(
+  shiny::numericInput(
     inputId = inputId,
     label = label,
     value = value,
@@ -155,16 +155,16 @@ create_numeric_input <- function(inputId, label, value = NULL, min = NA, max = N
 #' @family ui_components
 #' @export
 create_checkbox <- function(inputId, label, value = FALSE, help_text = NULL) {
-  checkbox_elem <- checkboxInput(
+  checkbox_elem <- shiny::checkboxInput(
     inputId = inputId,
     label = label,
     value = value
   )
 
   if (!is.null(help_text)) {
-    div(
+    shiny::div(
       checkbox_elem,
-      tags$small(class = "text-muted", help_text)
+      shiny::tags$small(class = "text-muted", help_text)
     )
   } else {
     checkbox_elem
@@ -188,10 +188,10 @@ create_checkbox <- function(inputId, label, value = FALSE, help_text = NULL) {
 #' @examples
 #' \dontrun{
 #' # Primary action button
-#' create_action_button("submit", "Gem", "primary", icon("save"))
+#' create_action_button("submit", "Gem", "primary", shiny::icon("save"))
 #'
 #' # Warning button
-#' create_action_button("reset", "Nulstil", "warning", icon("refresh"))
+#' create_action_button("reset", "Nulstil", "warning", shiny::icon("refresh"))
 #' }
 #'
 #' @family ui_components
@@ -210,7 +210,7 @@ create_action_button <- function(inputId, label, style = "primary", icon = NULL,
 
   button_class <- class_map[[style]] %||% "btn-primary"
 
-  actionButton(
+  shiny::actionButton(
     inputId = inputId,
     label = label,
     icon = icon,
@@ -235,10 +235,10 @@ create_action_button <- function(inputId, label, style = "primary", icon = NULL,
 #' @examples
 #' \dontrun{
 #' # Info panel
-#' create_info_panel("Data loaded successfully", "success", icon = icon("check"))
+#' create_info_panel("Data loaded successfully", "success", icon = shiny::icon("check"))
 #'
 #' # Warning panel
-#' create_info_panel("Check your data format", "warning", icon = icon("warning"))
+#' create_info_panel("Check your data format", "warning", icon = shiny::icon("warning"))
 #' }
 #'
 #' @family ui_components
@@ -262,11 +262,11 @@ create_info_panel <- function(content, type = "info", dismissible = FALSE, icon 
     content
   }
 
-  div(
+  shiny::div(
     class = paste0("alert ", alert_class, dismissible_class),
     role = "alert",
     if (dismissible) {
-      tags$button(
+      shiny::tags$button(
         type = "button",
         class = "btn-close",
         `data-bs-dismiss` = "alert",

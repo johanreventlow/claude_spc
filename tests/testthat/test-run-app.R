@@ -34,6 +34,23 @@ restore_globals <- function(original) {
 }
 
 test_that("run_app forwards custom port to runApp", {
+  if (!requireNamespace("pkgload", quietly = TRUE)) {
+    skip("pkgload er ikke installeret i testmiljøet")
+  }
+
+  dev_package_fn <- tryCatch(
+    get("dev_package", envir = asNamespace("pkgload")),
+    error = function(e) NULL
+  )
+  if (is.null(dev_package_fn)) {
+    skip("pkgload::dev_package() er ikke tilgængelig i denne konfiguration")
+  }
+
+  pkgload_session <- tryCatch(dev_package_fn(), error = function(e) NULL)
+  if (is.null(pkgload_session)) {
+    skip("pkgload::dev_package() returnerer NULL - ingen load_all() session aktiv")
+  }
+
   original <- setup_required_globals()
   on.exit(restore_globals(original), add = TRUE)
 

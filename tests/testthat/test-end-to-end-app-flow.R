@@ -8,9 +8,7 @@ cat("\n=== STARTING END-TO-END TEST SUITE ===\n")
 cat("Timestamp:", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n")
 
 library(testthat)
-library(shiny)
 library(shinytest2)  # For advanced Shiny testing hvis tilgængelig, ellers skip
-library(dplyr)
 library(ggplot2)
 
 test_debug_log <- function(..., context = "TEST_E2E_GENERIC") {

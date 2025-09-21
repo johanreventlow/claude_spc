@@ -1,4 +1,4 @@
-# Codex Instruktioner – SPC App
+# Claude Instruktioner – SPC App
 
 ## 1) Projektoversigt
 
@@ -12,7 +12,7 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 
 ### 2.1 Test-First Development (TDD)
 
-**OBLIGATORISK:** Al udvikling følger Test-Driven Development:
+✅ **OBLIGATORISK:** Al udvikling følger Test-Driven Development:
 
 1. **Skriv tests først** – Definér den forventede adfærd, før kode ændres
 2. **Kør tests kontinuerligt** – Tests køres efter hver ændring og skal altid bestå
@@ -73,7 +73,7 @@ log_debug(
 
 ### 3.1 Shiny Best Practices
 
-**Unified Event Architecture (OBLIGATORISK for al ny udvikling):**
+✅ **Unified Event Architecture (OBLIGATORISK for al ny udvikling):**
 ```r
 # ✅ Korrekt brug af event-bus
 emit$data_loaded()
@@ -123,28 +123,7 @@ values$some_data <- data
 
 ### 3.3 Error Handling Patterns
 
-```r
-safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE) {
-  tryCatch({
-    code
-  }, error = function(e) {
-    log_error(
-      component = "[ERROR_HANDLER]",
-      message = paste(operation_name, "fejlede"),
-      details = list(error_message = e$message),
-      session = session,
-      show_user = show_user
-    )
-    return(fallback)
-  })
-}
-
-variable_check <- if (exists("feature_flag") && isTRUE(feature_flag) && exists("new_system")) {
-  new_system$section$variable
-} else {
-  legacy_system$variable
-}
-```
+`safe_operation()` flyttet til Appendix B
 
 ---
 
@@ -230,6 +209,25 @@ config_value <- golem::get_golem_options("test_mode_auto_load", default = FALSE)
 * **Backup før dataændringer** – Git commits eller manuelle kopier før manipulation
 
 ---
+
+
+---
+
+## 📎 Appendix A: CLI-kommandoer og testkørsel
+
+### Test-kommandoer
+
+```r
+# Kør alle tests
+R -e "source('global.R'); testthat::test_dir('tests/testthat')"
+
+# Kør specifik test-fil
+grep "^test-.*\.R$" tests/testthat -n
+R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refactoring.R')"
+```
+
+> Disse bruges ifm. test verification (jf. 2.1) og pre-commit (jf. 7.1)
+
 
 ## 6) Legacy Guidelines (Preserved from original)
 
@@ -328,7 +326,7 @@ config_value <- golem::get_golem_options("test_mode_auto_load", default = FALSE)
 * **[MANUELT TRIN]** – Marker manuelle skridt tydeligt
 * **Faktuel rapportering** – Fokus på diffs, tests og next steps
 * **Problem-løsning format** – Beskriv problem, analyse, løsning, tests
-* **ADR'er** – Arkitekturvalg dokumenteres i `docs/adr/`
+* **ADR'er** – Arkitekturvalg dokumenteres i `docs/adr/` (se Appendix C for skabelon)
 
 ### 9.2 Commit Message Format (uden eksterne referencer)
 
@@ -473,3 +471,53 @@ session$onSessionEnded(function() {
 * **Danish language support** – Terminologi og labels på dansk
 * **Best practice compliance** – Moderne Shiny- og softwareudviklingsstandarder
 
+---
+
+## 📎 Appendix B: Centrale util-funktioner
+
+### `safe_operation()` – mønster for tryg fejlindkapsling
+```r
+safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE) {
+  tryCatch({
+    code
+  }, error = function(e) {
+    log_error(
+      component = "[ERROR_HANDLER]",
+      message = paste(operation_name, "fejlede"),
+      details = list(error_message = e$message),
+      session = session,
+      show_user = show_user
+    )
+    return(fallback)
+  })
+}
+
+variable_check <- if (exists("feature_flag") && isTRUE(feature_flag) && exists("new_system")) {
+  new_system$section$variable
+} else {
+  legacy_system$variable
+}
+```
+
+---
+
+## 📎 Appendix C: ADR-template
+
+```markdown
+# ADR-001: [Navn på beslutning]
+
+## Status
+Accepted / Proposed / Deprecated / Superseded
+
+## Kontekst
+Beskriv baggrunden for beslutningen. Hvilket problem forsøger vi at løse?
+
+## Beslutning
+Forklar hvilken arkitektonisk beslutning der blev truffet og hvorfor.
+
+## Konsekvenser
+Beskriv fordele, ulemper og evt. nødvendige ændringer fremadrettet.
+
+## Dato
+[ÅÅÅÅ-MM-DD]
+```

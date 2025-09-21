@@ -8,19 +8,19 @@
 ## Hovedfunktion for UI header
 # Opretter alle header komponenter inklusive scripts og styles
 create_ui_header <- function() {
-  tagList(
+  shiny::tagList(
     # Aktivér shinyjs
     shinyjs::useShinyjs(),
-    tags$head(
+    shiny::tags$head(
       # CSS files for plot debugging
-      tags$link(rel = "stylesheet", type = "text/css", href = "plot-debug.css"),
+      shiny::tags$link(rel = "stylesheet", type = "text/css", href = "plot-debug.css"),
 
       # JavaScript files
-      tags$script(src = "local-storage.js"),
-      tags$script(src = "ui-helpers.js"),
-      tags$script(src = "shiny-handlers.js"),
+      shiny::tags$script(src = "local-storage.js"),
+      shiny::tags$script(src = "ui-helpers.js"),
+      shiny::tags$script(src = "shiny-handlers.js"),
       # Inline CSS styles
-      tags$style(HTML(paste0("
+      shiny::tags$style(htmltools::HTML(paste0("
         /* SPC App Main Styles */
 
         /* Navigation and Tab Styling */
@@ -168,17 +168,17 @@ create_ui_header <- function() {
 # Main content area components
 
 create_ui_main_content <- function() {
-  tagList(
+  shiny::tagList(
     # Welcome page when no meaningful data is loaded
-    conditionalPanel(condition = "output.dataLoaded != 'TRUE'", create_welcome_page()),
+    shiny::conditionalPanel(condition = "output.dataLoaded != 'TRUE'", create_welcome_page()),
 
     # Data table and visualization - only when user has started
-    conditionalPanel(
+    shiny::conditionalPanel(
       condition = "output.dataLoaded == 'TRUE'",
 
 
       # Main content in 2x2 grid layout
-      layout_columns(
+      bslib::layout_columns(
         col_widths = c(6, 6, 6, 6),
         height = "auto",
         max_height = "100%",
@@ -195,34 +195,34 @@ create_ui_main_content <- function() {
 
 
 create_chart_settings_card <- function() {
-  navset_card_tab(
-    title = span(icon("sliders-h"), " Indstillinger", ),
+  bslib::navset_card_tab(
+    title = shiny::span(shiny::icon("sliders-h"), " Indstillinger", ),
     full_screen = TRUE,
     height = "calc(50vh - 60px)",
     # Tab 1: Detaljer ----
-    nav_panel(
+    bslib::nav_panel(
       max_height = "100%",
       min_height = "100%",
       title = "Detaljer",
-      icon = icon("pen-to-square"),
+      icon = shiny::icon("pen-to-square"),
       # Chart type and target value side by side
-      layout_column_wrap(
+      bslib::layout_column_wrap(
         width = 1 / 2,
-        div(
+        shiny::div(
           id = "indicator_div",
           # Indikator metadata
-          textInput(
+          shiny::textInput(
             "indicator_title",
             "Titel på indikator:",
             width = UI_INPUT_WIDTHS$full,
             value = "",
             placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
           ),
-          layout_column_wrap(
+          bslib::layout_column_wrap(
             width = UI_LAYOUT_PROPORTIONS$half,
 
             # Target value input
-            textInput(
+            shiny::textInput(
               "target_value",
               "Målværdi:",
               value = "",
@@ -231,7 +231,7 @@ create_chart_settings_card <- function() {
             ),
 
             # Centerline input
-            textInput(
+            shiny::textInput(
               "centerline_value",
               "Evt. baseline:",
               value = "",
@@ -241,10 +241,10 @@ create_chart_settings_card <- function() {
           ),
 
           # Beskrivelse
-          div(
+          shiny::div(
             id = "indicator-description-wrapper",
             style = "display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;",
-            textAreaInput(
+            shiny::textAreaInput(
               "indicator_description",
               "Datadefinition:",
               value = "",
@@ -254,9 +254,9 @@ create_chart_settings_card <- function() {
             )
           ),
         ),
-        div(
+        shiny::div(
           # Chart type selection
-          selectizeInput(
+          shiny::selectizeInput(
             "chart_type",
             "Diagram type:",
             choices = CHART_TYPES_DA,
@@ -265,7 +265,7 @@ create_chart_settings_card <- function() {
 
 
           # Y-axis unit selection
-          selectizeInput(
+          shiny::selectizeInput(
             "y_axis_unit",
             "Y-akse enhed:",
             choices = Y_AXIS_UNITS_DA,
@@ -276,14 +276,14 @@ create_chart_settings_card <- function() {
     ),
 
     # Tab 2: Column mapping -----
-    nav_panel(
+    bslib::nav_panel(
       "Kolonnematch",
-      icon = icon("columns"),
-      layout_column_wrap(
+      icon = shiny::icon("columns"),
+      bslib::layout_column_wrap(
         width = 1 / 2,
-        div(
+        shiny::div(
           # X-axis column
-          selectizeInput(
+          shiny::selectizeInput(
             "x_column",
             "X-akse (vandret tids-/observationsakse):",
             choices = NULL,
@@ -291,7 +291,7 @@ create_chart_settings_card <- function() {
           ),
 
           # Y-axis column
-          selectizeInput(
+          shiny::selectizeInput(
             "y_column",
             "Y-akse (lodret værdiakse):",
             choices = NULL,
@@ -299,54 +299,54 @@ create_chart_settings_card <- function() {
           ),
 
           # N column - wrapped for dropup behavior
-          div(
+          shiny::div(
             class = "selectize-dropup",
-            selectizeInput(
+            shiny::selectizeInput(
               "n_column",
-              span("Nævner (n):", icon("info-circle")),
+              shiny::span("Nævner (n):", shiny::icon("info-circle")),
               choices = NULL,
               selected = NULL
             ) |>
-              tooltip("Valgfri: Nævner-kolonne til beregning af andele og rater")
+              bslib::tooltip("Valgfri: Nævner-kolonne til beregning af andele og rater")
           )
         ),
-        div(
+        shiny::div(
           # Skift column
-          selectizeInput(
+          shiny::selectizeInput(
             "skift_column",
-            span("Opdel proces:", icon("info-circle")),
+            shiny::span("Opdel proces:", shiny::icon("info-circle")),
             choices = NULL,
             selected = NULL
           ),
 
           # Frys column
-          selectizeInput(
+          shiny::selectizeInput(
             "frys_column",
-            span("Fastfrys niveau:", icon("info-circle")),
+            shiny::span("Fastfrys niveau:", shiny::icon("info-circle")),
             choices = NULL,
             selected = NULL
           ),
 
           # Kommentar column
-          div(
+          shiny::div(
             class = "selectize-dropup",
-            selectizeInput(
+            shiny::selectizeInput(
               "kommentar_column",
-              span("Kommentar (noter):", icon("info-circle")),
+              shiny::span("Kommentar (noter):", shiny::icon("info-circle")),
               choices = NULL,
               selected = NULL
             ) |>
-              tooltip("Valgfri: Kolonne med kommentarer eller noter til datapunkter")
+              bslib::tooltip("Valgfri: Kolonne med kommentarer eller noter til datapunkter")
           ),
-          div(
+          shiny::div(
             style = "padding: 10px 0;",
-            div(
+            shiny::div(
               class = "text-center",
               # Auto-detect button
-              actionButton(
+              shiny::actionButton(
                 "auto_detect_columns",
                 "Auto-detektér kolonner",
-                icon = icon("magic"),
+                icon = shiny::icon("magic"),
                 class = "btn-secondary btn-sm w-100",
                 style = "margin-top: 25px;"
               )
@@ -355,21 +355,21 @@ create_chart_settings_card <- function() {
         ),
 
         # Column validation feedback
-        # div(
+        # shiny::div(
         #   id = "column_validation",
         #   style = "margin-top: 10px;",
-        #   uiOutput("column_validation_messages")
+        #   shiny::uiOutput("column_validation_messages")
         # )
       )
     ),
 
     # Tab 3: Organisatorisk enhed ----
-    nav_panel(
+    bslib::nav_panel(
       "Organisatorisk",
-      icon = icon("building"),
+      icon = shiny::icon("building"),
       max_height = "100%",
       min_height = "100%",
-      div(
+      shiny::div(
         style = "padding: 10px 0;",
         # Organisatorisk enhed selection
         create_unit_selection()
@@ -377,80 +377,80 @@ create_chart_settings_card <- function() {
     ),
 
     # Tab 4: Additional settings (placeholder) ----
-    # nav_panel(
+    # bslib::nav_panel(
     #   "Avanceret",
-    #   icon = icon("cogs"),
+    #   icon = shiny::icon("cogs"),
     #   max_height = "100%",
     #   min_height = "100%",
     #
-    #   div(
+    #   shiny::div(
     #     style = "padding: 20px; text-align: center; color: #666;",
-    #     icon("wrench", style = "font-size: 2rem; margin-bottom: 10px;"),
-    #     br(),
+    #     shiny::icon("wrench", style = "font-size: 2rem; margin-bottom: 10px;"),
+    #     shiny::br(),
     #     "Yderligere indstillinger kommer her",
-    #     br(),
-    #     tags$small("Denne tab er reserveret til fremtidige features")
+    #     shiny::br(),
+    #     shiny::tags$small("Denne tab er reserveret til fremtidige features")
     #   )
-    # ) # nav_panel (Avanceret)
+    # ) # bslib::nav_panel(Avanceret)
   ) # navset_card_tab
 }
 
 
 # New function for plot-only card
 create_plot_only_card <- function() {
-  card(
+  bslib::card(
     full_screen = TRUE,
-    card_header(
-      div(icon("chart-line"), " SPC Graf")
+    bslib::card_header(
+      shiny::div(shiny::icon("chart-line"), " SPC Graf")
     ),
-    card_body(
+    bslib::card_body(
       visualizationModuleUI("visualization")
     )
   )
 }
 
 create_data_table_card <- function() {
-  card(
+  bslib::card(
     full_screen = TRUE,
     min_height = "calc(50vh - 60px)",
-    card_header(
-      div(
+    bslib::card_header(
+      shiny::div(
         style = "display: flex; justify-content: space-between; align-items: center;",
-        div(icon("table"), " Data", ),
-        div(
+        shiny::div(shiny::icon("table"), " Data", ),
+        shiny::div(
           class = "btn-group-sm",
-          actionButton(
+          shiny::actionButton(
             "edit_column_names",
             label = "Redigér kolonnenavne",
-            icon = icon("edit"),
+            icon = shiny::icon("edit"),
             title = "Redigér kolonnenavne",
             class = "btn-secondary btn-sm"
           ),
-          actionButton(
+          shiny::actionButton(
             "add_column",
             label = "Tilføj kolonne",
-            icon = icon("plus"),
+            icon = shiny::icon("plus"),
             title = "Tilføj kolonne",
             class = "btn-secondary btn-sm"
           ),
-          actionButton(
+          shiny::actionButton(
             "add_row",
             label = "Tilføj række",
-            icon = icon("plus-square"),
+            icon = shiny::icon("plus-square"),
             title = "Tilføj række",
             class = "btn-secondary btn-sm"
           ),
-          # actionButton(
+          # shiny::actionButton(
           #   "reset_table",
           #   label = NULL,
-          #   icon = icon("refresh"),
+          #   icon = shiny::icon("refresh"),
           #   title = "Reset tabel",
           #   class = "btn-outline-warning btn-sm"
           # )
         )
       )
     ),
-    card_body(
+    bslib::card_body(
       # Data table using excelR
       excelR::excelOutput("main_data_table", height = "auto")
     )
@@ -464,12 +464,12 @@ create_status_value_boxes <- function() {
 }
 
 create_unit_selection <- function() {
-  div(
+  shiny::div(
     style = "margin-bottom: 15px;",
-    tags$label("Afdeling eller afsnit", style = "font-weight: 500;"),
-    div(
+    shiny::tags$label("Afdeling eller afsnit", style = "font-weight: 500;"),
+    shiny::div(
       style = "margin-top: 5px;",
-      radioButtons(
+      shiny::radioButtons(
         "unit_type",
         NULL,
         choices = list("Vælg fra liste" = "select", "Indtast selv" = "custom"),
@@ -479,7 +479,7 @@ create_unit_selection <- function() {
     ),
 
     # Dropdown for standard enheder
-    conditionalPanel(condition = "input.unit_type == 'select'", selectizeInput(
+    shiny::conditionalPanel(condition = "input.unit_type == 'select'", shiny::selectizeInput(
       "unit_select",
       NULL,
       choices = list(
@@ -495,45 +495,45 @@ create_unit_selection <- function() {
     )),
 
     # Custom input
-    conditionalPanel(
+    shiny::conditionalPanel(
       condition = "input.unit_type == 'custom'",
-      textInput("unit_custom", NULL, placeholder = "Indtast enhedsnavn...")
+      shiny::textInput("unit_custom", NULL, placeholder = "Indtast enhedsnavn...")
     )
   )
 }
 
 create_export_card <- function() {
-  conditionalPanel(condition = "output.plot_ready == 'true'", card(
-    card_header(div(icon("download"), " Eksport", )),
-    card_body(
+  shiny::conditionalPanel(condition = "output.plot_ready == 'true'", bslib::card(
+    bslib::card_header(shiny::div(shiny::icon("download"), " Eksport", )),
+    bslib::card_body(
       # KOMPLET EXPORT - Excel version
-      div(
-        downloadButton(
+      shiny::div(
+        shiny::downloadButton(
           "download_complete_excel",
           "📋 Komplet Export (Excel)",
-          icon = icon("file-excel"),
+          icon = shiny::icon("file-excel"),
           title = "Download hele sessionen som Excel fil med data og konfiguration",
           class = "btn-success w-100 mb-2"
         ),
 
         # Hjælpe-tekst for komplet export
-        div(
+        shiny::div(
           style = "font-size: 0.75rem; color: #666; text-align: center; margin-bottom: 8px; font-style: italic;",
           "Data + metadata i 2 Excel sheets - klar til brug og re-import"
         )
       ),
-      hr(style = "margin: 15px 0;"),
-      div(style = "text-align: center; font-size: 0.85rem; color: #666; margin-bottom: 10px;", strong("Graf eksporter:")),
-      downloadButton(
+      shiny::hr(style = "margin: 15px 0;"),
+      shiny::div(style = "text-align: center; font-size: 0.85rem; color: #666; margin-bottom: 10px;", shiny::strong("Graf eksporter:")),
+      shiny::downloadButton(
         "download_png",
         "Download PNG",
-        icon = icon("image"),
+        icon = shiny::icon("image"),
         class = "btn-outline-primary w-100 mb-2"
       ),
-      downloadButton(
+      shiny::downloadButton(
         "download_pdf",
         "Download PDF Rapport",
-        icon = icon("file-pdf"),
+        icon = shiny::icon("file-pdf"),
         class = "btn-outline-primary w-100"
       )
     )
@@ -549,9 +549,9 @@ create_export_card <- function() {
 ## Hovedfunktion for UI sidebar
 # Opretter komplet sidebar med data upload og konfiguration
 create_ui_sidebar <- function() {
-  sidebar(
-    # title = div(
-    #   icon("upload"),
+  bslib::sidebar(
+    # title = shiny::div(
+    #   shiny::icon("upload"),
     #   " Data upload & konfiguration",
     #   style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
     # ),
@@ -561,62 +561,62 @@ create_ui_sidebar <- function() {
     collapsible = TRUE,
 
     # Upload eller start ny session sektion - ALTID SYNLIG
-    # div(
+    # shiny::div(
     # style = "margin-bottom: 15px;",
-    # h6("Vælg handling:", style = "font-weight: 500; margin-bottom: 15px;"),
+    # shiny::h6("Vælg handling:", style = "font-weight: 500; margin-bottom: 15px;"),
 
     # Start ny session knap
-    actionButton(
+    shiny::actionButton(
       "clear_saved",
       "Start ny session",
-      icon = icon("refresh"),
+      icon = shiny::icon("refresh"),
       class = "btn-primary w-100 mb-2",
       title = "Start med tom standardtabel"
     ),
 
     # Upload fil knap - åbner modal
-    actionButton(
+    shiny::actionButton(
       "show_upload_modal",
       "Upload datafil",
-      icon = icon("upload"),
+      icon = shiny::icon("upload"),
       class = "btn-secondary w-100",
       title = "Upload Excel eller CSV fil"
       # )
     ),
 
     # REST OF SIDEBAR - only when data is loaded
-    # conditionalPanel(
+    # shiny::conditionalPanel(
     #   condition = "output.dataLoaded == 'TRUE'",
     #
-    #   hr(),
+    #   shiny::hr(),
     #
     #
     #
     #
     #
-    #   # hr(),
+    #   # shiny::hr(),
     #
     #   # Session management
-    #   div(
-    #     h6("Session:", style = "font-weight: 500; margin-bottom: 10px;"),
-    #     actionButton(
+    #   shiny::div(
+    #     shiny::h6("Session:", style = "font-weight: 500; margin-bottom: 10px;"),
+    #     shiny::actionButton(
     #       "manual_save",
     #       "Gem session",
-    #       icon = icon("save"),
+    #       icon = shiny::icon("save"),
     #       class = "btn-outline-primary btn-sm w-100"
     #     ),
-    #     div(
+    #     shiny::div(
     #       id = "save_status",
     #       style = "margin-top: 8px; font-size: 0.8rem; color: #666;",
-    #       uiOutput("save_status_display")
+    #       shiny::uiOutput("save_status_display")
     #     )
     #   ),
     #
-    #   hr(),
+    #   shiny::hr(),
     #
     #   # Data status
-    #   div(
-    #     uiOutput("data_status_display")
+    #   shiny::div(
+    #     shiny::uiOutput("data_status_display")
     #   )
     # )
   )
@@ -631,25 +631,25 @@ create_ui_sidebar <- function() {
 ## Hovedfunktion for velkomstside
 # Opretter komplet velkomstside med hero sektion og handlingsknapper
 create_welcome_page <- function() {
-  div(
+  shiny::div(
     class = "welcome-page",
     style = "min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);",
 
     # Hero Sektion
-    div(
+    shiny::div(
       class = "hero-section py-5",
-      div(
+      shiny::div(
         class = "container-fluid",
-        div(
+        shiny::div(
           class = "row align-items-center mb-5",
-          div(
+          shiny::div(
             class = "col-12 text-center",
-            h1(
+            shiny::h1(
               class = "display-4 fw-bold",
               style = paste0("color: ", HOSPITAL_COLORS$primary, "; margin-bottom: 1rem;"),
               "Velkommen til BFH SPC-værktøj"
             ),
-            p(
+            shiny::p(
               class = "lead text-muted",
               style = "font-size: 1.25rem; max-width: 800px; margin: 0 auto;",
               "Transformér dine data til indsigter med Statistical Process Control. ",
@@ -661,19 +661,19 @@ create_welcome_page <- function() {
     ),
 
     # Main Content - Two Column Layout
-    div(
+    shiny::div(
       class = "container-fluid px-4",
-      div(
+      shiny::div(
         class = "row g-4 mb-5",
 
         # LEFT COLUMN - Getting Started Guide
-        div(
+        shiny::div(
           class = "col-lg-6",
           create_getting_started_card()
         ),
 
         # RIGHT COLUMN - Understanding SPC
-        div(
+        shiny::div(
           class = "col-lg-6",
           create_understanding_spc_card()
         )
@@ -681,26 +681,26 @@ create_welcome_page <- function() {
     ),
 
     # Call to Action Section
-    div(
+    shiny::div(
       class = "cta-section py-5",
       style = paste0("background-color: ", HOSPITAL_COLORS$primary, "; color: white;"),
-      div(
+      shiny::div(
         class = "container text-center",
-        div(
+        shiny::div(
           class = "row",
-          div(
+          shiny::div(
             class = "col-lg-8 mx-auto",
-            h2(class = "mb-4", "Klar til at komme i gang?"),
-            p(class = "mb-4 fs-5", "Start din første SPC-analyse på under 5 minutter."),
-            div(
+            shiny::h2(class = "mb-4", "Klar til at komme i gang?"),
+            shiny::p(class = "mb-4 fs-5", "Start din første SPC-analyse på under 5 minutter."),
+            shiny::div(
               class = "d-grid gap-2 d-md-flex justify-content-md-center",
-              actionButton(
+              shiny::actionButton(
                 "start_new_session",
                 "🚀 Start ny analyse",
                 class = "btn btn-light btn-lg me-md-2",
                 style = "font-weight: 600; padding: 12px 30px;"
               ),
-              actionButton(
+              shiny::actionButton(
                 "upload_data_welcome",
                 "📊 Upload data",
                 class = "btn btn-outline-light btn-lg",
@@ -716,26 +716,26 @@ create_welcome_page <- function() {
 
 # Left Column - Getting Started Guide
 create_getting_started_card <- function() {
-  card(
+  bslib::card(
     class = "h-100 shadow-sm",
     style = "border: none; border-radius: 15px;",
-    card_header(
+    bslib::card_header(
       class = "bg-white border-0 pb-0",
       style = "border-radius: 15px 15px 0 0;",
-      div(
+      shiny::div(
         class = "d-flex align-items-center",
-        div(
+        shiny::div(
           class = "me-3",
           style = paste0("background: ", HOSPITAL_COLORS$primary, "; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;"),
-          icon("rocket", style = "color: white; font-size: 1.5rem;")
+          shiny::icon("rocket", style = "color: white; font-size: 1.5rem;")
         ),
-        div(
-          h3(class = "card-title mb-1", "Kom i gang på 3 trin"),
-          p(class = "text-muted mb-0", "Din vej fra data til indsigt")
+        shiny::div(
+          shiny::h3(class = "card-title mb-1", "Kom i gang på 3 trin"),
+          shiny::p(class = "text-muted mb-0", "Din vej fra data til indsigt")
         )
       )
     ),
-    card_body(
+    bslib::card_body(
       class = "px-4 py-4",
 
       # Step 1
@@ -766,18 +766,18 @@ create_getting_started_card <- function() {
       ),
 
       # Quick Start Button
-      div(
+      shiny::div(
         class = "mt-4 pt-3 border-top",
-        div(
+        shiny::div(
           class = "d-grid",
-          actionButton(
+          shiny::actionButton(
             "quick_start_demo",
             "👆 Prøv med eksempel-data",
             class = "btn btn-outline-primary btn-lg",
             style = "border-radius: 10px; font-weight: 500;"
           )
         ),
-        p(
+        shiny::p(
           class = "text-center text-muted mt-2 mb-0",
           style = "font-size: 0.9rem;",
           "Eller upload dine egne data direkte"
@@ -789,26 +789,26 @@ create_getting_started_card <- function() {
 
 # Right Column - Understanding SPC
 create_understanding_spc_card <- function() {
-  card(
+  bslib::card(
     class = "h-100 shadow-sm",
     style = "border: none; border-radius: 15px;",
-    card_header(
+    bslib::card_header(
       class = "bg-white border-0 pb-0",
       style = "border-radius: 15px 15px 0 0;",
-      div(
+      shiny::div(
         class = "d-flex align-items-center",
-        div(
+        shiny::div(
           class = "me-3",
           style = paste0("background: ", HOSPITAL_COLORS$secondary, "; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;"),
-          icon("lightbulb", style = "color: white; font-size: 1.5rem;")
+          shiny::icon("lightbulb", style = "color: white; font-size: 1.5rem;")
         ),
-        div(
-          h3(class = "card-title mb-1", "Forstå SPC"),
-          p(class = "text-muted mb-0", "Værktøjet der transformerer data til handling")
+        shiny::div(
+          shiny::h3(class = "card-title mb-1", "Forstå SPC"),
+          shiny::p(class = "text-muted mb-0", "Værktøjet der transformerer data til handling")
         )
       )
     ),
-    card_body(
+    bslib::card_body(
       class = "px-4 py-4",
 
       # What is SPC?
@@ -822,7 +822,7 @@ create_understanding_spc_card <- function() {
       create_info_section(
         icon = "heartbeat",
         title = "Hvorfor SPC i sundhedsvæsenet?",
-        content = HTML("
+        content = htmltools::HTML("
           <ul class='list-unstyled'>
             <li><strong>🎯 Spot trends tidligt:</strong> Identificer problemer før de bliver kritiske</li>
             <li><strong>📊 Forstå variation:</strong> Normal udsving vs. særlige årsager</li>
@@ -836,7 +836,7 @@ create_understanding_spc_card <- function() {
       create_info_section(
         icon = "hospital",
         title = "Konkrete eksempler fra BFH",
-        content = HTML("
+        content = htmltools::HTML("
           <div class='row g-2'>
             <div class='col-6'>
               <div class='example-item p-2 rounded' style='background: #f8f9fa;'>
@@ -871,25 +871,25 @@ create_understanding_spc_card <- function() {
 
 # Helper function for step items
 create_step_item <- function(number, icon, title, description, example = NULL) {
-  div(
+  shiny::div(
     class = "step-item d-flex mb-4",
     # Step Number Circle
-    div(
+    shiny::div(
       class = "step-number me-3 flex-shrink-0",
       style = paste0("width: 40px; height: 40px; background: ", HOSPITAL_COLORS$primary, "; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem;"),
       number
     ),
     # Step Content
-    div(
+    shiny::div(
       class = "step-content flex-grow-1",
-      div(
+      shiny::div(
         class = "d-flex align-items-center mb-2",
-        icon(icon, class = "text-primary me-2"),
-        h5(class = "mb-0 fw-semibold", title)
+        shiny::icon(icon, class = "text-primary me-2"),
+        shiny::h5(class = "mb-0 fw-semibold", title)
       ),
-      p(class = "text-muted mb-1", description),
+      shiny::p(class = "text-muted mb-1", description),
       if (!is.null(example)) {
-        p(
+        shiny::p(
           class = "small text-primary mb-0",
           style = "font-style: italic;",
           example
@@ -901,18 +901,18 @@ create_step_item <- function(number, icon, title, description, example = NULL) {
 
 # Helper function for info sections
 create_info_section <- function(icon, title, content) {
-  div(
+  shiny::div(
     class = "info-section mb-4",
-    div(
+    shiny::div(
       class = "d-flex align-items-start mb-2",
-      div(
+      shiny::div(
         class = "me-2 flex-shrink-0",
-        icon(icon, class = "text-secondary", style = "font-size: 1.2rem; margin-top: 2px;")
+        shiny::icon(icon, class = "text-secondary", style = "font-size: 1.2rem; margin-top: 2px;")
       ),
-      div(
+      shiny::div(
         class = "flex-grow-1",
-        h5(class = "fw-semibold mb-2", title),
-        div(class = "text-muted", content)
+        shiny::h5(class = "fw-semibold mb-2", title),
+        shiny::div(class = "text-muted", content)
       )
     )
   )

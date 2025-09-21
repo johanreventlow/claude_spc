@@ -152,7 +152,7 @@ cleanup_app_state <- function(app_state, emit = NULL) {
     safe_operation(
       "Reset column state during cleanup",
       code = {
-        isolate({
+        shiny::isolate({
           app_state$columns$auto_detect$in_progress <- FALSE
           app_state$columns$auto_detect$completed <- FALSE
           app_state$columns$auto_detect$results <- NULL

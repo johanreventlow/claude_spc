@@ -3,9 +3,6 @@
 # Extracted from fct_spc_calculations.R for better maintainability
 #
 # Dependencies ----------------------------------------------------------------
-library(qicharts2)
-library(ggplot2)
-library(lubridate)
 
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
   # DEBUG: Comprehensive input parameter logging

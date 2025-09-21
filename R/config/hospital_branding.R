@@ -8,7 +8,7 @@
 brand_config <- yaml::read_yaml("_brand.yml")
 
 # Opret tema baseret på brand.yml (auto-opdaget som _brand.yml)
-my_theme <- bs_theme(brand = "_brand.yml")
+my_theme <- bslib::bs_theme(brand = "_brand.yml")
 
 ## Hospital information -----
 HOSPITAL_NAME <- brand_config$meta$name
@@ -37,17 +37,17 @@ HOSPITAL_COLORS <- list(
 
 ## ggplot2 hospital tema -----
 HOSPITAL_THEME <- function() {
-  theme_minimal() +
-    theme(
-      plot.title = element_text(color = HOSPITAL_COLORS$primary, size = 14, face = "bold"),
-      plot.subtitle = element_text(color = HOSPITAL_COLORS$secondary, size = 12),
-      axis.title = element_text(color = HOSPITAL_COLORS$dark, size = 11),
-      axis.text = element_text(color = HOSPITAL_COLORS$dark, size = 10),
-      legend.title = element_text(color = HOSPITAL_COLORS$dark, size = 11),
-      legend.text = element_text(color = HOSPITAL_COLORS$dark, size = 10),
-      panel.grid.major = element_line(color = HOSPITAL_COLORS$light),
-      panel.grid.minor = element_line(color = HOSPITAL_COLORS$light),
-      strip.text = element_text(color = HOSPITAL_COLORS$primary, face = "bold")
+  ggplot2::theme_minimal() +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(color = HOSPITAL_COLORS$primary, size = 14, face = "bold"),
+      plot.subtitle = ggplot2::element_text(color = HOSPITAL_COLORS$secondary, size = 12),
+      axis.title = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 11),
+      axis.text = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 10),
+      legend.title = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 11),
+      legend.text = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 10),
+      panel.grid.major = ggplot2::element_line(color = HOSPITAL_COLORS$light),
+      panel.grid.minor = ggplot2::element_line(color = HOSPITAL_COLORS$light),
+      strip.text = ggplot2::element_text(color = HOSPITAL_COLORS$primary, face = "bold")
     )
 }
 

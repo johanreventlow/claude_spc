@@ -20,10 +20,10 @@ setup_visualization <- function(input, output, session, app_state) {
   # Kolonne konfiguration til visualisering
   # Store last valid config to avoid NULL during input updates
   log_debug("Setting up column configuration reactives", "VISUALIZATION")
-  last_valid_config <- reactiveVal(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run"))
+  last_valid_config <- shiny::reactiveVal(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run"))
 
   # Separate reactives for auto-detected and manual column selection
-  auto_detected_config <- reactive({
+  auto_detected_config <- shiny::reactive({
     log_debug("======================================", "AUTO_DETECTED_CONFIG")
     log_debug("auto_detected_config reactive triggered", "AUTO_DETECTED_CONFIG")
 
@@ -38,7 +38,7 @@ setup_visualization <- function(input, output, session, app_state) {
       }
     }
 
-    req(auto_columns)
+    shiny::req(auto_columns)
 
     config <- list(
       x_col = auto_columns$x_col,
@@ -51,7 +51,7 @@ setup_visualization <- function(input, output, session, app_state) {
     return(config)
   })
 
-  manual_config <- reactive({
+  manual_config <- shiny::reactive({
     x_col <- sanitize_selection(input$x_column)
     y_col <- sanitize_selection(input$y_column)
     n_col <- sanitize_selection(input$n_column)
@@ -65,7 +65,7 @@ setup_visualization <- function(input, output, session, app_state) {
   })
 
   # Simplified column config - single source of truth
-  column_config <- reactive({
+  column_config <- shiny::reactive({
     log_debug("======================================", "COLUMN_CONFIG")
     log_debug("column_config reactive triggered (simplified)", "COLUMN_CONFIG")
 
@@ -100,7 +100,7 @@ setup_visualization <- function(input, output, session, app_state) {
   })
 
   # Observer to update last_valid_config (side effects outside reactives)
-  observe({
+  shiny::observe({
     config <- column_config()
     if (!is.null(config$y_col)) {
       last_valid_config(config)
@@ -114,11 +114,11 @@ setup_visualization <- function(input, output, session, app_state) {
     "visualization",
     data_reactive = NULL,  # Module uses its own event-driven data access
     column_config_reactive = column_config,
-    chart_type_reactive = reactive({
+    chart_type_reactive = shiny::reactive({
       chart_selection <- if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type
       get_qic_chart_type(chart_selection)
     }),
-    target_value_reactive = reactive({
+    target_value_reactive = shiny::reactive({
       if (is.null(input$target_value) || input$target_value == "") {
         return(NULL)
       }
@@ -135,7 +135,7 @@ setup_visualization <- function(input, output, session, app_state) {
         return(parse_danish_target(input$target_value, NULL))
       }
     }),
-    centerline_value_reactive = reactive({
+    centerline_value_reactive = shiny::reactive({
       if (is.null(input$centerline_value) || input$centerline_value == "") {
         return(NULL)
       }
@@ -152,7 +152,7 @@ setup_visualization <- function(input, output, session, app_state) {
         return(parse_danish_target(input$centerline_value, NULL))
       }
     }),
-    skift_config_reactive = reactive({
+    skift_config_reactive = shiny::reactive({
       # Bestem om vi skal vise faser baseret på Skift kolonne valg og data
       data <- app_state$data$current_data
       config <- column_config()
@@ -178,7 +178,7 @@ setup_visualization <- function(input, output, session, app_state) {
         skift_column = skift_col
       ))
     }),
-    frys_config_reactive = reactive({
+    frys_config_reactive = shiny::reactive({
       # Bestem frys kolonne for baseline freeze
       data <- app_state$data$current_data
       config <- column_config()
@@ -198,21 +198,21 @@ setup_visualization <- function(input, output, session, app_state) {
       return(frys_col)
     }),
     chart_title_reactive = chart_title(input),
-    y_axis_unit_reactive = reactive({
+    y_axis_unit_reactive = shiny::reactive({
       if (is.null(input$y_axis_unit) || input$y_axis_unit == "") {
         return("count")
       } else {
         return(input$y_axis_unit)
       }
     }),
-    kommentar_column_reactive = reactive({
+    kommentar_column_reactive = shiny::reactive({
       return(sanitize_selection(input$kommentar_column))
     }),
     app_state = app_state
   )
 
   # Plot klar tjek
-  output$plot_ready <- reactive({
+  output$plot_ready <- shiny::reactive({
     result <- !is.null(visualization$plot_ready()) && visualization$plot_ready()
     return(if (result) "true" else "false")
   })

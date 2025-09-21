@@ -9,7 +9,7 @@ NULL
 #' Setup Event Listeners
 #'
 #' Sets up all reactive event listeners for the application.
-#' This function creates observeEvent() handlers for all events
+#' This function creates shiny::observeEvent() handlers for all events
 #' in the app_state$events reactive values.
 #'
 #' @param app_state The centralized app state
@@ -20,7 +20,7 @@ NULL
 #'
 #' @details
 #' This function consolidates all event-driven reactive patterns
-#' in one place, replacing the scattered observeEvent() calls
+#' in one place, replacing the scattered shiny::observeEvent() calls
 #' and bridge observers that were previously spread across
 #' multiple files.
 #'
@@ -31,7 +31,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # Setting up unified event listeners
 
   # DATA LIFECYCLE EVENTS
-  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
+  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
     # Data loaded event handler
 
     # FASE 3: Unfreeze autodetect system when new data is loaded
@@ -45,7 +45,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
   })
 
-  observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
+  shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
     # Data changed event handler
 
     # Update column choices when data changes
@@ -53,7 +53,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # AUTO-DETECTION EVENTS
-  observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  shiny::observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Auto-detection started event handler
 
     # Set auto-detection in progress
@@ -91,14 +91,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     )
   })
 
-  observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  shiny::observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
 
     # Update state
     app_state$columns$auto_detect$in_progress <- FALSE
     app_state$columns$auto_detect$completed <- TRUE
 
     # Trigger UI sync if columns were detected
-    auto_detect_results <- isolate(app_state$columns$auto_detect$results)
+    auto_detect_results <- shiny::isolate(app_state$columns$auto_detect$results)
 
     if (!is.null(auto_detect_results)) {
       emit$ui_sync_needed()
@@ -107,7 +107,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # UI SYNCHRONIZATION EVENTS
-  observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
+  shiny::observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
 
     # Add extra debugging
 
@@ -128,7 +128,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     emit$ui_sync_completed()
   })
 
-  observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
+  shiny::observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
 
     # Update timestamp
     app_state$columns$ui_sync$last_sync_time <- Sys.time()
@@ -138,14 +138,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # NAVIGATION EVENTS
-  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
+  shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
 
     # Increment navigation trigger to update all eventReactive components
     app_state$navigation$trigger <- app_state$navigation$trigger + 1L
   })
 
   # TEST MODE EVENTS
-  observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
 
     # In test mode, immediately start auto-detection
     if (!is.null(app_state$data$current_data)) {
@@ -154,7 +154,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # SESSION LIFECYCLE EVENTS
-  observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  shiny::observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
 
     # FASE 3: Session start trigger for name-only detection
     autodetect_engine(
@@ -165,7 +165,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     )
   })
 
-  observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  shiny::observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
 
     # FASE 3: Manual trigger always runs, bypassing frozen state
     autodetect_engine(
@@ -176,7 +176,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     )
   })
 
-  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
+  shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
 
     # Reset all state to initial values
     app_state$data$current_data <- NULL
@@ -193,7 +193,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # ERROR HANDLING EVENTS ===================================================
 
   # General error event listener
-  observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$highest, {
+  shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$highest, {
     error_info <- app_state$errors$last_error
 
 
@@ -218,7 +218,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Processing error event listener
-  observeEvent(app_state$events$processing_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
+  shiny::observeEvent(app_state$events$processing_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
     error_info <- app_state$errors$last_error
 
 
@@ -231,7 +231,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Validation error event listener
-  observeEvent(app_state$events$validation_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
+  shiny::observeEvent(app_state$events$validation_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
     error_info <- app_state$errors$last_error
 
 
@@ -242,7 +242,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Network error event listener
-  observeEvent(app_state$events$network_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$medium, {
+  shiny::observeEvent(app_state$events$network_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$medium, {
     error_info <- app_state$errors$last_error
 
 
@@ -252,7 +252,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Recovery completed event listener
-  observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  shiny::observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
     error_info <- app_state$errors$last_error
 
 
@@ -275,7 +275,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # choices=NULL og selected=NULL, og dermed clearede alle dropdown værdier efter autodetect.
   # UI sync håndteres allerede korrekt via ui_sync_needed event systemet.
 
-  # observeEvent(app_state$events$column_choices_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  # shiny::observeEvent(app_state$events$column_choices_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
   # #   log_debug("Column choices changed event received", .context = "UI_EVENT")
   #
   #   if (!is.null(ui_service)) {
@@ -286,7 +286,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # })
 
   # Form reset needed event listener
-  observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  shiny::observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
 
     if (!is.null(ui_service)) {
       ui_service$reset_form_fields()
@@ -295,7 +295,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Form restore needed event listener
-  observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  shiny::observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
 
     # For form restore, we need metadata from app_state
     # This could be triggered by session restore events
@@ -306,7 +306,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # General UI update needed event listener
-  observeEvent(app_state$events$ui_update_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  shiny::observeEvent(app_state$events$ui_update_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
 
     # This could trigger multiple UI updates
     if (!is.null(ui_service)) {
@@ -323,16 +323,16 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   columns_to_observe <- c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
 
   for (col in columns_to_observe) {
-    observeEvent(input[[col]], {
+    shiny::observeEvent(input[[col]], {
       input_received_time <- Sys.time()
       new_value <- input[[col]]
 
       # DROPDOWN DEBUGGING: Log input change details
-      old_value <- isolate(app_state$columns[[col]]) %||% ""
+      old_value <- shiny::isolate(app_state$columns[[col]]) %||% ""
       #               "to", paste0("'", new_value, "'")), "DROPDOWN_DEBUG")
 
       # TIMING LOGGING: Calculate time since last programmatic update
-      last_update_time <- isolate(app_state$ui$last_programmatic_update)
+      last_update_time <- shiny::isolate(app_state$ui$last_programmatic_update)
       time_since_update <- if (!is.null(last_update_time)) {
         as.numeric(difftime(input_received_time, last_update_time, units = "secs")) * 1000
       } else { NA }
@@ -341,7 +341,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       #         .context = "LOOP_PROTECTION")
 
       # FREEZE-AWARE LOGGING: Observe freeze state without modification
-      freeze_state <- isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
+      freeze_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
       #               ", autodetect frozen =", freeze_state), "DROPDOWN_DEBUG")
 
@@ -355,7 +355,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         app_state$columns[[col]] <- new_value
 
         # PERFORMANCE METRICS: Track token consumption for monitoring
-        isolate({
+        shiny::isolate({
           app_state$ui$performance_metrics$tokens_consumed <- app_state$ui$performance_metrics$tokens_consumed + 1L
         })
 
@@ -377,16 +377,16 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
   # This observer tracks timing metrics for optimization without emitting events
   if (!is.null(app_state$ui)) {
-    observeEvent(app_state$ui$last_programmatic_update, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$lowest, {
+    shiny::observeEvent(app_state$ui$last_programmatic_update, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$lowest, {
       current_time <- Sys.time()
-      last_update <- isolate(app_state$ui$last_programmatic_update)
+      last_update <- shiny::isolate(app_state$ui$last_programmatic_update)
 
       if (!is.null(last_update)) {
         # FREEZE-AWARE TIMING: Track performance metrics with context
-        freeze_state <- isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
+        freeze_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
         autodetect_in_progress <- if (!is.null(app_state$columns)) {
-          isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
+          shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
         } else { FALSE }
 
       #               ", autodetect active:", autodetect_in_progress), .context = "TIMING_MONITOR")
@@ -424,22 +424,22 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
   )
 
   # DROPDOWN DEBUGGING: Log autodetect results that will be used
-  auto_detect_results <- isolate(app_state$columns$auto_detect$results)
+  auto_detect_results <- shiny::isolate(app_state$columns$auto_detect$results)
   if (!is.null(auto_detect_results)) {
     for (col_name in names(auto_detect_results)) {
     }
   } else {
   }
 
-  # Use isolate() to access reactive values safely
-  current_data <- isolate(app_state$data$current_data)
+  # Use shiny::isolate() to access reactive values safely
+  current_data <- shiny::isolate(app_state$data$current_data)
   if (is.null(current_data)) {
     return()
   }
 
   data <- current_data
   col_names <- names(data)
-  columns_state <- isolate(app_state$columns)
+  columns_state <- shiny::isolate(app_state$columns)
 
   # Update UI controls with detected columns using centralized service
   safe_operation(
@@ -449,12 +449,12 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
         # Use centralized UI service with detected selections for all 6 columns
         col_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
         selected_columns <- list(
-          x_column = isolate(columns_state$x_column) %||% "",
-          y_column = isolate(columns_state$y_column) %||% "",
-          n_column = isolate(columns_state$n_column) %||% "",
-          skift_column = isolate(columns_state$skift_column) %||% "",
-          frys_column = isolate(columns_state$frys_column) %||% "",
-          kommentar_column = isolate(columns_state$kommentar_column) %||% ""
+          x_column = shiny::isolate(columns_state$x_column) %||% "",
+          y_column = shiny::isolate(columns_state$y_column) %||% "",
+          n_column = shiny::isolate(columns_state$n_column) %||% "",
+          skift_column = shiny::isolate(columns_state$skift_column) %||% "",
+          frys_column = shiny::isolate(columns_state$frys_column) %||% "",
+          kommentar_column = shiny::isolate(columns_state$kommentar_column) %||% ""
         )
 
         # DROPDOWN DEBUGGING: Log alle 6 kolonner eksplicit
@@ -472,50 +472,50 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
 
         safe_programmatic_ui_update(session, app_state, function() {
           # Primary columns (required)
-          x_col_val <- isolate(columns_state$x_column)
+          x_col_val <- shiny::isolate(columns_state$x_column)
           if (!is.null(x_col_val)) {
-            updateSelectizeInput(session, "x_column",
+            shiny::updateSelectizeInput(session, "x_column",
                                choices = standard_choices,
                                selected = x_col_val)
             log_debug_kv(updated_x_column_ui = x_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
-          y_col_val <- isolate(columns_state$y_column)
+          y_col_val <- shiny::isolate(columns_state$y_column)
           if (!is.null(y_col_val)) {
-            updateSelectizeInput(session, "y_column",
+            shiny::updateSelectizeInput(session, "y_column",
                                choices = standard_choices,
                                selected = y_col_val)
             log_debug_kv(updated_y_column_ui = y_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
-          n_col_val <- isolate(columns_state$n_column)
+          n_col_val <- shiny::isolate(columns_state$n_column)
           if (!is.null(n_col_val)) {
-            updateSelectizeInput(session, "n_column",
+            shiny::updateSelectizeInput(session, "n_column",
                                choices = standard_choices,
                                selected = n_col_val)
             log_debug_kv(updated_n_column_ui = n_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
           # Control columns (optional)
-          skift_col_val <- isolate(columns_state$skift_column)
+          skift_col_val <- shiny::isolate(columns_state$skift_column)
           if (!is.null(skift_col_val)) {
-            updateSelectizeInput(session, "skift_column",
+            shiny::updateSelectizeInput(session, "skift_column",
                                choices = standard_choices,
                                selected = skift_col_val)
             log_debug_kv(updated_skift_column_ui = skift_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
-          frys_col_val <- isolate(columns_state$frys_column)
+          frys_col_val <- shiny::isolate(columns_state$frys_column)
           if (!is.null(frys_col_val)) {
-            updateSelectizeInput(session, "frys_column",
+            shiny::updateSelectizeInput(session, "frys_column",
                                choices = standard_choices,
                                selected = frys_col_val)
             log_debug_kv(updated_frys_column_ui = frys_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
-          kommentar_col_val <- isolate(columns_state$kommentar_column)
+          kommentar_col_val <- shiny::isolate(columns_state$kommentar_column)
           if (!is.null(kommentar_col_val)) {
-            updateSelectizeInput(session, "kommentar_column",
+            shiny::updateSelectizeInput(session, "kommentar_column",
                                choices = standard_choices,
                                selected = kommentar_col_val)
             log_debug_kv(updated_kommentar_column_ui = kommentar_col_val, .context = "UI_SYNC_UNIFIED")
@@ -587,8 +587,8 @@ update_column_choices_unified <- function(app_state, input, output, session, ui_
       # Priority: input[[col]] > app_state$columns[[col]] > ""
       current_val <- if (!is.null(input[[col]]) && input[[col]] != "") {
         input[[col]]
-      } else if (!is.null(isolate(app_state$columns[[col]]))) {
-        isolate(app_state$columns[[col]])
+      } else if (!is.null(shiny::isolate(app_state$columns[[col]]))) {
+        shiny::isolate(app_state$columns[[col]])
       } else {
         ""
       }
@@ -604,7 +604,7 @@ update_column_choices_unified <- function(app_state, input, output, session, ui_
         } else {
           # Fallback to direct updates with retained selections
           for (col in columns_to_update) {
-            updateSelectizeInput(session, col, choices = col_choices, selected = current_selections[[col]])
+            shiny::updateSelectizeInput(session, col, choices = col_choices, selected = current_selections[[col]])
           }
         }
       },

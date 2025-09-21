@@ -13,9 +13,9 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
   # Check if centralized state is available
   use_centralized_state <- !is.null(app_state)
   # Auto-gendan session data når tilgængelig (hvis aktiveret)
-  observeEvent(input$auto_restore_data,
+  shiny::observeEvent(input$auto_restore_data,
     {
-      req(input$auto_restore_data)
+      shiny::req(input$auto_restore_data)
 
       # Tjek om auto-gendannelse er aktiveret
       if (!AUTO_RESTORE_ENABLED) {
@@ -124,7 +124,7 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
               nrow(saved_state$data)
             }
 
-            showNotification(
+            shiny::showNotification(
               paste(
                 "Tidligere session automatisk genindlæst:", data_rows, "datapunkter fra",
                 format(as.POSIXct(saved_state$timestamp), "%d-%m-%Y %H:%M")
@@ -156,63 +156,63 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
   )
 
   # Manual save handler
-  observeEvent(input$manual_save, {
+  shiny::observeEvent(input$manual_save, {
     # Unified state: Use centralized state for current data
     current_data_check <- app_state$data$current_data
-    req(current_data_check)
+    shiny::req(current_data_check)
 
     metadata <- collect_metadata(input)
 
     saveDataLocally(session, current_data_check, metadata)
     # Unified state assignment only
     app_state$session$last_save_time <- Sys.time()
-    showNotification("Session gemt lokalt!", type = "message", duration = 2)
+    shiny::showNotification("Session gemt lokalt!", type = "message", duration = 2)
   })
 
   # Clear saved handler
-  observeEvent(input$clear_saved, {
+  shiny::observeEvent(input$clear_saved, {
     handle_clear_saved_request(input, session, app_state, emit)
   })
 
   # Upload modal handler
-  observeEvent(input$show_upload_modal, {
+  shiny::observeEvent(input$show_upload_modal, {
     show_upload_modal()
   })
 
   # Confirm clear saved handler
-  observeEvent(input$confirm_clear_saved, {
+  shiny::observeEvent(input$confirm_clear_saved, {
     handle_confirm_clear_saved(session, app_state, emit, ui_service)
   })
 
   # Track file selection for modal
-  output$fileSelected <- reactive({
+  output$fileSelected <- shiny::reactive({
     !is.null(input$data_file) && !is.null(input$data_file$datapath)
   })
   outputOptions(output, "fileSelected", suspendWhenHidden = FALSE)
 
   # Confirm upload handler
-  observeEvent(input$confirm_upload, {
+  shiny::observeEvent(input$confirm_upload, {
     # Set navigation flags for file upload flow
     # Use unified state management
     app_state$session$user_started_session <- TRUE
     app_state$session$file_uploaded <- FALSE  # Will be set to TRUE by actual file upload handler
 
-    removeModal()
+    shiny::removeModal()
   })
 
   # Save status display
-  output$save_status_display <- renderUI({
+  output$save_status_display <- shiny::renderUI({
     # Unified state: Use centralized state for last save time
     last_save_time_check <- app_state$session$last_save_time
 
     if (!is.null(last_save_time_check)) {
       time_diff <- as.numeric(difftime(Sys.time(), last_save_time_check, units = "mins"))
       if (time_diff < 1) {
-        span(icon("check"), " Gemt lige nu", style = "color: green;")
+        shiny::span(shiny::icon("check"), " Gemt lige nu", style = "color: green;")
       } else if (time_diff < 60) {
-        span(icon("clock"), paste(" Gemt for", round(time_diff), "min siden"))
+        shiny::span(shiny::icon("clock"), paste(" Gemt for", round(time_diff), "min siden"))
       } else {
-        span(icon("clock"), " Gemt for mere end 1 time siden")
+        shiny::span(shiny::icon("clock"), " Gemt for mere end 1 time siden")
       }
     }
   })
@@ -223,54 +223,54 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
 # Helper functions for session management
 restore_metadata <- function(session, metadata, ui_service = NULL) {
 
-  isolate({
+  shiny::isolate({
     if (!is.null(ui_service)) {
       # Use centralized UI service for metadata restoration
       ui_service$update_form_fields(metadata)
     } else {
       # Fallback to direct updates
       if (!is.null(metadata$title)) {
-        updateTextInput(session, "indicator_title", value = metadata$title)
+        shiny::updateTextInput(session, "indicator_title", value = metadata$title)
       }
       if (!is.null(metadata$unit_type)) {
-        updateRadioButtons(session, "unit_type", selected = metadata$unit_type)
+        shiny::updateRadioButtons(session, "unit_type", selected = metadata$unit_type)
       }
       if (!is.null(metadata$unit_select)) {
-        updateSelectizeInput(session, "unit_select", selected = metadata$unit_select)
+        shiny::updateSelectizeInput(session, "unit_select", selected = metadata$unit_select)
       }
       if (!is.null(metadata$unit_custom)) {
-        updateTextInput(session, "unit_custom", value = metadata$unit_custom)
+        shiny::updateTextInput(session, "unit_custom", value = metadata$unit_custom)
       }
       if (!is.null(metadata$description)) {
         updateTextAreaInput(session, "indicator_description", value = metadata$description)
       }
       if (!is.null(metadata$chart_type)) {
-        updateSelectizeInput(session, "chart_type", selected = metadata$chart_type)
+        shiny::updateSelectizeInput(session, "chart_type", selected = metadata$chart_type)
       }
       if (!is.null(metadata$x_column)) {
-        updateSelectizeInput(session, "x_column", selected = metadata$x_column)
+        shiny::updateSelectizeInput(session, "x_column", selected = metadata$x_column)
       }
       if (!is.null(metadata$y_column)) {
-        updateSelectizeInput(session, "y_column", selected = metadata$y_column)
+        shiny::updateSelectizeInput(session, "y_column", selected = metadata$y_column)
       }
       if (!is.null(metadata$n_column)) {
-        updateSelectizeInput(session, "n_column", selected = metadata$n_column)
+        shiny::updateSelectizeInput(session, "n_column", selected = metadata$n_column)
       }
       if (!is.null(metadata$target_value)) {
-        updateTextInput(session, "target_value", value = metadata$target_value)
+        shiny::updateTextInput(session, "target_value", value = metadata$target_value)
       }
       if (!is.null(metadata$centerline_value)) {
-        updateTextInput(session, "centerline_value", value = metadata$centerline_value)
+        shiny::updateTextInput(session, "centerline_value", value = metadata$centerline_value)
       }
       if (!is.null(metadata$y_axis_unit)) {
-        updateSelectizeInput(session, "y_axis_unit", selected = metadata$y_axis_unit)
+        shiny::updateSelectizeInput(session, "y_axis_unit", selected = metadata$y_axis_unit)
       }
     }
   })
 }
 
 collect_metadata <- function(input) {
-  isolate({
+  shiny::isolate({
     list(
       title = input$indicator_title,
       unit_type = input$unit_type,
@@ -307,7 +307,7 @@ handle_clear_saved_request <- function(input, session, app_state, emit) {
   # If no data or settings, start new session directly
   if (!has_data && !has_settings) {
     reset_to_empty_session(session, app_state, emit, ui_service)
-    showNotification("Ny session startet", type = "message", duration = 2)
+    shiny::showNotification("Ny session startet", type = "message", duration = 2)
     return()
   }
 
@@ -317,8 +317,8 @@ handle_clear_saved_request <- function(input, session, app_state, emit) {
 
 handle_confirm_clear_saved <- function(session, app_state, emit, ui_service = NULL) {
   reset_to_empty_session(session, app_state, emit, ui_service)
-  removeModal()
-  showNotification("Ny session startet - alt data og indstillinger nulstillet", type = "message", duration = 4)
+  shiny::removeModal()
+  shiny::showNotification("Ny session startet - alt data og indstillinger nulstillet", type = "message", duration = 4)
 }
 
 reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) {
@@ -367,19 +367,19 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
   new_data <- app_state$data$current_data
 
   # Reset UI inputs using centralized service
-  isolate({
+  shiny::isolate({
     if (!is.null(ui_service)) {
       # Use centralized UI service for all form resets
       ui_service$reset_form_fields()
     } else {
       # Fallback to direct updates
-      updateTextInput(session, "indicator_title", value = "")
-      updateRadioButtons(session, "unit_type", selected = "select")
-      updateSelectizeInput(session, "unit_select", selected = "")
-      updateTextInput(session, "unit_custom", value = "")
+      shiny::updateTextInput(session, "indicator_title", value = "")
+      shiny::updateRadioButtons(session, "unit_type", selected = "select")
+      shiny::updateSelectizeInput(session, "unit_select", selected = "")
+      shiny::updateTextInput(session, "unit_custom", value = "")
       updateTextAreaInput(session, "indicator_description", value = "")
-      updateSelectizeInput(session, "chart_type", selected = "run")
-      updateSelectizeInput(session, "y_axis_unit", selected = "count")
+      shiny::updateSelectizeInput(session, "chart_type", selected = "run")
+      shiny::updateSelectizeInput(session, "y_axis_unit", selected = "count")
 
       # Opdater kolonnevalg med nye standardkolonner fra empty session data
       if (!is.null(new_data) && ncol(new_data) > 0) {
@@ -388,24 +388,24 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
         col_choices <- c("Vælg kolonne" = "", col_choices)
 
 
-        updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
-        updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
-        updateSelectizeInput(session, "n_column", choices = col_choices, selected = "")
-        updateSelectizeInput(session, "skift_column", choices = col_choices, selected = "")
-        updateSelectizeInput(session, "frys_column", choices = col_choices, selected = "")
-        updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = "")
+        shiny::updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
+        shiny::updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
+        shiny::updateSelectizeInput(session, "n_column", choices = col_choices, selected = "")
+        shiny::updateSelectizeInput(session, "skift_column", choices = col_choices, selected = "")
+        shiny::updateSelectizeInput(session, "frys_column", choices = col_choices, selected = "")
+        shiny::updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = "")
       } else {
         # Fallback til tomme choices
-        updateSelectizeInput(session, "x_column", choices = c("Vælg kolonne" = ""), selected = "")
-        updateSelectizeInput(session, "y_column", choices = c("Vælg kolonne" = ""), selected = "")
-        updateSelectizeInput(session, "n_column", choices = c("Vælg kolonne" = ""), selected = "")
-        updateSelectizeInput(session, "skift_column", choices = c("Vælg kolonne" = ""), selected = "")
-        updateSelectizeInput(session, "frys_column", choices = c("Vælg kolonne" = ""), selected = "")
-        updateSelectizeInput(session, "kommentar_column", choices = c("Vælg kolonne" = ""), selected = "")
+        shiny::updateSelectizeInput(session, "x_column", choices = c("Vælg kolonne" = ""), selected = "")
+        shiny::updateSelectizeInput(session, "y_column", choices = c("Vælg kolonne" = ""), selected = "")
+        shiny::updateSelectizeInput(session, "n_column", choices = c("Vælg kolonne" = ""), selected = "")
+        shiny::updateSelectizeInput(session, "skift_column", choices = c("Vælg kolonne" = ""), selected = "")
+        shiny::updateSelectizeInput(session, "frys_column", choices = c("Vælg kolonne" = ""), selected = "")
+        shiny::updateSelectizeInput(session, "kommentar_column", choices = c("Vælg kolonne" = ""), selected = "")
       }
 
-      updateTextInput(session, "target_value", value = "")
-      updateTextInput(session, "centerline_value", value = "")
+      shiny::updateTextInput(session, "target_value", value = "")
+      shiny::updateTextInput(session, "centerline_value", value = "")
     }
 
     shinyjs::reset("data_file")
@@ -434,46 +434,46 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
 }
 
 show_upload_modal <- function() {
-  showModal(modalDialog(
-    title = div(
-      icon("upload"),
+  shiny::showModal(shiny::modalDialog(
+    title = shiny::div(
+      shiny::icon("upload"),
       " Upload datafil",
       style = paste("color:", HOSPITAL_COLORS$primary)
     ),
     size = "m",
-    div(
+    shiny::div(
       style = "margin: 20px 0;",
 
       # File input i modal
-      fileInput(
+      shiny::fileInput(
         "data_file",
         "Vælg datafil:",
         accept = c(".xlsx", ".xls", ".csv", ".CSV"),
         placeholder = "Ingen fil valgt...",
         width = "100%"
       ),
-      hr(),
-      div(
+      shiny::hr(),
+      shiny::div(
         style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 0.9rem;",
-        h6("Understøttede filformater:", style = "font-weight: 500; margin-bottom: 10px;"),
-        tags$ul(
+        shiny::h6("Understøttede filformater:", style = "font-weight: 500; margin-bottom: 10px;"),
+        shiny::tags$ul(
           style = "margin-bottom: 0;",
-          tags$li(strong("Excel filer:"), " .xlsx, .xls - med automatisk kolonnedetekttion"),
-          tags$li(strong("CSV filer:"), " .csv - danske indstillinger (semikolon, komma som decimal)")
+          shiny::tags$li(shiny::strong("Excel filer:"), " .xlsx, .xls - med automatisk kolonnedetekttion"),
+          shiny::tags$li(shiny::strong("CSV filer:"), " .csv - danske indstillinger (semikolon, komma som decimal)")
         ),
-        br(),
-        div(
+        shiny::br(),
+        shiny::div(
           style = "font-size: 0.8rem; color: #666;",
-          icon("info-circle"),
+          shiny::icon("info-circle"),
           " Filer med 'Data' og 'Metadata' sheets genindlæser komplette sessioner automatisk."
         )
       )
     ),
-    footer = tagList(
-      modalButton("Annuller"),
-      conditionalPanel(
+    footer = shiny::tagList(
+      shiny::modalButton("Annuller"),
+      shiny::conditionalPanel(
         condition = "output.fileSelected == true",
-        actionButton("confirm_upload", "Upload fil", class = "btn-primary", icon = icon("check"))
+        shiny::actionButton("confirm_upload", "Upload fil", class = "btn-primary", icon = shiny::icon("check"))
       )
     ),
     easyClose = TRUE
@@ -481,27 +481,27 @@ show_upload_modal <- function() {
 }
 
 show_clear_confirmation_modal <- function(has_data, has_settings) {
-  showModal(modalDialog(
+  shiny::showModal(shiny::modalDialog(
     title = "Start ny session?",
     size = "m",
-    div(
-      icon("refresh"),
+    shiny::div(
+      shiny::icon("refresh"),
       " Er du sikker på at du vil starte en helt ny session?",
-      br(), br(),
-      p("Dette vil:"),
-      tags$ul(
-        if (has_data) tags$li("Slette eksisterende data i tabellen"),
-        if (has_settings) tags$li("Nulstille titel, beskrivelse og andre indstillinger"),
+      shiny::br(), shiny::br(),
+      shiny::p("Dette vil:"),
+      shiny::tags$ul(
+        if (has_data) shiny::tags$li("Slette eksisterende data i tabellen"),
+        if (has_settings) shiny::tags$li("Nulstille titel, beskrivelse og andre indstillinger"),
         # Unified state: Check centralized state for last save time
-        if (!is.null(app_state$session$last_save_time)) tags$li("Fjerne gemt session fra lokal storage"),
-        tags$li("Oprette en tom standardtabel")
+        if (!is.null(app_state$session$last_save_time)) shiny::tags$li("Fjerne gemt session fra lokal storage"),
+        shiny::tags$li("Oprette en tom standardtabel")
       ),
-      br(),
-      p("Denne handling kan ikke fortrydes.")
+      shiny::br(),
+      shiny::p("Denne handling kan ikke fortrydes.")
     ),
-    footer = tagList(
-      modalButton("Annuller"),
-      actionButton("confirm_clear_saved", "Ja, start ny session", class = "btn-warning")
+    footer = shiny::tagList(
+      shiny::modalButton("Annuller"),
+      shiny::actionButton("confirm_clear_saved", "Ja, start ny session", class = "btn-warning")
     ),
     easyClose = FALSE
   ))
@@ -518,7 +518,7 @@ show_clear_confirmation_modal <- function(has_data, has_settings) {
 setup_welcome_page_handlers <- function(input, output, session, app_state, emit, ui_service = NULL) {
 
   # Håndtér "Start ny analyse" knap fra velkomstsiden
-  observeEvent(input$start_new_session, {
+  shiny::observeEvent(input$start_new_session, {
 
     if (is.null(app_state)) {
       log_error("app_state is NULL - navigation will not work properly", "WELCOME_PAGE")
@@ -559,12 +559,12 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
       ui_service$update_column_choices(clear_selections = TRUE)
     } else {
       # Fallback to direct updates - use updateSelectizeInput for consistency
-      updateSelectizeInput(session, "x_column", selected = "")
-      updateSelectizeInput(session, "y_column", selected = "")
-      updateSelectizeInput(session, "n_column", selected = "")
-      updateSelectizeInput(session, "skift_column", selected = "")
-      updateSelectizeInput(session, "frys_column", selected = "")
-      updateSelectizeInput(session, "kommentar_column", selected = "")
+      shiny::updateSelectizeInput(session, "x_column", selected = "")
+      shiny::updateSelectizeInput(session, "y_column", selected = "")
+      shiny::updateSelectizeInput(session, "n_column", selected = "")
+      shiny::updateSelectizeInput(session, "skift_column", selected = "")
+      shiny::updateSelectizeInput(session, "frys_column", selected = "")
+      shiny::updateSelectizeInput(session, "kommentar_column", selected = "")
     }
 
     log_debug_kv(
@@ -575,13 +575,13 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
   })
 
   # Håndtér "Upload data" knap fra velkomstsiden
-  observeEvent(input$upload_data_welcome, {
+  shiny::observeEvent(input$upload_data_welcome, {
     # Fokusér på fil input eller åbn fil dialog
     shinyjs::click("file_upload")
   })
 
   # Håndtér "Quick start demo" knap
-  observeEvent(input$quick_start_demo, {
+  shiny::observeEvent(input$quick_start_demo, {
     # Indlæs eksempel data
     test_file_path <- "R/data/spc_exampledata.csv"
 
@@ -628,7 +628,7 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
           app_state$session$file_name <- "Eksempel data (SPC demo)"
 
           # Vis succes besked
-          showNotification(
+          shiny::showNotification(
             "Eksempel data indlæst! Du kan nu se SPC analysen.",
             type = "message",
             duration = 3
@@ -643,7 +643,7 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
       )
     } else {
       log_warn("Demo data file not found at:", test_file_path, "DEMO_DATA")
-      showNotification(
+      shiny::showNotification(
         "Eksempel data ikke tilgængelig. Prøv at uploade dine egne data.",
         type = "warning",
         duration = 5

@@ -6,7 +6,7 @@
 #' @param port Port number for the application (default: NULL for auto-assignment)
 #' @param launch_browser TRUE for browser, FALSE for no launch, or leave default for environment-aware decision
 #' @param options List of application options (golem-style configuration)
-#' @param ... Additional arguments to pass to shinyApp()
+#' @param ... Additional arguments to pass to shiny::shinyApp()
 #'
 #' @details
 #' This function implements golem-inspired patterns for robust Shiny app deployment.
@@ -46,10 +46,9 @@ run_app <- function(port = NULL,
   shiny::addResourcePath("www", "www")
   
   # Create the Shiny app
-  app <- shinyApp(
+  app <- shiny::shinyApp(
     ui = app_ui(),
-    server = app_server,
-    ...
+    server = app_server
   )
 
   # Determine launch behavior using golem-style options and environment detection
@@ -93,12 +92,12 @@ run_app <- function(port = NULL,
 
   # Run the app
   if (is.null(port)) {
-    runApp(
+    shiny::runApp(
       app,
       launch.browser = browser_option
     )
   } else {
-    runApp(
+    shiny::runApp(
       app,
       port = port,
       launch.browser = browser_option
@@ -112,18 +111,18 @@ app_ui <- function() {
   # UI components now loaded globally for better performance
 
   # Return the UI structure using consolidated functions
-  page_navbar(
-    title = tagList(
-      img(
+  bslib::page_navbar(
+    title = shiny::tagList(
+      shiny::img(
         src = HOSPITAL_LOGO_PATH,
         height = "40px",
         style = "margin-right: 10px;",
         onerror = "this.style.display='none'"
       ),
-      div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
+      shiny::div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
     ),
     theme = my_theme,
-    navbar_options = navbar_options(theme = "light", underline = FALSE),
+    navbar_options = bslib::navbar_options(theme = "light", underline = FALSE),
 
     # Header-komponenter
     header = create_ui_header(),
@@ -132,7 +131,7 @@ app_ui <- function() {
     sidebar = create_ui_sidebar(),
 
     # Hovedindhold
-    nav_panel(
+    bslib::nav_panel(
       title = NULL,
       create_ui_main_content()
     )

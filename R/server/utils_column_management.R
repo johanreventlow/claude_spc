@@ -51,21 +51,21 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
   # LEGACY: Auto-detection trigger observer removed - now handled by unified event system
   # Manual auto-detection is triggered via emit$auto_detection_started() in the event system
-  # The observeEvent(app_state$events$data_loaded) -> emit$auto_detection_started() chain
+  # The shiny::observeEvent(app_state$events$data_loaded) -> emit$auto_detection_started() chain
   # handles all auto-detection triggering automatically through the unified event architecture
 
   # TEST MODE: Now handled by unified event system in utils_event_system.R
   # Legacy test mode observer removed - replaced by emit$test_mode_ready() pattern
 
   # UNIFIED EVENT SYSTEM: File upload auto-detection triggers are now handled by data_loaded events
-  # The emit$data_loaded() -> observeEvent(app_state$events$data_loaded) -> emit$auto_detection_started()
+  # The emit$data_loaded() -> shiny::observeEvent(app_state$events$data_loaded) -> emit$auto_detection_started()
   # chain handles all auto-detection triggering automatically
 
   # UNIFIED EVENT SYSTEM: File upload triggers are now handled by data_loaded events
   # The event system automatically handles auto-detection when data is loaded
 
   # UNIFIED EVENT SYSTEM: Auto-detection is now handled by event listeners in utils_event_system.R
-  # The observeEvent(app_state$events$auto_detection_started) handles all auto-detection logic
+  # The shiny::observeEvent(app_state$events$auto_detection_started) handles all auto-detection logic
 
   # UNIFIED EVENT SYSTEM: Auto-detection and UI sync are now handled through events
   # emit$auto_detection_started() triggers auto-detection -> emit$ui_sync_needed() -> sync_ui_with_columns_unified()
@@ -73,7 +73,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
   # log_debug("Auto-detection and UI sync handled by unified event system", .context = "AUTODETECT_SETUP")
 
   # Auto-detekterings knap handler - kører altid når bruger trykker
-  observeEvent(input$auto_detect_columns, {
+  shiny::observeEvent(input$auto_detect_columns, {
     # FASE 3: Use event-driven manual trigger for consistency
     safe_operation(
       "Manual auto-detection trigger",
@@ -90,10 +90,10 @@ setup_column_management <- function(input, output, session, app_state, emit) {
   })
 
   # Kolonnevaliderings output
-  output$column_validation_messages <- renderUI({
+  output$column_validation_messages <- shiny::renderUI({
     # Use unified state management
     current_data_check <- app_state$data$current_data
-    req(current_data_check)
+    shiny::req(current_data_check)
 
     if ((is.null(input$x_column) || input$x_column == "") ||
       (is.null(input$y_column) || input$y_column == "")) {
@@ -139,43 +139,43 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 
     # Vis resultater
     if (length(warnings) > 0) {
-      div(
+      shiny::div(
         class = "alert alert-warning",
         style = "font-size: 0.85rem; padding: 8px; margin: 5px 0;",
-        icon("exclamation-triangle"),
-        strong(" Kolonne advarsler:"),
-        tags$ul(
+        shiny::icon("exclamation-triangle"),
+        shiny::strong(" Kolonne advarsler:"),
+        shiny::tags$ul(
           style = "margin: 5px 0; padding-left: 20px;",
-          lapply(warnings, function(warn) tags$li(warn))
+          lapply(warnings, function(warn) shiny::tags$li(warn))
         )
       )
     } else if (length(selected_cols) >= 2) {
-      div(
+      shiny::div(
         class = "alert alert-success",
         style = "font-size: 0.85rem; padding: 8px; margin: 5px 0;",
-        icon("check-circle"),
-        strong(" Kolonner valideret! "),
+        shiny::icon("check-circle"),
+        shiny::strong(" Kolonner valideret! "),
         sprintf("Klar til %s chart", chart_type)
       )
     }
   })
 
   # Redigér kolonnenavne modal
-  observeEvent(input$edit_column_names, {
+  shiny::observeEvent(input$edit_column_names, {
     show_column_edit_modal(session, app_state)
   })
 
   # Bekræft kolonnenavn ændringer
-  observeEvent(input$confirm_column_names, {
+  shiny::observeEvent(input$confirm_column_names, {
     handle_column_name_changes(input, session, app_state, emit)
   })
 
   # Tilføj kolonne
-  observeEvent(input$add_column, {
+  shiny::observeEvent(input$add_column, {
     show_add_column_modal()
   })
 
-  observeEvent(input$confirm_add_col, {
+  shiny::observeEvent(input$confirm_add_col, {
     handle_add_column(input, session, app_state, emit)
   })
 
@@ -191,12 +191,12 @@ setup_column_management <- function(input, output, session, app_state, emit) {
 show_column_edit_modal <- function(session, app_state = NULL) {
   # Use unified state management
   current_data_check <- app_state$data$current_data
-  req(current_data_check)
+  shiny::req(current_data_check)
 
   current_names <- names(current_data_check)
 
   name_inputs <- lapply(1:length(current_names), function(i) {
-    textInput(
+    shiny::textInput(
       paste0("col_name_", i),
       paste("Kolonne", i, ":"),
       value = current_names[i],
@@ -204,21 +204,21 @@ show_column_edit_modal <- function(session, app_state = NULL) {
     )
   })
 
-  showModal(modalDialog(
+  shiny::showModal(shiny::modalDialog(
     title = "Redigér kolonnenavne",
     size = "m",
-    div(
+    shiny::div(
       style = "margin-bottom: 15px;",
-      h6("Nuværende kolonnenavne:", style = "font-weight: 500;"),
-      p(paste(current_names, collapse = ", "), style = "color: #666; font-style: italic;")
+      shiny::h6("Nuværende kolonnenavne:", style = "font-weight: 500;"),
+      shiny::p(paste(current_names, collapse = ", "), style = "color: #666; font-style: italic;")
     ),
-    div(
+    shiny::div(
       style = "max-height: 300px; overflow-y: auto;",
       name_inputs
     ),
-    footer = tagList(
-      modalButton("Annuller"),
-      actionButton("confirm_column_names", "Gem ændringer", class = "btn-primary")
+    footer = shiny::tagList(
+      shiny::modalButton("Annuller"),
+      shiny::actionButton("confirm_column_names", "Gem ændringer", class = "btn-primary")
     )
   ))
 }
@@ -228,7 +228,7 @@ show_column_edit_modal <- function(session, app_state = NULL) {
 handle_column_name_changes <- function(input, session, app_state = NULL, emit = NULL) {
   # Use unified state management
   current_data_check <- app_state$data$current_data
-  req(current_data_check)
+  shiny::req(current_data_check)
 
   current_names <- names(current_data_check)
   new_names <- character(length(current_names))
@@ -243,7 +243,7 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
   }
 
   if (any(duplicated(new_names))) {
-    showNotification(
+    shiny::showNotification(
       "Kolonnenavne skal være unikke. Ret duplikater og prøv igen.",
       type = "error",
       duration = 5
@@ -259,7 +259,7 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
     emit$data_changed()
   }
 
-  removeModal()
+  shiny::removeModal()
 
   if (!identical(current_names, new_names)) {
     changed_cols <- which(current_names != new_names)
@@ -268,28 +268,28 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
       collapse = ", "
     )
 
-    showNotification(
+    shiny::showNotification(
       paste("Kolonnenavne opdateret:", change_summary),
       type = "message",
       duration = 4
     )
   } else {
-    showNotification("Ingen ændringer i kolonnenavne", type = "message", duration = 2)
+    shiny::showNotification("Ingen ændringer i kolonnenavne", type = "message", duration = 2)
   }
 }
 
 ## Vis tilføj kolonne modal
 # Viser modal dialog for tilføjelse af nye kolonner
 show_add_column_modal <- function() {
-  showModal(modalDialog(
+  shiny::showModal(shiny::modalDialog(
     title = "Tilføj ny kolonne",
-    textInput("new_col_name", "Kolonnenavn:", value = "Ny_kolonne"),
-    selectInput("new_col_type", "Type:",
+    shiny::textInput("new_col_name", "Kolonnenavn:", value = "Ny_kolonne"),
+    shiny::selectInput("new_col_type", "Type:",
       choices = list("Numerisk" = "numeric", "Tekst" = "text", "Dato" = "date")
     ),
-    footer = tagList(
-      modalButton("Annuller"),
-      actionButton("confirm_add_col", "Tilføj", class = "btn-primary")
+    footer = shiny::tagList(
+      shiny::modalButton("Annuller"),
+      shiny::actionButton("confirm_add_col", "Tilføj", class = "btn-primary")
     )
   ))
 }
@@ -299,7 +299,7 @@ show_add_column_modal <- function() {
 handle_add_column <- function(input, session, app_state = NULL, emit = NULL) {
   # Use unified state management
   current_data_check <- app_state$data$current_data
-  req(input$new_col_name, current_data_check)
+  shiny::req(input$new_col_name, current_data_check)
 
   new_col_name <- input$new_col_name
   new_col_type <- input$new_col_type
@@ -320,8 +320,8 @@ handle_add_column <- function(input, session, app_state = NULL, emit = NULL) {
     emit$data_changed()
   }
 
-  removeModal()
-  showNotification(paste("Kolonne", new_col_name, "tilføjet"), type = "message")
+  shiny::removeModal()
+  shiny::showNotification(paste("Kolonne", new_col_name, "tilføjet"), type = "message")
 }
 
 # DATA TABLE FUNKTIONER ======================================================
@@ -338,7 +338,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
   output$main_data_table <- excelR::renderExcel({
     # UNIFIED EVENT SYSTEM: Direct access to current data
     current_data_check <- app_state$data$current_data
-    req(current_data_check)
+    shiny::req(current_data_check)
 
   # log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
 
@@ -355,12 +355,12 @@ setup_data_table <- function(input, output, session, app_state, emit) {
       data = data,
       columns = data.frame(
         title = names(data),
-        type = case_when(
+        type = dplyr::case_when(
           names(data) == "Skift" ~ "checkbox",
           names(data) == "Frys" ~ "radio",
           TRUE ~ "text"
         ),
-        width = case_when(
+        width = dplyr::case_when(
           names(data) == "Skift" ~ 60,
           names(data) == "Frys" ~ 60,
           names(data) == "Dato" ~ 100,
@@ -383,7 +383,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
   })
 
   # Håndtér excelR tabel ændringer
-  observeEvent(input$main_data_table,
+  shiny::observeEvent(input$main_data_table,
     {
       # Use unified state management
       updating_table_check <- app_state$data$updating_table
@@ -494,7 +494,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
           # Emit event to trigger downstream effects
           emit$data_changed()
 
-          showNotification("Tabel opdateret", type = "message", duration = 2)
+          shiny::showNotification("Tabel opdateret", type = "message", duration = 2)
         },
         error_type = "processing",
         emit = emit,
@@ -507,10 +507,10 @@ setup_data_table <- function(input, output, session, app_state, emit) {
   )
 
   # Tilføj række
-  observeEvent(input$add_row, {
+  shiny::observeEvent(input$add_row, {
     # UNIFIED EVENT SYSTEM: Direct access to current data
     current_data_check <- app_state$data$current_data
-    req(current_data_check)
+    shiny::req(current_data_check)
 
     # Sæt vedvarende flag for at forhindre auto-save interferens
     # Use unified state management
@@ -526,7 +526,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     # Emit event to trigger downstream effects
     emit$data_changed()
 
-    showNotification("Ny række tilføjet", type = "message")
+    shiny::showNotification("Ny række tilføjet", type = "message")
 
     # Trigger event-driven cleanup instead of timing-based
     # Use unified state management

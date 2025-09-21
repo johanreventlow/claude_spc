@@ -65,11 +65,11 @@ load_core_packages <- function() {
       reason = "UI framework - page_navbar, card, sidebar functions"
     ),
 
-    # Data Manipulation - Pipe operator and dplyr verbs used extensively
+    # Data Manipulation - Declarative helpers (case_when etc.)
     dplyr = list(
       package = "dplyr",
       min_version = "1.0.0",
-      reason = "Data manipulation - %>% pipe and verbs used throughout"
+      reason = "Data manipulation helpers - case_when and related utilities"
     )
   )
 
@@ -108,13 +108,6 @@ load_feature_packages <- function(config) {
       required = TRUE
     ),
 
-    # String Operations
-    stringi = list(
-      package = "stringi",
-      min_version = "1.7.0",
-      reason = "String manipulation - stri_* functions",
-      required = TRUE
-    ),
 
     # File I/O
     readr = list(
@@ -138,20 +131,6 @@ load_feature_packages <- function(config) {
       required = TRUE
     ),
 
-    # UI Enhancements
-    shinycssloaders = list(
-      package = "shinycssloaders",
-      min_version = "1.0.0",
-      reason = "Loading spinners - withSpinner function",
-      required = TRUE
-    ),
-
-    shinyWidgets = list(
-      package = "shinyWidgets",
-      min_version = "0.7.0",
-      reason = "Enhanced UI widgets - pickerInput, switchInput",
-      required = TRUE
-    ),
 
     # Data Analysis
     zoo = list(
@@ -346,7 +325,7 @@ verify_critical_dependencies <- function() {
     bslib = c("page_navbar", "card", "sidebar"),
 
     # dplyr data manipulation
-    dplyr = c("%>%", "filter", "mutate", "select")
+    dplyr = c("case_when")
   )
 
   missing_functions <- c()

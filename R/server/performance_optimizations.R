@@ -21,8 +21,8 @@
 create_optimized_data_pipeline <- function(app_state, emit) {
 
   # Consolidated data processing reactive with debouncing
-  data_processing_pipeline <- debounce(reactive({
-    req(app_state$data$current_data)
+  data_processing_pipeline <- shiny::debounce(shiny::reactive({
+    shiny::req(app_state$data$current_data)
 
   # log_debug("Starting optimized data processing pipeline", "PERFORMANCE_OPT")
 
@@ -270,7 +270,7 @@ setup_optimized_event_listeners <- function(app_state, emit, session) {
   data_pipeline <- create_optimized_data_pipeline(app_state, emit)
 
   # Single consolidated observer for data changes
-  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = get_priority("STATE_MANAGEMENT"), {
+  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = get_priority("STATE_MANAGEMENT"), {
   # log_debug("Optimized data_loaded handler triggered", "PERFORMANCE_OPT")
 
     # Process through optimized pipeline
@@ -316,13 +316,13 @@ apply_batch_ui_updates <- function(session, updates) {
   # Apply all updates
   for (update_name in names(updates)) {
     if (update_name == "x_column" && !is.null(updates$x_column)) {
-      updateSelectizeInput(session, "x_column", selected = updates$x_column)
+      shiny::updateSelectizeInput(session, "x_column", selected = updates$x_column)
     } else if (update_name == "y_column" && !is.null(updates$y_column)) {
-      updateSelectizeInput(session, "y_column", selected = updates$y_column)
+      shiny::updateSelectizeInput(session, "y_column", selected = updates$y_column)
     } else if (update_name == "n_column" && !is.null(updates$n_column)) {
-      updateSelectizeInput(session, "n_column", selected = updates$n_column)
+      shiny::updateSelectizeInput(session, "n_column", selected = updates$n_column)
     } else if (update_name == "cl_column" && !is.null(updates$cl_column)) {
-      updateSelectizeInput(session, "cl_column", selected = updates$cl_column)
+      shiny::updateSelectizeInput(session, "cl_column", selected = updates$cl_column)
     }
   }
 }

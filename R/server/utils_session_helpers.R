@@ -12,7 +12,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   # UNIFIED STATE: Empty table initialization now handled through session management events
 
   # UNIFIED EVENT SYSTEM: Reactive value to track dataLoaded status
-  dataLoaded_status <- reactiveVal("FALSE")
+  dataLoaded_status <- shiny::reactiveVal("FALSE")
 
   # Helper function to evaluate dataLoaded status
   evaluate_dataLoaded_status <- function() {
@@ -69,21 +69,21 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   }
 
   # UNIFIED EVENT LISTENERS: Update dataLoaded status when relevant events occur
-  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
   # log_debug("data_loaded event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
     dataLoaded_status(new_status)
   # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
-  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
+  shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
   # log_debug("session_reset event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
     dataLoaded_status(new_status)
   # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
-  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
+  shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
   # log_debug("navigation_changed event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
     dataLoaded_status(new_status)
@@ -91,14 +91,14 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   })
 
   # Data indlæsnings status flags - følger BFH UTH mønster
-  output$dataLoaded <- renderText({
+  output$dataLoaded <- shiny::renderText({
     # UNIFIED EVENT SYSTEM: Simply return the reactive value
     dataLoaded_status()
   })
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
 
   # UNIFIED EVENT SYSTEM: Reactive value to track has_data status
-  has_data_status <- reactiveVal("false")
+  has_data_status <- shiny::reactiveVal("false")
 
   # Helper function to evaluate has_data status
   evaluate_has_data_status <- function() {
@@ -125,26 +125,26 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   }
 
   # UNIFIED EVENT LISTENERS: Update has_data status when relevant events occur
-  observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
     has_data_status(new_status)
   # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
-  observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
+  shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
     has_data_status(new_status)
   # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
-  observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
+  shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
     has_data_status(new_status)
   # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   # Initial evaluation to set correct startup state
-  observe({
+  shiny::observe({
     initial_dataLoaded <- evaluate_dataLoaded_status()
     initial_has_data <- evaluate_has_data_status()
     dataLoaded_status(initial_dataLoaded)
@@ -152,7 +152,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   # log_debug("Initial status set - dataLoaded:", initial_dataLoaded, "has_data:", initial_has_data, .context = "NAVIGATION_UNIFIED")
   }, priority = 2000)  # High priority to run early
 
-  output$has_data <- renderText({
+  output$has_data <- shiny::renderText({
     # UNIFIED EVENT SYSTEM: Simply return the reactive value
     has_data_status()
   })
@@ -160,7 +160,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
 
 
   # Data status visning
-  output$data_status_display <- renderUI({
+  output$data_status_display <- shiny::renderUI({
     # Use unified state management
     file_uploaded_check <- app_state$session$file_uploaded
 
@@ -168,29 +168,29 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     current_data_check <- app_state$data$current_data
 
     if (is.null(current_data_check)) {
-      div(
-        span(class = "status-indicator status-warning"),
+      shiny::div(
+        shiny::span(class = "status-indicator status-warning"),
         "Ingen data",
         style = "font-size: 0.9rem;"
       )
     } else if (file_uploaded_check) {
       data_rows <- sum(!is.na(current_data_check[[1]]))
-      div(
-        span(class = "status-indicator status-ready"),
+      shiny::div(
+        shiny::span(class = "status-indicator status-ready"),
         paste("Fil uploadet -", data_rows, "datapunkter"),
         style = "font-size: 0.9rem;"
       )
     } else {
       data_rows <- sum(!is.na(current_data_check[[1]]))
       if (data_rows > 0) {
-        div(
-          span(class = "status-indicator status-processing"),
+        shiny::div(
+          shiny::span(class = "status-indicator status-processing"),
           paste("Manuel indtastning -", data_rows, "datapunkter"),
           style = "font-size: 0.9rem;"
         )
       } else {
-        div(
-          span(class = "status-indicator status-warning"),
+        shiny::div(
+          shiny::span(class = "status-indicator status-warning"),
           "Tom tabel - indtast data eller upload fil",
           style = "font-size: 0.9rem;"
         )
@@ -200,7 +200,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
 
 
   # Reaktiv debounced auto-save - følger Shiny best practices
-  auto_save_trigger <- debounce(reactive({
+  auto_save_trigger <- shiny::debounce(shiny::reactive({
     # Guards for at forhindre auto-gem under tabel operationer
     # Use unified state management
     updating_table_check <- app_state$data$updating_table
@@ -237,9 +237,9 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     }
   }), millis = 2000)
 
-  obs_data_save <- observe({
+  obs_data_save <- shiny::observe({
     save_data <- auto_save_trigger()
-    req(save_data)  # Only proceed if we have valid save data
+    shiny::req(save_data)  # Only proceed if we have valid save data
 
     autoSaveAppState(session, save_data$data, save_data$metadata)
     # Use unified state management
@@ -252,7 +252,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   }
 
   # Reaktiv debounced settings save - følger Shiny best practices
-  settings_save_trigger <- debounce(reactive({
+  settings_save_trigger <- shiny::debounce(shiny::reactive({
     # Samme guards som data auto-gem
     # Use unified state management
     updating_table_check <- app_state$data$updating_table
@@ -287,15 +287,14 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     }
   }), millis = 1000)  # Faster debounce for settings
 
-  obs_settings_save <- observe({
+  obs_settings_save <- shiny::observe({
     save_data <- settings_save_trigger()
-    req(save_data)  # Only proceed if we have valid save data
+    shiny::req(save_data)  # Only proceed if we have valid save data
 
     autoSaveAppState(session, save_data$data, save_data$metadata)
     # Use unified state management
     app_state$session$last_save_time <- save_data$timestamp
-  }) %>%
-    bindEvent(
+  }) |> bindEvent(
       {
         list(
           input$indicator_title,
@@ -317,7 +316,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     )
 
   # Event-driven table operation cleanup - replaces later::later() anti-pattern
-  table_cleanup_trigger <- debounce(reactive({
+  table_cleanup_trigger <- shiny::debounce(shiny::reactive({
     # Use unified state management
     table_operation_cleanup_needed_check <- app_state$data$table_operation_cleanup_needed
 
@@ -328,9 +327,9 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     }
   }), millis = 2000)
 
-  observe({
+  shiny::observe({
     cleanup_time <- table_cleanup_trigger()
-    req(cleanup_time)  # Only proceed if cleanup is needed
+    shiny::req(cleanup_time)  # Only proceed if cleanup is needed
 
     # Clear the table operation flag and reset cleanup request
     # Use unified state management
@@ -369,7 +368,7 @@ create_empty_session_data <- function() {
 ## Aktuel organisatorisk enhed
 # Reaktiv funktion for nuværende organisatoriske enhed
 current_unit <- function(input) {
-  reactive({
+  shiny::reactive({
     # Helper to sanitize input values (same as in visualization server)
     sanitize_input <- function(input_value) {
       if (is.null(input_value) || length(input_value) == 0 || identical(input_value, character(0)) || input_value == "") {
@@ -407,7 +406,7 @@ current_unit <- function(input) {
 ## Komplet chart titel
 # Reaktiv funktion for komplet chart titel
 chart_title <- function(input) {
-  reactive({
+  shiny::reactive({
     # Helper to sanitize input values (same pattern throughout app)
     sanitize_input <- function(input_value) {
       if (is.null(input_value) || length(input_value) == 0 || identical(input_value, character(0)) || input_value == "") {

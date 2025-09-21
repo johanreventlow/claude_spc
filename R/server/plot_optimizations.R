@@ -282,7 +282,7 @@ apply_plot_styling_optimized <- function(plot, config, chart_title_reactive, y_a
 
   # Add title
   if (!is.null(chart_title_reactive)) {
-    title_text <- if (is.reactive(chart_title_reactive)) chart_title_reactive() else chart_title_reactive
+    title_text <- if (shiny::is.reactive(chart_title_reactive)) chart_title_reactive() else chart_title_reactive
     if (!is.null(title_text) && title_text != "") {
       styled_plot <- styled_plot + ggplot2::ggtitle(title_text)
     }

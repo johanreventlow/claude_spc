@@ -29,8 +29,7 @@ En professionel Shiny applikation til **Statistical Process Control (SPC)** anal
 install.packages(c(
   "shiny", "bslib", "dplyr", "readr", "readxl",
   "qicharts2", "ggplot2", "ggrepel", "scales",
-  "shinyWidgets", "shinycssloaders", "shinyjs",
-  "excelR", "stringi", "zoo", "lubridate",
+  "shinyjs", "excelR", "zoo", "lubridate",
   "openxlsx", "yaml", "shinylogs", "later"
 ))
 ```

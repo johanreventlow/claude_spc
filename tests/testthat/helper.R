@@ -1,9 +1,16 @@
 # helper.R
 # Test setup og fælles funktioner
 
-library(shiny)
 library(shinytest2)
 library(testthat)
+
+# Alias Shiny core functions for tests uden global library()
+isolate <- shiny::isolate
+reactive <- shiny::reactive
+reactiveValues <- shiny::reactiveValues
+debounce <- shiny::debounce
+updateSelectizeInput <- shiny::updateSelectizeInput
+req <- shiny::req
 
 # Source app komponenter for test
 # Naviger til projekt rod og load global.R

@@ -11,7 +11,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
   # Unified state: App state is always available
 
   # File upload handler
-  observeEvent(input$data_file, {
+  shiny::observeEvent(input$data_file, {
     # Enhanced debug tracking for comprehensive testing
     debug_user_interaction("file_upload_initiated",
                           list(filename = input$data_file$name,
@@ -19,7 +19,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
                                type = input$data_file$type),
                           session$token)
 
-    req(input$data_file)
+    shiny::req(input$data_file)
 
     # Start workflow tracer for file upload
     upload_tracer <- debug_workflow_tracer("file_upload_workflow", app_state, session$token)
@@ -47,7 +47,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
                 ),
                 session_id = session$token)
 
-      showNotification(
+      shiny::showNotification(
         paste("File validation failed:", paste(validation_result$errors, collapse = "; ")),
         type = "error",
         duration = 8
@@ -62,7 +62,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
     # Close upload modal automatically
     on.exit(
       {
-        removeModal()
+        shiny::removeModal()
       },
       add = TRUE
     )
@@ -167,15 +167,15 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     emit$navigation_changed()
 
     # Restore metadata with delay to ensure UI is ready
-    invalidateLater(500)
-    isolate({
+    shiny::invalidateLater(500)
+    shiny::isolate({
       if (!is.null(ui_service)) {
         restore_metadata(session, metadata, ui_service)
       } else {
       }
     })
 
-    showNotification(
+    shiny::showNotification(
       paste("Komplet session importeret:", nrow(data), "rækker,", ncol(data), "kolonner + konfiguration"),
       type = "message",
       duration = 4
@@ -206,7 +206,7 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     emit$navigation_changed()
 
 
-    showNotification(
+    shiny::showNotification(
       paste("Excel fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
       type = "message",
       duration = 3
@@ -307,7 +307,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
     }
 
     if (length(cleaning_messages) > 0) {
-      showNotification(
+      shiny::showNotification(
         paste("Data cleaned:", paste(cleaning_messages, collapse = ", ")),
         type = "message",
         duration = 5
@@ -372,7 +372,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
     debug_state_snapshot("after_csv_upload_complete", app_state, session_id = session_id)
   }
 
-  showNotification(
+  shiny::showNotification(
     paste("CSV fil uploadet:", nrow(data), "rækker,", ncol(data), "kolonner"),
     type = "message",
     duration = 3
@@ -724,22 +724,22 @@ handle_upload_error <- function(error, file_info, session_id = NULL) {
             session_id = session_id)
 
   # Create comprehensive user notification
-  notification_html <- tags$div(
-    tags$strong(user_message),
-    tags$br(),
-    tags$em(paste("Technical details:", error_message)),
+  notification_html <- shiny::tags$div(
+    shiny::tags$strong(user_message),
+    shiny::tags$br(),
+    shiny::tags$em(paste("Technical details:", error_message)),
     if (length(suggestions) > 0) {
-      tags$div(
-        tags$br(),
-        tags$strong("Suggestions:"),
-        tags$ul(
-          lapply(suggestions, function(s) tags$li(s))
+      shiny::tags$div(
+        shiny::tags$br(),
+        shiny::tags$strong("Suggestions:"),
+        shiny::tags$ul(
+          lapply(suggestions, function(s) shiny::tags$li(s))
         )
       )
     }
   )
 
-  showNotification(
+  shiny::showNotification(
     notification_html,
     type = "error",
     duration = 15

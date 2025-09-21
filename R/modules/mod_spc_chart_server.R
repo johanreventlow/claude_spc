@@ -3,14 +3,11 @@
 # Extracted from mod_spc_chart.R for better maintainability
 
 # Dependencies ----------------------------------------------------------------
-library(shiny)
-library(shinyjs)
-
 # Helper functions now loaded globally in global.R for better performance
 
 
 visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL) {
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
     log_debug("==========================================", "MODULE")
     log_debug("Initializing visualization module server", "MODULE")
     log_debug(paste("Module ID:", id), "MODULE")
@@ -26,14 +23,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     log_debug("Creating module-internal data reactive with navigation trigger", "MODULE")
 
     # Cached data storage
-    cached_data <- reactiveVal(NULL)
+    cached_data <- shiny::reactiveVal(NULL)
 
     # Create a reactive-safe data function
     get_module_data <- function() {
       log_debug("get_module_data() called - reactive-safe approach", "MODULE_DATA")
 
-      # Use isolate() to safely access reactive values
-      current_data_check <- isolate(app_state$data$current_data)
+      # Use shiny::isolate() to safely access reactive values
+      current_data_check <- shiny::isolate(app_state$data$current_data)
       if (is.null(current_data_check)) {
         log_debug("get_module_data: No current data available", "MODULE_DATA")
         return(NULL)
@@ -44,7 +41,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       log_debug(paste("get_module_data: Data dimensions:", nrow(data), "x", ncol(data)), "MODULE_DATA")
 
       # Add hide_anhoej_rules flag as attribute
-      hide_anhoej_rules_check <- isolate(app_state$ui$hide_anhoej_rules)
+      hide_anhoej_rules_check <- shiny::isolate(app_state$ui$hide_anhoej_rules)
       attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
       log_debug(paste("get_module_data: Hide Anhøj rules flag:", hide_anhoej_rules_check), "MODULE_DATA")
 
@@ -65,14 +62,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     }
 
     # UNIFIED EVENT SYSTEM: Event-driven data reactive
-    module_data_cache <- reactiveVal(NULL)
+    module_data_cache <- shiny::reactiveVal(NULL)
 
-    module_data_reactive <- reactive({
+    module_data_reactive <- shiny::reactive({
       return(module_data_cache())
     })
 
     # UNIFIED EVENT SYSTEM: Update data cache when relevant events occur
-    observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
+    shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
       log_debug("Module data update triggered by navigation_changed event", "MODULE_DATA")
 
       # Use the pure function to get data
@@ -85,7 +82,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     })
 
     # UNIFIED EVENT SYSTEM: Also update when data changes
-    observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+    shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
       log_debug("Module data update triggered by data_loaded event", "MODULE_DATA")
 
       # Use the pure function to get data
@@ -98,7 +95,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     })
 
     # UNIFIED EVENT SYSTEM: Initialize data at startup if available
-    if (!is.null(isolate(app_state$data$current_data))) {
+    if (!is.null(shiny::isolate(app_state$data$current_data))) {
       log_debug("Initializing module data at startup", "MODULE_DATA")
       initial_data <- get_module_data()
       module_data_cache(initial_data)
@@ -127,20 +124,20 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     ## Chart Configuration
     # Reaktiv konfiguration for chart setup
     # Håndterer kolonne-validering og auto-detection
-    chart_config <- reactive({
-      # Enhanced req() guards - stop execution if dependencies not ready
+    chart_config <- shiny::reactive({
+      # Enhanced shiny::req() guards - stop execution if dependencies not ready
       data <- module_data_reactive()
-      req(data)
-      req(is.data.frame(data))
-      req(nrow(data) > 0)
-      req(ncol(data) > 0)
+      shiny::req(data)
+      shiny::req(is.data.frame(data))
+      shiny::req(nrow(data) > 0)
+      shiny::req(ncol(data) > 0)
 
       config <- column_config_reactive()
-      req(config)
-      req(is.list(config))
+      shiny::req(config)
+      shiny::req(is.list(config))
 
       chart_type <- chart_type_reactive() %||% "run"  # Use %||% for cleaner fallback
-      req(chart_type)
+      shiny::req(chart_type)
 
       # Valider at kolonner eksisterer i data - hvis ikke, fallback til NULL
       if (!is.null(config$x_col) && !(config$x_col %in% names(data))) {
@@ -156,8 +153,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # INGEN AUTO-DETECTION her - dropdown values respekteres altid
       # Auto-detection sker kun ved data upload i server_column_management.R
 
-      # FIXED: Replace blocking req() with safe validation
-      # If y_col is not available, return NULL instead of hanging with req()
+      # FIXED: Replace blocking shiny::req() with safe validation
+      # If y_col is not available, return NULL instead of hanging with shiny::req()
       if (is.null(config$y_col) || !(config$y_col %in% names(data))) {
         log_debug("chart_config: y_col not available, returning NULL to prevent hang", "CHART_CONFIG")
         return(NULL)
@@ -174,14 +171,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Plot Generering ---------------------------------------------------------
 
     # Plot caching infrastructure
-    plot_cache <- reactiveVal(NULL)
-    plot_cache_key <- reactiveVal(NULL)
+    plot_cache <- shiny::reactiveVal(NULL)
+    plot_cache_key <- shiny::reactiveVal(NULL)
 
     ## Hoved SPC Plot Reactive
     # Hovedfunktion for SPC plot generering med caching
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
-    spc_plot <- reactive({
-      # FIXED: Safe chart_config validation without hanging req()
+    spc_plot <- shiny::reactive({
+      # FIXED: Safe chart_config validation without hanging shiny::req()
       config <- chart_config()
       if (is.null(config)) {
         log_debug("spc_plot: chart_config returned NULL, plot not ready", "SPC_PLOT")
@@ -360,7 +357,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     ## Faktisk Plot Rendering
     # Separat renderPlot for det faktiske SPC plot
     # PRODUCTION VERSION with fixes applied
-    output$spc_plot_actual <- renderPlot({
+    output$spc_plot_actual <- shiny::renderPlot({
       log_debug("Starting SPC plot rendering", "PLOT_RENDER")
 
       # Use the fixed spc_plot() reactive which handles NULL chart_config gracefully
@@ -381,37 +378,37 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     ## Plot Status
     # Plot klar status - exposed til parent
-    output$plot_ready <- reactive({
+    output$plot_ready <- shiny::reactive({
       get_plot_state("plot_ready")
     })
     outputOptions(output, "plot_ready", suspendWhenHidden = FALSE)
 
     ## Plot Information
     # Plot info og advarsler - event-driven med reactive isolation
-    output$plot_info <- renderUI({
+    output$plot_info <- shiny::renderUI({
       # Use reactive values for event-driven updates
       warnings <- get_plot_state("plot_warnings")
       plot_ready <- get_plot_state("plot_ready")
 
       if (length(warnings) > 0) {
-        div(
+        shiny::div(
           class = "alert alert-warning",
-          icon("exclamation-triangle"),
-          strong(" Graf-advarsler:"),
-          tags$ul(
-            lapply(warnings, function(warn) tags$li(warn))
+          shiny::icon("exclamation-triangle"),
+          shiny::strong(" Graf-advarsler:"),
+          shiny::tags$ul(
+            lapply(warnings, function(warn) shiny::tags$li(warn))
           )
         )
       } else if (plot_ready) {
         # Only access external reactives when needed, with isolation
-        data <- isolate(module_data_reactive())
-        chart_type <- isolate(chart_type_reactive()) %||% "ukendt"
+        data <- shiny::isolate(module_data_reactive())
+        chart_type <- shiny::isolate(chart_type_reactive()) %||% "ukendt"
 
-        div(
+        shiny::div(
           class = "alert alert-success",
           style = "font-size: 0.9rem;",
-          icon("check-circle"),
-          strong(" Graf genereret succesfuldt! "),
+          shiny::icon("check-circle"),
+          shiny::strong(" Graf genereret succesfuldt! "),
           sprintf(
             "Chart type: %s | Datapunkter: %d",
             chart_type,
@@ -425,15 +422,15 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     ## Data Status Box
     # Data oversigt value box - event-driven med isolation
-    output$plot_status_boxes <- renderUI({
+    output$plot_status_boxes <- shiny::renderUI({
       # Event-driven approach - react to plot_ready changes
       plot_ready <- get_plot_state("plot_ready")
 
       if (plot_ready) {
         # Only access external reactives when needed, with isolation
-        data <- isolate(module_data_reactive())
-        config <- isolate(chart_config())
-        chart_type <- isolate(chart_type_reactive()) %||% "run"
+        data <- shiny::isolate(module_data_reactive())
+        config <- shiny::isolate(chart_config())
+        chart_type <- shiny::isolate(chart_type_reactive()) %||% "run"
 
         data_count <- nrow(data)
         chart_name <- switch(chart_type,
@@ -445,39 +442,39 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           "Ukendt"
         )
 
-        value_box(
+        bslib::value_box(
           title = "Data Overblik",
           value = paste(data_count, "punkter"),
-          showcase = icon("chart-line"),
+          showcase = shiny::icon("chart-line"),
           theme = if (data_count >= 15) "info" else "warning",
-          p(class = "fs-7 text-muted mb-0", paste(chart_name, if (data_count < 15) "| Få datapunkter" else "| Tilstrækkelig data"))
+          shiny::p(class = "fs-7 text-muted mb-0", paste(chart_name, if (data_count < 15) "| Få datapunkter" else "| Tilstrækkelig data"))
         )
       } else {
         # Standard tilstand
-        value_box(
+        bslib::value_box(
           title = "Data Status",
           value = "Ingen data",
-          showcase = icon("database"),
+          showcase = shiny::icon("database"),
           theme = "secondary",
-          p(class = "fs-7 text-muted mb-0", "Upload eller indtast data")
+          shiny::p(class = "fs-7 text-muted mb-0", "Upload eller indtast data")
         )
       }
     })
 
     ## Data Summary Box
     # Data oversigt value box til fejlkontrol
-    output$data_summary_box <- renderUI({
+    output$data_summary_box <- shiny::renderUI({
       data <- module_data_reactive()
       config <- chart_config()
 
       if (is.null(data) || nrow(data) == 0) {
         return(
-          value_box(
+          bslib::value_box(
             title = "Data Oversigt",
             value = "Ingen data",
             showcase = spc_out_of_control_icon,
             theme = "light",
-            p(class = "fs-7 text-muted mb-0", "Vent på data load")
+            shiny::p(class = "fs-7 text-muted mb-0", "Vent på data load")
           )
         )
       }
@@ -508,20 +505,20 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         summary_text <- "Konfiguration ikke klar"
       }
 
-      value_box(
+      bslib::value_box(
         title = "Data Oversigt",
         value = paste0(total_rows, "×", total_cols),
         showcase = spc_out_of_control_icon,
         showcase_layout = "top right",
         theme = "light",
-        p(class = "fs-7 text-muted mb-0", summary_text)
+        shiny::p(class = "fs-7 text-muted mb-0", summary_text)
       )
     })
 
     ## Anhøj Rules Value Boxes
     # Anhøj rules som value boxes - ALTID SYNLIGE
     # Viser serielængde og antal kryds for alle chart typer
-    output$anhoej_rules_boxes <- renderUI({
+    output$anhoej_rules_boxes <- shiny::renderUI({
       log_debug("============================= VALUE_BOXES", "VALUEBOX_RENDER")
       log_debug("anhoej_rules_boxes renderUI triggered", "VALUEBOX_RENDER")
 
@@ -596,9 +593,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
 
       # Altid returner de tre hoved boxes med passende indhold
-      tagList(
+      shiny::tagList(
         ### Serielængde Box-----
-        value_box(
+        bslib::value_box(
           title = "Serielængde",
           style = if (status_info$status == "insufficient_data") {
             "flex: 1;  background-color: white !important; color: #999999;"
@@ -607,16 +604,16 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
-              layout_column_wrap(
+              bslib::layout_column_wrap(
                 width = 1 / 2,
-                div(anhoej$longest_run_max),
-                div(anhoej$longest_run)
+                shiny::div(anhoej$longest_run_max),
+                shiny::div(anhoej$longest_run)
               )
             } else {
               "Beregner..."
             }
           } else {
-            span(
+            shiny::span(
               style = "font-size:1.5em; color: #999999 !important;",
               switch(status_info$status,
                 "no_data" = "Ingen data",
@@ -637,20 +634,20 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           } else {
             status_info$theme
           },
-          p(
+          shiny::p(
             class = "fs-7 text-muted mb-0",
             if (status_info$status == "ready") {
               if (!is.null(anhoej$longest_run_max) && !is.na(anhoej$longest_run_max)) {
-                layout_column_wrap(
+                bslib::layout_column_wrap(
                   width = 1 / 2,
-                  div("Forventet (maksimum)"),
-                  div("Faktisk")
+                  shiny::div("Forventet (maksimum)"),
+                  shiny::div("Faktisk")
                 )
               } else {
                 "Anhøj rules analyse - serielængde"
               }
             } else {
-              span(
+              shiny::span(
                 style = "color: #999999;",
                 status_info$message
               )
@@ -659,7 +656,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         ),
 
         ### Antal Kryds Box -----
-        value_box(
+        bslib::value_box(
           title = "Antal kryds",
           style = if (status_info$status == "insufficient_data") {
             "flex: 1;  background-color: white !important; color: #999999;"
@@ -668,16 +665,16 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$n_crossings) && !is.na(anhoej$n_crossings)) {
-              layout_column_wrap(
+              bslib::layout_column_wrap(
                 width = 1 / 2,
-                div(anhoej$n_crossings_min),
-                div(anhoej$n_crossings)
+                shiny::div(anhoej$n_crossings_min),
+                shiny::div(anhoej$n_crossings)
               )
             } else {
               "Beregner..."
             }
           } else {
-            span(
+            shiny::span(
               style = "font-size:1.5em; color: #999999 !important;",
               switch(status_info$status,
                 "no_data" = "Ingen data",
@@ -698,20 +695,20 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           } else {
             status_info$theme
           },
-          p(
+          shiny::p(
             class = "fs-7 text-muted mb-0",
             if (status_info$status == "ready") {
               if (!is.null(anhoej$n_crossings_min) && !is.na(anhoej$n_crossings_min)) {
-                layout_column_wrap(
+                bslib::layout_column_wrap(
                   width = 1 / 2,
-                  div("Forventet (minimum)"),
-                  div("Faktisk")
+                  shiny::div("Forventet (minimum)"),
+                  shiny::div("Faktisk")
                 )
               } else {
                 "Anhøj rules analyse - median krydsninger"
               }
             } else {
-              span(
+              shiny::span(
                 style = "color: #999999;",
                 status_info$message
               )
@@ -720,9 +717,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         ),
 
         ### Kontrolgrænser Box ----
-        value_box(
+        bslib::value_box(
           title = if (status_info$status == "ready" && chart_type == "run") {
-            div("Uden for kontrolgrænser", style = "color: #999999 !important;")
+            shiny::div("Uden for kontrolgrænser", style = "color: #999999 !important;")
           } else {
             "Uden for kontrolgrænser"
           },
@@ -736,13 +733,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           value = if (status_info$status == "ready" && !chart_type == "run" && !is.null(anhoej$out_of_control_count)) {
             anhoej$out_of_control_count
           } else if (status_info$status == "ready" && chart_type == "run") {
-            div(
+            shiny::div(
               style = "font-size:1em; color: #999999 !important; padding-bottom: 1em;",
               class = "fs-7 mb-0",
               "Anvendes ikke ved analyse af seriediagrammer (run charts)"
             )
           } else {
-            span(
+            shiny::span(
               style = "font-size:1.5em; color: #999999 !important;",
               switch(status_info$status,
                 "no_data" = "Ingen data",
@@ -765,7 +762,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           } else {
             status_info$theme
           },
-          p(
+          shiny::p(
             class = if (status_info$status == "ready" && chart_type == "run") "fs-7 mb-0" else "fs-7 text-muted mb-0",
             style = if (status_info$status == "ready" && chart_type == "run") "color: #999999 !important;" else NULL,
             if (status_info$status == "ready") {
@@ -775,7 +772,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 "Punkter uden for kontrolgrænser"
               }
             } else {
-              span(
+              shiny::span(
                 style = "color: #999999;",
                 status_info$message
               )
@@ -789,34 +786,34 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Reserveret til fremtidige funktioner
 
     ### Data Kvalitet Box
-    output$data_quality_box <- renderUI({
+    output$data_quality_box <- shiny::renderUI({
       data <- module_data_reactive()
       if (is.null(data) || nrow(data) == 0) {
-        return(div())
+        return(shiny::div())
       }
 
-      value_box(
+      bslib::value_box(
         title = "Data Kvalitet",
         value = "God",
-        showcase = icon("check-circle"),
+        showcase = shiny::icon("check-circle"),
         theme = "success",
-        p(class = "fs-6 text-muted", "Automatisk kvalitetskontrol")
+        shiny::p(class = "fs-6 text-muted", "Automatisk kvalitetskontrol")
       )
     })
 
     ### Rapport Status Box
-    output$report_status_box <- renderUI({
+    output$report_status_box <- shiny::renderUI({
       data <- module_data_reactive()
       if (is.null(data) || nrow(data) == 0) {
-        return(div())
+        return(shiny::div())
       }
 
-      value_box(
+      bslib::value_box(
         title = "Rapport Status",
         value = "Klar",
-        showcase = icon("file-text"),
+        showcase = shiny::icon("file-text"),
         theme = "info",
-        p(class = "fs-6 text-muted", "Eksport og deling tilgængelig")
+        shiny::p(class = "fs-6 text-muted", "Eksport og deling tilgængelig")
       )
     })
 
@@ -825,9 +822,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Giver adgang til plot objekt, status og Anhøj resultater
     return(
       list(
-        plot = reactive(get_plot_state("plot_object")),
-        plot_ready = reactive(get_plot_state("plot_ready")),
-        anhoej_results = reactive(get_plot_state("anhoej_results")),
+        plot = shiny::reactive(get_plot_state("plot_object")),
+        plot_ready = shiny::reactive(get_plot_state("plot_ready")),
+        anhoej_results = shiny::reactive(get_plot_state("anhoej_results")),
         chart_config = chart_config
       )
     )
