@@ -25,12 +25,16 @@ Transformere det nuværende legacy-projekt til en moderne, vedligeholdelsesvenli
 - **Test:** Verificer at periodiske operationer fungerer
 - **Commit:** `fix: ret later() callbacks til at fungere uden reaktiv kontekst`
 
-### 1.3 Fix TEST_MODE_AUTO_LOAD konfiguration
-- **Problem:** Default til TRUE i produktion er farligt
-- **Lokation:** `global.R` konfiguration
-- **Løsning:** Ret default til FALSE, eksplicit TRUE kun i development
-- **Test:** Verificer at app starter med korrekte defaults
-- **Commit:** `fix: ret TEST_MODE_AUTO_LOAD default til sikker produktion`
+### 1.3 Fix TEST_MODE_AUTO_LOAD miljøafhængig konfiguration
+- **Problem:** Default til TRUE uden miljøvariabel er farligt i produktion
+- **Lokation:** `global.R` linje 172
+- **Løsning:** Implementer smart environment detection:
+  - Development (RStudio/shiny::runApp): Default TRUE
+  - Production (shinyapps.io/Connect): Default FALSE
+  - Test environment: Respekter eksplicit miljøvariabel
+- **Pattern:** Detect deployment context før default setting
+- **Test:** Verificer korrekte defaults i forskellige miljøer
+- **Commit:** `fix: implementer miljøafhængig TEST_MODE_AUTO_LOAD konfiguration`
 
 **Fase 1 mål:** App starter og kører stabilt uden runtime-fejl
 
@@ -229,14 +233,14 @@ devtools::check()
 
 | Fase | Status | Start | Slut | Commits |
 |------|--------|-------|------|---------|
-| 1 - Runtime fejl | 🔄 I gang | 2025-09-21 | | |
+| 1 - Runtime fejl | 🔄 I gang | 2025-09-21 | | a4e33ea |
 | 2 - Dependencies | ⏳ Afventer | | | |
 | 3 - Arkitektur | ⏳ Afventer | | | |
 | 4 - Konfiguration | ⏳ Afventer | | | |
 | 5 - Cleanup | ⏳ Afventer | | | |
 | 6 - Performance | ⏳ Afventer | | | |
 
-**Nuværende fokus:** Fase 1.1 - Fix isolate() fejl i server initialization
+**Nuværende fokus:** Fase 1.2 - Fix later() callback fejl ✅ (komplet som del af a4e33ea)
 
 ---
 

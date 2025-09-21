@@ -168,8 +168,36 @@ validate_state_consistency <- function(values, app_state) {
 
 ## Testmodus -----
 # TEST MODE: Auto-indlæs eksempeldata til qic() fejlfinding
-# Respekter environment variable hvis sat, ellers default til FALSE
-TEST_MODE_AUTO_LOAD <- as.logical(Sys.getenv("TEST_MODE_AUTO_LOAD", "TRUE"))
+# Smart environment detection for sikker default-adfærd
+
+# Detect deployment environment
+detect_environment <- function() {
+  # Check for explicit environment variable first
+  env_var <- Sys.getenv("TEST_MODE_AUTO_LOAD", "")
+  if (env_var != "") {
+    return(as.logical(env_var))
+  }
+
+  # Production environments (safe default: FALSE)
+  if (Sys.getenv("SHINY_SERVER_VERSION") != "" ||     # Shiny Server
+      Sys.getenv("CONNECT_SERVER") != "" ||           # Posit Connect
+      Sys.getenv("SHINYAPPS_SERVER") != "" ||         # shinyapps.io
+      Sys.getenv("R_CONFIG_ACTIVE") == "production") { # Explicit production
+    return(FALSE)
+  }
+
+  # Development environments (convenient default: TRUE)
+  if (Sys.getenv("RSTUDIO") == "1" ||                 # RStudio IDE
+      interactive() ||                                # Interactive R session
+      Sys.getenv("R_CONFIG_ACTIVE") == "development") { # Explicit development
+    return(TRUE)
+  }
+
+  # Test environments and unknown contexts (safe default: FALSE)
+  return(FALSE)
+}
+
+TEST_MODE_AUTO_LOAD <- detect_environment()
 
 # Specificer hvilken fil der skal indlæses automatisk i test mode
 # Filsti skal være relativ til app root-mappen
