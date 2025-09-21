@@ -20,9 +20,9 @@ library(scales) # Til procent-formatering i plots
 # library(rlang) # NOTE: %||% operator er lokalt defineret i utils_ui_components.R
 library(lubridate)
 library(openxlsx) # Til Excel export funktionalitet
-library(yaml) # Til læsning af brand.yml
+# library(yaml) # NOTE: Bruger yaml:: namespace pattern
 library(shinylogs) # Advanced web-based logging and monitoring
-library(later) # Til forsinket udførelse
+# library(later) # NOTE: Bruger later:: namespace pattern
 
 # SOURCE UTILITIES --------------------------------
 # Robust sourcing that works from different working directories
