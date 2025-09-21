@@ -38,6 +38,9 @@ R -e "shiny::runApp('.', port = 3838)"
 
 # Alternative med development settings
 R -e "source('global.R'); shiny::runApp('.', port = 4040)"
+
+# Kør via pakkefunktionen og vælg selv porten
+R -e "claudespc::run_app(port = 5050)"
 ```
 
 ### Development Mode
