@@ -1,6 +1,6 @@
 # golem_utils.R
 # Golem-inspired utility functions for robust Shiny app management
-# Fase 3.4: Proper golem patterns implementation
+# Fase 3.4: Proper golem patterns implementation with YAML configuration support
 
 #' Set Application Options (Golem-style)
 #'
@@ -306,4 +306,243 @@ favicon <- function(path = "www/favicon.ico") {
     log_debug(paste("Favicon not found:", path), "FAVICON")
     return(NULL)
   }
+}
+
+# YAML CONFIGURATION SUPPORT =================================================
+
+#' Load Golem Configuration from YAML
+#'
+#' @description
+#' Load application configuration fra inst/golem-config.yml following
+#' standard golem patterns. Provides objektiv sammenligning med golem best practices.
+#'
+#' @param env Environment name (development, production, testing, default)
+#' @param config_path Path to golem-config.yml file
+#' @return List with configuration for specified environment
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Load development configuration
+#' dev_config <- get_golem_config("development")
+#'
+#' # Load production configuration
+#' prod_config <- get_golem_config("production")
+#'
+#' # Load from custom path
+#' config <- get_golem_config("development", "custom/path/config.yml")
+#' }
+get_golem_config <- function(env = NULL, config_path = "inst/golem-config.yml") {
+  log_debug(paste("Loading golem configuration for environment:", env %||% "auto-detect"), "GOLEM_CONFIG")
+
+  # Auto-detect environment if not specified
+  if (is.null(env)) {
+    env <- detect_golem_environment()
+  }
+
+  # Check if config file exists
+  if (!file.exists(config_path)) {
+    log_debug(paste("Golem config file not found:", config_path), "GOLEM_CONFIG")
+    return(get_fallback_golem_config(env))
+  }
+
+  # Load YAML configuration
+  tryCatch({
+    config_data <- yaml::read_yaml(config_path)
+
+    # Get configuration for specific environment
+    if (env %in% names(config_data)) {
+      env_config <- config_data[[env]]
+      log_debug(paste("✅ Golem configuration loaded for environment:", env), "GOLEM_CONFIG")
+      return(env_config)
+    } else {
+      log_debug(paste("Environment", env, "not found in config, using default"), "GOLEM_CONFIG")
+      return(config_data[["default"]] %||% get_fallback_golem_config(env))
+    }
+  }, error = function(e) {
+    log_error(paste("Failed to load golem config:", e$message), "GOLEM_CONFIG")
+    return(get_fallback_golem_config(env))
+  })
+}
+
+#' Detect Golem Environment
+#'
+#' @description
+#' Detect current deployment environment following golem conventions.
+#'
+#' @return String indicating environment (development, production, testing, default)
+detect_golem_environment <- function() {
+  # Check R_CONFIG_ACTIVE first (standard practice)
+  r_config <- Sys.getenv("R_CONFIG_ACTIVE", "")
+  if (r_config != "") {
+    mapped_env <- switch(r_config,
+      "development" = "development",
+      "dev" = "development",
+      "production" = "production",
+      "prod" = "production",
+      "testing" = "testing",
+      "test" = "testing",
+      "default"  # Fallback
+    )
+    log_debug(paste("Environment detected from R_CONFIG_ACTIVE:", mapped_env), "GOLEM_ENV")
+    return(mapped_env)
+  }
+
+  # Check application mode
+  if (exists("is_prod_mode", mode = "function") && is_prod_mode()) {
+    return("production")
+  }
+
+  if (exists("is_dev_mode", mode = "function") && is_dev_mode()) {
+    return("development")
+  }
+
+  # Check for testing environment
+  if (any(c("testthat", "test") %in% search())) {
+    return("testing")
+  }
+
+  # Interactive session implies development
+  if (interactive()) {
+    return("development")
+  }
+
+  # Default fallback
+  log_debug("No specific environment detected, using default", "GOLEM_ENV")
+  return("default")
+}
+
+#' Get Fallback Golem Configuration
+#'
+#' @description
+#' Provide fallback configuration when YAML loading fails.
+#'
+#' @param env Environment name
+#' @return List with basic configuration
+get_fallback_golem_config <- function(env) {
+  log_debug(paste("Using fallback golem configuration for:", env), "GOLEM_FALLBACK")
+
+  # Basic fallback configuration
+  base_config <- list(
+    golem_name = "claudeSPC",
+    golem_version = "1.0.0",
+    app_prod = FALSE,
+
+    environment = list(
+      type = env,
+      is_development = (env == "development"),
+      is_production = (env == "production"),
+      is_testing = (env == "testing")
+    ),
+
+    logging = list(
+      level = "INFO",
+      enable_debug_mode = (env %in% c("development", "testing"))
+    ),
+
+    testing = list(
+      auto_load_test_data = (env == "development"),
+      test_data_file = if (env == "development") "R/data/spc_exampledata.csv" else NULL
+    ),
+
+    session = list(
+      auto_restore_session = (env == "production")
+    )
+  )
+
+  return(base_config)
+}
+
+#' Apply Golem Configuration to Runtime
+#'
+#' @description
+#' Apply loaded golem configuration til application runtime.
+#' Bridges between YAML config og eksisterende systems.
+#'
+#' @param golem_config Configuration from get_golem_config()
+#' @return Invisible TRUE
+#' @export
+apply_golem_config <- function(golem_config) {
+  log_debug("Applying golem configuration to runtime", "GOLEM_APPLY")
+
+  if (is.null(golem_config)) {
+    log_debug("No golem configuration to apply", "GOLEM_APPLY")
+    return(invisible(FALSE))
+  }
+
+  # Apply app options
+  if (!is.null(golem_config$environment)) {
+    app_options <- list(
+      production_mode = golem_config$environment$is_production %||% FALSE,
+      test_mode = golem_config$testing$auto_load_test_data %||% FALSE,
+      debug_level = golem_config$logging$level %||% "INFO"
+    )
+    set_app_options(app_options)
+  }
+
+  # Apply environment variables
+  if (!is.null(golem_config$logging)) {
+    if (!is.null(golem_config$logging$level)) {
+      Sys.setenv(SPC_LOG_LEVEL = golem_config$logging$level)
+    }
+
+    if (!is.null(golem_config$logging$enable_debug_mode)) {
+      Sys.setenv(SHINY_DEBUG_MODE = if (golem_config$logging$enable_debug_mode) "TRUE" else "FALSE")
+    }
+  }
+
+  # Apply global variables for backward compatibility
+  if (!is.null(golem_config$testing$auto_load_test_data)) {
+    assign("TEST_MODE_AUTO_LOAD", golem_config$testing$auto_load_test_data, envir = .GlobalEnv)
+  }
+
+  if (!is.null(golem_config$session$auto_restore_session)) {
+    assign("AUTO_RESTORE_ENABLED", golem_config$session$auto_restore_session, envir = .GlobalEnv)
+  }
+
+  log_debug("✅ Golem configuration applied to runtime", "GOLEM_APPLY")
+  return(invisible(TRUE))
+}
+
+#' Get Current Golem Configuration Summary
+#'
+#' @description
+#' Get human-readable summary af current golem configuration.
+#'
+#' @return Character vector with configuration summary
+#' @export
+get_golem_config_summary <- function() {
+  env <- detect_golem_environment()
+  config <- get_golem_config(env)
+
+  if (is.null(config)) {
+    return("Golem configuration not available")
+  }
+
+  summary_lines <- c(
+    paste("Golem App:", config$golem_name %||% "claudeSPC"),
+    paste("Version:", config$golem_version %||% "1.0.0"),
+    paste("Environment:", config$environment$type %||% env),
+    paste("Production Mode:", config$app_prod %||% FALSE),
+    paste("Debug Mode:", config$logging$enable_debug_mode %||% FALSE),
+    paste("Log Level:", config$logging$level %||% "INFO"),
+    paste("Auto Load Test Data:", config$testing$auto_load_test_data %||% FALSE),
+    paste("Auto Restore Session:", config$session$auto_restore_session %||% FALSE)
+  )
+
+  return(summary_lines)
+}
+
+# HELPER FUNCTIONS ============================================================
+
+#' Null-coalescing operator
+#'
+#' @description
+#' Return right-hand side if left-hand side is NULL
+#'
+#' @param x Left-hand side value
+#' @param y Right-hand side value (fallback)
+#' @return x if not NULL, otherwise y
+`%||%` <- function(x, y) {
+  if (is.null(x)) y else x
 }
