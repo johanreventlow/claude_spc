@@ -4,20 +4,20 @@
 
 library(shiny)
 library(bslib) # Til page_navbar, card, sidebar etc.
-library(qicharts2)
+# library(qicharts2) # NOTE: Bruger qicharts2:: namespace pattern
 library(excelR) # Til Excel-lignende redigerbare tabeller
 library(dplyr)
-library(ggplot2)
-library(ggrepel) # Til kommentar labels på plots
+# library(ggplot2) # NOTE: Bruger ggplot2:: namespace pattern
+# library(ggrepel) # NOTE: Kan bruges med ggrepel:: namespace pattern
 library(stringi)
 library(readr)
 library(readxl)
 library(shinycssloaders)
 library(shinyWidgets)
-library(shinyjs)
+# library(shinyjs) # NOTE: Bruger shinyjs:: namespace pattern
 library(zoo) # Til rullende gennemsnit i beregnede felter
 library(scales) # Til procent-formatering i plots
-library(rlang) # Til %||% operatoren
+# library(rlang) # NOTE: %||% operator er lokalt defineret i utils_ui_components.R
 library(lubridate)
 library(openxlsx) # Til Excel export funktionalitet
 library(yaml) # Til læsning af brand.yml
