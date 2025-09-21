@@ -409,14 +409,15 @@ create_plot_only_card <- function() {
     full_screen = TRUE,
     fillable = TRUE,
     max_height = "100%",
-    min_height = "100%",
+    # min_height = "100%",
+    min_height = "calc(50vh - 60px)",
     bslib::card_header(
       shiny::div(shiny::icon("chart-line"), " SPC Preview")
     ),
-    bslib::card_body(
+    bslib::card_body_fill(
+      fill = TRUE,
       shiny::div(
         style = "height: 100%",
-        fill = TRUE,
       visualizationModuleUI("visualization")
       )
     )

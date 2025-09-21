@@ -21,16 +21,15 @@ visualizationModuleUI <- function(id) {
   ns <- shiny::NS(id)
 
   # PRODUCTION VERSION: Restored original styling with fixes applied
-  shiny::div(
-    id = ns("plot_container"),
+  # shiny::div(
+  #   id = ns("plot_container"),
     # class = "spc-plot-main-container",
-    style = "position: relative; height: 100%;",
+    # style = "position: relative; height: 100%;",
     # shiny::div(
       # class = "spc-ggplot-output",
-      # shiny::plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
-    shiny::plotOutput(ns("spc_plot_actual"))
+      shiny::plotOutput(ns("spc_plot_actual"), width = "100%", height = "100%")
     # )
-  )
+  # )
 }
 
 # STATUS ELEMENTER UI ========================================================
