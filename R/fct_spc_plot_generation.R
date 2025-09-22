@@ -418,9 +418,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
         # Truncate very long comments
         if (nrow(comment_data) > 0) {
-          comment_data$comment <- ifelse(
+          comment_data$comment <- dplyr::if_else(
             nchar(comment_data$comment) > 40,
-            paste0(substr(comment_data$comment, 1, 37), "..."),
+            stringr::str_c(substr(comment_data$comment, 1, 37), "..."),
             comment_data$comment
           )
         }
