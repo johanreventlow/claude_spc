@@ -20,7 +20,10 @@ setup_visualization <- function(input, output, session, app_state) {
   # Kolonne konfiguration til visualisering
   # Store last valid config to avoid NULL during input updates
   # Operation completed
-  last_valid_config <- shiny::reactiveVal(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run"))
+  # Initialize last_valid_config in app_state if not already present
+  if (is.null(app_state$visualization$last_valid_config)) {
+    app_state$visualization$last_valid_config <- list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run")
+  }
 
   # Separate reactives for auto-detected and manual column selection
   auto_detected_config <- shiny::reactive({
@@ -103,7 +106,7 @@ setup_visualization <- function(input, output, session, app_state) {
   shiny::observe({
     config <- column_config()
     if (!is.null(config$y_col)) {
-      last_valid_config(config)
+      app_state$visualization$last_valid_config <- config
     }
   })
 

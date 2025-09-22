@@ -342,11 +342,14 @@ apply_batch_ui_updates <- function(session, updates) {
 #' Create Minimal App State
 #'
 #' Creates a minimal app_state structure for standalone usage of detect_columns_with_cache
+#' NOTE: This is for testing/standalone usage only - production code should use
+#' the centralized app_state from create_app_state()
 #'
 create_minimal_app_state <- function() {
   state <- new.env(parent = emptyenv())
 
-  # Minimal structure needed by autodetect_engine
+  # Minimal structure needed by autodetect_engine (TESTING ONLY)
+  # Production code should use app_state$columns$auto_detect instead
   state$columns <- shiny::reactiveValues()
   state$columns$auto_detect <- shiny::reactiveValues(
     in_progress = FALSE,

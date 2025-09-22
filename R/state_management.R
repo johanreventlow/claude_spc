@@ -174,7 +174,11 @@ create_app_state <- function() {
     # Lifecycle tracking
     session_active = TRUE,
     cleanup_initiated = FALSE,
-    background_tasks_active = TRUE
+    background_tasks_active = TRUE,
+
+    # Navigation status (migrated from reactiveVal)
+    dataLoaded_status = "FALSE",
+    has_data_status = "false"
   )
 
   # Test Mode Management
@@ -231,7 +235,16 @@ create_app_state <- function() {
     plot_warnings = character(0),
     anhoej_results = NULL,
     is_computing = FALSE,
-    plot_object = NULL
+    plot_object = NULL,
+
+    # Module caching (migrated from reactiveVal)
+    module_cached_data = NULL,
+    module_data_cache = NULL,
+    plot_cache = NULL,
+    plot_cache_key = NULL,
+
+    # Configuration caching (migrated from reactiveVal)
+    last_valid_config = list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run")
   )
 
   # Error State - Convert to reactiveValues for consistency

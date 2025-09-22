@@ -11,8 +11,11 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   # Centralized state is now always available
   # UNIFIED STATE: Empty table initialization now handled through session management events
 
-  # UNIFIED EVENT SYSTEM: Reactive value to track dataLoaded status
-  dataLoaded_status <- shiny::reactiveVal("FALSE")
+  # UNIFIED EVENT SYSTEM: Use centralized app_state for dataLoaded status
+  # Initialize dataLoaded status in app_state if not already present
+  if (is.null(app_state$session$dataLoaded_status)) {
+    app_state$session$dataLoaded_status <- "FALSE"
+  }
 
   # Helper function to evaluate dataLoaded status
   evaluate_dataLoaded_status <- function() {
@@ -72,33 +75,36 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
   # log_debug("data_loaded event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
-    dataLoaded_status(new_status)
+    app_state$session$dataLoaded_status <- new_status
   # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
   # log_debug("session_reset event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
-    dataLoaded_status(new_status)
+    app_state$session$dataLoaded_status <- new_status
   # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
   # log_debug("navigation_changed event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
-    dataLoaded_status(new_status)
+    app_state$session$dataLoaded_status <- new_status
   # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   # Data indlæsnings status flags - følger BFH UTH mønster
   output$dataLoaded <- shiny::renderText({
-    # UNIFIED EVENT SYSTEM: Simply return the reactive value
-    dataLoaded_status()
+    # UNIFIED EVENT SYSTEM: Return value from centralized app_state
+    app_state$session$dataLoaded_status
   })
   outputOptions(output, "dataLoaded", suspendWhenHidden = FALSE)
 
-  # UNIFIED EVENT SYSTEM: Reactive value to track has_data status
-  has_data_status <- shiny::reactiveVal("false")
+  # UNIFIED EVENT SYSTEM: Use centralized app_state for has_data status
+  # Initialize has_data status in app_state if not already present
+  if (is.null(app_state$session$has_data_status)) {
+    app_state$session$has_data_status <- "false"
+  }
 
   # Helper function to evaluate has_data status
   evaluate_has_data_status <- function() {
@@ -127,19 +133,19 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   # UNIFIED EVENT LISTENERS: Update has_data status when relevant events occur
   shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
-    has_data_status(new_status)
+    app_state$session$has_data_status <- new_status
   # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
-    has_data_status(new_status)
+    app_state$session$has_data_status <- new_status
   # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
   shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
-    has_data_status(new_status)
+    app_state$session$has_data_status <- new_status
   # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
   })
 
@@ -147,14 +153,14 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   shiny::observe({
     initial_dataLoaded <- evaluate_dataLoaded_status()
     initial_has_data <- evaluate_has_data_status()
-    dataLoaded_status(initial_dataLoaded)
-    has_data_status(initial_has_data)
+    app_state$session$dataLoaded_status <- initial_dataLoaded
+    app_state$session$has_data_status <- initial_has_data
   # log_debug("Initial status set - dataLoaded:", initial_dataLoaded, "has_data:", initial_has_data, .context = "NAVIGATION_UNIFIED")
   }, priority = 2000)  # High priority to run early
 
   output$has_data <- shiny::renderText({
-    # UNIFIED EVENT SYSTEM: Simply return the reactive value
-    has_data_status()
+    # UNIFIED EVENT SYSTEM: Return value from centralized app_state
+    app_state$session$has_data_status
   })
   outputOptions(output, "has_data", suspendWhenHidden = FALSE)
 

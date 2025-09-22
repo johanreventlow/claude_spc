@@ -17,8 +17,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # MODULE-INTERNAL DATA REACTIVE ==========================================
     # Create both reactive and cached value for robust access
 
-    # Cached data storage
-    cached_data <- shiny::reactiveVal(NULL)
+    # Cached data storage - use centralized app_state
+    # Initialize module cache in app_state if not already present
+    if (is.null(app_state$visualization$module_cached_data)) {
+      app_state$visualization$module_cached_data <- NULL
+    }
 
     # Create a reactive-safe data function
     get_module_data <- function() {
@@ -48,11 +51,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
     }
 
-    # UNIFIED EVENT SYSTEM: Event-driven data reactive
-    module_data_cache <- shiny::reactiveVal(NULL)
+    # UNIFIED EVENT SYSTEM: Event-driven data reactive - use centralized app_state
+    # Initialize module data cache in app_state if not already present
+    if (is.null(app_state$visualization$module_data_cache)) {
+      app_state$visualization$module_data_cache <- NULL
+    }
 
     module_data_reactive <- shiny::reactive({
-      return(module_data_cache())
+      return(app_state$visualization$module_data_cache)
     })
 
     # UNIFIED EVENT SYSTEM: Update data cache when relevant events occur
@@ -62,8 +68,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       result_data <- get_module_data()
 
       # Update cache
-      module_data_cache(result_data)
-      cached_data(result_data)
+      app_state$visualization$module_data_cache <- result_data
+      app_state$visualization$module_cached_data <- result_data
     })
 
     # UNIFIED EVENT SYSTEM: Also update when data changes
@@ -72,15 +78,15 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       result_data <- get_module_data()
 
       # Update cache
-      module_data_cache(result_data)
-      cached_data(result_data)
+      app_state$visualization$module_data_cache <- result_data
+      app_state$visualization$module_cached_data <- result_data
     })
 
     # UNIFIED EVENT SYSTEM: Initialize data at startup if available
     if (!is.null(shiny::isolate(app_state$data$current_data))) {
       initial_data <- get_module_data()
-      module_data_cache(initial_data)
-      cached_data(initial_data)
+      app_state$visualization$module_data_cache <- initial_data
+      app_state$visualization$module_cached_data <- initial_data
     }
 
     # UNIFIED STATE: Always use app_state for visualization state management
@@ -147,8 +153,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Plot Generering ---------------------------------------------------------
 
     # Plot caching infrastructure
-    plot_cache <- shiny::reactiveVal(NULL)
-    plot_cache_key <- shiny::reactiveVal(NULL)
+    # Use centralized app_state for plot caching
+    # Initialize plot cache in app_state if not already present
+    if (is.null(app_state$visualization$plot_cache)) {
+      app_state$visualization$plot_cache <- NULL
+    }
+    if (is.null(app_state$visualization$plot_cache_key)) {
+      app_state$visualization$plot_cache_key <- NULL
+    }
 
     ## Hoved SPC Plot Reactive
     # Hovedfunktion for SPC plot generering med caching
@@ -175,9 +187,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       ))
 
       # Check if we can use cached plot
-      if (!is.null(plot_cache()) && !is.null(plot_cache_key()) &&
-          plot_cache_key() == current_cache_key) {
-        return(plot_cache())
+      if (!is.null(app_state$visualization$plot_cache) && !is.null(app_state$visualization$plot_cache_key) &&
+          app_state$visualization$plot_cache_key == current_cache_key) {
+        return(app_state$visualization$plot_cache)
       }
 
       # Cache miss - generating new plot
@@ -291,8 +303,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           }
 
           # Cache the plot with current key
-          plot_cache(plot)
-          plot_cache_key(current_cache_key)
+          app_state$visualization$plot_cache <- plot
+          app_state$visualization$plot_cache_key <- current_cache_key
 
           return(plot)
         },
@@ -302,8 +314,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           set_plot_state("anhoej_results", NULL)
 
           # Invalidate cache on error
-          plot_cache(NULL)
-          plot_cache_key(NULL)
+          app_state$visualization$plot_cache <- NULL
+          app_state$visualization$plot_cache_key <- NULL
 
           return(NULL)
         },
