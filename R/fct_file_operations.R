@@ -860,14 +860,31 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
 
   # Data quality analysis before preprocessing
   na_counts <- purrr::map_int(data, ~sum(is.na(.x)))
-  empty_counts <- purrr::map_int(data, ~sum(.x == "" | .x == " ", na.rm = TRUE))
+  # Fix: Only check character columns for empty strings to avoid NA-warnings
+  empty_counts <- purrr::map_int(data, ~ {
+    if (is.character(.x)) {
+      sum(stringr::str_trim(.x) == "", na.rm = TRUE)
+    } else {
+      0L
+    }
+  })
 
-  # Handle completely empty rows
+  # Handle completely empty rows using tidyverse approach
   if (nrow(data) > 0) {
-    empty_rows <- apply(data, 1, function(row) all(is.na(row) | row == "" | row == " "))
-    if (sum(empty_rows) > 0) {
-      data <- data[!empty_rows, ]
-      cleaning_log$empty_rows_removed <- sum(empty_rows)
+    # Count empty rows before filtering
+    empty_rows_count <- data |>
+      dplyr::filter(dplyr::if_all(dplyr::everything(), ~ {
+        is.na(.x) | (is.character(.x) & stringr::str_trim(.x) == "")
+      })) |>
+      nrow()
+
+    if (empty_rows_count > 0) {
+      # Filter out empty rows
+      data <- data |>
+        dplyr::filter(!dplyr::if_all(dplyr::everything(), ~ {
+          is.na(.x) | (is.character(.x) & stringr::str_trim(.x) == "")
+        }))
+      cleaning_log$empty_rows_removed <- empty_rows_count
     }
   }
 

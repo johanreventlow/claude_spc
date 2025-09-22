@@ -427,63 +427,41 @@ setup_data_table <- function(input, output, session, app_state, emit) {
             # Hent kolonnenavne fra colHeaders
             col_names <- unlist(new_data$colHeaders)
 
-            # Konvertér liste af rækker til data frame
+            # Konvertér liste af rækker til data frame ved navn-baseret matching
             row_list <- new_data$data
 
-            # Opret tom data frame med korrekt struktur
-            new_df <- data.frame(matrix(NA, nrow = length(row_list), ncol = length(col_names)))
-            names(new_df) <- col_names
-
-            # Fyld data frame række for række
-            for (i in seq_along(row_list)) {
-              row_data <- row_list[[i]]
-              for (j in seq_along(row_data)) {
-                if (j <= length(col_names)) {
-                  new_df[i, j] <- row_data[[j]]
-                }
+            # Sikker rekonstruktion med tidyverse - navne-baseret i stedet for positions-baseret
+            new_df <- purrr::map_dfr(row_list, function(row_data) {
+              # Pad row_data til at matche col_names længde hvis nødvendigt
+              if (length(row_data) < length(col_names)) {
+                row_data <- c(row_data, rep(NA, length(col_names) - length(row_data)))
               }
-            }
+              # Konvertér alle til character først for at undgå type-konflikter
+              row_data_char <- as.character(row_data[seq_along(col_names)])
+              # Opret navngivet vektor og konvertér til tibble row
+              named_row <- stats::setNames(row_data_char, col_names)
+              tibble::as_tibble_row(named_row)
+            })
 
-            # Konvertér datatyper korrekt
-            # Skift kolonne (logisk) - excelR sender checkbox som logisk allerede
-            if ("Skift" %in% names(new_df)) {
-              # Håndtér både logiske og streng repræsentationer
-              skift_values <- new_df$Skift
-              if (is.character(skift_values)) {
-                new_df$Skift <- skift_values == "TRUE" | skift_values == "true" | skift_values == TRUE
-              } else {
-                new_df$Skift <- as.logical(skift_values)
-              }
-            }
-
-            # Frys kolonne (logisk) - excelR sender radio som logisk
-            if ("Frys" %in% names(new_df)) {
-              # Håndtér både logiske og streng repræsentationer
-              frys_values <- new_df$Frys
-              if (is.character(frys_values)) {
-                new_df$Frys <- frys_values == "TRUE" | frys_values == "true" | frys_values == TRUE
-              } else {
-                new_df$Frys <- as.logical(frys_values)
-              }
-            }
-
-            # Numeriske kolonner
-            numeric_cols <- c("Tæller", "Nævner")
-            for (col in numeric_cols) {
-              if (col %in% names(new_df)) {
-                new_df[[col]] <- as.numeric(new_df[[col]])
-              }
-            }
-
-            # Dato kolonne
-            if ("Dato" %in% names(new_df)) {
-              new_df$Dato <- as.character(new_df$Dato)
-            }
-
-            # Karakter kolonner
-            if ("Kommentar" %in% names(new_df)) {
-              new_df$Kommentar <- as.character(new_df$Kommentar)
-            }
+            # Konvertér datatyper korrekt med tidyverse patterns
+            new_df <- new_df |>
+              dplyr::mutate(
+                # Logiske kolonner - alle er nu character, så konvertér direkte
+                dplyr::across(
+                  dplyr::any_of(c("Skift", "Frys")),
+                  ~ .x %in% c("TRUE", "true")
+                ),
+                # Numeriske kolonner
+                dplyr::across(
+                  dplyr::any_of(c("Tæller", "Nævner")),
+                  ~ as.numeric(.x)
+                ),
+                # Karakter kolonner (allerede character, men eksplicit for tydelighed)
+                dplyr::across(
+                  dplyr::any_of(c("Dato", "Kommentar")),
+                  ~ as.character(.x)
+                )
+              )
           } else {
             return()
           }
