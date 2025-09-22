@@ -1,10 +1,10 @@
-Package: claudespc
-Title: Statistical Process Control Application for Healthcare
+Package: SPCify
+Title: SPCify - Kvalitetsudvikling på Bispebjerg og Frederiksberg Hospital
 Version: 0.1.0
 Authors@R:
-    person("SPC", "Team", , "noreply@example.com", role = c("aut", "cre"))
-Author: SPC Team <noreply@example.com>
-Maintainer: SPC Team <noreply@example.com>
+    person("Johan", "Reventlow", , "noreply@example.com", role = c("aut", "cre"))
+Author: Johan Reventlow <noreply@example.com>
+Maintainer: Johan Reventlow <noreply@example.com>
 Description:
     En Shiny applikation til Statistical Process Control (SPC) analyse
     specifikt designet til brug i sundhedsvæsenet. Appen giver mulighed for
@@ -50,8 +50,6 @@ Suggests:
     knitr,
     rmarkdown,
     writexl (>= 1.4.0),
-    DT (>= 0.24),
-    rstudioapi (>= 0.13)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 RemoteType: local
