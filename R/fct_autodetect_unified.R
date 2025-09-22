@@ -66,7 +66,7 @@ autodetect_engine <- function(data = NULL,
   } else {
     # Full data analysis scenario
     log_debug_kv(
-      column_names = paste(names(data), collapse = ", "),
+      column_names = stringr::str_c(names(data), collapse = ", "),
       .context = "UNIFIED_AUTODETECT"
     )
     results <- detect_columns_full_analysis(data, app_state)
@@ -126,7 +126,7 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
   }
 
   log_debug_kv(
-    column_names = paste(col_names, collapse = ", "),
+    column_names = stringr::str_c(col_names, collapse = ", "),
     .context = "NAME_BASED_DETECT"
   )
 
@@ -204,9 +204,9 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
   )
 
   log_debug_kv(
-    x_col = ifelse(is.null(results$x_col), "NULL", results$x_col),
-    y_col = ifelse(is.null(results$y_col), "NULL", results$y_col),
-    n_col = ifelse(is.null(results$n_col), "NULL", results$n_col),
+    x_col = dplyr::if_else(is.null(results$x_col), "NULL", results$x_col),
+    y_col = dplyr::if_else(is.null(results$y_col), "NULL", results$y_col),
+    n_col = dplyr::if_else(is.null(results$n_col), "NULL", results$n_col),
     .context = "NAME_BASED_DETECT"
   )
 
@@ -232,7 +232,7 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
   }
 
   log_debug_kv(
-    column_names = paste(names(data), collapse = ", "),
+    column_names = stringr::str_c(names(data), collapse = ", "),
     .context = "FULL_DATA_DETECT"
   )
 
@@ -272,8 +272,8 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
   )
 
   log_debug_kv(
-    y_col_final = ifelse(is.null(results$y_col), "NULL", results$y_col),
-    n_col_final = ifelse(is.null(results$n_col), "NULL", results$n_col),
+    y_col_final = dplyr::if_else(is.null(results$y_col), "NULL", results$y_col),
+    n_col_final = dplyr::if_else(is.null(results$n_col), "NULL", results$n_col),
     data_driven_improvements = !is.null(best_date_col) || length(y_candidates) > 0,
     .context = "FULL_DATA_DETECT"
   )
