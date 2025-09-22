@@ -29,10 +29,11 @@ styler_config <- list(
 
 cat("🔍 Kører lintr code quality check...\n")
 
-# Load lintr configuration
+# Verify lintr configuration exists
 if (file.exists(lintr_config_file)) {
   cat("Bruger lintr config:", lintr_config_file, "\n")
-  source(lintr_config_file)
+} else {
+  cat("Advarsel: Ingen .lintr fil fundet, bruger defaults\n")
 }
 
 # Kør lintr på specifikke filer og mapper

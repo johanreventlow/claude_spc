@@ -1,4 +1,4 @@
-linters: lintr::linters_with_defaults(
+linters: linters_with_defaults(
     # Style linters
     line_length_linter(120),
     object_name_linter = NULL,  # Allow danish function names and snake_case
@@ -17,7 +17,7 @@ linters: lintr::linters_with_defaults(
     function_left_parentheses_linter(),
 
     # Imports and dependencies - enhanced from existing config
-    library_call_linter = lintr::regex_linter(
+    library_call_linter = regex_linter(
       pattern = "(?<!#\\s*)\\blibrary\\s*\\(",
       message = "Brug eksplicit pkg::funktion i stedet for library()."
     ),
