@@ -1,0 +1,60 @@
+# Pre-commit framework configuration for SPC App
+#
+# Installation:
+#   1. Install pre-commit: pip install pre-commit
+#   2. Install hooks: pre-commit install
+#   3. Run manually: pre-commit run --all-files
+#
+# This is an ALTERNATIVE to the manual git hook in dev/pre-commit-hook.sh
+# Choose one approach - either manual hook OR pre-commit framework
+
+repos:
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '^(dev/|R/golem_utils\.R)'
+      - id: end-of-file-fixer
+        exclude: '^(dev/|R/golem_utils\.R)'
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=50000']  # 50MB max file size
+      - id: check-merge-conflict
+
+  # R-specific hooks
+  - repo: https://github.com/lorenzwalthert/precommit
+    rev: v0.3.2.9027
+    hooks:
+      # Style code with styler
+      - id: style-files
+        args: [--style_pkg=styler, --style_fun=tidyverse_style, --cache-root=styler-perm]
+        exclude: '^(dev/|R/golem_utils\.R)'
+
+      # Lint code with lintr (uses .lintr config)
+      - id: lintr
+        exclude: '^(dev/|R/golem_utils\.R|tests/)'
+
+      # Parse R files to check syntax
+      - id: parsable-R
+        exclude: '^(dev/|R/golem_utils\.R)'
+
+      # Check that no library() calls are used (prefers pkg::fun())
+      - id: no-browser-statement
+        exclude: '^(dev/|tests/)'
+
+  # Custom hooks for SPC App
+  - repo: local
+    hooks:
+      - id: spc-lintr-styler
+        name: SPC App Code Quality Check
+        entry: Rscript dev/lint_and_style.R
+        language: system
+        files: '\.R$'
+        exclude: '^(dev/|R/golem_utils\.R)'
+        pass_filenames: false
+        stages: [commit]
+
+# Global configuration
+fail_fast: false  # Run all hooks even if one fails
+default_stages: [commit]
