@@ -68,14 +68,13 @@ clean_qic_call_args <- function(call_args) {
       removed_positions <- which(!complete_cases)
 
       if (length(removed_positions) > 0) {
-        # Juster part positioner ved at trække fjernede rækker før hver position
-        adjusted_part <- call_args$part
-
-        for (i in seq_along(adjusted_part)) {
-          pos <- adjusted_part[i]
-          removed_before <- sum(removed_positions < pos)
-          adjusted_part[i] <- pos - removed_before
-        }
+        # Juster part positioner ved at trække fjernede rækker før hver position using tidyverse
+        adjusted_part <- call_args$part |>
+          purrr::map_dbl(~ {
+            pos <- .x
+            removed_before <- sum(removed_positions < pos)
+            pos - removed_before
+          })
 
         # Fjern ugyldige positioner
         valid_parts <- adjusted_part > 0 & adjusted_part <= sum(complete_cases)
@@ -328,15 +327,17 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
   if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
     # Find phase change points
     phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
+    # Add phase change lines using tidyverse approach
     if (length(phase_changes) > 0) {
-      for (change_point in phase_changes) {
-        plot <- plot +
-          ggplot2::geom_vline(
-            xintercept = qic_data$x[change_point + 1],
-            color = HOSPITAL_COLORS$warning,
-            linetype = "dotted", linewidth = 1, alpha = 0.7
-          )
-      }
+      plot <- phase_changes |>
+        purrr::reduce(function(p, change_point) {
+          p +
+            ggplot2::geom_vline(
+              xintercept = qic_data$x[change_point + 1],
+              color = HOSPITAL_COLORS$warning,
+              linetype = "dotted", linewidth = 1, alpha = 0.7
+            )
+        }, .init = plot)
     }
   }
 

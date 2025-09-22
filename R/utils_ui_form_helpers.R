@@ -87,11 +87,10 @@ create_form_update_service <- function(session) {
         safe_operation(
           "Batch form field update from metadata",
           code = {
-            for (field in fields) {
-              if (!is.null(metadata[[field]]) && field %in% names(.field_types)) {
-                update_field_by_type(field, metadata[[field]], .field_types[[field]])
-              }
-            }
+            # Update fields using tidyverse approach
+            fields |>
+              purrr::keep(~ !is.null(metadata[[.x]]) && .x %in% names(.field_types)) |>
+              purrr::walk(~ update_field_by_type(.x, metadata[[.x]], .field_types[[.x]]))
           },
           fallback = NULL,
           error_type = "batch_form_update"
@@ -105,11 +104,10 @@ create_form_update_service <- function(session) {
         safe_operation(
           "Reset form fields to defaults",
           code = {
-            for (field in names(.default_values)) {
-              if (field %in% names(.field_types)) {
-                update_field_by_type(field, .default_values[[field]], .field_types[[field]])
-              }
-            }
+            # Reset fields using tidyverse approach
+            names(.default_values) |>
+              purrr::keep(~ .x %in% names(.field_types)) |>
+              purrr::walk(~ update_field_by_type(.x, .default_values[[.x]], .field_types[[.x]]))
           },
           fallback = NULL,
           error_type = "form_reset"

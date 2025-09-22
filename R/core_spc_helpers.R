@@ -432,33 +432,43 @@ validate_data_structure <- function(data) {
     errors <- c(errors, "Data skal have mindst 2 kolonner (tid og værdi)")
   }
 
-  # Check for potential time/date columns
-  potential_date_cols <- character(0)
-  potential_numeric_cols <- character(0)
+  # Check for potential time/date columns using tidyverse approach
+  empty_columns <- data |>
+    purrr::map_lgl(~ all(is.na(.x))) |>
+    purrr::keep(isTRUE) |>
+    names()
 
-  for (col_name in names(data)) {
-    col_data <- data[[col_name]]
-
-    # Skip completely empty columns
-    if (all(is.na(col_data))) {
-      warnings <- c(warnings, paste("Kolonne", col_name, "er helt tom"))
-      next
-    }
-
-    # Check for potential date columns
-    char_data <- as.character(col_data)[!is.na(col_data)]
-    if (length(char_data) > 0) {
-      if (any(grepl("\\d{4}-\\d{2}-\\d{2}|\\d{2}/\\d{2}/\\d{4}|\\d{2}-\\d{2}-\\d{4}", char_data))) {
-        potential_date_cols <- c(potential_date_cols, col_name)
-      }
-    }
-
-    # Check for numeric columns (handle Danish decimal separator)
-    if (is.numeric(col_data) ||
-      sum(!is.na(parse_danish_number(col_data))) > length(col_data) * MIN_NUMERIC_PERCENT) {
-      potential_numeric_cols <- c(potential_numeric_cols, col_name)
-    }
+  # Add warnings for empty columns
+  if (length(empty_columns) > 0) {
+    warnings <- c(warnings, purrr::map_chr(empty_columns, ~ paste("Kolonne", .x, "er helt tom")))
   }
+
+  # Find potential date columns
+  potential_date_cols <- data |>
+    purrr::imap_chr(~ {
+      if (!all(is.na(.x))) {
+        char_data <- as.character(.x)[!is.na(.x)]
+        if (length(char_data) > 0 &&
+            any(grepl("\\d{4}-\\d{2}-\\d{2}|\\d{2}/\\d{2}/\\d{4}|\\d{2}-\\d{2}-\\d{4}", char_data))) {
+          return(.y)
+        }
+      }
+      return(NA_character_)
+    }) |>
+    purrr::discard(is.na)
+
+  # Find potential numeric columns
+  potential_numeric_cols <- data |>
+    purrr::imap_chr(~ {
+      if (!all(is.na(.x))) {
+        if (is.numeric(.x) ||
+            sum(!is.na(parse_danish_number(.x))) > length(.x) * MIN_NUMERIC_PERCENT) {
+          return(.y)
+        }
+      }
+      return(NA_character_)
+    }) |>
+    purrr::discard(is.na)
 
   # Validate minimum requirements
   if (length(potential_numeric_cols) == 0) {
