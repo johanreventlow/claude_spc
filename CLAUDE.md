@@ -22,8 +22,9 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 1. **Spørg først** – Få eksplicit godkendelse til enhver kodeændring
 2. **Planlæg commits** – Beskriv hvilke filer der ændres og hvorfor
 3. **Commit efter hvert trin** – Hvert logisk trin skal have sin egen commit
-4. **Test mellem commits** – Kør tests efter hver commit
-5. **Dokumentér ændringer** – Klar commit message med rationale
+4. **Automatisk quality checks** – Git hooks kører automatisk lintr/styler
+5. **Test mellem commits** – Kør tests efter hver commit
+6. **Dokumentér ændringer** – Klar commit message med rationale
 
 **Eksempel på korrekt workflow:**
 ```bash
@@ -38,9 +39,11 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 
 # Trin 3: Implementér med commits mellem hvert trin
 git add DESCRIPTION && git commit -m "feat: tilføj tidyverse dependencies"
-# Test køres og bestås
+# → Git hooks kører automatisk lintr/styler
+# → Tests køres og bestås
 git add R/fct_autodetect_unified.R && git commit -m "refactor: konverter for-loops til purrr::map"
-# Test køres og bestås
+# → Git hooks kører automatisk og formatterer kode
+# → Tests køres og bestås
 ```
 
 **ALDRIG gør:**
@@ -234,13 +237,33 @@ values$some_data <- data
 * **Isolation når nødvendigt** – Brug `isolate()` med omtanke og kun i reaktiverede kontekster
 * **Error boundaries** – Wrap komplekse reactive udtryk i `safe_operation()`
 
-### 4.2 R Code Quality
+### 4.2 R Code Quality (Automatisk Enforced)
 
+✅ **AUTOMATISK HÅNDHÆVET VIA GIT HOOKS:**
+
+* **Code formatting** – Styler formaterer automatisk efter tidyverse style guide
+* **Code linting** – Lintr tjekker potentielle problemer og style violations
+* **Line length** – Max 120 tegn (håndhævet automatisk)
+* **Assignment operators** – `<-` foretrækkes over `=` (håndhævet automatisk)
+* **Function calls** – `pkg::function()` foretrækkes over `library()` (håndhævet automatisk)
+
+**Manuel standards (ikke automatisk håndhævet):**
 * **Danske kommentarer** – Beskriv funktionalitet på dansk
 * **Engelske funktionsnavne** – Funktioner, variabler mv. navngives på engelsk
 * **Navngivningskonvention** – snake_case for logik, camelCase for UI-komponenter
 * **Type safety** – Brug `is.numeric()`, `is.character()` etc. før beregninger
-* **Statisk analyse** – Code quality håndteres automatisk af git hooks
+
+**Ved commit fejl:**
+```bash
+# Hvis lintr finder kritiske errors:
+❌ FEJL: Kritiske lintr errors fundet - skal rettes!
+# Fix errors og commit igen
+
+# Hvis styler ændrer filer:
+📝 Styler har ændret filer - stage dem igen:
+git add .
+git commit
+```
 
 ### 4.3 Error Handling Patterns
 
@@ -278,11 +301,12 @@ values$some_data <- data
 
 * **Atomic commits** – Én logisk ændring pr. commit
 * **Conventional commits (dansk)** – Se sektion 9.2 for format
-* **Tests før commit** – Ingen commits uden grønt test-resultat
+* **Automatisk code quality** – Git hooks kører lintr/styler ved hver commit
+* **Tests før commit** – Ingen commits uden grønt test-resultat OG code quality OK
 * **Ingen breaking changes** – Backward compatibility er default
 * **Feature flags** – Brug `TEST_MODE_*` og `FEATURE_FLAG_*` i konfiguration
 * **Staged rollout** – Test på separate porte (4040, 5050, 6060) før produktion
-* **CI/CD** – Integrér `devtools::check()`, tests og `lintr` i pipeline
+* **CI/CD** – Integrér `devtools::check()`, tests og code quality pipeline
 
 ---
 
@@ -320,8 +344,14 @@ config_value <- golem::get_golem_options("test_mode_auto_load", default = FALSE)
 * **`renv`** – Hold projektet låst til versionsspecifikke pakker
 * **`pak::pkg_install()`** – Brug deterministisk installation i CI
 * **`DESCRIPTION`** – Alle runtime-dependencies skal stå i `Imports`
-* **Namespace calls** – Brug `pkg::fun()` fremfor `library()` i runtime-kode
+* **Namespace calls** – Brug `pkg::fun()` fremfor `library()` (håndhævet automatisk af lintr)
 * **`Sys.getenv()`** – Alle secrets indlæses via miljøvariabler
+
+**Code Quality Dependencies (påkrævet for udvikling):**
+* **`lintr`** – Code quality checking (påkrævet for git hooks)
+* **`styler`** – Automatisk code formatering (påkrævet for git hooks)
+* **`here`** – Path management i development scripts
+* **Installation:** `install.packages(c("lintr", "styler", "here"))`
 
 ### 5.4 Data Integrity
 
@@ -494,10 +524,16 @@ Fritekst med kontekst, testresultater og rationale.
 * `docs` – Dokumentation
 * `chore` – Vedligehold
 * `perf` – Performanceforbedring
+* `style` – Code formatting (kun hvis manuel styling nødvendig)
 
-**Test-noter i commit body:**
+**Automatisk validering ved commit:**
+* ✅ **Code quality** – Git hooks kører automatisk lintr/styler
+* ✅ **Formatering** – Automatisk styling efter tidyverse guide
+* ✅ **Linting** – Potentielle problemer fanges før commit
+
+**Test-noter i commit body (hvis relevante):**
 * `Tests: R -e "source('global.R'); testthat::test_dir('tests/testthat')"`
-* `Code quality: Rscript dev/lint_and_style.R`
+* `Manual code quality: Rscript dev/lint_and_style.R` (kun hvis hooks disabled)
 
 ---
 
@@ -693,7 +729,9 @@ Deltag i ærlig, indsigtsfuld dialog der fremmer forståelse og produktiv udvikl
 2. fct_autodetect_unified.R: Konverter 3 for-loops til purrr::map()
 3. server_utils_column_management.R: Erstat sapply() med map_lgl()
 
-Dette vil resultere i 3 separate commits. Skal jeg fortsætte?"
+Dette vil resultere i 3 separate commits.
+Git hooks vil automatisk køre lintr/styler ved hver commit.
+Skal jeg fortsætte?"
 
 [Venter på bruger svar før implementering]
 ```
