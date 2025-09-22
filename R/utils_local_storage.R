@@ -11,11 +11,11 @@ saveDataLocally <- function(session, data, metadata = NULL) {
     code = {
       # CRITICAL: Preserve data structure explicitly - improved method
       data_to_save <- list(
-        values = lapply(data, function(x) as.vector(x)), # Convert each column to vector
+        values = purrr::map(data, as.vector), # Convert each column to vector
         col_names = colnames(data),
         nrows = nrow(data),
         ncols = ncol(data),
-        class_info = sapply(data, function(x) class(x)[1]) # Take first class only
+        class_info = purrr::map_chr(data, ~ class(.x)[1]) # Take first class only
       )
 
       app_state <- list(
