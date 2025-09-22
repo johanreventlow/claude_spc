@@ -6,10 +6,7 @@ linters: linters_with_defaults(
     trailing_whitespace_linter(),
     assignment_linter(),
     function_left_parentheses_linter(),
-    library_call_linter = regex_linter(
-      pattern = "(?<!#\\s*)\\blibrary\\s*\\(",
-      message = "Brug eksplicit pkg::funktion i stedet for library()."
-    ),
+    library_call_linter(),
     namespace_linter(),
     cyclocomp_linter(complexity_limit = 15)
   )
