@@ -102,7 +102,7 @@ cleanup_reactive_values <- function(values) {
 
   # Clear temporary state
   temp_objects <- c(
-    "ui_sync_needed", "auto_detected_columns",
+    "ui_sync_needed",
     "validation_results", "error_cache"
   )
 

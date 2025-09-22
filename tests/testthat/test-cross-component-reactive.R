@@ -24,7 +24,7 @@ test_that("Reactive values initialization og structure", {
 
     # Auto-detection states
     auto_detect_done = FALSE,
-    auto_detected_columns = NULL,
+    auto_detect_results = NULL,
     initial_auto_detect_completed = FALSE,
 
     # UI states
@@ -39,7 +39,7 @@ test_that("Reactive values initialization og structure", {
 
   # TEST: All expected reactive values present
   expect_true(all(c("current_data", "original_data", "file_uploaded") %in% names(mock_reactive_values)))
-  expect_true(all(c("auto_detect_done", "auto_detected_columns") %in% names(mock_reactive_values)))
+  expect_true(all(c("auto_detect_done", "auto_detect_results") %in% names(mock_reactive_values)))
   expect_true(all(c("ui_sync_needed", "updating_table") %in% names(mock_reactive_values)))
 
   # TEST: Initial states correct
@@ -57,7 +57,7 @@ test_that("Data flow: File Upload → Auto Detection", {
     original_data = NULL,
     file_uploaded = FALSE,
     auto_detect_done = FALSE,
-    auto_detected_columns = NULL
+    auto_detect_results = NULL
   )
 
   # Step 1: Simulate file upload
@@ -99,15 +99,15 @@ test_that("Data flow: File Upload → Auto Detection", {
       kommentar_col = "Kommentarer"
     )
 
-    values$auto_detected_columns <- detected_columns
+    values$auto_detect_results <- detected_columns
     values$auto_detect_done <- TRUE
   }
 
   # TEST: Auto-detection results
-  expect_true(!is.null(values$auto_detected_columns))
+  expect_true(!is.null(values$auto_detect_results))
   expect_true(values$auto_detect_done)
-  expect_equal(values$auto_detected_columns$x_col, "Dato")
-  expect_equal(values$auto_detected_columns$taeller_col, "Tæller")
+  expect_equal(values$auto_detect_results$x_col, "Dato")
+  expect_equal(values$auto_detect_results$taeller_col, "Tæller")
 })
 
 test_that("Data flow: Auto Detection → UI Sync", {
@@ -120,7 +120,7 @@ test_that("Data flow: Auto Detection → UI Sync", {
       Dato = "01-01-2024", Tæller = 95, Nævner = 100
     ),
     auto_detect_done = TRUE,
-    auto_detected_columns = list(
+    auto_detect_results = list(
       x_col = "Dato",
       taeller_col = "Tæller",
       naevner_col = "Nævner"
@@ -129,7 +129,7 @@ test_that("Data flow: Auto Detection → UI Sync", {
   )
 
   # Step 1: Trigger UI sync based on auto-detection completion
-  ui_sync_trigger <- values$auto_detect_done && !is.null(values$auto_detected_columns)
+  ui_sync_trigger <- values$auto_detect_done && !is.null(values$auto_detect_results)
 
   # TEST: UI sync should trigger
   expect_true(ui_sync_trigger)
@@ -139,9 +139,9 @@ test_that("Data flow: Auto Detection → UI Sync", {
     col_choices <- c("Vælg kolonne" = "", setNames(names(values$current_data), names(values$current_data)))
 
     ui_sync_data <- list(
-      x_col = values$auto_detected_columns$x_col,
-      taeller_col = values$auto_detected_columns$taeller_col,
-      naevner_col = values$auto_detected_columns$naevner_col,
+      x_col = values$auto_detect_results$x_col,
+      taeller_col = values$auto_detect_results$taeller_col,
+      naevner_col = values$auto_detect_results$naevner_col,
       col_choices = col_choices,
       timestamp = Sys.time()
     )
@@ -166,7 +166,7 @@ test_that("Data flow: Session Reset → State Cleanup", {
     file_uploaded = TRUE,
     user_started_session = TRUE,
     auto_detect_done = TRUE,
-    auto_detected_columns = list(x_col = "test"),
+    auto_detect_results = list(x_col = "test"),
     ui_sync_needed = list(x_col = "test"),
     updating_table = FALSE,
     hide_anhoej_rules = FALSE,
@@ -181,7 +181,7 @@ test_that("Data flow: Session Reset → State Cleanup", {
     values$file_uploaded <- FALSE
     values$user_started_session <- FALSE
     values$auto_detect_done <- FALSE
-    values$auto_detected_columns <- NULL
+    values$auto_detect_results <- NULL
     values$ui_sync_needed <- NULL
     values$initial_auto_detect_completed <- FALSE
 
@@ -194,7 +194,7 @@ test_that("Data flow: Session Reset → State Cleanup", {
   expect_false(values$file_uploaded)
   expect_false(values$user_started_session)
   expect_false(values$auto_detect_done)
-  expect_null(values$auto_detected_columns)
+  expect_null(values$auto_detect_results)
   expect_null(values$ui_sync_needed)
 
   # TEST: New empty session data

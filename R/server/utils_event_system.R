@@ -270,20 +270,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # UI UPDATE EVENTS ========================================================
 
-  # DISABLED: Column choices changed event listener - problematisk da den clearer dropdowns
-  # Dette event system kaldte update_column_choices() uden parametre, hvilket resulterede i
-  # choices=NULL og selected=NULL, og dermed clearede alle dropdown værdier efter autodetect.
-  # UI sync håndteres allerede korrekt via ui_sync_needed event systemet.
-
-  # shiny::observeEvent(app_state$events$column_choices_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-  # #   log_debug("Column choices changed event received", .context = "UI_EVENT")
-  #
-  #   if (!is.null(ui_service)) {
-  #     ui_service$update_column_choices()  # <-- PROBLEM: Ingen parametre resulterer i NULL choices/selected
-  #   } else {
-  # #     log_debug("No UI service available for column choices update", .context = "UI_EVENT")
-  #   }
-  # })
+  # NOTE: column_choices_changed observer disabled due to UI clearing issue
+  # Event still emitted for tracking, but UI sync handled via ui_sync_needed
 
   # Form reset needed event listener
   shiny::observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {

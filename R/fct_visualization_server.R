@@ -28,8 +28,8 @@ setup_visualization <- function(input, output, session, app_state) {
     log_debug("auto_detected_config reactive triggered", "AUTO_DETECTED_CONFIG")
 
     # Use unified state management - CORRECTED PATH
-    auto_columns <- app_state$columns$auto_detected_columns
-    log_debug(paste("Auto columns state (auto_detected_columns):", if(is.null(auto_columns)) "NULL" else "PRESENT"), "AUTO_DETECTED_CONFIG")
+    auto_columns <- app_state$columns$auto_detect$results
+    log_debug(paste("Auto columns state (auto_detect.results):", if(is.null(auto_columns)) "NULL" else "PRESENT"), "AUTO_DETECTED_CONFIG")
 
     if (!is.null(auto_columns)) {
       log_debug(paste("Auto detected columns - X:", auto_columns$x_col, "Y:", auto_columns$y_col, "N:", auto_columns$n_col), "AUTO_DETECTED_CONFIG")
@@ -83,7 +83,7 @@ setup_visualization <- function(input, output, session, app_state) {
     log_debug("Manual config not available, checking auto-detected config", "COLUMN_CONFIG")
 
     # Simplified auto-config access with better error handling
-    auto_columns <- app_state$columns$auto_detected_columns
+    auto_columns <- app_state$columns$auto_detect$results
     if (!is.null(auto_columns) && !is.null(auto_columns$y_col)) {
       log_debug("✅ Using auto-detected config as fallback", "COLUMN_CONFIG")
       return(list(

@@ -375,7 +375,7 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
 
   # Store complete results for backward compatibility
   existing_columns$auto_detect_results <- results
-  existing_columns$auto_detected_columns <- results
+  # Note: Hierarchical structure is only maintained in app_state, not in legacy return value
 
   # Mark as completed
   existing_columns$auto_detect_completed <- TRUE

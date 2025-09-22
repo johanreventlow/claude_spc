@@ -385,13 +385,33 @@ app_state$data <- reactiveValues(
 )
 
 app_state$columns <- reactiveValues(
-  auto_detect_in_progress = FALSE,
-  auto_detect_completed = FALSE,
-  auto_detect_results = NULL,
-  x_column = NULL,
-  y_column = NULL,
-  n_column = NULL,
-  cl_column = NULL
+  # Hierarchical auto-detection sub-system
+  auto_detect = reactiveValues(
+    in_progress = FALSE,
+    completed = FALSE,
+    results = NULL,
+    trigger = NULL,
+    last_run = NULL,
+    frozen_until_next_trigger = FALSE
+  ),
+
+  # Column mappings sub-system
+  mappings = reactiveValues(
+    x_column = NULL,
+    y_column = NULL,
+    n_column = NULL,
+    cl_column = NULL,
+    skift_column = NULL,
+    frys_column = NULL,
+    kommentar_column = NULL
+  ),
+
+  # UI synchronization sub-system
+  ui_sync = reactiveValues(
+    needed = FALSE,
+    last_sync_time = NULL,
+    pending_updates = list()
+  )
 )
 
 app_state$session <- reactiveValues(
@@ -423,7 +443,7 @@ observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVE
 })
 
 observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$MEDIUM, {
-  req(app_state$columns$auto_detect_results)
+  req(app_state$columns$auto_detect$results)
   emit$ui_sync_needed()
 })
 ```
@@ -445,7 +465,37 @@ session$onSessionEnded(function() {
 })
 ```
 
-### 10.3 Extension Points
+### 10.3 Hierarchical State Access Guidelines
+
+**✅ Korrekte mønstre for hierarkisk state access:**
+```r
+# Auto-detection results
+auto_columns <- app_state$columns$auto_detect$results
+app_state$columns$auto_detect$completed <- TRUE
+
+# Column mappings
+app_state$columns$mappings$x_column <- "Dato"
+detected_x <- app_state$columns$mappings$x_column
+
+# UI synchronization
+app_state$columns$ui_sync$needed <- TRUE
+last_sync <- app_state$columns$ui_sync$last_sync_time
+```
+
+**❌ Legacy mønstre at undgå:**
+```r
+# Direkte field access (FORÆLDET)
+auto_columns <- app_state$columns$auto_detected_columns  # Brug i stedet: auto_detect$results
+app_state$columns$x_column <- "Dato"                    # Brug i stedet: mappings$x_column
+```
+
+**Migration Best Practices:**
+1. **Søg systematisk** – Brug `grep -r "auto_detected_columns"` til at finde legacy usage
+2. **Test først** – Opdater tests før production kode
+3. **Bevar kompatibilitet** – Brug graduel migration med backward compatibility
+4. **Verificér reaktive kæder** – Sikr at hierarkiske ændringer ikke bryder reactive dependencies
+
+### 10.4 Extension Points
 
 1. **Start med tests** – Definér forventet adfærd
 2. **Implementér inkrementelt** – Små, testbare commits
@@ -470,6 +520,49 @@ session$onSessionEnded(function() {
 * **Performance** – Responsiv brugeroplevelse selv med større datasæt
 * **Danish language support** – Terminologi og labels på dansk
 * **Best practice compliance** – Moderne Shiny- og softwareudviklingsstandarder
+
+---
+
+## 12) Samtale Guidelines
+
+### Primært Mål
+Deltag i ærlig, indsigtsfuld dialog der fremmer forståelse og produktiv udvikling.
+
+### Kerneprincipper
+
+**Intellektuel ærlighed:**
+* Del ægte indsigter uden unødvendig smiger eller afvisning
+* Vær direkte omkring begrænsninger og trade-offs
+* Anerkend når du ikke ved noget eller er usikker
+
+**Kritisk engagement:**
+* Stil spørgsmålstegn ved vigtige overvejelser fremfor at acceptere idéer ukritisk
+* Udfordre logik, antagelser og implementeringsdetaljer når relevant
+* Fokusér på argumentets substans, ikke på at være behagelig
+
+**Balanceret evaluering:**
+* Præsentér både positive og negative vurderinger kun når de er velbegrundede
+* Undgå tomme komplimenter eller kritik uden substans
+* Vær specifik omkring hvad der virker og hvad der ikke gør
+
+**Retningsklarhed:**
+* Fokusér på om idéer bringer os fremad eller fører os på afveje
+* Vær eksplicit omkring konsekvenser og alternativer
+* Prioritér projektets langsigtede kvalitet over kortsigtede løsninger
+
+### Hvad der skal undgås
+
+* **Smigrende svar** eller ubegrundet positivitet
+* **Afvisning af idéer** uden ordentlig overvejelse
+* **Overfladisk enighed** eller uenighed
+* **Smiger** der ikke tjener samtalen
+* **Politisk korrekthed** på bekostning af teknisk præcision
+
+### Succeskriterium
+
+**Den eneste valuta der betyder noget:** Fremmer dette produktiv tænkning eller standser det?
+
+Hvis samtalen bevæger sig i en uproduktiv retning, påpeg det direkte og foreslå et bedre spor. Kvaliteten af tekniske beslutninger og kodebase-forbedringer er vigtigere end at undgå ubehag.
 
 ---
 

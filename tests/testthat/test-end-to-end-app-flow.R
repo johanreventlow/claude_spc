@@ -566,7 +566,7 @@ test_that("Reactive chain dependencies fungerer (Phase 2 pattern)", {
   # Mock reactive values til test
   test_values <- reactiveValues(
     current_data = NULL,
-    auto_detected_columns = NULL,
+    auto_detect_results = NULL,
     x_column = NULL,
     y_column = NULL,
     n_column = NULL

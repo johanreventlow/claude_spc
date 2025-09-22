@@ -19,8 +19,8 @@ test_that("Manuel kolonnevalg prioriteres over auto-detect", {
     stringsAsFactors = FALSE
   )
 
-  # Mock reaktive værdier for auto-detect
-  auto_detected_columns <- list(
+  # Mock reaktive værdier for auto-detect (simulerer app_state$columns$auto_detect$results)
+  auto_detect_results <- list(
     x_col = "Uge",  # Auto-detect ville vælge Uge som X
     y_col = "T",    # Auto-detect kunne ikke detektere T som tæller
     n_col = "N"     # Auto-detect kunne ikke detektere N som nævner
@@ -37,11 +37,11 @@ test_that("Manuel kolonnevalg prioriteres over auto-detect", {
 
   # Simuler auto_detected_config() funktionen
   auto_detected_config <- function() {
-    if (!is.null(auto_detected_columns)) {
+    if (!is.null(auto_detect_results)) {
       return(list(
-        x_col = auto_detected_columns$x_col,
-        y_col = auto_detected_columns$y_col,
-        n_col = auto_detected_columns$n_col
+        x_col = auto_detect_results$x_col,
+        y_col = auto_detect_results$y_col,
+        n_col = auto_detect_results$n_col
       ))
     }
     return(NULL)
@@ -82,8 +82,8 @@ test_that("Auto-detect fallback når ingen manuel valg", {
     chart_type = "Seriediagram (Run Chart)"
   )
 
-  # Mock reaktive værdier for auto-detect
-  auto_detected_columns <- list(
+  # Mock reaktive værdier for auto-detect (simulerer app_state$columns$auto_detect$results)
+  auto_detect_results <- list(
     x_col = "Uge",
     y_col = "Tæller",
     n_col = "Nævner"
@@ -100,11 +100,11 @@ test_that("Auto-detect fallback når ingen manuel valg", {
 
   # Simuler auto_detected_config()
   auto_detected_config <- function() {
-    if (!is.null(auto_detected_columns)) {
+    if (!is.null(auto_detect_results)) {
       return(list(
-        x_col = auto_detected_columns$x_col,
-        y_col = auto_detected_columns$y_col,
-        n_col = auto_detected_columns$n_col
+        x_col = auto_detect_results$x_col,
+        y_col = auto_detect_results$y_col,
+        n_col = auto_detect_results$n_col
       ))
     }
     return(NULL)
