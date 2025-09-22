@@ -1,34 +1,21 @@
 linters: linters_with_defaults(
-    # Style linters
     line_length_linter(120),
-    object_name_linter = NULL,  # Allow danish function names and snake_case
-
-    # Comment linters - allow danish comments
+    object_name_linter = NULL,
     commented_code_linter = NULL,
-
-    # Spacing and formatting
-    spaces_left_parentheses_linter = NULL,  # Allow function( style
+    spaces_left_parentheses_linter = NULL,
     trailing_whitespace_linter(),
-
-    # Assignment
     assignment_linter(),
-
-    # Function definition
     function_left_parentheses_linter(),
-
-    # Imports and dependencies - enhanced from existing config
     library_call_linter = regex_linter(
       pattern = "(?<!#\\s*)\\blibrary\\s*\\(",
       message = "Brug eksplicit pkg::funktion i stedet for library()."
     ),
     namespace_linter(),
-
-    # Complexity
     cyclocomp_linter(complexity_limit = 15)
   )
 exclusions: list(
-    "R/golem_utils.R",  # Golem generated code
-    "dev/",             # Development scripts
-    "tests/"            # Test files can be more relaxed
+    "R/golem_utils.R",
+    "dev/",
+    "tests/"
   )
 encoding: "UTF-8"
