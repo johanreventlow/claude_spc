@@ -4,9 +4,9 @@
 #' Main Server Function
 #'
 #' @param input,output,session Internal Shiny parameters
-#' 
-#' @noRd
-app_server <- function(input, output, session) {
+#'
+#' @export
+main_app_server <- function(input, output, session) {
   log_info("SPC App server initialization started", "APP_SERVER")
 
   # Initialize advanced debug system
@@ -240,22 +240,23 @@ app_server <- function(input, output, session) {
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
   log_debug("Checking TEST_MODE configuration...", "APP_SERVER")
-  log_debug(paste("TEST_MODE_AUTO_LOAD:", if(exists("TEST_MODE_AUTO_LOAD")) TEST_MODE_AUTO_LOAD else "UNDEFINED"), "APP_SERVER")
+  test_mode_auto_load <- get_test_mode_auto_load()
+  log_debug(paste("TEST_MODE_AUTO_LOAD:", test_mode_auto_load), "APP_SERVER")
 
   debug_log("Checking TEST_MODE configuration", "SESSION_LIFECYCLE", level = "TRACE",
             context = list(
-              TEST_MODE_AUTO_LOAD = if(exists("TEST_MODE_AUTO_LOAD")) TEST_MODE_AUTO_LOAD else "UNDEFINED"
+              TEST_MODE_AUTO_LOAD = test_mode_auto_load
             ),
             session_id = session$token)
 
-  if (exists("TEST_MODE_AUTO_LOAD") && TEST_MODE_AUTO_LOAD) {
+  if (test_mode_auto_load) {
     # Start workflow tracer for auto-load process
     autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, session$token)
-    log_debug(paste("🔄 Attempting auto-load with TEST_MODE_AUTO_LOAD =", TEST_MODE_AUTO_LOAD), "TEST_MODE")
-    test_file_path <- if(exists("TEST_MODE_FILE_PATH")) TEST_MODE_FILE_PATH else "UNDEFINED"
-    log_debug(paste("Test file path:", test_file_path), "TEST_MODE")
+    log_debug(paste("🔄 Attempting auto-load with TEST_MODE_AUTO_LOAD =", test_mode_auto_load), "TEST_MODE")
+    test_file_path <- get_test_mode_file_path()
+    log_debug(paste("Test file path:", test_file_path %||% "UNDEFINED"), "TEST_MODE")
 
-    if (exists("TEST_MODE_FILE_PATH") && file.exists(test_file_path)) {
+    if (!is.null(test_file_path) && file.exists(test_file_path)) {
       log_debug("✅ Test file found, starting auto-load...", "TEST_MODE")
       autoload_tracer$step("file_validation_complete")
 
@@ -374,7 +375,7 @@ app_server <- function(input, output, session) {
   }, once = TRUE, ignoreInit = FALSE)
 
   # TEST MODE: Emit test_mode_ready event AFTER all observers are set up
-  if (TEST_MODE_AUTO_LOAD) {
+  if (test_mode_auto_load) {
     shiny::observe({
       # Unified state: Use centralized state as primary data source
       current_data_check <- app_state$data$current_data

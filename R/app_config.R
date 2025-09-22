@@ -4,7 +4,7 @@
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @import bslib
-#' @noRd
+#' @export
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
@@ -43,11 +43,10 @@ app_ui <- function(request) {
 #' @param input,output,session Internal parameters for {shiny}.
 #'     DO NOT REMOVE.
 #' @import shiny
-#' @noRd
+#' @export
 app_server <- function(input, output, session) {
-  # Your application server logic goes here
-  # For now, call the existing server function
-  source(system.file("app", "server", "app_server.R", package = "claudespc"), local = TRUE)
+  # Call the main server function directly (no more file dependencies!)
+  main_app_server(input, output, session)
 }
 
 #' Add external Resources to the Application

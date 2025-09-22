@@ -54,6 +54,7 @@
 #' @seealso
 #' - ARCHITECTURE_OVERVIEW.md for Phase 4 detaljer
 #' - test-phase4-centralized-state.R for eksempler
+#' @export
 create_app_state <- function() {
   # Create environment-based state for by-reference sharing
   # CRITICAL FIX: Environment passes by reference, solving scope isolation
@@ -305,6 +306,7 @@ get_current_data <- function(app_state) {
 #' emit <- create_emit_api(app_state)
 #' emit$data_loaded()  # Triggers shiny::observeEvent(app_state$events$data_loaded, ...)
 #' }
+#' @export
 create_emit_api <- function(app_state) {
   list(
     # Data lifecycle events

@@ -13,15 +13,21 @@
 #' @return List with complete runtime configuration
 #' @export
 initialize_runtime_config <- function(override_options = list(), use_environment_profiles = TRUE) {
-  log_debug("Initializing centralized runtime configuration", "RUNTIME_CONFIG")
+  if (exists("log_debug", mode = "function")) {
+    log_debug("Initializing centralized runtime configuration", "RUNTIME_CONFIG")
+  }
 
   # Choose configuration approach
   if (use_environment_profiles) {
-    log_debug("Using environment profiles for configuration", "RUNTIME_CONFIG")
+    if (exists("log_debug", mode = "function")) {
+      log_debug("Using environment profiles for configuration", "RUNTIME_CONFIG")
+    }
 
     # Environment detection
     environment_type <- determine_environment_type_from_context(override_options)
-    log_debug(paste("Detected environment type:", environment_type), "RUNTIME_CONFIG")
+    if (exists("log_debug", mode = "function")) {
+      log_debug(paste("Detected environment type:", environment_type), "RUNTIME_CONFIG")
+    }
 
     # Get environment-specific profile
     profile <- get_environment_profile(environment_type, override_options)
@@ -33,7 +39,9 @@ initialize_runtime_config <- function(override_options = list(), use_environment
     config <- convert_profile_to_legacy_config(profile)
 
   } else {
-    log_debug("Using legacy configuration approach", "RUNTIME_CONFIG")
+    if (exists("log_debug", mode = "function")) {
+      log_debug("Using legacy configuration approach", "RUNTIME_CONFIG")
+    }
 
     # Legacy configuration structure
     config <- list()
@@ -57,7 +65,9 @@ initialize_runtime_config <- function(override_options = list(), use_environment
     apply_runtime_config(config)
   }
 
-  log_debug("✅ Runtime configuration initialized successfully", "RUNTIME_CONFIG")
+  if (exists("log_debug", mode = "function")) {
+    log_debug("✅ Runtime configuration initialized successfully", "RUNTIME_CONFIG")
+  }
   return(config)
 }
 

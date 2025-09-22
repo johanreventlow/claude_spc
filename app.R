@@ -1,14 +1,10 @@
 # app.R
-# Modernized Golem-style entry point for SPC App
+# Package-based entry point for SPC App
 
-# KONFIGURATION ===============================================================
-# Indlæs globale indstillinger og hjælpefunktioner
-source("global.R")
+# PACKAGE LOADING =============================================================
+# Load the package instead of sourcing files
+library(claudespc)
 
-# GOLEM LAUNCHER ==============================================================
-# Load Golem components
-source("R/run_app.R")
-
-# Run the application using Golem pattern
+# Run the application using package-loaded function
 run_app()
 

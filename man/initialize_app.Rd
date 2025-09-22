@@ -7,7 +7,7 @@
 initialize_app(force_reload = FALSE, config_override = NULL)
 }
 \arguments{
-\item{force_reload}{Boolean indicating if forced reload is needed}
+\item{force_reload}{Boolean indicating if forced reload is needed (legacy parameter)}
 
 \item{config_override}{Optional configuration override}
 }
@@ -15,6 +15,7 @@ initialize_app(force_reload = FALSE, config_override = NULL)
 List containing initialization results
 }
 \description{
-Master initialization function som erstatter den nuværende global.R approach.
-Orchestrerer all app initialization i en kontrolleret og testable måde.
+Package-based initialization function that replaces file sourcing with
+package namespace access. All functions are assumed to be loaded via
+package loading (library(claudespc)).
 }

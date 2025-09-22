@@ -14,4 +14,5 @@ Data frame with initialization status
 }
 \description{
 Generate comprehensive report of initialization status.
+Simplified for package-based approach.
 }

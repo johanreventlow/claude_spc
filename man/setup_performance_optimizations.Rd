@@ -13,5 +13,6 @@ setup_performance_optimizations(config)
 List with optimization results
 }
 \description{
-Configure performance-related settings baseret på app configuration.
+Configure performance-related settings based on app configuration.
+Simplified for package-based loading.
 }

@@ -18,7 +18,7 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
       shiny::req(input$auto_restore_data)
 
       # Tjek om auto-gendannelse er aktiveret
-      if (!AUTO_RESTORE_ENABLED) {
+      if (!get_auto_restore_enabled()) {
         return()
       }
 

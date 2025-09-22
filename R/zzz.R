@@ -8,6 +8,88 @@
 #'
 #' @importFrom utils packageVersion
 #' @noRd
+
+# Package-level environment for storing configuration and variables
+# This prevents pollution of .GlobalEnv
+.claudespc_env <- NULL
+
+#' Get or create the claudespc package environment
+#'
+#' @description
+#' Returns the package-level environment used for storing configuration
+#' and global variables. Creates it if it doesn't exist.
+#'
+#' @return Environment containing package-level variables
+#' @noRd
+get_claudespc_environment <- function() {
+  if (is.null(.claudespc_env)) {
+    .claudespc_env <<- new.env(parent = emptyenv())
+  }
+  return(.claudespc_env)
+}
+
+#' Get configuration value from package environment
+#'
+#' @param key Configuration key to retrieve
+#' @param default Default value if key not found
+#' @return Configuration value or default
+#' @export
+get_package_config <- function(key, default = NULL) {
+  claudespc_env <- get_claudespc_environment()
+  if (exists(key, envir = claudespc_env)) {
+    return(get(key, envir = claudespc_env))
+  } else {
+    return(default)
+  }
+}
+
+#' Get the complete runtime configuration
+#'
+#' @return Runtime configuration list or NULL
+#' @export
+get_runtime_config <- function() {
+  get_package_config("runtime_config", default = NULL)
+}
+
+#' Get test mode auto load setting
+#'
+#' @return Boolean indicating if test mode auto load is enabled
+#' @export
+get_test_mode_auto_load <- function() {
+  get_package_config("TEST_MODE_AUTO_LOAD", default = FALSE)
+}
+
+#' Get auto restore enabled setting
+#'
+#' @return Boolean indicating if auto restore is enabled
+#' @export
+get_auto_restore_enabled <- function() {
+  get_package_config("AUTO_RESTORE_ENABLED", default = FALSE)
+}
+
+#' Get hospital name from package environment
+#'
+#' @return Hospital name string
+#' @export
+get_package_hospital_name <- function() {
+  get_package_config("HOSPITAL_NAME", default = "Unknown Hospital")
+}
+
+#' Get hospital theme from package environment
+#'
+#' @return Bootstrap theme object
+#' @export
+get_package_theme <- function() {
+  get_package_config("my_theme", default = NULL)
+}
+
+#' Get test mode file path
+#'
+#' @return Test file path string
+#' @export
+get_test_mode_file_path <- function() {
+  get_package_config("TEST_MODE_FILE_PATH", default = NULL)
+}
 .onLoad <- function(libname, pkgname) {
 
   # Initialize package-level configuration
@@ -16,8 +98,8 @@
   # Set up logging
   initialize_logging_system()
 
-  # Load runtime configuration
-  initialize_runtime_config()
+  # Load runtime configuration using the full implementation
+  setup_package_runtime_config()
 
   # Set up resource paths for static files
   setup_resource_paths()
@@ -33,15 +115,19 @@ initialize_package_globals <- function() {
   # Initialize branding configuration using safe getters
   initialize_branding()
 
-  # Make branding available in global environment for backward compatibility
-  # These now use the safe getters instead of hardcoded values
-  assign("HOSPITAL_NAME", get_hospital_name(), envir = .GlobalEnv)
-  assign("HOSPITAL_LOGO_PATH", get_hospital_logo_path(), envir = .GlobalEnv)
-  assign("my_theme", get_bootstrap_theme(), envir = .GlobalEnv)
+  # Store branding in package environment instead of polluting .GlobalEnv
+  claudespc_env <- get_claudespc_environment()
+  claudespc_env$HOSPITAL_NAME <- get_hospital_name()
+  claudespc_env$HOSPITAL_LOGO_PATH <- get_hospital_logo_path()
+  claudespc_env$my_theme <- get_bootstrap_theme()
+  claudespc_env$HOSPITAL_COLORS <- get_hospital_colors()
+  claudespc_env$HOSPITAL_THEME <- get_hospital_ggplot_theme()
 
-  # Also make hospital colors available for backward compatibility
-  assign("HOSPITAL_COLORS", get_hospital_colors(), envir = .GlobalEnv)
-  assign("HOSPITAL_THEME", get_hospital_ggplot_theme(), envir = .GlobalEnv)
+  # For backward compatibility, also expose in global environment during transition
+  # TODO: Remove these once all consumers are updated to use package getters
+  assign("HOSPITAL_NAME", claudespc_env$HOSPITAL_NAME, envir = .GlobalEnv)
+  assign("my_theme", claudespc_env$my_theme, envir = .GlobalEnv)
+  assign("HOSPITAL_LOGO_PATH", claudespc_env$HOSPITAL_LOGO_PATH, envir = .GlobalEnv)
 }
 
 #' Initialize logging system
@@ -52,17 +138,33 @@ initialize_logging_system <- function() {
   if (!nzchar(Sys.getenv("SPC_LOG_LEVEL", ""))) {
     Sys.setenv(SPC_LOG_LEVEL = "INFO")
   }
-
-  # Initialize any logging infrastructure here
-  # (Most logging functions are defined in their respective files)
+  # Logging functions (log_debug, log_info, etc.) handle their own
+  # availability checks and fallbacks, so no additional setup needed
 }
 
-#' Initialize runtime configuration
+
+#' Setup package runtime configuration (called during .onLoad)
 #'
 #' @noRd
-initialize_runtime_config <- function() {
-  # This will be called when the package loads
-  # Runtime config initialization will happen in app startup
+setup_package_runtime_config <- function() {
+  # Call the full initialize_runtime_config() implementation
+  # and store result in package environment instead of .GlobalEnv
+  config <- initialize_runtime_config()
+
+  if (!is.null(config)) {
+    # Store config in package environment
+    claudespc_env <- get_claudespc_environment()
+    claudespc_env$runtime_config <- config
+
+    # Set up performance-related globals in package environment too
+    if (!is.null(config$testing)) {
+      claudespc_env$TEST_MODE_AUTO_LOAD <- config$testing$auto_load_enabled %||% FALSE
+    }
+    if (!is.null(config$development)) {
+      claudespc_env$AUTO_RESTORE_ENABLED <- config$development$auto_restore_enabled %||% FALSE
+    }
+  }
+
   invisible()
 }
 

@@ -1,455 +1,67 @@
-# GLOBAL KONFIGURATIONSFIL ================================================
+# PACKAGE-BASED GLOBAL CONFIGURATION ================================================
+# Replaces source()-based loading with package-based approach
 
-# BIBLIOTEKER OG DEPENDENCIES --------------------------------
-
-# library(qicharts2) # NOTE: Bruger qicharts2:: namespace pattern
-# library(ggplot2) # NOTE: Bruger ggplot2:: namespace pattern
-# library(ggrepel) # NOTE: Kan bruges med ggrepel:: namespace pattern
-# library(shinyjs) # NOTE: Bruger shinyjs:: namespace pattern
-# library(rlang) # NOTE: %||% operator er lokalt defineret i utils_ui_components.R
-# library(yaml) # NOTE: Bruger yaml:: namespace pattern
-# library(later) # NOTE: Bruger later:: namespace pattern
-
-# SOURCE UTILITIES --------------------------------
-# Robust sourcing that works from different working directories
-source_from_base <- function(relative_path) {
-  # Multiple strategies to find base directory
-  base_dir <- getwd()
-
-  # If we're in tests/testthat, go up two levels
-  if (basename(base_dir) == "testthat" && basename(dirname(base_dir)) == "tests") {
-    base_dir <- dirname(dirname(base_dir))
+# PACKAGE LOADING --------------------------------
+# For packaged deployment, load the package instead of sourcing individual files
+if (requireNamespace("claudespc", quietly = TRUE)) {
+  # Package is installed - load it
+  library(claudespc)
+  message("✓ claudespc package loaded")
+} else {
+  # Development mode - fall back to original global_packaged.R approach
+  warning("claudespc package not found - falling back to source-based loading")
+  if (file.exists("global_packaged.R")) {
+    source("global_packaged.R")
+  } else {
+    stop("Neither claudespc package nor global_packaged.R found")
   }
-
-  # Try direct path from current working dir
-  full_path <- file.path(base_dir, relative_path)
-  if (file.exists(full_path)) {
-    source(full_path)
-    return(invisible(TRUE))
-  }
-
-  # If that fails and we're potentially in a test environment, try going up directories
-  if (grepl("tests?", base_dir, ignore.case = TRUE)) {
-    parent_dir <- dirname(base_dir)
-    full_path_parent <- file.path(parent_dir, relative_path)
-    if (file.exists(full_path_parent)) {
-      source(full_path_parent)
-      return(invisible(TRUE))
-    }
-  }
-
-  # Final fallback - try relative path as is
-  if (file.exists(relative_path)) {
-    source(relative_path)
-    return(invisible(TRUE))
-  }
-
-  # If nothing works, give descriptive error
-  stop(paste("Could not find file:", relative_path, "from directory:", base_dir))
 }
 
-source_from_base("R/utils/logging.R")
-source_from_base("R/utils/dependency_injection.R")
-source_from_base("R/utils/shinylogs_config.R")
-source_from_base("R/utils/advanced_debug.R")  # Advanced debug infrastructure
-source_from_base("R/utils/end_to_end_debug.R")
-source_from_base("R/utils/visualization_dimensions.R")
+# BACKWARD COMPATIBILITY LAYER --------------------------------
+# Essential functions for backward compatibility - now provided by package
 
-# CONFIGURATION
-source_from_base("R/config/hospital_branding.R")
-source_from_base("R/config/chart_types.R")
-source_from_base("R/config/observer_priorities.R")
-source_from_base("R/config/state_management.R")
-source_from_base("R/config/ui_config.R")
-source_from_base("R/config/spc_config.R")
-source_from_base("R/config/system_config.R")
-source_from_base("R/config/environment_profiles.R")  # Phase 4.2: Environment-specific configuration profiles
-source_from_base("R/config/app_runtime_config.R")
-
-# CORE FUNCTIONS
-source_from_base("R/core/spc_helpers.R")
-source_from_base("R/fct_spc_plot_generation.R")
-source_from_base("R/core/file_io.R")
-source_from_base("R/core/autodetect_helpers.R")
-source_from_base("R/utils/local_storage.R")
-
-# SERVER COMPONENTS
-source_from_base("R/server/utils_session_helpers.R")
-source_from_base("R/server/utils_server_management.R")
-source_from_base("R/server/utils_column_management.R")
-source_from_base("R/fct_file_operations.R")
-source_from_base("R/fct_visualization_server.R")
-source_from_base("R/modules/mod_spc_chart_server.R")
-
-# PERFORMANCE OPTIMIZATIONS
-source_from_base("R/server/performance_helpers.R")
-source_from_base("R/server/performance_optimizations.R")
-source_from_base("R/server/plot_optimizations.R")
-
-# UI COMPONENTS
-source_from_base("R/modules/mod_spc_chart_ui.R")
-
-# GOLEM-STYLE UTILITIES
-source_from_base("R/golem_utils.R")
-
-# MAIN APP COMPONENTS
-source_from_base("R/server/app_server.R")
-source_from_base("R/ui/app_ui.R")
-source_from_base("R/run_app.R")
-
-# ENHANCED DEBUGGING UTILITIES --------------------------------
-
-# Centralized debug mode status check
+# Enhanced debugging utilities - simplified for package use
 get_debug_mode_status <- function() {
-  # Check runtime configuration first
+  # Simplified version that works with package loading
   if (exists("runtime_config") && !is.null(runtime_config$logging$debug_mode_enabled)) {
     return(runtime_config$logging$debug_mode_enabled)
   }
-
-  # Fallback to environment variable
   env_debug <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE")
   return(env_debug == "TRUE")
 }
 
-# Enhanced reactive context logging for Shiny fejlidentifikation
-log_reactive_context <- function(message, component = "REACTIVE", reactive_name = NULL) {
-  # Use environment-aware debug mode detection
-  debug_enabled <- get_debug_mode_status()
-
-  if (debug_enabled) {
-    context_info <- ""
-    if (!is.null(reactive_name)) {
-      context_info <- paste0(" [", reactive_name, "]")
-    }
-
-    # Attempt to get reactive context info
-    tryCatch({
-      is_reactive_context <- isolate({ TRUE })
-      context_info <- paste0(context_info, " (in reactive)")
-    }, error = function(e) {
-      context_info <- paste0(context_info, " (outside reactive)")
-    })
-
-    log_debug(paste0(message, context_info), component)
-  }
-}
-
-# State consistency validator for dual-state debugging
-validate_state_consistency <- function(values, app_state) {
-  debug_enabled <- get_debug_mode_status()
-  if (!debug_enabled) return(TRUE)
-
-  inconsistencies <- c()
-
-  # Check current_data sync
-  if (exists("app_state") && !is.null(app_state) && !is.null(app_state$data)) {
-    if (!is.null(values$current_data) && !is.null(app_state$data$current_data)) {
-      if (!identical(values$current_data, app_state$data$current_data)) {
-        inconsistencies <- c(inconsistencies, "current_data mismatch")
-      }
-    }
-  }
-
-  # Check file_uploaded sync
-  if (exists("app_state") && !is.null(app_state) && !is.null(app_state$session)) {
-    if (!is.null(values$file_uploaded) && !is.null(app_state$session$file_uploaded)) {
-      if (values$file_uploaded != app_state$session$file_uploaded) {
-        inconsistencies <- c(inconsistencies, "file_uploaded mismatch")
-      }
-    }
-  }
-
-  if (length(inconsistencies) > 0) {
-    log_debug(paste("State inconsistencies found:", paste(inconsistencies, collapse = ", ")), "STATE_VALIDATOR")
-  }
-
-  return(length(inconsistencies) == 0)
-}
-
-# Legacy function kept for compatibility
+# Legacy environment detection
 detect_environment <- function() {
-  # Check for explicit environment variable first
-  env_var <- Sys.getenv("TEST_MODE_AUTO_LOAD", "TRUE")
+  env_var <- Sys.getenv("TEST_MODE_AUTO_LOAD", "FALSE")
   if (env_var != "") {
     normalized_env_var <- tolower(trimws(env_var))
     true_values <- c("true", "t", "1", "yes", "y", "on")
-    false_values <- c("false", "f", "0", "no", "n", "off")
-
-    if (normalized_env_var %in% true_values) {
-      return(TRUE)
-    }
-
-    if (normalized_env_var %in% false_values) {
-      return(FALSE)
-    }
-
-    # Unknown inputs fall back to safe default
-    return(FALSE)
+    return(normalized_env_var %in% true_values)
   }
-
-  # Fallback to runtime_config if environment variable not set
-  if (exists("runtime_config") && !is.null(runtime_config$testing)) {
-    return(get_app_option("test_mode", runtime_config$testing$auto_load_enabled))
-  } else {
-    return(FALSE)  # Safe default before runtime_config is initialized
-  }
+  return(FALSE)
 }
 
-## Tabeltype -----
-# TABLE TYPE: Bruger excelR til Excel-lignende redigerbare tabeller
-
-# HJÆLPEFUNKTIONER --------------------------------
-
-source_from_base("R/utils/danish_locale.R")
-source_from_base("R/ui/utils_ui_helpers.R")
-source_from_base("R/ui/utils_ui_components.R")
-source_from_base("R/ui/utils_ui_updates.R")
-source_from_base("R/server/utils_event_system.R")
-source_from_base("R/utils/performance.R")
-source_from_base("R/utils/memory_management.R")
-
-# UNIFIED AUTODETECT ENGINE
-source_from_base("R/fct_autodetect_unified.R")    # Main unified autodetect engine
-# autodetect helpers now loaded in core section above
-
-# Hospital branding and themes moved to R/config/hospital_branding.R
-
-# Chart types moved to R/config/chart_types.R
-
-## Akseenhedsvalg -----
-
-# Y_AXIS_UNITS_DA now defined in R/config/spc_config.R to avoid duplication
-
-# DATABEHANDLING ================================
-
-## Standardkolonner hjælpefunktion -----
-# Sikrer at kun nødvendige kontrol-kolonner er til stede
-ensure_standard_columns <- function(data) {
-  # Kun Skift og Frys kolonner tilføjes automatisk (nødvendige for SPC kontrol)
-  required_cols <- c("Skift", "Frys")
-
-  # Tilføj kun påkrævede kontrol-kolonner
-  for (col in required_cols) {
-    if (!col %in% names(data)) {
-      data[[col]] <- FALSE
-    }
-  }
-
-  # Organiser kolonner: Skift og Frys først, derefter brugerens originale data
-  user_cols <- setdiff(names(data), required_cols)
-  final_order <- c(required_cols, user_cols)
-
-  # Returner data med korrekt kolonnerækkefølge
-  return(data[, final_order, drop = FALSE])
-}
-
-# VALIDERINGSFUNKTIONER ================================
-
-## Numerisk kolonnevalidering -----
-validate_numeric_column <- function(data, column_name) {
-  if (!column_name %in% names(data)) {
-    return(paste("Kolonne", column_name, "ikke fundet"))
-  }
-  if (!is.numeric(data[[column_name]])) {
-    return(paste("Kolonne", column_name, "skal være numerisk"))
-  }
-  return(NULL)
-}
-
-# Observer priorities moved to R/config/observer_priorities.R
-
-# FEJLHÅNDTERING HJÆLPEFUNKTIONER ================================
-
-## Centraliseret error logging - DEPRECATED - bruge R/utils_logging.R i stedet
-
-## Robust date parsing med standardiseret fejlhåndtering
-safe_date_parse <- function(data, locale = "da_DK.UTF-8", operation_name = "date parsing") {
-  tryCatch(
-    {
-      result <- suppressWarnings(lubridate::dmy(data, locale = locale))
-      success_rate <- sum(!is.na(result)) / length(result)
-
-      list(
-        data = result,
-        success_rate = success_rate,
-        success = success_rate > 0.7,
-        parsed_count = sum(!is.na(result)),
-        total_count = length(result)
-      )
-    },
-    error = function(e) {
-      log_error(paste(operation_name, "fejlede:", e$message), "DATE_PARSING")
-      list(
-        data = rep(as.POSIXct(NA), length(data)),
-        success_rate = 0,
-        success = FALSE,
-        parsed_count = 0,
-        total_count = length(data)
-      )
-    }
+# RUNTIME CONFIGURATION --------------------------------
+# Initialize runtime configuration - now handled by package loading
+if (exists("initialize_runtime_config", mode = "function")) {
+  runtime_config <- initialize_runtime_config()
+} else {
+  # Fallback basic config
+  runtime_config <- list(
+    logging = list(debug_mode_enabled = FALSE),
+    testing = list(auto_load_enabled = FALSE)
   )
 }
 
-#' Sikker udførelse af kritiske operationer med fejlhåndtering
-#'
-#' @description
-#' Standard wrapper til kritiske operationer der kræver robust fejlhåndtering.
-#' Fanger fejl, logger dem med det nye logging system og returnerer fallback værdi.
-#'
-#' @param operation_name Beskrivende navn på operationen (bruges i fejl logs)
-#' @param code R kode der skal udføres sikkert
-#' @param fallback Værdi der returneres hvis operationen fejler (default: NULL)
-#' @param session Shiny session objekt (ikke implementeret endnu)
-#' @param show_user Om fejl skal vises til bruger (ikke implementeret endnu)
-#'
-#' @return Resultat af code hvis succesfuld, ellers fallback værdi
-#' @export
-#'
-#' @details
-#' Funktionen bruger tryCatch til at fange fejl og logger automatisk fejl
-#' med ERROR level til logging systemet med "ERROR_HANDLING" komponent.
-#'
-#' @examples
-#' # Sikker udførelse af potentielt farlig operation
-#' result <- safe_operation(
-#'   "Division operation",
-#'   code = 10 / 0,
-#'   fallback = NA_real_
-#' )
-#'
-#' # Sikker fil læsning
-#' data <- safe_operation(
-#'   "Læs CSV fil",
-#'   code = read.csv("ikke_eksisterende_fil.csv"),
-#'   fallback = data.frame()
-#' )
-safe_operation <- function(operation_name, code,
-                          fallback = NULL,
-                          session = NULL,
-                          show_user = FALSE,
-                          error_type = "general",
-                          emit = NULL,
-                          app_state = NULL) {
-  tryCatch(
-    {
-      code
-    },
-    error = function(e) {
-      # Log error
-      log_error(
-        paste(operation_name, "fejlede:", e$message),
-        "ERROR_HANDLING"
-      )
-
-      # Update error state if app_state available
-      if (!is.null(app_state)) {
-        error_details <- list(
-          operation = operation_name,
-          message = e$message,
-          type = error_type,
-          timestamp = Sys.time(),
-          session_id = if(!is.null(session)) session$token else NULL
-        )
-
-        # Update error state
-        app_state$errors$last_error <- error_details
-        app_state$errors$error_count <- app_state$errors$error_count + 1L
-
-        # Add to error history (keep max 10)
-        current_history <- app_state$errors$error_history
-        if (length(current_history) >= 10) {
-          current_history <- current_history[2:10]  # Remove oldest
-        }
-        app_state$errors$error_history <- c(current_history, list(error_details))
-      }
-
-      # Emit error event if emit API available
-      if (!is.null(emit)) {
-        # Choose specific error event based on type
-        if (error_type == "validation") {
-          emit$validation_error()
-        } else if (error_type == "processing") {
-          emit$processing_error()
-        } else if (error_type == "network") {
-          emit$network_error()
-        } else {
-          emit$error_occurred()
-        }
-      }
-
-      # User feedback via unified pattern
-      if (show_user && !is.null(session)) {
-        showNotification(
-          paste("Fejl:", operation_name),
-          type = "error",
-          duration = 5
-        )
-      }
-
-      if (is.function(fallback)) {
-        return(fallback(e))
-      }
-      return(fallback)
-    }
-  )
-}
-
-# RUNTIME CONFIGURATION INITIALIZATION --------------------------------
-# Initialize centralized runtime configuration after all dependencies are loaded
-# This replaces scattered constants and provides environment-aware defaults
-runtime_config <- initialize_runtime_config()
-
-# DEVELOPMENT LOG LEVEL - Sæt kun automatisk niveau hvis ikke allerede defineret
+# DEVELOPMENT LOG LEVEL
 if (!nzchar(Sys.getenv("SPC_LOG_LEVEL", ""))) {
   Sys.setenv(SPC_LOG_LEVEL = "INFO")
 }
 
-# REACTIVE PERFORMANCE HJÆLPEFUNKTIONER =============================
-
-## Debounced reactive for expensive operationer - bruger Shiny native debounce
-create_debounced_reactive <- function(reactive_expr, millis = 1000) {
-  # Brug Shiny's built-in debounce() som følger best practices
-  # Dette eliminerer behovet for manual timer management
-  return(debounce(reactive_expr, millis = millis))
+# PACKAGE INITIALIZATION COMPLETE --------------------------------
+message("✓ Global configuration loaded successfully")
+if (exists("HOSPITAL_NAME")) {
+  message(paste("✓ Hospital branding loaded:", HOSPITAL_NAME))
+} else {
+  message("⚠ Hospital branding not available - check package installation")
 }
-
-# NOTE: setup_session_cleanup moved to R/utils_memory_management.R for Fase 5
-
-## Observer manager til tracking og cleanup
-observer_manager <- function() {
-  observers <- list()
-
-  list(
-    add = function(observer, name = NULL) {
-      id <- if (is.null(name)) length(observers) + 1 else name
-      observers[[id]] <<- observer
-      return(id)
-    },
-    remove = function(id) {
-      if (id %in% names(observers)) {
-        if (!is.null(observers[[id]]$destroy)) {
-          observers[[id]]$destroy()
-        }
-        observers[[id]] <<- NULL
-      }
-    },
-    cleanup_all = function() {
-      for (id in names(observers)) {
-        if (!is.null(observers[[id]]$destroy)) {
-          tryCatch(
-            {
-              observers[[id]]$destroy()
-            },
-            error = function(e) {
-              log_error(paste("Observer cleanup fejl for", id, ":", e$message), "OBSERVER_MGMT")
-            }
-          )
-        }
-      }
-      observers <<- list()
-    },
-    count = function() length(observers)
-  )
-}
-
-# State management moved to R/config/state_management.R

@@ -33,7 +33,7 @@ set_app_options <- function(options = list()) {
     return(invisible(NULL))
   }
 
-  log_debug( paste("Setting app options:", length(options), "options provided"), .context = "GOLEM_OPTIONS")
+  log_debug(paste("Setting app options:", length(options), "options provided"), "GOLEM_OPTIONS")
 
   # Default app options
   default_options <- list(
@@ -57,7 +57,7 @@ set_app_options <- function(options = list()) {
     do.call("options", option_list)
   }
 
-  log_debug(paste("✅ App options set successfully:", paste(names(merged_options), collapse = ", ")), .context = "GOLEM_OPTIONS")
+  log_debug(paste("✅ App options set successfully:", paste(names(merged_options), collapse = ", ")), "GOLEM_OPTIONS")
   return(invisible(merged_options))
 }
 
@@ -159,7 +159,7 @@ run_dev <- function(port = 4040,
                     debug_level = "DEBUG",
                     ...) {
 
-  log_debug("Starting development mode application", .context = "DEV_MODE")
+  log_debug("Starting development mode application", "DEV_MODE")
 
   # Set development-specific options
   dev_options <- list(
@@ -171,7 +171,7 @@ run_dev <- function(port = 4040,
     browser_launch = "rstudio_viewer"
   )
 
-  log_debug(paste("Development options:", paste(names(dev_options), collapse = ", ")), .context = "DEV_MODE")
+  log_debug(paste("Development options:", paste(names(dev_options), collapse = ", ")), "DEV_MODE")
 
   # Set environment for enhanced debugging
   Sys.setenv(SHINY_DEBUG_MODE = "TRUE")
@@ -189,7 +189,7 @@ run_dev <- function(port = 4040,
     ...
   )
 
-  log_debug("✅ Development application started successfully", .context = "DEV_MODE")
+  log_debug("✅ Development application started successfully", "DEV_MODE")
   return(app_result)
 }
 
@@ -207,7 +207,7 @@ run_prod <- function(port = NULL,
                      host = "0.0.0.0",
                      ...) {
 
-  log_debug("Starting production mode application", .context = "PROD_MODE")
+  log_debug("Starting production mode application", "PROD_MODE")
 
   # Set production-specific options
   prod_options <- list(
@@ -219,7 +219,7 @@ run_prod <- function(port = NULL,
     browser_launch = TRUE
   )
 
-  log_debug(paste("Production options:", paste(names(prod_options), collapse = ", ")), .context = "PROD_MODE")
+  log_debug(paste("Production options:", paste(names(prod_options), collapse = ", ")), "PROD_MODE")
 
   # Set environment for production
   Sys.setenv(SHINY_DEBUG_MODE = "FALSE")
@@ -233,7 +233,7 @@ run_prod <- function(port = NULL,
     ...
   )
 
-  log_debug("✅ Production application started successfully", .context = "PROD_MODE")
+  log_debug("✅ Production application started successfully", "PROD_MODE")
   return(app_result)
 }
 
@@ -293,10 +293,14 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
   if (dir.exists(path)) {
     shiny::addResourcePath(prefix, path)
-    log_debug( paste("✅ Added resource path:", prefix, "->", path), .context = "RESOURCE_PATHS")
+    if (exists("log_debug", mode = "function")) {
+      log_debug(paste("✅ Added resource path:", prefix, "->", path), "RESOURCE_PATHS")
+    }
     return(invisible(TRUE))
   } else {
-    log_debug( paste("Resource path not found:", path), .context = "RESOURCE_PATHS")
+    if (exists("log_debug", mode = "function")) {
+      log_debug(paste("Resource path not found:", path), "RESOURCE_PATHS")
+    }
     return(invisible(FALSE))
   }
 }
@@ -323,7 +327,7 @@ favicon <- function(path = "www/favicon.ico") {
   if (file.exists(path) || grepl("^www/", path)) {
     return(shiny::tags$head(shiny::tags$link(rel = "icon", href = path)))
   } else {
-    log_debug(paste("Favicon not found:", path), .context = "FAVICON")
+    log_debug(paste("Favicon not found:", path), "FAVICON")
     return(NULL)
   }
 }
@@ -353,7 +357,7 @@ favicon <- function(path = "www/favicon.ico") {
 #' config <- get_golem_config("development", "custom/path/config.yml")
 #' }
 get_golem_config <- function(env = NULL, config_path = "inst/golem-config.yml") {
-  log_debug(paste("Loading golem configuration for environment:", env %||% "auto-detect"), .context = "GOLEM_CONFIG")
+  log_debug(paste("Loading golem configuration for environment:", env %||% "auto-detect"), "GOLEM_CONFIG")
 
   # Auto-detect environment if not specified
   if (is.null(env)) {
@@ -362,7 +366,7 @@ get_golem_config <- function(env = NULL, config_path = "inst/golem-config.yml") 
 
   # Check if config file exists
   if (!file.exists(config_path)) {
-    log_debug(paste("Golem config file not found:", config_path), .context = "GOLEM_CONFIG")
+    log_debug(paste("Golem config file not found:", config_path), "GOLEM_CONFIG")
     return(get_fallback_golem_config(env))
   }
 
@@ -373,14 +377,14 @@ get_golem_config <- function(env = NULL, config_path = "inst/golem-config.yml") 
     # Get configuration for specific environment
     if (env %in% names(config_data)) {
       env_config <- config_data[[env]]
-      log_debug(paste("✅ Golem configuration loaded for environment:", env), .context = "GOLEM_CONFIG")
+      log_debug(paste("✅ Golem configuration loaded for environment:", env), "GOLEM_CONFIG")
       return(env_config)
     } else {
-      log_debug(paste("Environment", env, "not found in config, using default"), .context = "GOLEM_CONFIG")
+      log_debug(paste("Environment", env, "not found in config, using default"), "GOLEM_CONFIG")
       return(config_data[["default"]] %||% get_fallback_golem_config(env))
     }
   }, error = function(e) {
-    log_error(paste("Failed to load golem config:", e$message), .context = "GOLEM_CONFIG")
+    log_error(paste("Failed to load golem config:", e$message), "GOLEM_CONFIG")
     return(get_fallback_golem_config(env))
   })
 }
@@ -404,7 +408,7 @@ detect_golem_environment <- function() {
       "test" = "testing",
       "default"  # Fallback
     )
-    log_debug(paste("Environment detected from R_CONFIG_ACTIVE:", mapped_env), .context = "GOLEM_ENV")
+    log_debug(paste("Environment detected from R_CONFIG_ACTIVE:", mapped_env), "GOLEM_ENV")
     return(mapped_env)
   }
 
@@ -428,7 +432,7 @@ detect_golem_environment <- function() {
   }
 
   # Default fallback
-  log_debug("No specific environment detected, using default", .context = "GOLEM_ENV")
+  log_debug("No specific environment detected, using default", "GOLEM_ENV")
   return("default")
 }
 
@@ -440,7 +444,7 @@ detect_golem_environment <- function() {
 #' @param env Environment name
 #' @return List with basic configuration
 get_fallback_golem_config <- function(env) {
-  log_debug(paste("Using fallback golem configuration for:", env), .context = "GOLEM_FALLBACK")
+  log_debug(paste("Using fallback golem configuration for:", env), "GOLEM_FALLBACK")
 
   # Basic fallback configuration
   base_config <- list(
@@ -483,10 +487,10 @@ get_fallback_golem_config <- function(env) {
 #' @return Invisible TRUE
 #' @export
 apply_golem_config <- function(golem_config) {
-  log_debug("Applying golem configuration to runtime", .context = "GOLEM_APPLY")
+  log_debug("Applying golem configuration to runtime", "GOLEM_APPLY")
 
   if (is.null(golem_config)) {
-    log_debug("No golem configuration to apply", .context = "GOLEM_APPLY")
+    log_debug("No golem configuration to apply", "GOLEM_APPLY")
     return(invisible(FALSE))
   }
 
@@ -520,7 +524,7 @@ apply_golem_config <- function(golem_config) {
     assign("AUTO_RESTORE_ENABLED", golem_config$session$auto_restore_session, envir = .GlobalEnv)
   }
 
-  log_debug("✅ Golem configuration applied to runtime", .context = "GOLEM_APPLY")
+  log_debug("✅ Golem configuration applied to runtime", "GOLEM_APPLY")
   return(invisible(TRUE))
 }
 

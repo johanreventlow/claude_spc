@@ -10,5 +10,6 @@ verify_initialization_completeness()
 List with verification results
 }
 \description{
-Post-initialization verification at all critical components er loaded.
+Post-initialization verification that all critical components are loaded.
+Simplified for package-based approach.
 }

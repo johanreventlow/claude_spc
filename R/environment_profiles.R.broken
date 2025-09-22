@@ -23,7 +23,9 @@ get_environment_profile <- function(environment_type = NULL, override_options = 
     }
   }
 
-  log_debug(paste("Loading configuration profile for environment:", environment_type), "ENV_PROFILES")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug(paste("Loading configuration profile for environment:", environment_type), "ENV_PROFILES")
+  }
 
   # Get base profile
   profile <- switch(environment_type,
@@ -38,7 +40,9 @@ get_environment_profile <- function(environment_type = NULL, override_options = 
     profile <- merge_configuration_overrides(profile, override_options)
   }
 
-  log_debug(paste("✅ Environment profile loaded:", environment_type), "ENV_PROFILES")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug(paste("✅ Environment profile loaded:", environment_type), "ENV_PROFILES")
+  }
   return(profile)
 }
 
@@ -50,7 +54,9 @@ get_environment_profile <- function(environment_type = NULL, override_options = 
 #'
 #' @return List with development configuration
 get_development_profile <- function() {
-  log_debug("Loading development environment profile", "DEV_PROFILE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("Loading development environment profile", "DEV_PROFILE")
+  }
 
   profile <- list(
     # Environment identification
@@ -120,7 +126,9 @@ get_development_profile <- function() {
     )
   )
 
-  log_debug("✅ Development profile configured", "DEV_PROFILE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("✅ Development profile configured", "DEV_PROFILE")
+  }
   return(profile)
 }
 
@@ -132,7 +140,9 @@ get_development_profile <- function() {
 #'
 #' @return List with production configuration
 get_production_profile <- function() {
-  log_debug("Loading production environment profile", "PROD_PROFILE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("Loading production environment profile", "PROD_PROFILE")
+  }
 
   profile <- list(
     # Environment identification
@@ -203,7 +213,8 @@ get_production_profile <- function() {
     )
   )
 
-  log_debug("✅ Production profile configured", "PROD_PROFILE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("✅ Production profile configured", "PROD_PROFILE")
   return(profile)
 }
 
@@ -215,7 +226,8 @@ get_production_profile <- function() {
 #'
 #' @return List with testing configuration
 get_testing_profile <- function() {
-  log_debug("Loading testing environment profile", "TEST_PROFILE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("Loading testing environment profile", "TEST_PROFILE")
 
   profile <- list(
     # Environment identification
@@ -285,7 +297,8 @@ get_testing_profile <- function() {
     )
   )
 
-  log_debug("✅ Testing profile configured", "TEST_PROFILE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("✅ Testing profile configured", "TEST_PROFILE")
   return(profile)
 }
 
@@ -297,7 +310,8 @@ get_testing_profile <- function() {
 #'
 #' @return List with safe default configuration
 get_safe_default_profile <- function() {
-  log_debug("Loading safe default environment profile", "SAFE_PROFILE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("Loading safe default environment profile", "SAFE_PROFILE")
 
   profile <- list(
     # Environment identification
@@ -367,7 +381,8 @@ get_safe_default_profile <- function() {
     )
   )
 
-  log_debug("✅ Safe default profile configured", "SAFE_PROFILE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("✅ Safe default profile configured", "SAFE_PROFILE")
   return(profile)
 }
 
@@ -381,12 +396,14 @@ get_safe_default_profile <- function() {
 #' @param overrides User-provided override values
 #' @return Merged configuration profile
 merge_configuration_overrides <- function(base_profile, overrides) {
-  log_debug("Merging configuration overrides", "CONFIG_MERGE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("Merging configuration overrides", "CONFIG_MERGE")
 
   # Use modifyList for deep merging
   merged_profile <- utils::modifyList(base_profile, overrides, keep.null = TRUE)
 
-  log_debug(paste("✅ Configuration overrides merged:", length(overrides), "overrides applied"), "CONFIG_MERGE")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug(paste("✅ Configuration overrides merged:", length(overrides), "overrides applied"), "CONFIG_MERGE")
   return(merged_profile)
 }
 
@@ -400,7 +417,8 @@ merge_configuration_overrides <- function(base_profile, overrides) {
 #' @return Invisible TRUE
 #' @export
 apply_environment_profile <- function(profile) {
-  log_debug(paste("Applying environment profile:", profile$environment$type), "PROFILE_APPLY")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug(paste("Applying environment profile:", profile$environment$type), "PROFILE_APPLY")
 
   # Apply logging configuration
   if (!is.null(profile$logging$level)) {
@@ -430,7 +448,8 @@ apply_environment_profile <- function(profile) {
     assign("SHINY_DEBUG_MODE", profile$logging$enable_debug_mode, envir = .GlobalEnv)
   }
 
-  log_debug("✅ Environment profile applied to runtime", "PROFILE_APPLY")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("✅ Environment profile applied to runtime", "PROFILE_APPLY")
   return(invisible(TRUE))
 }
 
@@ -470,12 +489,14 @@ get_environment_summary <- function() {
 #'
 #' @return String indicating detected environment type
 detect_environment_from_context <- function() {
-  log_debug("Detecting environment from context", "ENV_DETECTION")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("Detecting environment from context", "ENV_DETECTION")
 
   # Check explicit environment variables first
   env_var <- Sys.getenv("R_CONFIG_ACTIVE", "")
   if (env_var != "") {
-    log_debug(paste("R_CONFIG_ACTIVE detected:", env_var), "ENV_DETECTION")
+    if (exists("log_debug", mode = "function")) {
+      if (exists("log_debug", mode = "function")) log_debug(paste("R_CONFIG_ACTIVE detected:", env_var), "ENV_DETECTION")
     # Map common config names to our environment types
     mapped_env <- switch(env_var,
       "development" = "development",
@@ -494,29 +515,35 @@ detect_environment_from_context <- function() {
   test_mode <- Sys.getenv("TEST_MODE_AUTO_LOAD", "")
 
   if (debug_mode == "TRUE" || test_mode == "TRUE") {
-    log_debug("Debug/test mode indicators detected - environment: development", "ENV_DETECTION")
+    if (exists("log_debug", mode = "function")) {
+      if (exists("log_debug", mode = "function")) log_debug("Debug/test mode indicators detected - environment: development", "ENV_DETECTION")
     return("development")
   }
 
   # Check if running interactively (development indicator)
   if (interactive()) {
-    log_debug("Interactive session detected - environment: development", "ENV_DETECTION")
+    if (exists("log_debug", mode = "function")) {
+      if (exists("log_debug", mode = "function")) log_debug("Interactive session detected - environment: development", "ENV_DETECTION")
     return("development")
   }
 
   # Check for common production indicators
   if (nzchar(Sys.getenv("SHINY_PORT")) || nzchar(Sys.getenv("PORT"))) {
-    log_debug("Production port indicators detected - environment: production", "ENV_DETECTION")
+    if (exists("log_debug", mode = "function")) {
+      if (exists("log_debug", mode = "function")) log_debug("Production port indicators detected - environment: production", "ENV_DETECTION")
     return("production")
   }
 
   # Check for testing indicators
   if (any(c("testthat", "test") %in% search()) || exists(".Random.seed") && exists("test_that")) {
-    log_debug("Testing framework detected - environment: testing", "ENV_DETECTION")
+    if (exists("log_debug", mode = "function")) {
+      if (exists("log_debug", mode = "function")) log_debug("Testing framework detected - environment: testing", "ENV_DETECTION")
     return("testing")
   }
 
   # Default fallback
-  log_debug("No specific environment indicators - defaulting to unknown", "ENV_DETECTION")
+  if (exists("log_debug", mode = "function")) {
+    if (exists("log_debug", mode = "function")) log_debug("No specific environment indicators - defaulting to unknown", "ENV_DETECTION")
+  }
   return("unknown")
 }

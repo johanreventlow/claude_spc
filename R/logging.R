@@ -30,7 +30,7 @@ LOG_LEVELS <- list(
 }
 
 # intern hjælper (ikke-eksporteret)
-`%||%` <- function(a, b) if (is.null(a) || is.na(a) || identical(a, "")) b else a
+`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || identical(a, "")) b else a
 
 #' Hent aktuel log level fra environment variabel
 #'
