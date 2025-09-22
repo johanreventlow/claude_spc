@@ -114,8 +114,9 @@ filter_complete_spc_data <- function(data, y_col, n_col = NULL, x_col = NULL) {
         original_x_class <- class(data[[x_col]])
       }
 
-      # Filter data to complete rows only
-      data_filtered <- data[complete_rows, , drop = FALSE]
+      # Filter data to complete rows using tidyverse approach
+      data_filtered <- data |>
+        dplyr::slice(which(complete_rows))
 
       # PRESERVE POSIXct/Date formats
       if (!is.null(x_col) && x_col %in% names(data) && !is.null(original_x_class)) {

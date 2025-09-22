@@ -342,7 +342,7 @@ create_config_registry <- function() {
 
       # Navigate nested keys (support dot notation)
       if (grepl("\\.", key)) {
-        key_parts <- strsplit(key, "\\.")[[1]]
+        key_parts <- stringr::str_split(key, "\\.", simplify = TRUE)[1, ]
         value <- config
         for (part in key_parts) {
           if (is.list(value) && part %in% names(value)) {
@@ -431,7 +431,7 @@ get_config <- function(path, default = NULL, type = "character", config_registry
     }
   }
 
-  parts <- strsplit(path, "\\.", fixed = TRUE)[[1]]
+  parts <- stringr::str_split(path, "\\.", simplify = TRUE)[1, ]
   if (length(parts) < 2) {
     log_warn(paste("Invalid config path:", path), "CONFIG_REGISTRY")
     return(default)

@@ -242,7 +242,8 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
     }
   }
 
-  if (any(duplicated(new_names))) {
+  # Check for duplicates using tidyverse approach
+  if (length(new_names) != length(unique(new_names))) {
     shiny::showNotification(
       "Kolonnenavne skal være unikke. Ret duplikater og prøv igen.",
       type = "error",

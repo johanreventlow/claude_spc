@@ -733,7 +733,7 @@ handle_upload_error <- function(error, file_info, session_id = NULL) {
         shiny::tags$br(),
         shiny::tags$strong("Suggestions:"),
         shiny::tags$ul(
-          lapply(suggestions, function(s) shiny::tags$li(s))
+          purrr::map(suggestions, ~ shiny::tags$li(.x))
         )
       )
     }
