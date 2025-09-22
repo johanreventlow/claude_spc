@@ -108,9 +108,91 @@ log_debug(
 
 ---
 
-## 3) Tekniske Best Practices
+## 3) Code Quality & Formatting (OBLIGATORISK)
 
-### 3.1 Shiny Best Practices
+### 3.0 Automatisk Code Quality via Git Hooks
+
+🔄 **AUTOMATISK SETUP**: Git hooks er allerede installeret og kører ved hver commit.
+
+**Hvad sker der automatisk:**
+```bash
+git commit -m "din besked"
+# → Git hook kører automatisk
+# → Tjekker kun ændrede R filer
+# → Kører lintr (code quality) + styler (formatting)
+# → Blokerer commit hvis kritiske errors
+# → Formaterer kode automatisk hvis nødvendigt
+```
+
+**Manuel kørsel:**
+```bash
+# Kør lintr + styler på alle filer
+Rscript dev/lint_and_style.R
+
+# Alternative: Pre-commit framework (valgfrit)
+pip install pre-commit && ./dev/setup-precommit.sh
+pre-commit run --all-files
+```
+
+**Exit codes og håndtering:**
+- `Exit 0`: Alt OK → Commit tilladt
+- `Exit 1`: Kritiske errors → **Commit blokeret**
+- `Exit 2`: Warnings → Commit tilladt med advarsel
+
+**Hvis styler ændrer filer:**
+```bash
+# Hook siger: "Filer blev ændret, stage dem igen"
+git add .
+git commit -m "din besked"  # Prøv igen
+```
+
+### 3.1 Code Quality Konfiguration
+
+**Lintr konfiguration (`.lintr`):**
+- Line length: 120 tegn
+- Tillader danske kommentarer og funktionsnavne
+- Tjekker library() calls (foretrækker `pkg::function()`)
+- Undtager `golem_utils.R`, `dev/` mapper
+
+**Styler konfiguration:**
+- Følger tidyverse style guide
+- Bevarer danske kommentarer
+- 2-space indentation
+- Automatisk spacing omkring operators
+
+**Undtagelser:**
+- `R/golem_utils.R` – Golem genereret kode
+- `dev/` – Development scripts
+- `tests/` – Mere afslappede regler
+
+### 3.2 Fejlhåndtering og Troubleshooting
+
+**Typiske scenarier:**
+```bash
+# Scenario 1: Kritiske lintr errors
+❌ FEJL: Kritiske lintr errors fundet - skal rettes!
+# → Fix errors manuelt og commit igen
+
+# Scenario 2: Styler formaterede filer
+📝 Styler har ændret 3 filer - husk at stage dem!
+git add .
+git commit
+
+# Scenario 3: Kun warnings
+⚠️ Warnings fundet, men commit tilladt
+# → Commit går igennem, overvej at fixe warnings
+```
+
+**Dokumentation:**
+- Komplet guide: `dev/README-code-quality.md`
+- Setup scripts: `dev/setup-precommit.sh`
+- Backup hook: `dev/pre-commit-hook.sh`
+
+---
+
+## 4) Tekniske Best Practices
+
+### 4.1 Shiny Best Practices
 
 ✅ **Unified Event Architecture (OBLIGATORISK for al ny udvikling):**
 ```r
@@ -152,33 +234,34 @@ values$some_data <- data
 * **Isolation når nødvendigt** – Brug `isolate()` med omtanke og kun i reaktiverede kontekster
 * **Error boundaries** – Wrap komplekse reactive udtryk i `safe_operation()`
 
-### 3.2 R Code Quality
+### 4.2 R Code Quality
 
 * **Danske kommentarer** – Beskriv funktionalitet på dansk
 * **Engelske funktionsnavne** – Funktioner, variabler mv. navngives på engelsk
 * **Navngivningskonvention** – snake_case for logik, camelCase for UI-komponenter
 * **Type safety** – Brug `is.numeric()`, `is.character()` etc. før beregninger
-* **Statisk analyse** – Kør `lintr` via `devtools::lint()` før commits
+* **Statisk analyse** – Code quality håndteres automatisk af git hooks
 
-### 3.3 Error Handling Patterns
+### 4.3 Error Handling Patterns
 
 `safe_operation()` flyttet til Appendix B
 
 ---
 
-## 4) Workflow & Integration
+## 5) Workflow & Integration
 
-### 4.1 Development Lifecycle
+### 5.1 Development Lifecycle
 
 1. **Problem definition** – Én linje der beskriver problemet
 2. **Test design** – Skriv tests der dokumenterer ønsket adfærd
 3. **Minimal implementation** – Implementér mindste nødvendige ændring
-4. **Test verification** – Kør hele test-suiten og dokumentér resultat
-5. **Integration testing** – Test full app flow (manuelt og automatisk)
-6. **Commit preparation** – Ryd op, opdater dokumentation, gennemfør self-review
-7. **Code review** – Inspicér diffs, valider naming/arkitektur og log-niveauer
+4. **Code quality check** – Automatisk via git hooks (`Rscript dev/lint_and_style.R`)
+5. **Test verification** – Kør hele test-suiten og dokumentér resultat
+6. **Integration testing** – Test full app flow (manuelt og automatisk)
+7. **Commit preparation** – Ryd op, opdater dokumentation, gennemfør self-review
+8. **Code review** – Inspicér diffs, valider naming/arkitektur og log-niveauer
 
-### 4.2 Testing Strategy
+### 5.2 Testing Strategy
 
 * **Unit tests** – Fokus på pure functions og service-lag
 * **Integration tests** – Reactive chains, event-bus og state transitions
@@ -191,7 +274,7 @@ values$some_data <- data
 * **≥90%** samlet test coverage
 * **Edge cases** – Null values, tomme datasæt, fejlbehæftede uploads, store filer
 
-### 4.3 Version Control & Deployment
+### 5.3 Version Control & Deployment
 
 * **Atomic commits** – Én logisk ændring pr. commit
 * **Conventional commits (dansk)** – Se sektion 9.2 for format
@@ -317,13 +400,19 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 ### 7.1 Pre-Commit Checklist
 
 - [ ] **Tests kørt og bestået** – Hele test-suiten
+- [ ] **Code quality checks** – Automatisk via git hooks eller manuel: `Rscript dev/lint_and_style.R`
 - [ ] **Manual functionality test** – Kerneflows verificeret
 - [ ] **Logging output valideret** – Strukturerede logs uden rå `cat()`
 - [ ] **Error handling verificeret** – Edge cases dækket
 - [ ] **Performance vurderet** – Ingen regressioner
 - [ ] **Dokumentation opdateret** – README, comments, ADRs
 - [ ] **Data integrity** – Ingen utilsigtede dataændringer
-- [ ] **`lintr`/`styler`** – Kør `devtools::lint()` og `styler::style_file()` hvis nødvendigt
+
+**Automatisk Code Quality (via git hooks):**
+- ✅ **Lintr** – Code style og potentielle problemer
+- ✅ **Styler** – Automatisk formatering efter tidyverse style
+- ✅ **Commit blocking** – Kritiske errors forhindrer commits
+- ✅ **Re-staging** – Automatisk formaterede filer skal stages igen
 
 ### 7.2 Code Review Criteria
 
@@ -408,7 +497,7 @@ Fritekst med kontekst, testresultater og rationale.
 
 **Test-noter i commit body:**
 * `Tests: R -e "source('global.R'); testthat::test_dir('tests/testthat')"`
-* `Lintr: devtools::lint()`
+* `Code quality: Rscript dev/lint_and_style.R`
 
 ---
 
