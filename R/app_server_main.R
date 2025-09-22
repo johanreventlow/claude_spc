@@ -95,7 +95,7 @@ main_app_server <- function(input, output, session) {
   log_debug("Line 150 executed - about to setup memory management", "DEBUG")
   log_debug("Setting up memory management...", "APP_SERVER")
   setup_session_cleanup(session, app_state)
-  log_debug("✅ Memory management configured", "APP_SERVER")
+  log_debug("Memory management configured", "APP_SERVER")
 
   # FASE 4: AUTOMATIC BACKGROUND CLEANUP - Schedule periodic system maintenance
   log_debug("Setting up automatic background cleanup scheduling...", "APP_SERVER")
@@ -110,16 +110,16 @@ main_app_server <- function(input, output, session) {
         # Check if session is still active before continuing
         session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
         if (session_check) {
-          log_debug("🧹 Stopping periodic cleanup - session ended", "BACKGROUND_CLEANUP")
+          log_debug("Stopping periodic cleanup - session ended", "BACKGROUND_CLEANUP")
           return()
         }
 
-        log_debug("🧹 Running scheduled comprehensive system cleanup", "BACKGROUND_CLEANUP")
+        log_debug("Running scheduled comprehensive system cleanup", "BACKGROUND_CLEANUP")
         safe_operation(
           "Scheduled system cleanup",
           code = {
             comprehensive_system_cleanup(app_state)
-            log_debug("✅ Scheduled cleanup completed successfully", "BACKGROUND_CLEANUP")
+            log_debug("Scheduled cleanup completed successfully", "BACKGROUND_CLEANUP")
           },
           fallback = NULL,
           session = session,

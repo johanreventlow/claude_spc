@@ -9,7 +9,10 @@ cleanup_expired_queue_updates(app_state, max_age_seconds = 30)
 \arguments{
 \item{app_state}{The centralized app state object}
 
-\item{max_age_seconds}{Maximum age of queue entries in seconds (default: 30)}
+\item{max_age_seconds}{Maximum age of tokens in seconds (default: 300)}
+}
+\value{
+List with performance metrics and formatted report
 }
 \description{
 Removes old queue entries that are likely no longer relevant.

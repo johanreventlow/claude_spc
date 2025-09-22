@@ -129,7 +129,7 @@ parse_danish_date_vectorized <- function(x) {
 #'
 #' @param data Data frame to standardize
 #' @return Standardized data frame
-#'
+#' @export
 ensure_standard_columns <- function(data) {
   if (is.null(data) || nrow(data) == 0) return(data)
 
@@ -143,6 +143,76 @@ ensure_standard_columns <- function(data) {
   names(data) <- make.names(names(data), unique = TRUE)
 
   return(data)
+}
+
+#' Validate Numeric Column
+#'
+#' Check if a column contains valid numeric data
+#'
+#' @param data Data frame to check
+#' @param column_name Name of column to validate
+#' @return NULL if valid, error message if invalid
+#' @export
+validate_numeric_column <- function(data, column_name) {
+  if (!column_name %in% names(data)) {
+    return(paste("Column", column_name, "not found"))
+  }
+
+  column_data <- data[[column_name]]
+  if (is.numeric(column_data)) {
+    return(NULL)
+  }
+
+  # Try to convert to numeric
+  tryCatch({
+    as.numeric(column_data)
+    return(NULL)
+  }, error = function(e) {
+    return(paste("Column", column_name, "cannot be converted to numeric"))
+  }, warning = function(w) {
+    return(NULL) # Warnings (like NAs) are acceptable
+  })
+}
+
+#' Safe Date Parse
+#'
+#' Safely parse dates with multiple format attempts
+#'
+#' @param date_vector Vector of dates to parse
+#' @return Parsed dates or original vector if parsing fails
+#' @export
+safe_date_parse <- function(date_vector) {
+  if (is.null(date_vector) || length(date_vector) == 0) {
+    return(date_vector)
+  }
+
+  # Common Danish date formats
+  formats <- c(
+    "%d-%m-%Y",    # DD-MM-YYYY
+    "%d/%m/%Y",    # DD/MM/YYYY
+    "%Y-%m-%d",    # YYYY-MM-DD
+    "%d.%m.%Y",    # DD.MM.YYYY
+    "%d-%m-%y",    # DD-MM-YY
+    "%d/%m/%y"     # DD/MM/YY
+  )
+
+  for (fmt in formats) {
+    tryCatch({
+      parsed <- as.Date(date_vector, format = fmt)
+      if (sum(!is.na(parsed)) > 0) {
+        return(parsed)
+      }
+    }, error = function(e) {
+      # Continue to next format
+    })
+  }
+
+  # If all formats fail, try automatic parsing
+  tryCatch({
+    return(as.Date(date_vector))
+  }, error = function(e) {
+    return(date_vector) # Return original if all parsing fails
+  })
 }
 
 #' Validate SPC Requirements

@@ -84,9 +84,9 @@ create_optimized_data_pipeline <- function(app_state, emit) {
 #' to avoid redundant processing of identical datasets.
 #'
 #' @param data The data to analyze
-#' @param app_state The app state for cache access
-#'
-detect_columns_with_cache <- function(data, app_state) {
+#' @param app_state The app state for cache access (optional - will create minimal state if NULL)
+#' @export
+detect_columns_with_cache <- function(data, app_state = NULL) {
   # Create data signature for caching
   data_signature <- create_data_signature(data)
 
@@ -99,13 +99,25 @@ detect_columns_with_cache <- function(data, app_state) {
     return(cached_result)
   }
 
+  # Create minimal state if not provided
+  if (is.null(app_state)) {
+    app_state <- create_minimal_app_state()
+  }
+
+  # Create minimal emit API for standalone usage
+  minimal_emit <- list(
+    auto_detection_completed = function() {},
+    data_loaded = function() {},
+    ui_sync_needed = function() {}
+  )
+
   # Perform auto-detection
   # log_debug("Performing fresh auto-detection", "PERFORMANCE_OPT")
-  autodetect_result <- autodetect_engine_unified(
+  autodetect_result <- autodetect_engine(
     data = data,
-    trigger_type = "optimized_pipeline",
+    trigger_type = "manual",  # Use manual trigger for cache scenarios
     app_state = app_state,
-    emit = function() {} # No emit needed in optimized flow
+    emit = minimal_emit
   )
 
   # Cache the result
@@ -325,4 +337,23 @@ apply_batch_ui_updates <- function(session, updates) {
       shiny::updateSelectizeInput(session, "cl_column", selected = updates$cl_column)
     }
   }
+}
+
+#' Create Minimal App State
+#'
+#' Creates a minimal app_state structure for standalone usage of detect_columns_with_cache
+#'
+create_minimal_app_state <- function() {
+  state <- new.env(parent = emptyenv())
+
+  # Minimal structure needed by autodetect_engine
+  state$columns <- shiny::reactiveValues()
+  state$columns$auto_detect <- shiny::reactiveValues(
+    in_progress = FALSE,
+    completed = FALSE,
+    results = NULL,
+    frozen_until_next_trigger = FALSE
+  )
+
+  return(state)
 }

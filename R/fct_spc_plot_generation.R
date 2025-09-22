@@ -5,19 +5,8 @@
 # Dependencies ----------------------------------------------------------------
 
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
-  # DEBUG: Comprehensive input parameter logging
-  log_debug("======================================", "SPC_CALC_DEBUG")
-  log_debug("generateSPCPlot function called", "SPC_CALC_DEBUG")
-  log_debug(paste("chart_type:", chart_type), "SPC_CALC_DEBUG")
-  log_debug(paste("target_value:", if(is.null(target_value)) "NULL" else target_value), "SPC_CALC_DEBUG")
-  log_debug(paste("show_phases:", show_phases), "SPC_CALC_DEBUG")
-  log_debug(paste("skift_column:", if(is.null(skift_column)) "NULL" else paste("'", skift_column, "'", sep="")), "SPC_CALC_DEBUG")
-  log_debug(paste("frys_column:", if(is.null(frys_column)) "NULL" else paste("'", frys_column, "'", sep="")), "SPC_CALC_DEBUG")
-  log_debug(paste("y_axis_unit:", if(is.null(y_axis_unit)) "NULL" else paste("'", y_axis_unit, "'", sep="")), "SPC_CALC_DEBUG")
-  log_debug(paste("kommentar_column:", if(is.null(kommentar_column)) "NULL" else paste("'", kommentar_column, "'", sep="")), "SPC_CALC_DEBUG")
-  log_debug(paste("Data dimensions:", nrow(data), "x", ncol(data)), "SPC_CALC_DEBUG")
-  log_debug(paste("Column names:", paste(names(data), collapse=", ")), "SPC_CALC_DEBUG")
-  log_debug("======================================", "SPC_CALC_DEBUG")
+  # Generate SPC plot with specified parameters
+  log_debug(paste("generateSPCPlot:", chart_type, "|", nrow(data), "rows"), "SPC_CALC_DEBUG")
 
   # Input validation
   validate_spc_inputs(data, config)
@@ -26,22 +15,15 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   title_text <- process_chart_title(chart_title_reactive, config)
 
   # Prepare data with defensive checking
-  log_debug("Preparing data variables...", "SPC_CALC_DEBUG")
-  log_debug(paste("config$x_col:", if(is.null(config$x_col)) "NULL" else paste("'", config$x_col, "'", sep="")), "SPC_CALC_DEBUG")
-  log_debug(paste("config$y_col:", if(is.null(config$y_col)) "NULL" else paste("'", config$y_col, "'", sep="")), "SPC_CALC_DEBUG")
-  log_debug(paste("config$n_col:", if(is.null(config$n_col)) "NULL" else paste("'", config$n_col, "'", sep="")), "SPC_CALC_DEBUG")
 
   # DEFENSIVE: Check for character(0) in config values
   if (!is.null(config$x_col) && (length(config$x_col) == 0 || identical(config$x_col, character(0)))) {
-    log_debug("⚠️ config$x_col is character(0) - setting to NULL", "SPC_CALC_DEBUG")
     config$x_col <- NULL
   }
   if (!is.null(config$y_col) && (length(config$y_col) == 0 || identical(config$y_col, character(0)))) {
-    log_debug("⚠️ config$y_col is character(0) - this will cause errors", "SPC_CALC_DEBUG")
     stop("Y-kolonne kan ikke være character(0)")
   }
   if (!is.null(config$n_col) && (length(config$n_col) == 0 || identical(config$n_col, character(0)))) {
-    log_debug("⚠️ config$n_col is character(0) - setting to NULL", "SPC_CALC_DEBUG")
     config$n_col <- NULL
   }
 
@@ -119,37 +101,22 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
     }
 
-    log_debug("Building y_data and ylab_text...", "SPC_CALC_DEBUG")
-    log_debug(paste("chart_type:", chart_type), "SPC_CALC_DEBUG")
-    log_debug(paste("taeller length:", length(taeller)), "SPC_CALC_DEBUG")
-    log_debug(paste("naevner length:", length(naevner)), "SPC_CALC_DEBUG")
 
     # DEFENSIVE: Check config values before using in paste
     y_col_safe <- if (is.null(config$y_col) || length(config$y_col) == 0 || identical(config$y_col, character(0))) "Y" else config$y_col
     n_col_safe <- if (is.null(config$n_col) || length(config$n_col) == 0 || identical(config$n_col, character(0))) "N" else config$n_col
-    log_debug(paste("y_col_safe:", y_col_safe), "SPC_CALC_DEBUG")
-    log_debug(paste("n_col_safe:", n_col_safe), "SPC_CALC_DEBUG")
 
     if (chart_type == "run") {
-      log_debug("Processing run chart type...", "SPC_CALC_DEBUG")
       y_data <- (taeller / naevner) * 100
-      log_debug("y_data calculated successfully", "SPC_CALC_DEBUG")
       ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", y_col_safe, "/", n_col_safe, ") %")
-      log_debug("ylab_text created successfully", "SPC_CALC_DEBUG")
     } else if (chart_type %in% c("p", "pp", "u", "up")) {
-      log_debug("Processing p/u chart type...", "SPC_CALC_DEBUG")
       y_data <- taeller
       n_data <- naevner
       ylab_text <- if (y_unit_label != "") y_unit_label else (if (chart_type %in% c("p", "pp")) "Proportion" else "Rate")
-      log_debug("y_data and ylab_text created successfully", "SPC_CALC_DEBUG")
     } else {
-      log_debug("Processing other chart type...", "SPC_CALC_DEBUG")
       y_data <- (taeller / naevner) * 100
-      log_debug("y_data calculated successfully", "SPC_CALC_DEBUG")
       ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", y_col_safe, "/", n_col_safe, ") %")
-      log_debug("ylab_text created successfully", "SPC_CALC_DEBUG")
     }
-    log_debug("✅ y_data and ylab_text processing completed", "SPC_CALC_DEBUG")
   } else {
     # Get unit labels early - before they are used
 
@@ -172,7 +139,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     # PRESERVE POSIXct/Date formats in non-ratio case too
     if (!is.null(config$x_col) && config$x_col %in% names(data)) {
       original_x_class <- class(data[[config$x_col]])
-      log_debug(paste("DATA FILTERING DEBUG (non-ratio):\n- Original", config$x_col, "class:", original_x_class[1]), "DATA_FILTER")
     }
 
     data_backup <- data # Keep reference to original data
@@ -181,18 +147,15 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     # Restore POSIXct/Date format if lost during filtering
     if (!is.null(config$x_col) && config$x_col %in% names(data)) {
       filtered_x_class <- class(data[[config$x_col]])
-      log_debug(paste("- Filtered", config$x_col, "class:", filtered_x_class[1]), "DATA_FILTER")
 
       if (inherits(data_backup[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
         !inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
-        log_debug(paste("- RESTORING (non-ratio): Lost", original_x_class[1], "format, restoring..."), "DATA_FILTER")
 
         # Restore the original class and attributes
         data[[config$x_col]] <- data_backup[[config$x_col]][complete_rows]
         class(data[[config$x_col]]) <- original_x_class
         attributes(data[[config$x_col]]) <- attributes(data_backup[[config$x_col]])
 
-        log_debug(paste("- ✓ RESTORED (non-ratio):", config$x_col, "to", class(data[[config$x_col]])[1]), "DATA_FILTER")
       }
     }
 
@@ -332,20 +295,17 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       if (!is.null(x_col_name) && x_col_name %in% names(data) &&
         (x_validation$is_date || is.character(data[[x_col_name]]))) {
         # Debug logging før opdatering
-        log_debug(paste("DATAFRAME UPDATE DEBUG:\n- data nrows:", nrow(data), "\n- Original", x_col_name, "class:", class(data[[x_col_name]])[1]), "DATA_PROCESS")
 
         if (x_validation$is_date) {
           # DATE COLUMN: Use processed data from x_validation
-          log_debug(paste("- x_validation$x_data length:", length(x_validation$x_data), "\n- x_validation$x_data class:", class(x_validation$x_data)[1]), "DATA_PROCESS")
 
           # Opdater kolonnen med de processerede data fra x_validation
           if (length(x_validation$x_data) == nrow(data)) {
             data[[x_col_name]] <- x_validation$x_data
             x_col_for_qic <- x_col_name
 
-            log_debug(paste("✓ SUCCESS: Opdaterede", x_col_name, "til", class(x_validation$x_data)[1], "\nQICDATA DEBUG: Bruger dato-kolonne", x_col_name, "med", length(x_validation$x_data), "datoer"), "DATA_PROCESS")
           } else {
-            log_debug(paste("✗ ERROR: Længde mismatch - x_validation$x_data:", length(x_validation$x_data), "vs data rows:", nrow(data), "\nQICDATA DEBUG: Bruger obs_sequence som fallback"), "DATA_PROCESS")
+            log_debug("Length mismatch - using observation sequence as fallback", "DATA_PROCESS")
             # Fallback til observation sekvens
             if (!("obs_sequence" %in% names(data))) {
               data$obs_sequence <- 1:nrow(data)
@@ -361,7 +321,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           data[[x_col_name]] <- factor(original_labels, levels = unique_labels)
           x_col_for_qic <- x_col_name
 
-          log_debug(paste("✓ SUCCESS: Konverterede tekstkolonne", x_col_name, "til factor med original rækkefølge\nQICDATA DEBUG: Bruger tekst-kolonne", x_col_name, "med", length(data[[x_col_name]]), "tekstlabels som factor\n- Sample labels:", paste(head(unique_labels, 3), collapse = ", "), "\n- Levels i korrekt rækkefølge:", paste(head(unique_labels, 5), collapse = ", ")), "DATA_PROCESS")
         }
       } else {
         # Brug observation sekvens som fallback
@@ -370,7 +329,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         }
         x_col_for_qic <- "obs_sequence"
 
-        log_debug("QICDATA DEBUG: Bruger obs_sequence som fallback", "DATA_PROCESS")
       }
 
       # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
@@ -407,7 +365,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           }
 
           # Call qic() with prepared arguments
-          log_debug("=== QIC CALL DEBUG ===\nCalling qic()...", "QIC_CALL")
           if (getOption("debug.mode", FALSE)) {
             log_debug("qic_args structure:", "QIC_CALL")
             log_debug(qic_args, "QIC_CALL")
@@ -416,17 +373,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           log_debug(qic_args, "QIC")
 
           qic_data <- do.call(qicharts2::qic, qic_args)
-          log_debug(paste("QIC call successful, returned data dimensions:", nrow(qic_data), "x", ncol(qic_data)), "QIC_CALL")
 
-          # DEBUG: Show complete qic_data structure and content
-          log_debug_block("QIC_DATA", "qic_data structure")
-          str(qic_data)
-          log_debug("qic_data column names:", paste(names(qic_data), collapse = ", "), .context = "QIC_DATA")
-          log_debug("qic_data head (first 10 rows):", .context = "QIC_DATA")
-          print(head(qic_data, 10))
-          log_debug_block("QIC_DATA", "qic_data structure completed", type = "stop")
-
-          log_debug(qic_data, "QIC")
 
           # Convert proportions to percentages for run charts with rate data
           if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
@@ -480,36 +427,29 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       }
 
       # Build custom ggplot using qic calculations
-      log_debug(paste("=== GGPLOT BUILD DEBUG ===\nqic_data dimensions:", nrow(qic_data), "x", ncol(qic_data), "\nqic_data columns:", paste(names(qic_data), collapse = ", ")), "GGPLOT_BUILD")
 
       plot <- safe_operation(
         "Build custom ggplot",
         code = {
           plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y))
-          log_debug("Base plot created successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::geom_line(color = HOSPITAL_COLORS$lightgrey, linewidth = 1)
-          log_debug("Line geom added successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$mediumgrey)
-          log_debug("Point geom added successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::geom_line(ggplot2::aes(y = cl),
             color = HOSPITAL_COLORS$hospitalblue,
             linetype = "solid", linewidth = 1
           )
-          log_debug("Center line added successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::labs(title = call_args$title, x = "", y = "")
-          log_debug("Labels added successfully", "GGPLOT_BUILD")
 
           plot <- plot + ggplot2::theme_minimal()
-          log_debug("Theme added successfully", "GGPLOT_BUILD")
 
           plot
         },
         fallback = function(e) {
-          log_debug(paste("ERROR in ggplot build:", e$message), "GGPLOT_BUILD")
+          log_error(paste("ERROR in ggplot build:", e$message), "GGPLOT_BUILD")
           stop(e)
         },
         error_type = "processing"
@@ -535,7 +475,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # Intelligent x-akse formatering baseret på dato-mønstre
       if (!is.null(x_validation$x.format) && x_validation$is_date) {
         # DEBUG: Tjek qic_data$x type
-        log_debug(paste("QIC_DATA X DEBUG: class =", class(qic_data$x)[1], "\ninherits Date =", inherits(qic_data$x, "Date"), "\ninherits POSIXct =", inherits(qic_data$x, "POSIXct")), "X_AXIS_FORMAT")
 
         # Intelligent interval detektion og formatering
         interval_info <- detect_date_interval(qic_data$x, debug = TRUE)

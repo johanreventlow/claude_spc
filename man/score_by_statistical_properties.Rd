@@ -4,12 +4,14 @@
 \alias{score_by_statistical_properties}
 \title{Score Statistical Properties}
 \usage{
-score_by_statistical_properties(col_data, role)
+score_by_statistical_properties(col_data, role = NULL, type = NULL)
 }
 \arguments{
 \item{col_data}{Vector of column data}
 
-\item{role}{Target role ("y_column" or "n_column")}
+\item{role}{Target role ("y_column" or "n_column") - optional, defaults to "y_column"}
+
+\item{type}{Legacy parameter for compatibility ("x", "y", etc.) - maps to role}
 }
 \value{
 Score between 0 and 1

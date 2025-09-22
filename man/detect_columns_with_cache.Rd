@@ -4,12 +4,12 @@
 \alias{detect_columns_with_cache}
 \title{Detect Columns with Caching}
 \usage{
-detect_columns_with_cache(data, app_state)
+detect_columns_with_cache(data, app_state = NULL)
 }
 \arguments{
 \item{data}{The data to analyze}
 
-\item{app_state}{The app state for cache access}
+\item{app_state}{The app state for cache access (optional - will create minimal state if NULL)}
 }
 \description{
 Auto-detection with intelligent caching based on data signature

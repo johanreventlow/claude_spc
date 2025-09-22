@@ -310,12 +310,44 @@ score_column_candidates <- function(data, numeric_candidates, role = c("y_column
 #' Scores column names based on pattern matching for specific roles.
 #'
 #' @param col_name Column name to score
-#' @param role Target role ("y_column" or "n_column")
+#' @param role Target role ("y_column" or "n_column") - optional, defaults to "y_column"
+#' @param type Legacy parameter for compatibility ("x", "y", etc.) - maps to role
 #' @return Score between 0 and 1
-score_by_name_patterns <- function(col_name, role) {
+#' @export
+score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
+  # Handle legacy type parameter and default role
+  if (!is.null(type)) {
+    role <- switch(type,
+      "x" = "x_column",  # Date columns
+      "y" = "y_column",  # Count/numerator columns
+      "n" = "n_column",  # Denominator columns
+      "y_column"  # Default fallback
+    )
+  }
+
+  # Default to y_column if no role specified
+  if (is.null(role)) {
+    role <- "y_column"
+  }
   col_lower <- tolower(col_name)
 
-  if (role == "y_column") {
+  if (role == "x_column") {
+    # Patterns for date/time columns
+    x_patterns <- c("dato", "date", "tid", "time", "observation", "periode", "month", "år", "year")
+    for (pattern in x_patterns) {
+      if (grepl(pattern, col_lower)) {
+        return(1.0)  # Perfect match
+      }
+    }
+
+    # Partial matches for date-like patterns
+    partial_patterns <- c("day", "dag", "uge", "week", "kvartal", "quarter")
+    for (pattern in partial_patterns) {
+      if (grepl(pattern, col_lower)) {
+        return(0.8)  # High match
+      }
+    }
+  } else if (role == "y_column") {
     # Patterns for count/value columns
     y_patterns <- c("tæller", "tael", "count", "num", "antal", "værdi", "value")
     for (pattern in y_patterns) {
@@ -365,9 +397,25 @@ score_by_name_patterns <- function(col_name, role) {
 #' Scores columns based on data type and range characteristics.
 #'
 #' @param col_data Vector of column data
-#' @param role Target role ("y_column" or "n_column")
+#' @param role Target role ("y_column" or "n_column") - optional, defaults to "y_column"
+#' @param type Legacy parameter for compatibility ("x", "y", etc.) - maps to role
 #' @return Score between 0 and 1
-score_by_data_characteristics <- function(col_data, role) {
+#' @export
+score_by_data_characteristics <- function(col_data, role = NULL, type = NULL) {
+  # Handle legacy type parameter and default role
+  if (!is.null(type)) {
+    role <- switch(type,
+      "x" = "x_column",  # Date columns
+      "y" = "y_column",  # Count/numerator columns
+      "n" = "n_column",  # Denominator columns
+      "y_column"  # Default fallback
+    )
+  }
+
+  # Default to y_column if no role specified
+  if (is.null(role)) {
+    role <- "y_column"
+  }
   # Remove missing values
   clean_data <- col_data[!is.na(col_data)]
   if (length(clean_data) == 0) return(0)
@@ -423,9 +471,25 @@ score_by_data_characteristics <- function(col_data, role) {
 #' Scores columns based on statistical properties relevant to SPC analysis.
 #'
 #' @param col_data Vector of column data
-#' @param role Target role ("y_column" or "n_column")
+#' @param role Target role ("y_column" or "n_column") - optional, defaults to "y_column"
+#' @param type Legacy parameter for compatibility ("x", "y", etc.) - maps to role
 #' @return Score between 0 and 1
-score_by_statistical_properties <- function(col_data, role) {
+#' @export
+score_by_statistical_properties <- function(col_data, role = NULL, type = NULL) {
+  # Handle legacy type parameter and default role
+  if (!is.null(type)) {
+    role <- switch(type,
+      "x" = "x_column",  # Date columns
+      "y" = "y_column",  # Count/numerator columns
+      "n" = "n_column",  # Denominator columns
+      "y_column"  # Default fallback
+    )
+  }
+
+  # Default to y_column if no role specified
+  if (is.null(role)) {
+    role <- "y_column"
+  }
   # Remove missing values
   clean_data <- col_data[!is.na(col_data)]
   if (length(clean_data) < 2) return(0)

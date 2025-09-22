@@ -162,6 +162,76 @@ test_that("update_all_column_mappings synchronizes state correctly", {
   }
 })
 
+test_that("Column scoring functions support both role and type parameters", {
+  test_data <- data.frame(
+    ObservationDate = c("01-01-2024", "02-01-2024", "03-01-2024"),
+    Count = c(10, 15, 12),
+    Total = c(100, 120, 110)
+  )
+
+  # Test score_by_name_patterns with different parameter styles
+  if (exists("score_by_name_patterns")) {
+    # Legacy type parameter
+    date_score_type <- score_by_name_patterns("ObservationDate", type = "x")
+    count_score_type <- score_by_name_patterns("Count", type = "y")
+
+    # New role parameter
+    date_score_role <- score_by_name_patterns("ObservationDate", role = "x_column")
+    count_score_role <- score_by_name_patterns("Count", role = "y_column")
+
+    # Default parameter (should work)
+    default_score <- score_by_name_patterns("Count")
+
+    expect_true(is.numeric(date_score_type))
+    expect_true(is.numeric(count_score_type))
+    expect_true(is.numeric(date_score_role))
+    expect_true(is.numeric(count_score_role))
+    expect_true(is.numeric(default_score))
+
+    # Results should be equivalent between type and role parameters
+    expect_equal(date_score_type, date_score_role)
+    expect_equal(count_score_type, count_score_role)
+  }
+
+  # Test score_by_data_characteristics with different parameter styles
+  if (exists("score_by_data_characteristics")) {
+    # Legacy type parameter
+    numeric_score_type <- score_by_data_characteristics(test_data$Count, type = "y")
+
+    # New role parameter
+    numeric_score_role <- score_by_data_characteristics(test_data$Count, role = "y_column")
+
+    # Default parameter
+    default_score <- score_by_data_characteristics(test_data$Count)
+
+    expect_true(is.numeric(numeric_score_type))
+    expect_true(is.numeric(numeric_score_role))
+    expect_true(is.numeric(default_score))
+
+    # Results should be equivalent
+    expect_equal(numeric_score_type, numeric_score_role)
+  }
+
+  # Test score_by_statistical_properties with different parameter styles
+  if (exists("score_by_statistical_properties")) {
+    # Legacy type parameter
+    stat_score_type <- score_by_statistical_properties(test_data$Count, type = "y")
+
+    # New role parameter
+    stat_score_role <- score_by_statistical_properties(test_data$Count, role = "y_column")
+
+    # Default parameter
+    default_score <- score_by_statistical_properties(test_data$Count)
+
+    expect_true(is.numeric(stat_score_type))
+    expect_true(is.numeric(stat_score_role))
+    expect_true(is.numeric(default_score))
+
+    # Results should be equivalent
+    expect_equal(stat_score_type, stat_score_role)
+  }
+})
+
 test_that("Auto-detection handles edge cases gracefully", {
   # Test empty data
   empty_data <- data.frame()

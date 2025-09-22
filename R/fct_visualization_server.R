@@ -8,33 +8,33 @@
 ## Hovedfunktion for visualisering
 # Opsætter al server logik relateret til visualisering og data forberedelse
 setup_visualization <- function(input, output, session, app_state) {
-  log_debug("=======================================", "VISUALIZATION")
-  log_debug("Setting up visualization system", "VISUALIZATION")
+  # Operation completed
+  # Operation completed
 
   # INPUT SANITIZATION: Using centralized sanitize_selection from utils_ui_helpers.R
 
   # UNIFIED EVENT SYSTEM: Direct access to app_state data instead of reactive dependencies
   # No need for app_data_reactive - visualization module uses its own event-driven data access
-  log_debug("Visualization setup - using unified event system", "VISUALIZATION")
+  # Operation completed
 
   # Kolonne konfiguration til visualisering
   # Store last valid config to avoid NULL during input updates
-  log_debug("Setting up column configuration reactives", "VISUALIZATION")
+  # Operation completed
   last_valid_config <- shiny::reactiveVal(list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run"))
 
   # Separate reactives for auto-detected and manual column selection
   auto_detected_config <- shiny::reactive({
-    log_debug("======================================", "AUTO_DETECTED_CONFIG")
-    log_debug("auto_detected_config reactive triggered", "AUTO_DETECTED_CONFIG")
+    # Operation completed
+    # Operation completed
 
     # Use unified state management - CORRECTED PATH
     auto_columns <- app_state$columns$auto_detect$results
-    log_debug(paste("Auto columns state (auto_detect.results):", if(is.null(auto_columns)) "NULL" else "PRESENT"), "AUTO_DETECTED_CONFIG")
+    # Operation completed
 
     if (!is.null(auto_columns)) {
-      log_debug(paste("Auto detected columns - X:", auto_columns$x_col, "Y:", auto_columns$y_col, "N:", auto_columns$n_col), "AUTO_DETECTED_CONFIG")
+      # Operation completed
       if (!is.null(auto_columns$timestamp)) {
-        log_debug(paste("Auto detection timestamp:", auto_columns$timestamp), "AUTO_DETECTED_CONFIG")
+        # Operation completed
       }
     }
 
@@ -47,7 +47,7 @@ setup_visualization <- function(input, output, session, app_state) {
       chart_type = get_qic_chart_type(if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
     )
 
-    log_debug(paste("✅ auto_detected_config returning:", paste(names(config), config, sep="=", collapse=", ")), "AUTO_DETECTED_CONFIG")
+    # Operation completed
     return(config)
   })
 
@@ -66,26 +66,26 @@ setup_visualization <- function(input, output, session, app_state) {
 
   # Simplified column config - single source of truth
   column_config <- shiny::reactive({
-    log_debug("======================================", "COLUMN_CONFIG")
-    log_debug("column_config reactive triggered (simplified)", "COLUMN_CONFIG")
+    # Operation completed
+    # Operation completed
 
     # Always prioritize manual input when available (user selections)
     manual_config_check <- manual_config()
-    log_debug(paste("Manual config Y column:", if(is.null(manual_config_check) || is.null(manual_config_check$y_col)) "NULL" else manual_config_check$y_col), "COLUMN_CONFIG")
+    # Operation completed
 
     # If user has made explicit selections, use those
     if (!is.null(manual_config_check) && !is.null(manual_config_check$y_col)) {
-      log_debug("✅ Using manual config (user selections take priority)", "COLUMN_CONFIG")
+      # Operation completed
       return(manual_config_check)
     }
 
     # Otherwise, try auto-detected config as fallback only
-    log_debug("Manual config not available, checking auto-detected config", "COLUMN_CONFIG")
+    # Operation completed
 
     # Simplified auto-config access with better error handling
     auto_columns <- app_state$columns$auto_detect$results
     if (!is.null(auto_columns) && !is.null(auto_columns$y_col)) {
-      log_debug("✅ Using auto-detected config as fallback", "COLUMN_CONFIG")
+      # Operation completed
       return(list(
         x_col = auto_columns$x_col,
         y_col = auto_columns$y_col,
@@ -95,7 +95,7 @@ setup_visualization <- function(input, output, session, app_state) {
     }
 
     # No valid config available
-    log_debug("⚠️ No valid config found - returning NULL", "COLUMN_CONFIG")
+    # Operation completed
     return(NULL)
   })
 
@@ -109,7 +109,7 @@ setup_visualization <- function(input, output, session, app_state) {
 
 
   # Initialiser visualiserings modul
-  log_debug("Initializing visualization module server", "VISUALIZATION")
+  # Operation completed
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = NULL,  # Module uses its own event-driven data access

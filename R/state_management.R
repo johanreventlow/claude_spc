@@ -263,6 +263,7 @@ create_app_state <- function() {
 #'
 
 # Data helper (simplified)
+#' @export
 set_current_data <- function(app_state, value) {
   shiny::isolate({
     app_state$data$current_data <- value
@@ -440,6 +441,7 @@ create_emit_api <- function(app_state) {
 }
 
 ## Dato kolonnevalidering -----
+#' @export
 validate_date_column <- function(data, column_name) {
   if (!column_name %in% names(data)) {
     return(paste("Kolonne", column_name, "ikke fundet"))

@@ -1,6 +1,8 @@
 # app.R
 # Package-based entry point for SPC App
 
+devtools::load_all()
+
 # PACKAGE LOADING =============================================================
 # Load the package instead of sourcing files
 library(claudespc)

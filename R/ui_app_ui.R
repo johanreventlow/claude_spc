@@ -721,7 +721,7 @@ create_welcome_page <- function() {
               ),
               shiny::actionButton(
                 "upload_data_welcome",
-                "📊 Upload data",
+                "Upload data",
                 class = "btn btn-outline-light btn-lg",
                 style = "font-weight: 600; padding: 12px 30px;"
               )
@@ -844,7 +844,7 @@ create_understanding_spc_card <- function() {
         content = htmltools::HTML("
           <ul class='list-unstyled'>
             <li><strong>🎯 Spot trends tidligt:</strong> Identificer problemer før de bliver kritiske</li>
-            <li><strong>📊 Forstå variation:</strong> Normal udsving vs. særlige årsager</li>
+            <li><strong>Forstå variation:</strong> Normal udsving vs. særlige årsager</li>
             <li><strong>💡 Træf bedre beslutninger:</strong> Baseret på statistisk evidens</li>
             <li><strong>🚀 Forbedre kontinuerligt:</strong> Måle effekt af ændringer</li>
           </ul>

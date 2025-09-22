@@ -8,54 +8,41 @@
 
 visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
-    log_debug("==========================================", "MODULE")
-    log_debug("Initializing visualization module server", "MODULE")
-    log_debug(paste("Module ID:", id), "MODULE")
+    # Module initialization
     ns <- session$ns
-    log_debug("Namespace function created", "MODULE")
 
     # State Management --------------------------------------------------------
     # Use unified state management if available, fallback to local reactiveValues
-    log_debug("Setting up state management", "MODULE")
 
     # MODULE-INTERNAL DATA REACTIVE ==========================================
     # Create both reactive and cached value for robust access
-    log_debug("Creating module-internal data reactive with navigation trigger", "MODULE")
 
     # Cached data storage
     cached_data <- shiny::reactiveVal(NULL)
 
     # Create a reactive-safe data function
     get_module_data <- function() {
-      log_debug("get_module_data() called - reactive-safe approach", "MODULE_DATA")
 
       # Use shiny::isolate() to safely access reactive values
       current_data_check <- shiny::isolate(app_state$data$current_data)
       if (is.null(current_data_check)) {
-        log_debug("get_module_data: No current data available", "MODULE_DATA")
         return(NULL)
       }
 
-      log_debug("get_module_data: Current data available", "MODULE_DATA")
       data <- current_data_check
-      log_debug(paste("get_module_data: Data dimensions:", nrow(data), "x", ncol(data)), "MODULE_DATA")
 
       # Add hide_anhoej_rules flag as attribute
       hide_anhoej_rules_check <- shiny::isolate(app_state$ui$hide_anhoej_rules)
       attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
-      log_debug(paste("get_module_data: Hide Anhøj rules flag:", hide_anhoej_rules_check), "MODULE_DATA")
 
       # Filter non-empty rows
       non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
-      log_debug(paste("get_module_data: Non-empty rows:", sum(non_empty_rows), "out of", nrow(data)), "MODULE_DATA")
 
       if (any(non_empty_rows)) {
         filtered_data <- data[non_empty_rows, ]
         attr(filtered_data, "hide_anhoej_rules") <- hide_anhoej_rules_check
-        log_debug(paste("✅ get_module_data: Returning filtered data:", nrow(filtered_data), "rows"), "MODULE_DATA")
         return(filtered_data)
       } else {
-        log_debug("⚠️ get_module_data: No meaningful data found - returning original with flag", "MODULE_DATA")
         attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
         return(data)
       }
@@ -70,7 +57,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # UNIFIED EVENT SYSTEM: Update data cache when relevant events occur
     shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
-      log_debug("Module data update triggered by navigation_changed event", "MODULE_DATA")
 
       # Use the pure function to get data
       result_data <- get_module_data()
@@ -78,35 +64,26 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Update cache
       module_data_cache(result_data)
       cached_data(result_data)
-      log_debug("✅ Data cached for renderPlot access via pure function", "MODULE_DATA")
     })
 
     # UNIFIED EVENT SYSTEM: Also update when data changes
     shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
-      log_debug("Module data update triggered by data_loaded event", "MODULE_DATA")
-
       # Use the pure function to get data
       result_data <- get_module_data()
 
       # Update cache
       module_data_cache(result_data)
       cached_data(result_data)
-      log_debug("✅ Data cached for data_loaded event", "MODULE_DATA")
     })
 
     # UNIFIED EVENT SYSTEM: Initialize data at startup if available
     if (!is.null(shiny::isolate(app_state$data$current_data))) {
-      log_debug("Initializing module data at startup", "MODULE_DATA")
       initial_data <- get_module_data()
       module_data_cache(initial_data)
       cached_data(initial_data)
-      log_debug("✅ Initial data cached", "MODULE_DATA")
     }
 
     # UNIFIED STATE: Always use app_state for visualization state management
-    log_debug("Using unified app_state for visualization state", "MODULE")
-    log_debug("Using app_state$visualization for plot state management", .context = "MODULE")
-    log_debug("✅ State management initialized", "MODULE")
 
     # UNIFIED STATE: Helper functions for app_state visualization management
     set_plot_state <- function(key, value) {
@@ -156,7 +133,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # FIXED: Replace blocking shiny::req() with safe validation
       # If y_col is not available, return NULL instead of hanging with shiny::req()
       if (is.null(config$y_col) || !(config$y_col %in% names(data))) {
-        log_debug("chart_config: y_col not available, returning NULL to prevent hang", "CHART_CONFIG")
         return(NULL)
       }
 
@@ -181,7 +157,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # FIXED: Safe chart_config validation without hanging shiny::req()
       config <- chart_config()
       if (is.null(config)) {
-        log_debug("spc_plot: chart_config returned NULL, plot not ready", "SPC_PLOT")
         return(NULL)
       }
 
@@ -202,11 +177,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Check if we can use cached plot
       if (!is.null(plot_cache()) && !is.null(plot_cache_key()) &&
           plot_cache_key() == current_cache_key) {
-        log_debug("Using cached plot", .context = "PLOT_CACHE")
         return(plot_cache())
       }
 
-      log_debug("Cache miss - generating new plot", .context = "PLOT_CACHE")
+      # Cache miss - generating new plot
 
       # Clean state management - only set computing when actually needed
       # Unified state assignment using helper functions
@@ -214,11 +188,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       set_plot_state("plot_warnings", character(0))
       set_plot_state("anhoej_results", NULL)
 
-      log_debug("Starting plot generation...", "PLOT_GENERATION")
+      # Starting plot generation
 
       on.exit(
         {
-          log_debug("Plot generation completed", "PLOT_GENERATION")
           # Unified state assignment using helper function
           set_plot_state("is_computing", FALSE)
         },
@@ -260,13 +233,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           # Get kommentar column
           kommentar_col <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
 
-          # DEBUG: Log all parameters before generateSPCPlot call
-          log_debug(paste("target_value:", deparse(target_value_reactive())), .context = "PLOT_PARAMS")
-          log_debug(paste("centerline_value:", deparse(centerline_value_reactive())), .context = "PLOT_PARAMS")
-          log_debug(paste("skift_config:", deparse(skift_config)), .context = "PLOT_PARAMS")
-          log_debug(paste("frys_column:", deparse(frys_column)), .context = "PLOT_PARAMS")
-          log_debug(paste("chart_title_reactive result:", deparse(chart_title_reactive())), .context = "PLOT_PARAMS")
-          log_debug(paste("kommentar_col:", deparse(kommentar_col)), .context = "PLOT_PARAMS")
+          # Parameters validated before plot generation
 
           spc_result <- generateSPCPlot(
             data = data,
@@ -326,7 +293,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           # Cache the plot with current key
           plot_cache(plot)
           plot_cache_key(current_cache_key)
-          log_debug("Plot cached with key:", substr(current_cache_key, 1, 8), .context = "PLOT_CACHE")
 
           return(plot)
         },
@@ -335,16 +301,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           set_plot_state("plot_ready", FALSE)
           set_plot_state("anhoej_results", NULL)
 
-          # Detailed error logging for diagnosis
-          log_debug(paste("❌ PLOT ERROR:", e$message), .context = "PLOT_ERROR")
-          log_debug(paste("Error class:", class(e)), .context = "PLOT_ERROR")
-          if (exists("config")) log_debug(paste("Config at error:", deparse(config)), .context = "PLOT_ERROR")
-          if (exists("data")) log_debug(paste("Data dimensions at error:", nrow(data), "x", ncol(data)), .context = "PLOT_ERROR")
-
           # Invalidate cache on error
           plot_cache(NULL)
           plot_cache_key(NULL)
-          log_debug("Cache invalidated due to error", .context = "PLOT_CACHE")
 
           return(NULL)
         },
@@ -360,17 +319,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Separat renderPlot for det faktiske SPC plot
     # PRODUCTION VERSION with fixes applied
     output$spc_plot_actual <- shiny::renderPlot({
-      log_debug("Starting SPC plot rendering", "PLOT_RENDER")
 
       # Use the fixed spc_plot() reactive which handles NULL chart_config gracefully
       plot_result <- spc_plot()
 
       if (!is.null(plot_result)) {
-        log_debug("SPC plot generated successfully", "PLOT_RENDER")
         print(plot_result)
         return(plot_result)
       } else {
-        log_debug("SPC plot returned NULL - configuration not ready", "PLOT_RENDER")
         # Return NULL for now - UI will show loading state
         return(NULL)
       }
@@ -521,22 +477,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Anhøj rules som value boxes - ALTID SYNLIGE
     # Viser serielængde og antal kryds for alle chart typer
     output$anhoej_rules_boxes <- shiny::renderUI({
-      log_debug("============================= VALUE_BOXES", "VALUEBOX_RENDER")
-      log_debug("anhoej_rules_boxes renderUI triggered", "VALUEBOX_RENDER")
 
       data <- module_data_reactive()
-      log_debug(paste("Data available:", !is.null(data)), "VALUEBOX_RENDER")
-      if (!is.null(data)) {
-        log_debug(paste("Data dimensions:", nrow(data), "x", ncol(data)), "VALUEBOX_RENDER")
-      }
 
       # Smart indhold baseret på nuværende status - ALTID vis boxes
       config <- chart_config()
-      log_debug(paste("Config available:", !is.null(config)), "VALUEBOX_RENDER")
       chart_type <- chart_type_reactive() %||% "run"
-      log_debug(paste("Chart type:", chart_type), "VALUEBOX_RENDER")
       anhoej <- get_plot_state("anhoej_results")
-      log_debug(paste("Anhoej results available:", !is.null(anhoej)), "VALUEBOX_RENDER")
 
       # Simplificeret logik - hvis vi har data med meningsfuldt indhold, er vi klar
       has_meaningful_data <- !is.null(data) && nrow(data) > 0 &&

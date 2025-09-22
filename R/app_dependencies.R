@@ -12,7 +12,7 @@
 #' @return List with dependency loading results
 #' @export
 manage_app_dependencies <- function(config = NULL) {
-  log_debug("Starting centralized dependency management", "DEPENDENCY_MGMT")
+  # Dependency operation completed
 
   # Default config if not provided
   if (is.null(config)) {
@@ -36,7 +36,7 @@ manage_app_dependencies <- function(config = NULL) {
   # Performance optimizations
   results$performance <- setup_performance_packages(config)
 
-  log_debug("✅ Dependency management completed", "DEPENDENCY_MGMT")
+  # Dependency operation completed
   return(results)
 }
 
@@ -48,7 +48,7 @@ manage_app_dependencies <- function(config = NULL) {
 #'
 #' @return List with loading results
 load_core_packages <- function() {
-  log_debug("Loading core framework packages", "CORE_PACKAGES")
+  # Dependency operation completed
 
   core_packages <- list(
     # Core Shiny Framework - MUST be globally available
@@ -85,7 +85,7 @@ load_core_packages <- function() {
     )
   }
 
-  log_debug("Core packages loaded", "CORE_PACKAGES")
+  # Dependency operation completed
   return(results)
 }
 
@@ -97,7 +97,7 @@ load_core_packages <- function() {
 #' @param config App configuration
 #' @return List with loading results
 load_feature_packages <- function(config) {
-  log_debug("Loading feature-specific packages", "FEATURE_PACKAGES")
+  # Dependency operation completed
 
   feature_packages <- list(
     # Excel-like Tables
@@ -175,7 +175,7 @@ load_feature_packages <- function(config) {
     )
   }
 
-  log_debug("Feature packages loaded", "FEATURE_PACKAGES")
+  # Dependency operation completed
   return(results)
 }
 
@@ -188,11 +188,11 @@ load_feature_packages <- function(config) {
 #' @return List with loading results
 load_development_packages <- function(config) {
   if (!config$environment$is_development) {
-    log_debug("Skipping development packages (not in development mode)", "DEV_PACKAGES")
+    # Dependency operation completed
     return(list())
   }
 
-  log_debug("Loading development packages", "DEV_PACKAGES")
+  # Dependency operation completed
 
   dev_packages <- list(
     # Development tools would go here
@@ -211,7 +211,7 @@ load_development_packages <- function(config) {
     )
   }
 
-  log_debug("Development packages loaded", "DEV_PACKAGES")
+  # Dependency operation completed
   return(results)
 }
 
@@ -223,7 +223,7 @@ load_development_packages <- function(config) {
 #' @param config App configuration
 #' @return List with optimization results
 setup_performance_packages <- function(config) {
-  log_debug("Setting up package performance optimizations", "PERF_PACKAGES")
+  # Dependency operation completed
 
   optimizations <- list()
 
@@ -235,7 +235,7 @@ setup_performance_packages <- function(config) {
       data.table::setDTthreads(threads)
       threads
     }, error = function(e) {
-      log_debug(paste("Could not configure data.table threads:", e$message), "PERF_PACKAGES")
+      # Dependency operation completed
       NULL
     })
   }
@@ -243,7 +243,7 @@ setup_performance_packages <- function(config) {
   # Configure readr threading
   optimizations$readr_num_threads <- if (config$environment$is_production) 1 else 2
 
-  log_debug("Package performance optimizations complete", "PERF_PACKAGES")
+  # Dependency operation completed
   return(optimizations)
 }
 
@@ -258,7 +258,7 @@ setup_performance_packages <- function(config) {
 #' @param required Whether this package is absolutely required
 #' @return List with loading results
 safe_load_package <- function(package_name, min_version = NULL, reason = "", required = TRUE) {
-  log_debug(paste("Loading package:", package_name), "PACKAGE_LOADER")
+  # Dependency operation completed
 
   result <- list(
     package = package_name,
@@ -290,7 +290,7 @@ safe_load_package <- function(package_name, min_version = NULL, reason = "", req
     }
 
     result$loaded <- TRUE
-    log_debug(paste("✅", package_name, "loaded successfully, version:", result$version), "PACKAGE_LOADER")
+    # Dependency operation completed
 
   }, error = function(e) {
     result$error <<- e$message
@@ -301,7 +301,7 @@ safe_load_package <- function(package_name, min_version = NULL, reason = "", req
       stop(paste("Critical dependency", package_name, "could not be loaded:", e$message))
     } else {
       # For optional packages, log and continue
-      log_debug(paste("Optional package", package_name, "not available, continuing"), "PACKAGE_LOADER")
+      # Dependency operation completed
     }
   })
 
@@ -315,7 +315,7 @@ safe_load_package <- function(package_name, min_version = NULL, reason = "", req
 #'
 #' @return Boolean indicating if all critical dependencies are satisfied
 verify_critical_dependencies <- function() {
-  log_debug("Verifying critical dependencies", "DEPENDENCY_VERIFY")
+  # Dependency operation completed
 
   critical_functions <- list(
     # Shiny core
@@ -344,7 +344,7 @@ verify_critical_dependencies <- function() {
     return(FALSE)
   }
 
-  log_debug("✅ All critical dependencies verified", "DEPENDENCY_VERIFY")
+  # Dependency operation completed
   return(TRUE)
 }
 

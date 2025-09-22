@@ -634,7 +634,7 @@ initialize_advanced_debug <- function(enable_history = TRUE, max_history_entries
   # REDUCED NOISE: Only show debug system banner if verbose debugging enabled
   debug_mode <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
   if (debug_mode) {
-    log_info("=== ADVANCED DEBUG SYSTEM ACTIVE ===", "ADVANCED_DEBUG")
+    log_info("ADVANCED DEBUG SYSTEM ACTIVE ===", "ADVANCED_DEBUG")
     log_info("Available utilities:", "ADVANCED_DEBUG")
     log_info("- debug_log()              Enhanced logging med categories", "ADVANCED_DEBUG")
     log_info("- debug_state_snapshot()   State inspection og comparison", "ADVANCED_DEBUG")

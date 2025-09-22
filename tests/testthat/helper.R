@@ -41,8 +41,37 @@ if (file.exists("global.R")) {
 }
 
 # Load server helper functions specifically for tests
-if (file.exists("R/utils_session_helpers.R")) {
-  source("R/utils_session_helpers.R", local = FALSE)
+session_helper_paths <- c(
+  "R/server_utils_session_helpers.R",
+  "R/utils_session_helpers.R"
+)
+
+for (helper_path in session_helper_paths) {
+  if (file.exists(helper_path)) {
+    source(helper_path, local = FALSE)
+    break
+  }
+}
+
+# Sikr adgang til centrale hjælpefunktioner via pakket namespace
+if (!exists("observer_manager", envir = .GlobalEnv)) {
+  if (requireNamespace("claudespc", quietly = TRUE)) {
+    assign("observer_manager", claudespc::observer_manager, envir = .GlobalEnv)
+  }
+}
+
+if (!exists("create_empty_session_data", envir = .GlobalEnv)) {
+  # Load session helpers directly from source if not available via package
+  session_helpers_paths <- c(
+    file.path(project_root, "R", "server_utils_session_helpers.R"),
+    file.path(project_root, "R", "server_utils_server_management.R")
+  )
+  for (helpers_path in session_helpers_paths) {
+    if (file.exists(helpers_path)) {
+      source(helpers_path, local = FALSE)
+      if (exists("create_empty_session_data", envir = .GlobalEnv)) break
+    }
+  }
 }
 
 # Test data setup

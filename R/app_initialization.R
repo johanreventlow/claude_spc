@@ -15,7 +15,7 @@
 #' @export
 initialize_app <- function(force_reload = FALSE, config_override = NULL) {
 
-  log_debug("=== STARTING PACKAGE-BASED APP INITIALIZATION ===", .context = "APP_INIT")
+  log_debug("Starting package-based app initialization", .context = "APP_INIT")
 
   init_results <- list()
 
@@ -48,7 +48,7 @@ initialize_app <- function(force_reload = FALSE, config_override = NULL) {
   # 5. Verify initialization completeness
   init_results$verification <- verify_initialization_completeness()
 
-  log_debug("✅ PACKAGE-BASED APP INITIALIZATION COMPLETED", .context = "APP_INIT")
+  log_debug("Package-based app initialization completed", .context = "APP_INIT")
   return(init_results)
 }
 
@@ -138,7 +138,7 @@ verify_branding_setup <- function() {
   )
 
   if (results$complete) {
-    log_debug("✅ Branding verification PASSED", .context = "BRANDING_VERIFICATION")
+    log_debug("Branding verification PASSED", .context = "BRANDING_VERIFICATION")
   } else {
     log_debug("⚠ Branding verification PARTIAL - some elements missing", .context = "BRANDING_VERIFICATION")
   }
@@ -222,7 +222,7 @@ verify_initialization_completeness <- function() {
   )
 
   if (verification$complete) {
-    log_debug("✅ Initialization verification PASSED", .context = "VERIFICATION")
+    log_debug("Initialization verification PASSED", .context = "VERIFICATION")
   } else {
     log_debug(paste("Initialization verification FAILED:",
                   length(verification$missing_functions), "missing functions,",

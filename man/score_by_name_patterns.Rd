@@ -4,12 +4,14 @@
 \alias{score_by_name_patterns}
 \title{Score Column Name Patterns}
 \usage{
-score_by_name_patterns(col_name, role)
+score_by_name_patterns(col_name, role = NULL, type = NULL)
 }
 \arguments{
 \item{col_name}{Column name to score}
 
-\item{role}{Target role ("y_column" or "n_column")}
+\item{role}{Target role ("y_column" or "n_column") - optional, defaults to "y_column"}
+
+\item{type}{Legacy parameter for compatibility ("x", "y", etc.) - maps to role}
 }
 \value{
 Score between 0 and 1

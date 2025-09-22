@@ -57,7 +57,7 @@ initialize_runtime_config <- function(override_options = list(), use_environment
     apply_runtime_config(config)
   }
 
-  # log_debug("✅ Runtime configuration initialized successfully", .context = "RUNTIME_CONFIG")
+  # log_debug("Runtime configuration initialized successfully", .context = "RUNTIME_CONFIG")
   return(config)
 }
 
@@ -250,7 +250,7 @@ apply_runtime_config <- function(config) {
 
   # Environment variables set by environment profiles, not here
 
-  # log_debug("✅ Runtime configuration applied to global variables", .context = "CONFIG_APPLY")
+  # log_debug("Runtime configuration applied to global variables", .context = "CONFIG_APPLY")
   return(invisible(TRUE))
 }
 
@@ -497,6 +497,6 @@ convert_profile_to_legacy_config <- function(profile) {
     )
   )
 
-  # log_debug("✅ Environment profile converted to legacy format", .context = "CONFIG_CONVERT")
+  # log_debug("Environment profile converted to legacy format", .context = "CONFIG_CONVERT")
   return(config)
 }

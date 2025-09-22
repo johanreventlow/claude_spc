@@ -67,7 +67,6 @@ autodetect_engine <- function(data = NULL,
   } else {
     # Full data analysis scenario
     log_debug_kv(
-      data_dimensions = paste(dim(data), collapse = "x"),
       column_names = paste(names(data), collapse = ", "),
       .context = "UNIFIED_AUTODETECT"
     )
@@ -96,9 +95,7 @@ autodetect_engine <- function(data = NULL,
   })
 
   log_debug_kv(
-    frozen_state = "TRUE",
-    trigger_type = trigger_type,
-    timestamp = as.character(Sys.time()),
+    autodetect_completed = TRUE,
     .context = "UNIFIED_AUTODETECT"
   )
   # 4. UI SYNC & LOGGING
@@ -118,6 +115,7 @@ autodetect_engine <- function(data = NULL,
 #' @param col_names Character vector of column names
 #' @param app_state Centralized app state (optional for logging)
 #' @return List with detected column mappings
+#' @export
 detect_columns_name_based <- function(col_names, app_state = NULL) {
   log_debug_block("NAME_BASED_DETECT", "Starting name-based column detection")
 
@@ -129,7 +127,6 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
   }
 
   log_debug_kv(
-    column_count = length(col_names),
     column_names = paste(col_names, collapse = ", "),
     .context = "NAME_BASED_DETECT"
   )
@@ -144,7 +141,7 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
 
   col_names_lower <- tolower(col_names)
 
-  # X-shiny::column(date/time detection) - FASE 4: Enhanced tidsspecifikke patterns
+  # X-column (date/time detection) - Enhanced time-specific patterns
   dato_patterns <- c("dato", "date", "tid", "time", "år", "year", "måned", "month",
                      "uge", "week", "dag", "day", "periode", "period", "kvartal", "quarter",
                      "jan", "feb", "mar", "apr", "maj", "jun",
@@ -153,64 +150,59 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
     dato_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
     if (length(dato_idx) > 0) {
       x_col <- col_names[dato_idx[1]]
-      log_debug_kv(x_column_detected = x_col, pattern_used = pattern, .context = "NAME_BASED_DETECT")
       break
     }
   }
 
-  # Fallback: first column if no date pattern found
-  if (is.null(x_col) && length(col_names) > 0) {
-    x_col <- col_names[1]
-    log_debug_kv(x_column_fallback = x_col, .context = "NAME_BASED_DETECT")
-  }
-
-  # Y-shiny::column(count/value detection) - enhanced patterns
+  # Y-column (count patterns)
   count_patterns <- c("tæller", "tael", "num", "count", "værdi", "value", "antal")
   for (pattern in count_patterns) {
     count_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
     if (length(count_idx) > 0) {
       y_col <- col_names[count_idx[1]]
-      log_debug_kv(y_column_detected = y_col, pattern_used = pattern, .context = "NAME_BASED_DETECT")
       break
     }
   }
 
-  # N-shiny::column(denominator detection) - enhanced patterns
+  # N-column (denominator patterns)
   denom_patterns <- c("nævner", "naev", "denom", "total", "samlet")
   for (pattern in denom_patterns) {
     denom_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
     if (length(denom_idx) > 0) {
       n_col <- col_names[denom_idx[1]]
-      log_debug_kv(n_column_detected = n_col, pattern_used = pattern, .context = "NAME_BASED_DETECT")
       break
     }
   }
 
-  # Exact matches for control columns
-  skift_idx <- which(grepl("^skift$", col_names_lower, ignore.case = TRUE))
-  if (length(skift_idx) > 0) {
-    skift_col <- col_names[skift_idx[1]]
-    log_debug_kv(skift_column_detected = skift_col, .context = "NAME_BASED_DETECT")
+  # Special columns
+  skift_patterns <- c("skift", "shift", "ugedag", "weekday")
+  for (pattern in skift_patterns) {
+    skift_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
+    if (length(skift_idx) > 0) {
+      skift_col <- col_names[skift_idx[1]]
+      break
+    }
   }
 
-  frys_idx <- which(grepl("^frys$", col_names_lower, ignore.case = TRUE))
-  if (length(frys_idx) > 0) {
-    frys_col <- col_names[frys_idx[1]]
-    log_debug_kv(frys_column_detected = frys_col, .context = "NAME_BASED_DETECT")
+  frys_patterns <- c("frys", "freeze", "frossen", "frozen")
+  for (pattern in frys_patterns) {
+    frys_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
+    if (length(frys_idx) > 0) {
+      frys_col <- col_names[frys_idx[1]]
+      break
+    }
   }
 
-  # Comment column - enhanced patterns
-  comment_patterns <- c("kommentar", "comment", "note", "bemærk", "beskrivelse", "description")
+  comment_patterns <- c("kommentar", "comment", "note", "bemærkning")
   for (pattern in comment_patterns) {
     comment_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
     if (length(comment_idx) > 0) {
       kommentar_col <- col_names[comment_idx[1]]
-      log_debug_kv(comment_column_detected = kommentar_col, pattern_used = pattern, .context = "NAME_BASED_DETECT")
       break
     }
   }
 
-  # Results summary
+  # Compile results
   results <- list(
     x_col = x_col,
     y_col = y_col,
@@ -249,7 +241,6 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
   }
 
   log_debug_kv(
-    data_dimensions = paste(dim(data), collapse = "x"),
     column_names = paste(names(data), collapse = ", "),
     .context = "FULL_DATA_DETECT"
   )
@@ -268,11 +259,6 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
     # Sort by score and take highest confidence
     sorted_dates <- date_candidates[order(sapply(date_candidates, function(x) x$score), decreasing = TRUE)]
     best_date_col <- names(sorted_dates)[1]
-    log_debug_kv(
-      best_date_column = best_date_col,
-      confidence_score = sorted_dates[[1]]$score,
-      .context = "FULL_DATA_DETECT"
-    )
   }
 
   # 2. NUMERIC COLUMN ANALYSIS
@@ -293,7 +279,6 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
   )
 
   log_debug_kv(
-    x_col_final = ifelse(is.null(results$x_col), "NULL", results$x_col),
     y_col_final = ifelse(is.null(results$y_col), "NULL", results$y_col),
     n_col_final = ifelse(is.null(results$n_col), "NULL", results$n_col),
     data_driven_improvements = !is.null(best_date_col) || length(y_candidates) > 0,
@@ -395,13 +380,11 @@ log_autodetect_decisions <- function(results, trigger_type, session_id = NULL) {
   log_debug_block("AUTODETECT_DECISIONS", "Logging autodetect decisions")
 
   log_debug_kv(
-    trigger_type = trigger_type,
-    session_id = session_id %||% "unknown",
-    x_column_decision = results$x_col %||% "NULL",
-    y_column_decision = results$y_col %||% "NULL",
-    n_column_decision = results$n_col %||% "NULL",
-    control_columns_found = !is.null(results$skift_col) || !is.null(results$frys_col),
+    x_column_detected = !is.null(results$x_col),
+    y_column_detected = !is.null(results$y_col),
+    n_column_detected = !is.null(results$n_col),
     comment_column_found = !is.null(results$kommentar_col),
+    trigger_type = trigger_type,
     .context = "AUTODETECT_DECISIONS"
   )
 

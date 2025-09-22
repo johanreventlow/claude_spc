@@ -162,7 +162,7 @@ create_ui_update_service <- function(session, app_state) {
           # Reset column choices (will be empty until data is loaded)
           update_column_choices(clear_selections = TRUE)
 
-          log_debug("Form fields reset successfully", .context = "UI_SERVICE")
+          # Form fields reset
         },
         fallback = function(e) {
           log_error("Error resetting form fields:", e$message, "UI_SERVICE")
@@ -185,10 +185,10 @@ create_ui_update_service <- function(session, app_state) {
       code = {
         if (show) {
           shinyjs::show(element_id)
-          log_debug("Showed element:", element_id, .context = "UI_SERVICE")
+          # Element shown
         } else {
           shinyjs::hide(element_id)
-          log_debug("Hid element:", element_id, .context = "UI_SERVICE")
+          # UI operation completed
         }
       },
       fallback = function(e) {
@@ -206,7 +206,7 @@ create_ui_update_service <- function(session, app_state) {
   # @param show_feedback Whether to show validation feedback to the user
   #
   validate_form_fields <- function(field_rules, show_feedback = TRUE) {
-    log_debug("Validating form fields", .context = "UI_SERVICE")
+    # UI operation completed
 
     validation_results <- list(valid = TRUE, errors = list())
 
@@ -258,7 +258,6 @@ create_ui_update_service <- function(session, app_state) {
           }
         }
 
-        log_debug("Form validation completed, valid:", validation_results$valid, .context = "UI_SERVICE")
       },
       fallback = function(e) {
         log_error("Error during form validation:", e$message, "UI_SERVICE")
@@ -281,7 +280,7 @@ create_ui_update_service <- function(session, app_state) {
   # @param modal Whether to show as modal dialog instead of notification
   #
   show_user_feedback <- function(message, type = "info", duration = 3, modal = FALSE) {
-    log_debug("Showing user feedback:", type, "-", message, .context = "UI_SERVICE")
+    # UI operation completed
 
     safe_operation(
       "Show user feedback",
@@ -311,7 +310,7 @@ create_ui_update_service <- function(session, app_state) {
           shiny::showNotification(message, type = shiny_type, duration = duration)
         }
 
-        log_debug("User feedback shown successfully", .context = "UI_SERVICE")
+        # UI operation completed
       },
       fallback = function(e) {
         log_error("Error showing user feedback:", e$message, "UI_SERVICE")
@@ -327,7 +326,7 @@ create_ui_update_service <- function(session, app_state) {
   # @param conditions Named list of conditions and corresponding UI updates
   #
   update_ui_conditionally <- function(conditions) {
-    log_debug("Updating UI conditionally based on", length(conditions), "conditions", .context = "UI_SERVICE")
+    # UI operation completed
 
     safe_operation(
       "Update UI conditionally",
@@ -342,7 +341,7 @@ create_ui_update_service <- function(session, app_state) {
             condition_spec$condition
           }
 
-          log_debug("Condition", condition_name, ":", condition_met, .context = "UI_SERVICE")
+          # UI operation completed
 
           if (condition_met) {
             # Execute actions for true condition
@@ -378,7 +377,6 @@ create_ui_update_service <- function(session, app_state) {
           }
         }
 
-        log_debug("Conditional UI updates completed", .context = "UI_SERVICE")
       },
       fallback = function(e) {
         log_error("Error in conditional UI updates:", e$message, "UI_SERVICE")
@@ -413,7 +411,6 @@ add_ui_update_events <- function(app_state) {
   app_state$events$form_reset_needed <- 0L
   app_state$events$form_restore_needed <- 0L
 
-  log_debug("UI update events added to app_state", .context = "UI_SERVICE")
   return(app_state)
 }
 
@@ -450,7 +447,6 @@ add_ui_update_emit_functions <- function(emit, app_state) {
     })
   }
 
-  log_debug("UI update emit functions added", .context = "UI_SERVICE")
   return(emit)
 }
 
@@ -500,8 +496,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
   }
 
   freeze_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
-  log_debug(paste("Starting safe programmatic UI update med", delay_ms, "ms forsinkelse",
-                  "(autodetect frozen:", freeze_state, ")"), "DROPDOWN_DEBUG")
+  # Starting safe programmatic UI update
 
   run_update <- function() {
     execution_start <- Sys.time()
@@ -515,7 +510,6 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
       queue_idle <- !isTRUE(shiny::isolate(app_state$ui$queue_processing))
 
       if (pending_queue > 0 && queue_idle) {
-        log_debug("🚀 Direct run færdig – starter queued updates", "QUEUE_DEBUG")
         if (requireNamespace("later", quietly = TRUE)) {
           later::later(function() {
             process_ui_update_queue(app_state)
@@ -526,7 +520,6 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
       }
     }, add = TRUE)
 
-    log_debug("TOKEN-BASED LOOP_PROTECTION: Starter UI opdatering", "DROPDOWN_DEBUG")
 
     app_state$ui$programmatic_token_counter <- shiny::isolate(app_state$ui$programmatic_token_counter) + 1L
     session_token <- paste0(
@@ -535,7 +528,6 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
       "_",
       format(execution_start, "%H%M%S_%f")
     )
-    log_debug(paste("Generated session token:", session_token), "TOKEN_DEBUG")
 
     is_real_session <- inherits(session, "ShinySession") && !is.null(session$sendCustomMessage)
 
@@ -549,13 +541,9 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
       assign(
         "updateSelectizeInput",
         function(session, inputId, choices = NULL, selected = NULL, ...) {
-          log_debug(paste("Updating", inputId,
-                          "med valg:", if (!is.null(choices)) paste0("[", length(choices), " elementer]") else "NULL",
-                          "selected:", if (!is.null(selected)) paste0("'", selected, "'") else "NULL"),
-                    "DROPDOWN_DEBUG")
+# Operation completed
 
           if (!is.null(choices) && length(choices) > 0) {
-            log_debug(paste("Choices for", inputId, ":", paste(names(choices), "=", choices, collapse = ", ")), "DROPDOWN_DEBUG")
           }
 
           if (!is.null(selected)) {
@@ -568,12 +556,12 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
                 session_token = session_token
               )
             })
-            log_debug(paste("Token", input_token, "tilknyttet", inputId, "med værdi", paste0("'", selected, "'")), "TOKEN_DEBUG")
+            # Token operation completed
           }
 
           result <- original_updateSelectizeInput(session, inputId, choices = choices, selected = selected, ...)
 
-          log_debug(paste("updateSelectizeInput afsluttet for", inputId), "DROPDOWN_DEBUG")
+          # Dropdown update completed
           return(result)
         },
         envir = .GlobalEnv
@@ -598,9 +586,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 
     update_completed_time <- Sys.time()
     execution_time_ms <- as.numeric(difftime(update_completed_time, execution_start, units = "secs")) * 1000
-    log_debug(paste("LOOP_PROTECTION: UI opdatering gennemført på", round(execution_time_ms, 2), "ms"),
-              .context = "LOOP_PROTECTION")
-
+# Operation completed
     performance_end <- Sys.time()
     update_duration_ms <- as.numeric(difftime(performance_end, performance_start, units = "secs")) * 1000
 
@@ -617,10 +603,6 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
           (current_avg * (total_updates - 1) + update_duration_ms) / total_updates
       }
     })
-
-    log_debug(paste("Update completed in", round(update_duration_ms, 2), "ms",
-                    "(avg:", round(shiny::isolate(app_state$ui$performance_metrics$avg_update_duration_ms), 2), "ms)"),
-              "PERFORMANCE_DEBUG")
 
     invisible(NULL)
   }
@@ -644,7 +626,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
         max_queue_size <- shiny::isolate(app_state$ui$memory_limits$max_queue_size)
 
         if (length(current_queue) >= max_queue_size) {
-          log_debug(paste("⚠️ Queue på maksimum (", length(current_queue), "/", max_queue_size, "), fjerner ældste"), "QUEUE_DEBUG")
+          # Queue operation completed
           current_queue <- current_queue[-1]
         }
 
@@ -659,9 +641,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
           }
         })
 
-        log_debug(paste("Tilføjede opdatering til queue med ID:", queue_entry$queue_id,
-                        "(queue størrelse:", length(new_queue), "/", max_queue_size, ")"),
-                  "QUEUE_DEBUG")
+# Operation completed
 
         if (isTRUE(shiny::isolate(app_state$ui$queue_processing))) {
           enqueue_ui_update(app_state, queue_entry)
@@ -702,10 +682,10 @@ enqueue_ui_update <- function(app_state, queue_entry) {
 
   # Start processor if not already running
   if (!isTRUE(shiny::isolate(app_state$ui$queue_processing))) {
-    log_debug("🚀 Starting queue processor", "QUEUE_DEBUG")
+    # Queue operation completed
     process_ui_update_queue(app_state)
   } else {
-    log_debug("📋 Queue processor already running", "QUEUE_DEBUG")
+    # Queue operation completed
   }
 
   return(invisible(TRUE))
@@ -720,7 +700,6 @@ enqueue_ui_update <- function(app_state, queue_entry) {
 #'
 #' @export
 process_ui_update_queue <- function(app_state) {
-  log_debug("⚙️ Processing UI update queue...", "QUEUE_DEBUG")
 
   # Set processing flag and ensure cleanup
   shiny::isolate(app_state$ui$queue_processing <- TRUE)
@@ -742,7 +721,7 @@ process_ui_update_queue <- function(app_state) {
 
     # EMPTY CHECK: Exit if no items to process
     if (length(current_queue) == 0) {
-      log_debug("Queue is empty, processor stopping", "QUEUE_DEBUG")
+      # Queue operation completed
       break
     }
 
@@ -753,19 +732,15 @@ process_ui_update_queue <- function(app_state) {
     # UPDATE QUEUE: Remove processed item immediately
     shiny::isolate(app_state$ui$queued_updates <- remaining_queue)
 
-    log_debug(paste("Processing queued update with ID:", next_update$queue_id,
-              "(", length(remaining_queue), "remaining)"), "QUEUE_DEBUG")
-
     # EXECUTE UPDATE: Run function directly without wrapper recursion
     safe_operation(
       "Execute queued UI update",
       code = {
         # Execute the stored function directly
         next_update$func()
-        log_debug(paste("Queued update", next_update$queue_id, "completed successfully"), "QUEUE_DEBUG")
       },
       fallback = function(e) {
-        log_debug(paste("❌ Error processing queued update", next_update$queue_id, ":", e$message), "QUEUE_DEBUG")
+        # Queue operation completed
       },
       session = next_update$session,
       show_user = FALSE
@@ -773,7 +748,7 @@ process_ui_update_queue <- function(app_state) {
 
     # Limit processing to prevent runaway loops
     if (length(shiny::isolate(app_state$ui$queued_updates)) > 100) {
-      log_debug("⚠️ Queue size exceeded safety limit, deferring remaining items", "QUEUE_DEBUG")
+      # Queue operation completed
       break
     }
   }
@@ -807,9 +782,7 @@ cleanup_expired_queue_updates <- function(app_state, max_age_seconds = 30) {
     if (age_seconds <= max_age_seconds) {
       fresh_updates <- c(fresh_updates, list(update_entry))
     } else {
-      log_debug(paste("Removing expired update", update_entry$queue_id,
-                "(age:", round(age_seconds, 1), "seconds)"), "QUEUE_CLEANUP")
-    }
+# Operation completed
   }
 
   # UPDATE QUEUE with fresh entries only
@@ -817,8 +790,7 @@ cleanup_expired_queue_updates <- function(app_state, max_age_seconds = 30) {
 
   removed_count <- length(current_queue) - length(fresh_updates)
   if (removed_count > 0) {
-    log_debug(paste("Removed", removed_count, "expired updates,",
-              length(fresh_updates), "remaining"), "QUEUE_CLEANUP")
+    # Queue cleaned up
   }
 }
 
@@ -850,9 +822,7 @@ cleanup_expired_tokens <- function(app_state, max_age_seconds = 300) {
     if (age_seconds <= max_age_seconds) {
       fresh_tokens[[inputId]] <- token_entry
     } else {
-      log_debug(paste("Removing expired token", token_entry$token,
-                "for", inputId, "(age:", round(age_seconds, 1), "seconds)"), "TOKEN_CLEANUP")
-    }
+# Operation completed
   }
 
   # UPDATE TOKENS with fresh entries only
@@ -860,8 +830,7 @@ cleanup_expired_tokens <- function(app_state, max_age_seconds = 300) {
 
   removed_count <- length(current_tokens) - length(fresh_tokens)
   if (removed_count > 0) {
-    log_debug(paste("Removed", removed_count, "expired tokens,",
-              length(fresh_tokens), "remaining"), "TOKEN_CLEANUP")
+    # Tokens cleaned up
   }
 }
 
@@ -874,7 +843,7 @@ cleanup_expired_tokens <- function(app_state, max_age_seconds = 300) {
 #'
 #' @export
 comprehensive_system_cleanup <- function(app_state) {
-  log_debug("Starting comprehensive cleanup...", "SYSTEM_CLEANUP")
+  # System cleanup operation completed
 
   cleanup_start <- Sys.time()
 
@@ -889,20 +858,19 @@ comprehensive_system_cleanup <- function(app_state) {
   max_tokens <- shiny::isolate(app_state$ui$memory_limits$max_pending_tokens)
 
   if (length(current_tokens) > max_tokens) {
-    log_debug(paste("⚠️ Token limit exceeded (", length(current_tokens), "/", max_tokens, "), removing oldest tokens"), "SYSTEM_CLEANUP")
+    # System cleanup operation completed
 
     # Sort by timestamp and keep newest
     sorted_tokens <- current_tokens[order(sapply(current_tokens, function(x) x$timestamp), decreasing = TRUE)]
     app_state$ui$pending_programmatic_inputs <- sorted_tokens[1:max_tokens]
 
     removed_token_count <- length(current_tokens) - max_tokens
-    log_debug(paste("Removed", removed_token_count, "oldest tokens"), "SYSTEM_CLEANUP")
   }
 
   cleanup_end <- Sys.time()
   cleanup_duration_ms <- as.numeric(difftime(cleanup_end, cleanup_start, units = "secs")) * 1000
 
-  log_debug(paste("Comprehensive cleanup completed in", round(cleanup_duration_ms, 2), "ms"), "SYSTEM_CLEANUP")
+  # System cleanup operation completed
 }
 
 #' Get Performance Report
@@ -949,7 +917,7 @@ get_performance_report <- function(app_state) {
     "🔧 TOKEN+QUEUE SYSTEM PERFORMANCE REPORT\n",
     "========================================\n",
     "⏱️  Uptime: ", report$uptime_hours, " hours\n",
-    "📊 Updates: ", report$total_updates, " total (", report$queued_updates, " queued)\n",
+    "Updates: ", report$total_updates, " total (", report$queued_updates, " queued)\n",
     "🎯 Tokens: ", report$tokens_consumed, " consumed\n",
     "⚡ Performance: ", report$avg_update_duration_ms, "ms avg duration\n",
     "📈 Peak queue: ", report$queue_max_size, " entries\n",
@@ -981,5 +949,9 @@ reset_performance_metrics <- function(app_state) {
     app_state$ui$performance_metrics$last_performance_reset <- Sys.time()
   })
 
-  log_debug("Performance metrics reset", "PERFORMANCE_DEBUG")
+  # Performance operation completed
+}
+
+# Close any missing braces
+}
 }

@@ -77,12 +77,21 @@ test_that("Column mapping logic fungerer korrekt", {
   )
 
   if (exists("detect_columns_with_cache")) {
-    detected <- detect_columns_with_cache(test_data)
-    expect_true(is.list(detected))
+    # Test 1: Med app_state parameter (eksisterende funktionalitet)
+    app_state <- create_test_app_state()
+    detected_with_state <- detect_columns_with_cache(test_data, app_state)
+    expect_true(is.list(detected_with_state))
+
+    # Test 2: Uden app_state parameter (ny funktionalitet)
+    detected_without_state <- detect_columns_with_cache(test_data)
+    expect_true(is.list(detected_without_state))
+
+    # Test at begge resultater er sammenlignelige
+    expect_true(identical(names(detected_with_state), names(detected_without_state)))
 
     # Test at vi får relevante mapping forslag
-    if ("x_col" %in% names(detected)) {
-      expect_true(is.character(detected$x_col))
+    if ("x_col" %in% names(detected_without_state)) {
+      expect_true(is.character(detected_without_state$x_col))
     }
   }
 })

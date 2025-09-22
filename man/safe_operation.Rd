@@ -10,7 +10,8 @@ safe_operation(
   fallback = NULL,
   session = NULL,
   show_user = FALSE,
-  error_type = "general"
+  error_type = "general",
+  ...
 )
 }
 \arguments{

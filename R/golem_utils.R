@@ -33,7 +33,6 @@ set_app_options <- function(options = list()) {
     return(invisible(NULL))
   }
 
-  log_debug( paste("Setting app options:", length(options), "options provided"), .context = "GOLEM_OPTIONS")
 
   # Default app options
   default_options <- list(
@@ -57,7 +56,6 @@ set_app_options <- function(options = list()) {
     do.call("options", option_list)
   }
 
-  log_debug(paste("✅ App options set successfully:", paste(names(merged_options), collapse = ", ")), .context = "GOLEM_OPTIONS")
   return(invisible(merged_options))
 }
 
@@ -171,7 +169,6 @@ run_dev <- function(port = 4040,
     browser_launch = "rstudio_viewer"
   )
 
-  log_debug(paste("Development options:", paste(names(dev_options), collapse = ", ")), .context = "DEV_MODE")
 
   # Set environment for enhanced debugging
   Sys.setenv(SHINY_DEBUG_MODE = "TRUE")
@@ -189,7 +186,6 @@ run_dev <- function(port = 4040,
     ...
   )
 
-  log_debug("✅ Development application started successfully", .context = "DEV_MODE")
   return(app_result)
 }
 
@@ -219,7 +215,6 @@ run_prod <- function(port = NULL,
     browser_launch = TRUE
   )
 
-  log_debug(paste("Production options:", paste(names(prod_options), collapse = ", ")), .context = "PROD_MODE")
 
   # Set environment for production
   Sys.setenv(SHINY_DEBUG_MODE = "FALSE")
@@ -233,7 +228,6 @@ run_prod <- function(port = NULL,
     ...
   )
 
-  log_debug("✅ Production application started successfully", .context = "PROD_MODE")
   return(app_result)
 }
 
@@ -293,7 +287,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
   if (dir.exists(path)) {
     shiny::addResourcePath(prefix, path)
-    log_debug( paste("✅ Added resource path:", prefix, "->", path), .context = "RESOURCE_PATHS")
+    log_debug( paste("Added resource path:", prefix, "->", path), .context = "RESOURCE_PATHS")
     return(invisible(TRUE))
   } else {
     log_debug( paste("Resource path not found:", path), .context = "RESOURCE_PATHS")
@@ -373,7 +367,7 @@ get_golem_config <- function(env = NULL, config_path = "inst/golem-config.yml") 
     # Get configuration for specific environment
     if (env %in% names(config_data)) {
       env_config <- config_data[[env]]
-      log_debug(paste("✅ Golem configuration loaded for environment:", env), .context = "GOLEM_CONFIG")
+      log_debug(paste("Golem configuration loaded for environment:", env), .context = "GOLEM_CONFIG")
       return(env_config)
     } else {
       log_debug(paste("Environment", env, "not found in config, using default"), .context = "GOLEM_CONFIG")
@@ -520,7 +514,7 @@ apply_golem_config <- function(golem_config) {
     assign("AUTO_RESTORE_ENABLED", golem_config$session$auto_restore_session, envir = .GlobalEnv)
   }
 
-  log_debug("✅ Golem configuration applied to runtime", .context = "GOLEM_APPLY")
+  log_debug("Golem configuration applied to runtime", .context = "GOLEM_APPLY")
   return(invisible(TRUE))
 }
 
