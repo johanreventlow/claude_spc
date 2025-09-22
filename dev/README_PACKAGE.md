@@ -37,7 +37,7 @@ make prod       # Production build
 
 **Før (global.R):**
 ```r
-source_from_base("R/utils/logging.R")
+source_from_base("R/utils_logging.R")
 source_from_base("R/config/state_management.R")
 # ... 50+ source() calls
 ```
