@@ -30,18 +30,20 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
       # Tjek også om bruger aktivt er startet på at arbejde (fil uploadet eller startet manuelt)
-      meaningful_data <- any(sapply(current_data_check, function(x) {
-        if (is.logical(x)) {
-          return(any(x, na.rm = TRUE))
-        }
-        if (is.numeric(x)) {
-          return(any(!is.na(x)))
-        }
-        if (is.character(x)) {
-          return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
-        }
-        return(FALSE)
-      }))
+      # Check if data has meaningful content using tidyverse approach
+      meaningful_data <- current_data_check |>
+        purrr::map_lgl(~ {
+          if (is.logical(.x)) {
+            any(.x, na.rm = TRUE)
+          } else if (is.numeric(.x)) {
+            any(!is.na(.x))
+          } else if (is.character(.x)) {
+            any(nzchar(.x, keepNA = FALSE), na.rm = TRUE)
+          } else {
+            FALSE
+          }
+        }) |>
+        any()
 
       # Betragt kun data som indlæst hvis:
       # 1. Der er meningsfuldt data, ELLER
@@ -114,18 +116,20 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
       "false"
     } else {
       # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
-      meaningful_data <- any(sapply(current_data_check, function(x) {
-        if (is.logical(x)) {
-          return(any(x, na.rm = TRUE))
-        }
-        if (is.numeric(x)) {
-          return(any(!is.na(x)))
-        }
-        if (is.character(x)) {
-          return(any(nzchar(x, keepNA = FALSE), na.rm = TRUE))
-        }
-        return(FALSE)
-      }))
+      # Check if data has meaningful content using tidyverse approach
+      meaningful_data <- current_data_check |>
+        purrr::map_lgl(~ {
+          if (is.logical(.x)) {
+            any(.x, na.rm = TRUE)
+          } else if (is.numeric(.x)) {
+            any(!is.na(.x))
+          } else if (is.character(.x)) {
+            any(nzchar(.x, keepNA = FALSE), na.rm = TRUE)
+          } else {
+            FALSE
+          }
+        }) |>
+        any()
       if (meaningful_data) "true" else "false"
     }
   }
