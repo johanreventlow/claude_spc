@@ -227,11 +227,9 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
       }
     } else {
       # CHARACTER COLUMN: Convert to factor with original row order to prevent alphabetical sorting
-      original_labels <- data[[x_col_name]]
-      unique_labels <- unique(original_labels) # Preserves original order from dataset
-
-      # Convert to factor with levels in dataset order (not alphabetical)
-      data[[x_col_name]] <- factor(original_labels, levels = unique_labels)
+      # Create factor with levels in dataset order using tidyverse approach
+      data[[x_col_name]] <- data[[x_col_name]] |>
+        forcats::fct_inorder()
       x_col_for_qic <- x_col_name
 
     }

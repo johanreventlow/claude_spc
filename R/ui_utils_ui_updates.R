@@ -860,9 +860,14 @@ comprehensive_system_cleanup <- function(app_state) {
   if (length(current_tokens) > max_tokens) {
     # System cleanup operation completed
 
-    # Sort by timestamp and keep newest
-    sorted_tokens <- current_tokens[order(sapply(current_tokens, function(x) x$timestamp), decreasing = TRUE)]
-    app_state$ui$pending_programmatic_inputs <- sorted_tokens[1:max_tokens]
+    # Sort by timestamp and keep newest using tidyverse approach
+    sorted_tokens <- current_tokens |>
+      tibble::enframe(name = "index", value = "token") |>
+      dplyr::mutate(timestamp = purrr::map_dbl(token, ~ .x$timestamp)) |>
+      dplyr::arrange(dplyr::desc(timestamp)) |>
+      dplyr::slice_head(n = max_tokens) |>
+      dplyr::pull(token)
+    app_state$ui$pending_programmatic_inputs <- sorted_tokens
 
     removed_token_count <- length(current_tokens) - max_tokens
   }

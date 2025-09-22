@@ -526,8 +526,8 @@ process_phase_freeze_config <- function(data, show_phases, skift_column, frys_co
         skift_data <- as.logical(skift_data)
       }
 
-      # Get positions where TRUE values occur (these are where new phases start)
-      skift_points <- which(skift_data == TRUE)
+      # Get positions where TRUE values occur using tidyverse approach
+      skift_points <- seq_along(skift_data)[skift_data == TRUE]
       if (length(skift_points) > 0) {
         # qic() expects integer vector of positions where new phases start
         part_positions <- sort(skift_points)
@@ -550,8 +550,8 @@ process_phase_freeze_config <- function(data, show_phases, skift_column, frys_co
         frys_data <- as.logical(frys_data)
       }
 
-      # Get positions where TRUE values occur (baseline freeze points)
-      frys_points <- which(frys_data == TRUE)
+      # Get positions where TRUE values occur using tidyverse approach
+      frys_points <- seq_along(frys_data)[frys_data == TRUE]
 
       if (length(frys_points) > 0) {
         # Use the last TRUE position as freeze point (baseline up to this point)

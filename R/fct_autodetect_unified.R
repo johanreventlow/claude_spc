@@ -194,9 +194,9 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
   )
 
   log_debug_kv(
-    x_col = ifelse(is.null(results$x_col), "NULL", results$x_col),
-    y_col = ifelse(is.null(results$y_col), "NULL", results$y_col),
-    n_col = ifelse(is.null(results$n_col), "NULL", results$n_col),
+    x_col = results$x_col %||% "NULL",
+    y_col = results$y_col %||% "NULL",
+    n_col = results$n_col %||% "NULL",
     .context = "NAME_BASED_DETECT"
   )
 
@@ -261,8 +261,8 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
   )
 
   log_debug_kv(
-    y_col_final = ifelse(is.null(results$y_col), "NULL", results$y_col),
-    n_col_final = ifelse(is.null(results$n_col), "NULL", results$n_col),
+    y_col_final = results$y_col %||% "NULL",
+    n_col_final = results$n_col %||% "NULL",
     data_driven_improvements = !is.null(best_date_col) || length(y_candidates) > 0,
     .context = "FULL_DATA_DETECT"
   )
