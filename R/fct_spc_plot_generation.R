@@ -4,6 +4,378 @@
 #
 # Dependencies ----------------------------------------------------------------
 
+# COMMENT PROCESSING UTILITIES ================================================
+
+## Extract Comment Data for Plot Annotations
+# Processer kommentar-data til brug i plot annotationer
+extract_comment_data <- function(data, kommentar_column, qic_data) {
+  # Returner NULL hvis ingen kommentar-kolonne er specificeret
+  if (is.null(kommentar_column) || !kommentar_column %in% names(data)) {
+    return(NULL)
+  }
+
+  # Udtrækker kommentarer og synkroniserer med qic_data
+  comments_raw <- data[[kommentar_column]]
+
+  # Opret kommentar data frame aligned med qic_data
+  comment_data <- data.frame(
+    x = qic_data$x,
+    y = qic_data$y,
+    comment = comments_raw[1:nrow(qic_data)], # Sikr samme længde som qic_data
+    stringsAsFactors = FALSE
+  )
+
+  # Filtrer til kun ikke-tomme kommentarer
+  comment_data <- comment_data[
+    !is.na(comment_data$comment) &
+      trimws(comment_data$comment) != "",
+  ]
+
+  # Afkort meget lange kommentarer
+  if (nrow(comment_data) > 0) {
+    comment_data$comment <- dplyr::if_else(
+      nchar(comment_data$comment) > 40,
+      stringr::str_c(substr(comment_data$comment, 1, 37), "..."),
+      comment_data$comment
+    )
+  }
+
+  return(comment_data)
+}
+
+# DATA CLEANING UTILITIES =====================================================
+
+## Clean QIC Call Arguments
+# Renser QIC kald argumenter for komplette cases og justerer part positioner
+clean_qic_call_args <- function(call_args) {
+  # Tilføj return.data = TRUE for at få underliggende data frame i stedet for plot
+  call_args$return.data <- TRUE
+
+  # Rens data for komplette cases
+  complete_cases <- complete.cases(call_args$x, call_args$y)
+
+  if (!all(complete_cases)) {
+    call_args$x <- call_args$x[complete_cases]
+    call_args$y <- call_args$y[complete_cases]
+
+    # Håndter n-værdier hvis de findes
+    if ("n" %in% names(call_args)) {
+      call_args$n <- call_args$n[complete_cases]
+    }
+
+    # Håndter part positioner: juster for fjernede rækker
+    if ("part" %in% names(call_args)) {
+      removed_positions <- which(!complete_cases)
+
+      if (length(removed_positions) > 0) {
+        # Juster part positioner ved at trække fjernede rækker før hver position
+        adjusted_part <- call_args$part
+
+        for (i in seq_along(adjusted_part)) {
+          pos <- adjusted_part[i]
+          removed_before <- sum(removed_positions < pos)
+          adjusted_part[i] <- pos - removed_before
+        }
+
+        # Fjern ugyldige positioner
+        valid_parts <- adjusted_part > 0 & adjusted_part <= sum(complete_cases)
+        call_args$part <- adjusted_part[valid_parts]
+
+        if (length(call_args$part) == 0) {
+          call_args$part <- NULL
+        }
+      }
+    }
+  }
+
+  return(call_args)
+}
+
+# QIC ARGUMENTS UTILITIES =====================================================
+
+## Build QIC Call Arguments
+# Bygger argumenter til qicharts2::qic() kald dynamisk
+build_qic_call_arguments <- function(x_data, y_data, chart_type, title_text, ylab_text,
+                                   n_data = NULL, freeze_position = NULL,
+                                   part_positions = NULL, target_value = NULL) {
+
+  # Byg grundlæggende qic kald argumenter dynamisk
+  call_args <- list(
+    x = x_data,
+    y = y_data,
+    chart = chart_type,
+    title = title_text,
+    ylab = ylab_text
+  )
+
+  # NOTE: x.period og x.format parametre bruges ikke længere da vi anvender return.data=TRUE
+
+  # Tilføj n for P/U charts
+  if (chart_type %in% c("p", "pp", "u", "up") && !is.null(n_data)) {
+    call_args$n <- n_data
+  }
+
+  # Tilføj freeze for baseline - kan bruges sammen med part
+  if (!is.null(freeze_position)) {
+    call_args$freeze <- freeze_position
+  }
+
+  # Tilføj part for phase splits - kan bruges sammen med freeze
+  if (!is.null(part_positions)) {
+    call_args$part <- part_positions
+  }
+
+  # Tilføj target line hvis angivet
+  if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+    call_args$target <- target_value
+  }
+
+  return(call_args)
+}
+
+# DATA PROCESSING UTILITIES ===================================================
+
+## Process Ratio Chart Data
+# Behandler data for ratio charts (med tæller/nævner)
+process_ratio_chart_data <- function(data, config, chart_type, y_axis_unit) {
+  # Ratio charts (with numerator/denominator)
+  data <- filter_complete_spc_data(data, config$y_col, config$n_col, config$x_col)
+
+  # Parse and validate numeric data
+  parsed_data <- parse_and_validate_spc_data(
+    data[[config$y_col]],
+    data[[config$n_col]],
+    config$y_col,
+    config$n_col
+  )
+
+  # Get unit label
+  y_unit_label <- get_safe_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+
+  # Calculate Y-axis data and generate label
+  y_data <- calculate_y_axis_data(chart_type, parsed_data$y_data, parsed_data$n_data)
+  n_data <- parsed_data$n_data  # Keep for qicharts2
+  ylab_text <- generate_y_axis_label(chart_type, y_unit_label, config$y_col, config$n_col)
+
+  return(list(
+    data = data,
+    y_data = y_data,
+    n_data = n_data,
+    ylab_text = ylab_text,
+    y_unit_label = y_unit_label
+  ))
+}
+
+## Process Standard Chart Data
+# Behandler data for standard numeriske charts (enkelt værdi)
+process_standard_chart_data <- function(data, config, chart_type, y_axis_unit) {
+  # Standard numeric charts (single value)
+  data <- filter_complete_spc_data(data, config$y_col, NULL, config$x_col)
+
+  # Parse and validate numeric data
+  parsed_data <- parse_and_validate_spc_data(data[[config$y_col]], NULL, config$y_col)
+
+  # Get unit label and calculate Y-axis data
+  y_unit_label <- get_safe_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+  y_data <- calculate_y_axis_data(chart_type, parsed_data$y_data)
+  ylab_text <- generate_y_axis_label(chart_type, y_unit_label, config$y_col)
+
+  return(list(
+    data = data,
+    y_data = y_data,
+    n_data = NULL,  # No n_data for standard charts
+    ylab_text = ylab_text,
+    y_unit_label = y_unit_label
+  ))
+}
+
+# QIC DATA GENERATION UTILITIES ===============================================
+
+## Prepare QIC Data Parameters
+# Forbereder data parametre til qicharts2 integration med NSE håndtering
+prepare_qic_data_parameters <- function(data, config, x_validation) {
+  x_col_name <- config$x_col # Auto-detected date column or NULL
+  y_col_name <- config$y_col # Should be "Tæller"
+  n_col_name <- config$n_col # Should be "Nævner"
+
+  # Brug data fra x_validation i stedet for duplikeret logik
+  log_debug(paste("UPDATE CONDITION DEBUG:\n- x_col_name is not NULL:", !is.null(x_col_name),
+                  "\n- x_col_name in names(data):", if (!is.null(x_col_name)) x_col_name %in% names(data) else "N/A",
+                  "\n- x_validation$is_date:", x_validation$is_date,
+                  if (!is.null(x_col_name) && x_col_name %in% names(data))
+                    paste("\n- data[[x_col_name]] is character:", is.character(data[[x_col_name]])) else ""), "DATA_PROCESS")
+
+  # UPDATED CONDITION: Accept both date columns AND character columns (like "Uge tekst")
+  if (!is.null(x_col_name) && x_col_name %in% names(data) &&
+    (x_validation$is_date || is.character(data[[x_col_name]]))) {
+    # Debug logging før opdatering
+
+    if (x_validation$is_date) {
+      # DATE COLUMN: Use processed data from x_validation
+
+      # Opdater kolonnen med de processerede data fra x_validation
+      if (length(x_validation$x_data) == nrow(data)) {
+        data[[x_col_name]] <- x_validation$x_data
+        x_col_for_qic <- x_col_name
+
+      } else {
+        log_debug("Length mismatch - using observation sequence as fallback", "DATA_PROCESS")
+        # Fallback til observation sekvens
+        if (!("obs_sequence" %in% names(data))) {
+          data$obs_sequence <- 1:nrow(data)
+        }
+        x_col_for_qic <- "obs_sequence"
+      }
+    } else {
+      # CHARACTER COLUMN: Convert to factor with original row order to prevent alphabetical sorting
+      original_labels <- data[[x_col_name]]
+      unique_labels <- unique(original_labels) # Preserves original order from dataset
+
+      # Convert to factor with levels in dataset order (not alphabetical)
+      data[[x_col_name]] <- factor(original_labels, levels = unique_labels)
+      x_col_for_qic <- x_col_name
+
+    }
+  } else {
+    # Brug observation sekvens som fallback
+    if (!("obs_sequence" %in% names(data))) {
+      data$obs_sequence <- 1:nrow(data)
+    }
+    x_col_for_qic <- "obs_sequence"
+
+  }
+
+  # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
+
+  return(list(
+    data = data,
+    x_col_for_qic = x_col_for_qic,
+    x_col_name = x_col_name,
+    y_col_name = y_col_name,
+    n_col_name = n_col_name
+  ))
+}
+
+## Build QIC Arguments with NSE
+# Bygger qicharts2::qic() argumenter med non-standard evaluation
+build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
+                               chart_type, freeze_position, part_positions, centerline_value) {
+  # Build qic call arguments
+  qic_args <- list(
+    data = data,
+    chart = chart_type,
+    return.data = TRUE
+  )
+
+  # Add column names using non-standard evaluation (NSE) approach
+  if (!is.null(x_col_for_qic)) qic_args$x <- as.name(x_col_for_qic)
+  if (!is.null(y_col_name)) qic_args$y <- as.name(y_col_name)
+  if (!is.null(n_col_name)) qic_args$n <- as.name(n_col_name)
+
+  # Add freeze for baseline - can be used together with part
+  if (!is.null(freeze_position)) {
+    qic_args$freeze <- freeze_position
+  }
+
+  # Add part for phase splits - can be used together with freeze
+  if (!is.null(part_positions)) {
+    qic_args$part <- part_positions
+  }
+
+  # Add centerline if provided
+  if (!is.null(centerline_value) && is.numeric(centerline_value) && !is.na(centerline_value)) {
+    qic_args$cl <- centerline_value
+  }
+
+  return(qic_args)
+}
+
+## Execute QIC Call with Post-processing
+# Udfører qicharts2::qic() kald og post-processerer resultaterne
+execute_qic_call <- function(qic_args, chart_type, config) {
+  # Call qic() with prepared arguments
+  if (getOption("debug.mode", FALSE)) {
+    log_debug("qic_args structure:", "QIC_CALL")
+    log_debug(qic_args, "QIC_CALL")
+  }
+
+  log_debug(qic_args, "QIC")
+
+  qic_data <- do.call(qicharts2::qic, qic_args)
+
+  # Convert proportions to percentages for run charts with rate data
+  if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(qic_args$data)) {
+    qic_data$y <- qic_data$y * 100
+    qic_data$cl <- qic_data$cl * 100
+
+    if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
+      qic_data$ucl <- qic_data$ucl * 100
+    }
+    if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
+      qic_data$lcl <- qic_data$lcl * 100
+    }
+  }
+
+  return(qic_data)
+}
+
+# PLOT ENHANCEMENT UTILITIES ==================================================
+
+## Add Plot Enhancements
+# Tilføjer target lines, phase separations og comment annotations
+add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
+  # Add phase separation lines if parts exist
+  if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
+    # Find phase change points
+    phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
+    if (length(phase_changes) > 0) {
+      for (change_point in phase_changes) {
+        plot <- plot +
+          ggplot2::geom_vline(
+            xintercept = qic_data$x[change_point + 1],
+            color = HOSPITAL_COLORS$warning,
+            linetype = "dotted", linewidth = 1, alpha = 0.7
+          )
+      }
+    }
+  }
+
+  # Add target line if provided
+  if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+    plot <- plot +
+      ggplot2::geom_hline(
+        yintercept = target_value,
+        color = HOSPITAL_COLORS$darkgrey, linetype = "42", linewidth = 1.2,
+        alpha = 0.8
+      )
+  }
+
+  # Add comment labels with ggrepel if comments exist
+  if (!is.null(comment_data) && nrow(comment_data) > 0) {
+    plot <- plot +
+      ggrepel::geom_text_repel(
+        data = comment_data,
+        ggplot2::aes(x = x, y = y, label = comment),
+        size = 3,
+        color = HOSPITAL_COLORS$darkgrey,
+        bg.color = "white",
+        bg.r = 0.1,
+        box.padding = 0.5,
+        point.padding = 0.5,
+        segment.color = HOSPITAL_COLORS$mediumgrey,
+        segment.size = 0.3,
+        nudge_x = .15,
+        nudge_y = .5,
+        segment.curvature = -1e-20,
+        arrow = arrow(length = unit(0.015, "npc")),
+        max.overlaps = Inf,
+        inherit.aes = FALSE
+      )
+  }
+
+  return(plot)
+}
+
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
   # Generate SPC plot with specified parameters
   log_debug(paste("generateSPCPlot:", chart_type, "|", nrow(data), "rows"), "SPC_CALC_DEBUG")
@@ -21,56 +393,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Process data based on chart type
   if (!is.null(config$n_col) && config$n_col %in% names(data)) {
     # Ratio charts (with numerator/denominator)
-    data <- filter_complete_spc_data(data, config$y_col, config$n_col, config$x_col)
-
-    # Parse and validate numeric data
-    parsed_data <- parse_and_validate_spc_data(
-      data[[config$y_col]],
-      data[[config$n_col]],
-      config$y_col,
-      config$n_col
-    )
-
-    # Get unit label
-    y_unit_label <- get_safe_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
-
-    # Calculate Y-axis data and generate label
-    y_data <- calculate_y_axis_data(chart_type, parsed_data$y_data, parsed_data$n_data)
-    n_data <- parsed_data$n_data  # Keep for qicharts2
-    ylab_text <- generate_y_axis_label(chart_type, y_unit_label, config$y_col, config$n_col)
+    data_result <- process_ratio_chart_data(data, config, chart_type, y_axis_unit)
   } else {
     # Standard numeric charts (single value)
-    data <- filter_complete_spc_data(data, config$y_col, NULL, config$x_col)
-
-    # Parse and validate numeric data
-    parsed_data <- parse_and_validate_spc_data(data[[config$y_col]], NULL, config$y_col)
-
-    # Get unit label and calculate Y-axis data
-    y_unit_label <- get_safe_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
-    y_data <- calculate_y_axis_data(chart_type, parsed_data$y_data)
-    ylab_text <- generate_y_axis_label(chart_type, y_unit_label, config$y_col)
-
-    # Note: Data filtering handled by filter_complete_spc_data utility
-
-      if (inherits(data_backup[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
-        !inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
-
-        # Restore the original class and attributes
-        data[[config$x_col]] <- data_backup[[config$x_col]][complete_rows]
-        class(data[[config$x_col]]) <- original_x_class
-        attributes(data[[config$x_col]]) <- attributes(data_backup[[config$x_col]])
-
-      }
-    }
-
-    y_data <- parse_danish_number(data[[config$y_col]])
-    ylab_text <- if (y_unit_label != "") y_unit_label else config$y_col
-
-    # Check conversion success
-    if (all(is.na(y_data))) {
-      stop(paste("Kunne ikke konvertere", config$y_col, "til numeriske værdier. Tjek at værdier er gyldige tal."))
-    }
+    data_result <- process_standard_chart_data(data, config, chart_type, y_axis_unit)
   }
+
+  # Extract processed data
+  data <- data_result$data
+  y_data <- data_result$y_data
+  n_data <- data_result$n_data
+  ylab_text <- data_result$ylab_text
+  y_unit_label <- data_result$y_unit_label
 
   # Ensure we have minimum data points after filtering
   if (length(y_data) < 3) {
@@ -106,73 +440,20 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   freeze_position <- phase_freeze_config$freeze_position
 
   # Build qic call arguments dynamically
-  call_args <- list(
-    x = x_data,
-    y = y_data,
-    chart = chart_type,
-    title = title_text,
-    ylab = ylab_text
+  call_args <- build_qic_call_arguments(
+    x_data = x_data,
+    y_data = y_data,
+    chart_type = chart_type,
+    title_text = title_text,
+    ylab_text = ylab_text,
+    n_data = if (exists("n_data")) n_data else NULL,
+    freeze_position = freeze_position,
+    part_positions = part_positions,
+    target_value = target_value
   )
 
-  # NOTE: x.period og x.format parametre bruges ikke længere da vi anvender return.data=TRUE
-
-  # Add n for P/U charts
-  if (chart_type %in% c("p", "pp", "u", "up") && exists("n_data")) {
-    call_args$n <- n_data
-  }
-
-  # Add freeze for baseline - can be used together with part
-  if (!is.null(freeze_position)) {
-    call_args$freeze <- freeze_position
-  }
-
-  # Add part for phase splits - can be used together with freeze
-  if (!is.null(part_positions)) {
-    call_args$part <- part_positions
-  }
-
-  # Add target line if provided
-  if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
-    call_args$target <- target_value
-  }
-
-  # CRITICAL: Add return.data = TRUE to get underlying data frame instead of plot
-  call_args$return.data <- TRUE
-
-  # Clean data
-  complete_cases <- complete.cases(call_args$x, call_args$y)
-  if (!all(complete_cases)) {
-    call_args$x <- call_args$x[complete_cases]
-    call_args$y <- call_args$y[complete_cases]
-
-    if ("n" %in% names(call_args)) {
-      call_args$n <- call_args$n[complete_cases]
-    }
-
-    # Handle part positions: adjust for removed rows
-    if ("part" %in% names(call_args)) {
-      removed_positions <- which(!complete_cases)
-
-      if (length(removed_positions) > 0) {
-        # Adjust part positions by subtracting removed rows before each position
-        adjusted_part <- call_args$part
-
-        for (i in seq_along(adjusted_part)) {
-          pos <- adjusted_part[i]
-          removed_before <- sum(removed_positions < pos)
-          adjusted_part[i] <- pos - removed_before
-        }
-
-        # Remove invalid positions
-        valid_parts <- adjusted_part > 0 & adjusted_part <= sum(complete_cases)
-        call_args$part <- adjusted_part[valid_parts]
-
-        if (length(call_args$part) == 0) {
-          call_args$part <- NULL
-        }
-      }
-    }
-  }
+  # Clean data and prepare arguments for QIC call
+  call_args <- clean_qic_call_args(call_args)
 
   if (length(call_args$y) < 3) {
     stop("For få datapunkter efter rensning (minimum 3 påkrævet)")
@@ -181,116 +462,38 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Generate SPC data using qicharts2
 
   # Generate SPC data using qicharts2 and build custom ggplot
-  safe_operation(
+  return(safe_operation(
     "Generate SPC plot data",
     code = {
       # Use data parameter approach like the working example
       # qicharts2::qic(x = Dato, y = `Tæller`, n = `Nævner`, part = c(12), data = data, return.data = TRUE)
 
-      # Get column names for qic() call - respecting auto-detection results
-      x_col_name <- config$x_col # Auto-detected date column or NULL
-      y_col_name <- config$y_col # Should be "Tæller"
-      n_col_name <- config$n_col # Should be "Nævner"
-
-      # Brug data fra x_validation i stedet for duplikeret logik
-      log_debug(paste("UPDATE CONDITION DEBUG:\n- x_col_name is not NULL:", !is.null(x_col_name), "\n- x_col_name in names(data):", if (!is.null(x_col_name)) x_col_name %in% names(data) else "N/A", "\n- x_validation$is_date:", x_validation$is_date, if (!is.null(x_col_name) && x_col_name %in% names(data)) paste("\n- data[[x_col_name]] is character:", is.character(data[[x_col_name]])) else ""), "DATA_PROCESS")
-
-      # UPDATED CONDITION: Accept both date columns AND character columns (like "Uge tekst")
-      if (!is.null(x_col_name) && x_col_name %in% names(data) &&
-        (x_validation$is_date || is.character(data[[x_col_name]]))) {
-        # Debug logging før opdatering
-
-        if (x_validation$is_date) {
-          # DATE COLUMN: Use processed data from x_validation
-
-          # Opdater kolonnen med de processerede data fra x_validation
-          if (length(x_validation$x_data) == nrow(data)) {
-            data[[x_col_name]] <- x_validation$x_data
-            x_col_for_qic <- x_col_name
-
-          } else {
-            log_debug("Length mismatch - using observation sequence as fallback", "DATA_PROCESS")
-            # Fallback til observation sekvens
-            if (!("obs_sequence" %in% names(data))) {
-              data$obs_sequence <- 1:nrow(data)
-            }
-            x_col_for_qic <- "obs_sequence"
-          }
-        } else {
-          # CHARACTER COLUMN: Convert to factor with original row order to prevent alphabetical sorting
-          original_labels <- data[[x_col_name]]
-          unique_labels <- unique(original_labels) # Preserves original order from dataset
-
-          # Convert to factor with levels in dataset order (not alphabetical)
-          data[[x_col_name]] <- factor(original_labels, levels = unique_labels)
-          x_col_for_qic <- x_col_name
-
-        }
-      } else {
-        # Brug observation sekvens som fallback
-        if (!("obs_sequence" %in% names(data))) {
-          data$obs_sequence <- 1:nrow(data)
-        }
-        x_col_for_qic <- "obs_sequence"
-
-      }
-
-      # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
+      # Prepare QIC data parameters with NSE handling
+      qic_params <- prepare_qic_data_parameters(data, config, x_validation)
+      data <- qic_params$data
+      x_col_for_qic <- qic_params$x_col_for_qic
+      x_col_name <- qic_params$x_col_name
+      y_col_name <- qic_params$y_col_name
+      n_col_name <- qic_params$n_col_name
 
       # Generate SPC data using qicharts2
       qic_data <- safe_operation(
         "Generate SPC data using qicharts2",
         code = {
-          # Build qic call arguments
-          qic_args <- list(
+          # Build qic call arguments with NSE
+          qic_args <- build_qic_arguments(
             data = data,
-            chart = chart_type,
-            return.data = TRUE
+            x_col_for_qic = x_col_for_qic,
+            y_col_name = y_col_name,
+            n_col_name = n_col_name,
+            chart_type = chart_type,
+            freeze_position = freeze_position,
+            part_positions = part_positions,
+            centerline_value = centerline_value
           )
 
-          # Add column names using non-standard evaluation (NSE) approach
-          if (!is.null(x_col_for_qic)) qic_args$x <- as.name(x_col_for_qic)
-          if (!is.null(y_col_name)) qic_args$y <- as.name(y_col_name)
-          if (!is.null(n_col_name)) qic_args$n <- as.name(n_col_name)
-
-          # Add freeze for baseline - can be used together with part
-          if (!is.null(freeze_position)) {
-            qic_args$freeze <- freeze_position
-          }
-
-          # Add part for phase splits - can be used together with freeze
-          if (!is.null(part_positions)) {
-            qic_args$part <- part_positions
-          }
-
-          # Add centerline if provided
-          if (!is.null(centerline_value) && is.numeric(centerline_value) && !is.na(centerline_value)) {
-            qic_args$cl <- centerline_value
-          }
-
-          # Call qic() with prepared arguments
-          if (getOption("debug.mode", FALSE)) {
-            log_debug("qic_args structure:", "QIC_CALL")
-            log_debug(qic_args, "QIC_CALL")
-          }
-
-          log_debug(qic_args, "QIC")
-
-          qic_data <- do.call(qicharts2::qic, qic_args)
-
-
-          # Convert proportions to percentages for run charts with rate data
-          if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(data)) {
-            qic_data$y <- qic_data$y * 100
-            qic_data$cl <- qic_data$cl * 100
-
-            if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
-              qic_data$ucl <- qic_data$ucl * 100
-            }
-            if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
-              qic_data$lcl <- qic_data$lcl * 100
-            }
-          }
+          # Execute QIC call with post-processing
+          qic_data <- execute_qic_call(qic_args, chart_type, config)
 
           qic_data
         },
@@ -301,34 +504,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       )
 
       # Handle comment data for labels
-      comment_data <- NULL
-      if (!is.null(kommentar_column) && kommentar_column %in% names(data)) {
-        # Extract comments and sync with qic_data
-        comments_raw <- data[[kommentar_column]]
-
-        # Create comment data frame aligned with qic_data
-        comment_data <- data.frame(
-          x = qic_data$x,
-          y = qic_data$y,
-          comment = comments_raw[1:nrow(qic_data)], # Ensure same length as qic_data
-          stringsAsFactors = FALSE
-        )
-
-        # Filter to only non-empty comments
-        comment_data <- comment_data[
-          !is.na(comment_data$comment) &
-            trimws(comment_data$comment) != "",
-        ]
-
-        # Truncate very long comments
-        if (nrow(comment_data) > 0) {
-          comment_data$comment <- dplyr::if_else(
-            nchar(comment_data$comment) > 40,
-            stringr::str_c(substr(comment_data$comment, 1, 37), "..."),
-            comment_data$comment
-          )
-        }
-      }
+      comment_data <- extract_comment_data(data, kommentar_column, qic_data)
 
       # Build custom ggplot using qic calculations
 
@@ -455,54 +631,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         }
       }
 
-      # Add phase separation lines if parts exist
-      if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
-        # Find phase change points
-        phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
-        if (length(phase_changes) > 0) {
-          for (change_point in phase_changes) {
-            plot <- plot +
-              ggplot2::geom_vline(
-                xintercept = qic_data$x[change_point + 1],
-                color = HOSPITAL_COLORS$warning,
-                linetype = "dotted", linewidth = 1, alpha = 0.7
-              )
-          }
-        }
-      }
-
-      # Add target line if provided
-      if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
-        plot <- plot +
-          ggplot2::geom_hline(
-            yintercept = target_value,
-            color = HOSPITAL_COLORS$darkgrey, linetype = "42", linewidth = 1.2,
-            alpha = 0.8
-          )
-      }
-
-      # Add comment labels with ggrepel if comments exist
-      if (!is.null(comment_data) && nrow(comment_data) > 0) {
-        plot <- plot +
-          ggrepel::geom_text_repel(
-            data = comment_data,
-            ggplot2::aes(x = x, y = y, label = comment),
-            size = 3,
-            color = HOSPITAL_COLORS$darkgrey,
-            bg.color = "white",
-            bg.r = 0.1,
-            box.padding = 0.5,
-            point.padding = 0.5,
-            segment.color = HOSPITAL_COLORS$mediumgrey,
-            segment.size = 0.3,
-            nudge_x = .15,
-            nudge_y = .5,
-            segment.curvature = -1e-20,
-            arrow = arrow(length = unit(0.015, "npc")),
-            max.overlaps = Inf,
-            inherit.aes = FALSE
-          )
-      }
+      # Add plot enhancements (phase lines, target line, comments)
+      plot <- add_plot_enhancements(plot, qic_data, target_value, comment_data)
 
       return(list(plot = plot, qic_data = qic_data))
     },
@@ -535,7 +665,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       return(list(plot = plot, qic_data = NULL))
     },
     error_type = "processing"
-  )
+  ))
 }
 
 # PLOT STYLING ===============================================================

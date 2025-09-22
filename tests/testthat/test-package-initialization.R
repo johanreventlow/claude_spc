@@ -80,13 +80,29 @@ test_that("Initialization verification works correctly", {
 
   expect_type(verification, "list")
   expect_true("complete" %in% names(verification))
-  expect_true("missing_functions" %in% names(verification))
-  expect_true("missing_globals" %in% names(verification))
 
   # For a properly packaged app, verification should pass
   expect_type(verification$complete, "logical")
-  expect_type(verification$missing_functions, "character")
-  expect_type(verification$missing_globals, "character")
+
+  # missing_functions and missing_globals are only present if there are issues
+  if ("missing_functions" %in% names(verification)) {
+    expect_type(verification$missing_functions, "character")
+  }
+
+  if ("missing_globals" %in% names(verification)) {
+    expect_type(verification$missing_globals, "character")
+  }
+
+  # If initialization is complete, these fields may not exist (successful case)
+  if (verification$complete) {
+    # In successful initialization, missing arrays may be absent or empty
+    if ("missing_functions" %in% names(verification)) {
+      expect_equal(length(verification$missing_functions), 0)
+    }
+    if ("missing_globals" %in% names(verification)) {
+      expect_equal(length(verification$missing_globals), 0)
+    }
+  }
 })
 
 test_that("get_initialization_status_report() works", {
@@ -165,9 +181,7 @@ test_that("Performance optimizations work without file dependencies", {
   expect_true(optimizations$testing_config_set %||% FALSE)
   expect_true(optimizations$development_config_set %||% FALSE)
 
-  # Check that global variables were set
-  expect_true(exists("TEST_MODE_AUTO_LOAD"))
-  expect_true(exists("AUTO_RESTORE_ENABLED"))
-  expect_equal(TEST_MODE_AUTO_LOAD, TRUE)
-  expect_equal(AUTO_RESTORE_ENABLED, FALSE)
+  # Check that configuration values are accessible via package functions
+  expect_equal(get_test_mode_auto_load(), TRUE)
+  expect_equal(get_auto_restore_enabled(), FALSE)
 })
