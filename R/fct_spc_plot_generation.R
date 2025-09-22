@@ -8,145 +8,49 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Generate SPC plot with specified parameters
   log_debug(paste("generateSPCPlot:", chart_type, "|", nrow(data), "rows"), "SPC_CALC_DEBUG")
 
-  # Input validation
+  # Input validation and configuration sanitization
   validate_spc_inputs(data, config)
+  config <- sanitize_spc_config(config)
 
-  # Get title with detailed debugging
+  # Process chart title
   title_text <- process_chart_title(chart_title_reactive, config)
 
-  # Prepare data with defensive checking
+  # Extract X-axis data
+  x_data <- extract_x_axis_data(data, config$x_col)
 
-  # DEFENSIVE: Check for character(0) in config values
-  if (!is.null(config$x_col) && (length(config$x_col) == 0 || identical(config$x_col, character(0)))) {
-    config$x_col <- NULL
-  }
-  if (!is.null(config$y_col) && (length(config$y_col) == 0 || identical(config$y_col, character(0)))) {
-    stop("Y-kolonne kan ikke være character(0)")
-  }
-  if (!is.null(config$n_col) && (length(config$n_col) == 0 || identical(config$n_col, character(0)))) {
-    config$n_col <- NULL
-  }
-
-  x_data <- if (!is.null(config$x_col) && config$x_col %in% names(data)) data[[config$x_col]] else NULL
-
-  y_data_raw <- data[[config$y_col]]
-
-  # Handle different chart types
-
+  # Process data based on chart type
   if (!is.null(config$n_col) && config$n_col %in% names(data)) {
-    # Charts with numerator/denominator
-    taeller_raw <- y_data_raw
-    naevner_raw <- data[[config$n_col]]
+    # Ratio charts (with numerator/denominator)
+    data <- filter_complete_spc_data(data, config$y_col, config$n_col, config$x_col)
 
-    # Filter out rows with missing data BEFORE conversion
-    complete_rows <- !is.na(taeller_raw) & !is.na(naevner_raw) &
-      trimws(as.character(taeller_raw)) != "" &
-      trimws(as.character(naevner_raw)) != ""
+    # Parse and validate numeric data
+    parsed_data <- parse_and_validate_spc_data(
+      data[[config$y_col]],
+      data[[config$n_col]],
+      config$y_col,
+      config$n_col
+    )
 
-    if (!any(complete_rows)) {
-      stop("Ingen komplette datarækker fundet. Tjek at både tæller og nævner kolonner har gyldige værdier.")
-    }
+    # Get unit label
+    y_unit_label <- get_safe_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
 
-    # Filter data to complete rows only
-    data_filtered <- data[complete_rows, , drop = FALSE]
-
-    # PRESERVE POSIXct/Date formats: If x_col was POSIXct/Date, ensure it remains so after filtering
-    if (!is.null(config$x_col) && config$x_col %in% names(data)) {
-      original_x_class <- class(data[[config$x_col]])
-      filtered_x_class <- class(data_filtered[[config$x_col]])
-
-
-      # If original was POSIXct/Date but filtered lost the class, restore it
-      if (inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
-        !inherits(data_filtered[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
-
-        # Restore the original class attributes
-        data_filtered[[config$x_col]] <- data[[config$x_col]][complete_rows]
-        class(data_filtered[[config$x_col]]) <- original_x_class
-        attributes(data_filtered[[config$x_col]]) <- attributes(data[[config$x_col]])
-
-      }
-
-    }
-
-    taeller <- parse_danish_number(data_filtered[[config$y_col]])
-    naevner <- parse_danish_number(data_filtered[[config$n_col]])
-
-    # Check conversion success
-    if (any(is.na(taeller)) || any(is.na(naevner))) {
-      invalid_taeller <- sum(is.na(taeller))
-      invalid_naevner <- sum(is.na(naevner))
-      stop(paste(
-        "Kunne ikke konvertere numeriske værdier:",
-        if (invalid_taeller > 0) paste(invalid_taeller, "ugyldige tæller værdier"),
-        if (invalid_naevner > 0) paste(invalid_naevner, "ugyldige nævner værdier")
-      ))
-    }
-
-    # Check for zero denominators
-    if (any(naevner == 0)) {
-      stop("Nævner kan ikke være nul (division by zero)")
-    }
-
-    # Update data reference to filtered data
-    data <- data_filtered
-
-    # Get unit labels early - before they are used
-
-    x_unit_label <- ""
-    # DEFENSIVE: Check for character(0) before calling get_unit_label
-    if (length(y_axis_unit) == 0 || identical(y_axis_unit, character(0))) {
-      y_unit_label <- get_unit_label("count", Y_AXIS_UNITS_DA)
-    } else {
-      y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
-    }
-
-
-    # DEFENSIVE: Check config values before using in paste
-    y_col_safe <- if (is.null(config$y_col) || length(config$y_col) == 0 || identical(config$y_col, character(0))) "Y" else config$y_col
-    n_col_safe <- if (is.null(config$n_col) || length(config$n_col) == 0 || identical(config$n_col, character(0))) "N" else config$n_col
-
-    if (chart_type == "run") {
-      y_data <- (taeller / naevner) * 100
-      ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", y_col_safe, "/", n_col_safe, ") %")
-    } else if (chart_type %in% c("p", "pp", "u", "up")) {
-      y_data <- taeller
-      n_data <- naevner
-      ylab_text <- if (y_unit_label != "") y_unit_label else (if (chart_type %in% c("p", "pp")) "Proportion" else "Rate")
-    } else {
-      y_data <- (taeller / naevner) * 100
-      ylab_text <- if (y_unit_label != "") y_unit_label else paste("Rate (", y_col_safe, "/", n_col_safe, ") %")
-    }
+    # Calculate Y-axis data and generate label
+    y_data <- calculate_y_axis_data(chart_type, parsed_data$y_data, parsed_data$n_data)
+    n_data <- parsed_data$n_data  # Keep for qicharts2
+    ylab_text <- generate_y_axis_label(chart_type, y_unit_label, config$y_col, config$n_col)
   } else {
-    # Get unit labels early - before they are used
+    # Standard numeric charts (single value)
+    data <- filter_complete_spc_data(data, config$y_col, NULL, config$x_col)
 
-    x_unit_label <- ""
-    # DEFENSIVE: Check for character(0) before calling get_unit_label
-    if (length(y_axis_unit) == 0 || identical(y_axis_unit, character(0))) {
-      y_unit_label <- get_unit_label("count", Y_AXIS_UNITS_DA)
-    } else {
-      y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
-    }
+    # Parse and validate numeric data
+    parsed_data <- parse_and_validate_spc_data(data[[config$y_col]], NULL, config$y_col)
 
-    # Standard numeric data - filter out missing values first
-    complete_rows <- !is.na(y_data_raw) & trimws(as.character(y_data_raw)) != ""
+    # Get unit label and calculate Y-axis data
+    y_unit_label <- get_safe_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
+    y_data <- calculate_y_axis_data(chart_type, parsed_data$y_data)
+    ylab_text <- generate_y_axis_label(chart_type, y_unit_label, config$y_col)
 
-    if (!any(complete_rows)) {
-      stop(paste("Ingen gyldige værdier fundet i", config$y_col, "kolonnen. Tjek at kolonne indeholder numeriske værdier."))
-    }
-
-    # Filter data to complete rows only
-    # PRESERVE POSIXct/Date formats in non-ratio case too
-    if (!is.null(config$x_col) && config$x_col %in% names(data)) {
-      original_x_class <- class(data[[config$x_col]])
-    }
-
-    data_backup <- data # Keep reference to original data
-    data <- data[complete_rows, , drop = FALSE]
-
-    # Restore POSIXct/Date format if lost during filtering
-    if (!is.null(config$x_col) && config$x_col %in% names(data)) {
-      filtered_x_class <- class(data[[config$x_col]])
+    # Note: Data filtering handled by filter_complete_spc_data utility
 
       if (inherits(data_backup[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
         !inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
