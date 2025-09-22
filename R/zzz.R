@@ -30,26 +30,18 @@
 #' @noRd
 initialize_package_globals <- function() {
 
-  # Create package environment for globals
-  if (!exists("claudespc_globals", envir = parent.env(environment()))) {
-    claudespc_globals <- new.env(parent = emptyenv())
-    assign("claudespc_globals", claudespc_globals, envir = parent.env(environment()))
-  }
+  # Initialize branding configuration using safe getters
+  initialize_branding()
 
-  # Initialize hospital branding (from hospital_branding.R)
-  claudespc_globals$HOSPITAL_NAME <- "Bornholms Hospital"
-  claudespc_globals$HOSPITAL_LOGO_PATH <- "www/hospital_logo.png"
+  # Make branding available in global environment for backward compatibility
+  # These now use the safe getters instead of hardcoded values
+  assign("HOSPITAL_NAME", get_hospital_name(), envir = .GlobalEnv)
+  assign("HOSPITAL_LOGO_PATH", get_hospital_logo_path(), envir = .GlobalEnv)
+  assign("my_theme", get_bootstrap_theme(), envir = .GlobalEnv)
 
-  # Initialize theme (basic version - full theme will be loaded by UI)
-  claudespc_globals$my_theme <- bslib::bs_theme(
-    version = 5,
-    preset = "bootstrap"
-  )
-
-  # Make globals available in global environment for backward compatibility
-  assign("HOSPITAL_NAME", claudespc_globals$HOSPITAL_NAME, envir = .GlobalEnv)
-  assign("HOSPITAL_LOGO_PATH", claudespc_globals$HOSPITAL_LOGO_PATH, envir = .GlobalEnv)
-  assign("my_theme", claudespc_globals$my_theme, envir = .GlobalEnv)
+  # Also make hospital colors available for backward compatibility
+  assign("HOSPITAL_COLORS", get_hospital_colors(), envir = .GlobalEnv)
+  assign("HOSPITAL_THEME", get_hospital_ggplot_theme(), envir = .GlobalEnv)
 }
 
 #' Initialize logging system

@@ -13,14 +13,14 @@ app_ui <- function(request) {
     bslib::page_navbar(
       title = shiny::tagList(
         shiny::img(
-          src = HOSPITAL_LOGO_PATH,
+          src = get_hospital_logo_path(),
           height = "40px",
           style = "margin-right: 10px;",
           onerror = "this.style.display='none'"
         ),
         shiny::div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
       ),
-      theme = my_theme,
+      theme = get_bootstrap_theme(),
       navbar_options = bslib::navbar_options(theme = "light", underline = FALSE),
 
       # Header-komponenter
