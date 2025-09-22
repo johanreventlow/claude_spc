@@ -10,10 +10,10 @@ if (requireNamespace("claudespc", quietly = TRUE)) {
 } else {
   # Development mode - fall back to original global_packaged.R approach
   warning("claudespc package not found - falling back to source-based loading")
-  if (file.exists("global_packaged.R")) {
-    source("global_packaged.R")
+  if (file.exists("dev/global_packaged.R")) {
+    source("dev/global_packaged.R")
   } else {
-    stop("Neither claudespc package nor global_packaged.R found")
+    stop("Neither claudespc package nor dev/global_packaged.R found")
   }
 }
 
