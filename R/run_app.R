@@ -25,116 +25,38 @@
 #' run_app(launch_browser = TRUE, options = list(production_mode = TRUE))
 #' }
 #'
+#' @import shiny
+#' @import golem
+#' @importFrom golem with_golem_options
 #' @export
 run_app <- function(port = NULL,
                     launch_browser = NULL,
                     options = list(),
                     ...) {
-  # Golem-style options management
-  set_app_options(options)
 
-  # Ensure global configuration is loaded (needed for package entry point)
-  if (!exists("HOSPITAL_NAME", envir = .GlobalEnv) ||
-      !exists("my_theme", envir = .GlobalEnv) ||
-      !exists("HOSPITAL_LOGO_PATH", envir = .GlobalEnv)) {
-    source("global.R", local = FALSE)
-  }
-
-  # Server function now loaded globally for better performance
-  
-  # Setup static resource paths for Golem structure
-  # Use system.file() to ensure resources work after packaging
-  www_path <- system.file("app", "www", package = "claudespc")
-  if (www_path == "") {
-    # Fallback for development (package not installed)
-    www_path <- file.path("inst", "app", "www")
-  }
-  shiny::addResourcePath("www", www_path)
-  
-  # Create the Shiny app
-  app <- shiny::shinyApp(
-    ui = app_ui(),
-    server = app_server
+  # Create the Shiny app using golem pattern
+  app <- with_golem_options(
+    app = shinyApp(
+      ui = app_ui,
+      server = app_server
+    ),
+    golem_opts = options
   )
 
-  # Determine launch behavior using golem-style options and environment detection
-  browser_option <- if (is.null(launch_browser)) {
-    # Check golem-style options first
-    option_browser <- get_app_option("browser_launch", NULL)
-    if (!is.null(option_browser)) {
-      if (option_browser == "rstudio_viewer" && requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()) {
-        tryCatch({
-          .rs.invokeShinyWindowViewer
-        }, error = function(e) {
-          log_debug(paste("RStudio viewer not available, falling back to browser:", e$message), "APP_LAUNCH")
-          TRUE
-        })
-      } else if (option_browser == "browser") {
-        TRUE
-      } else {
-        FALSE
-      }
-    } else {
-      # Fall back to environment-aware detection
-      if (exists("is_prod_mode", mode = "function") && is_prod_mode()) {
-        # Production: Always use standard browser launch for stability
-        TRUE
-      } else if (exists("is_dev_mode", mode = "function") && is_dev_mode()) {
-        # Development: Use browser instead of RStudio viewer (midlertidigt ændret)
-        TRUE
-      } else {
-        # Other environments: use standard browser launch
-        TRUE
-      }
-    }
-  } else {
-    launch_browser
-  }
-
-  # Run the app
+  # Run the app with proper port and browser handling
   if (is.null(port)) {
     shiny::runApp(
       app,
-      launch.browser = browser_option
+      launch.browser = launch_browser %||% TRUE,
+      ...
     )
   } else {
     shiny::runApp(
       app,
       port = port,
-      launch.browser = browser_option
+      launch.browser = launch_browser %||% TRUE,
+      ...
     )
   }
 }
 
-#' Get the UI function
-#' @noRd
-app_ui <- function() {
-  # UI components now loaded globally for better performance
-
-  # Return the UI structure using consolidated functions
-  bslib::page_navbar(
-    title = shiny::tagList(
-      shiny::img(
-        src = HOSPITAL_LOGO_PATH,
-        height = "40px",
-        style = "margin-right: 10px;",
-        onerror = "this.style.display='none'"
-      ),
-      shiny::div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
-    ),
-    theme = my_theme,
-    navbar_options = bslib::navbar_options(theme = "light", underline = FALSE),
-
-    # Header-komponenter
-    header = create_ui_header(),
-
-    # Sidebar
-    sidebar = create_ui_sidebar(),
-
-    # Hovedindhold
-    bslib::nav_panel(
-      title = NULL,
-      create_ui_main_content()
-    )
-  )
-}
