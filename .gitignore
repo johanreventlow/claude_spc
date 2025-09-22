@@ -3,6 +3,13 @@
 .Rapp.history
 .RData
 .Ruserdata
+*.Rcheck/
+*.tar.gz
+.Rlibs/
+# Backup files
+*.bak
+*.backup
+*.broken
 # Shiny specific
 rsconnect/
 .secrets
@@ -10,9 +17,13 @@ rsconnect/
 data/*.csv
 data/*.xlsx
 data/*.rds
+inst/extdata/*.xlsx
+inst/extdata/*.csv
 # Logs
 *.log
 logs/
+tests/testthat/logs/
+shinylogs_*.json
 # OS specific
 .DS_Store
 Thumbs.db
