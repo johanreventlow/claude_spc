@@ -109,4 +109,4 @@ get_golem_config <- function(
     file = app_sys("golem-config.yml"),
     use_parent = use_parent
   )
-}# Hook test
+}
