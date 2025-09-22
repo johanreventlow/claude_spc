@@ -274,15 +274,32 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 
 * **Ingen ændring af globale konfigurationer** uden eksplicit godkendelse
 * Bevar **dansk interface** og **danske kommentarer**
-* Reference commit `f05a97f` som stabil baseline
 
 ### 6.2 Architecture Boundaries
 
-* `/R/modules/` – Shiny-moduler (visualisering, status mv.)
-* `/R/server/` – Server-logik
-* `/R/ui/` – UI-komponenter
-* `/R/data/` – Eksempeldata og testfiler
+**R/ directory structure (flat organization med prefix-baseret gruppering):**
+
+* `app_*.R` – App initialization, configuration og main server logic
+* `config_*.R` – Konfigurationsfiler (chart types, branding, system config)
+* `core_*.R` – Centrale algoritmer og hjælpefunktioner
+* `fct_*.R` – Business logic funktioner (autodetect, file operations, SPC plot generation)
+* `modules_*.R` – Shiny moduler (UI og server components)
+* `server_*.R` – Server utilities og management funktioner
+* `ui_*.R` – UI components, helpers og update logic
+* `utils_*.R` – Utility funktioner (debugging, error handling, performance)
+* `state_management.R` – Centraliseret state management
+* `logging.R` – Logging system
+* `run_app.R` – App launcher
+* `golem_utils.R` – Golem framework utilities
+
+**Data og tests:**
+* `/R/data/` – Eksempeldata og testfiler (CSV, Excel)
 * `/tests/testthat/` – Test suites og fixtures
+
+**Naming conventions:**
+- Funktioner: snake_case (engelsk)
+- Kommentarer: dansk
+- Fil-præfikser angiver funktionel gruppering
 
 ### 6.3 Constraints & Forbidden Changes
 
