@@ -108,7 +108,7 @@ get_log_level <- function() {
 
 # intern hjælper (ikke-eksporteret)
 .safe_collapse <- function(args_list) {
-  parts <- lapply(args_list, .safe_format)
+  parts <- purrr::map(args_list, .safe_format)
   paste(unlist(parts, use.names = FALSE), collapse = " ")
 }
 

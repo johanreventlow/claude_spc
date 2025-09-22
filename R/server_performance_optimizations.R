@@ -142,7 +142,7 @@ create_data_signature <- function(data) {
     nrow = nrow(data),
     ncol = ncol(data),
     column_names = names(data),
-    column_types = sapply(data, function(x) class(x)[1]),
+    column_types = purrr::map_chr(data, ~ class(.x)[1]),
     sample_hash = digest::digest(utils::head(data, 10))
   )
 

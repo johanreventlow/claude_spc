@@ -335,9 +335,9 @@ create_date_utilities <- function() {
 
 create_string_utilities <- function() {
   list(
-    clean_column_names = function(names) gsub("[^A-Za-z0-9_]", "_", names),
-    normalize_text = function(text) trimws(tolower(text)),
-    extract_numbers = function(text) as.numeric(gsub("[^0-9.,]", "", text))
+    clean_column_names = function(names) stringr::str_replace_all(names, "[^A-Za-z0-9_]", "_"),
+    normalize_text = function(text) stringr::str_trim(stringr::str_to_lower(text)),
+    extract_numbers = function(text) as.numeric(stringr::str_replace_all(text, "[^0-9.,]", ""))
   )
 }
 

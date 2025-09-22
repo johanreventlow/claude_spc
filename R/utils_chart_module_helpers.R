@@ -121,12 +121,15 @@ create_module_data_manager <- function(app_state) {
           hide_anhoej_rules_check <- shiny::isolate(app_state$ui$hide_anhoej_rules)
           attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
 
-          # Filter non-empty rows
-          non_empty_rows <- apply(data, 1, function(row) any(!is.na(row)))
+          # Filter non-empty rows using tidyverse approach
+          filtered_data <- data |>
+            dplyr::filter(!dplyr::if_all(dplyr::everything(), ~ is.na(.x)))
 
-          if (any(non_empty_rows)) {
-            filtered_data <- data[non_empty_rows, ]
-            attr(filtered_data, "hide_anhoej_rules") <- hide_anhoej_rules_check
+          # Preserve attributes
+          attr(filtered_data, "hide_anhoej_rules") <- hide_anhoej_rules_check
+
+          # Return filtered data, or original if no rows remain
+          if (nrow(filtered_data) > 0) {
             return(filtered_data)
           } else {
             attr(data, "hide_anhoej_rules") <- hide_anhoej_rules_check
