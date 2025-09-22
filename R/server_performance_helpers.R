@@ -51,12 +51,7 @@ appears_date <- function(x) {
   )
 
   # Check pattern matches
-  pattern_matches <- 0
-  for (pattern in date_patterns) {
-    if (any(grepl(pattern, sample_data))) {
-      pattern_matches <- pattern_matches + 1
-    }
-  }
+  pattern_matches <- purrr::map_int(date_patterns, ~ sum(grepl(.x, sample_data))) %>% sum()
 
   # Also try actual date parsing
   suppressWarnings({
@@ -107,18 +102,20 @@ parse_danish_date_vectorized <- function(x) {
 
   result <- rep(as.Date(NA), length(x))
 
-  for (format in date_formats) {
-    if (all(!is.na(result))) break  # All dates parsed successfully
+  # Use purrr::reduce to iteratively parse dates with different formats
+  result <- purrr::reduce(date_formats, function(acc, format) {
+    if (all(!is.na(acc))) return(acc)  # All dates parsed successfully
 
-    missing_indices <- is.na(result)
+    missing_indices <- is.na(acc)
     if (any(missing_indices)) {
       suppressWarnings({
         parsed <- as.Date(x[missing_indices], format = format)
         success_indices <- !is.na(parsed)
-        result[missing_indices][success_indices] <- parsed[success_indices]
+        acc[missing_indices][success_indices] <- parsed[success_indices]
       })
     }
-  }
+    acc
+  }, .init = result)
 
   return(result)
 }
@@ -134,7 +131,7 @@ ensure_standard_columns <- function(data) {
   if (is.null(data) || nrow(data) == 0) return(data)
 
   # Remove any completely empty columns
-  empty_columns <- sapply(data, function(col) all(is.na(col) | col == ""))
+  empty_columns <- purrr::map_lgl(data, ~ all(is.na(.x) | .x == ""))
   if (any(empty_columns)) {
     data <- data[!empty_columns]
   }
@@ -199,17 +196,22 @@ safe_date_parse <- function(date_vector) {
     "%d/%m/%y"     # DD/MM/YY
   )
 
-  for (fmt in formats) {
-    tryCatch(
-      {
-        parsed <- as.Date(date_vector, format = fmt)
-        if (sum(!is.na(parsed)) > 0) {
-          return(parsed)
-        }
-      },
-      error = function(e) {
-        # Continue to next format
-      })
+  # Try each format and return first successful parse
+  result <- purrr::map(formats, ~ tryCatch(
+    {
+      parsed <- as.Date(date_vector, format = .x)
+      if (sum(!is.na(parsed)) > 0) {
+        return(parsed)
+      } else {
+        return(NULL)
+      }
+    },
+    error = function(e) NULL)) %>%
+    purrr::discard(is.null) %>%
+    purrr::pluck(1)
+
+  if (!is.null(result)) {
+    return(result)
   }
 
   # If all formats fail, try automatic parsing
