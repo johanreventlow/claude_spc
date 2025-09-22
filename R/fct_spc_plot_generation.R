@@ -46,18 +46,12 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   }
 
   x_data <- if (!is.null(config$x_col) && config$x_col %in% names(data)) data[[config$x_col]] else NULL
-  log_debug(paste("x_data extracted:", if(is.null(x_data)) "NULL" else paste("length=", length(x_data))), "SPC_CALC_DEBUG")
 
   y_data_raw <- data[[config$y_col]]
-  log_debug(paste("y_data_raw extracted:", if(is.null(y_data_raw)) "NULL" else paste("length=", length(y_data_raw))), "SPC_CALC_DEBUG")
 
   # Handle different chart types
-  log_debug("Checking chart type routing...", "SPC_CALC_DEBUG")
-  log_debug(paste("n_col check - config$n_col:", if(is.null(config$n_col)) "NULL" else paste("'", config$n_col, "'", sep="")), "SPC_CALC_DEBUG")
-  log_debug(paste("n_col exists in data:", if(is.null(config$n_col)) "N/A" else (config$n_col %in% names(data))), "SPC_CALC_DEBUG")
 
   if (!is.null(config$n_col) && config$n_col %in% names(data)) {
-    log_debug("✓ Using numerator/denominator chart type (ratio calculations)", "SPC_CALC_DEBUG")
     # Charts with numerator/denominator
     taeller_raw <- y_data_raw
     naevner_raw <- data[[config$n_col]]
@@ -79,22 +73,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       original_x_class <- class(data[[config$x_col]])
       filtered_x_class <- class(data_filtered[[config$x_col]])
 
-      log_debug(paste("DATA FILTERING DEBUG:\n- Original", config$x_col, "class:", original_x_class[1], "\n- Filtered", config$x_col, "class:", filtered_x_class[1]), "DATA_FILTER")
 
       # If original was POSIXct/Date but filtered lost the class, restore it
       if (inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
         !inherits(data_filtered[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
-        log_debug(paste("- RESTORING: Filtered data lost", original_x_class[1], "format, restoring..."), "DATA_FILTER")
 
         # Restore the original class attributes
         data_filtered[[config$x_col]] <- data[[config$x_col]][complete_rows]
         class(data_filtered[[config$x_col]]) <- original_x_class
         attributes(data_filtered[[config$x_col]]) <- attributes(data[[config$x_col]])
 
-        log_debug(paste("- ✓ RESTORED:", config$x_col, "to", class(data_filtered[[config$x_col]])[1]), "DATA_FILTER")
       }
 
-      log_debug(paste("- Original sample:", paste(head(data[[config$x_col]], 3), collapse = ", "), "\n- Filtered sample:", paste(head(data_filtered[[config$x_col]], 3), collapse = ", ")), "DATA_FILTER")
     }
 
     taeller <- parse_danish_number(data_filtered[[config$y_col]])
@@ -120,18 +110,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     data <- data_filtered
 
     # Get unit labels early - before they are used
-    log_debug("Processing unit labels...", "SPC_CALC_DEBUG")
-    log_debug(paste("y_axis_unit received:", if(is.null(y_axis_unit)) "NULL" else paste("'", y_axis_unit, "' (length:", length(y_axis_unit), ")", sep="")), "SPC_CALC_DEBUG")
 
     x_unit_label <- ""
     # DEFENSIVE: Check for character(0) before calling get_unit_label
     if (length(y_axis_unit) == 0 || identical(y_axis_unit, character(0))) {
-      log_debug("⚠️ y_axis_unit is character(0) - using default 'count'", "SPC_CALC_DEBUG")
       y_unit_label <- get_unit_label("count", Y_AXIS_UNITS_DA)
     } else {
       y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
     }
-    log_debug(paste("y_unit_label result:", if(is.null(y_unit_label)) "NULL" else paste("'", y_unit_label, "'", sep="")), "SPC_CALC_DEBUG")
 
     log_debug("Building y_data and ylab_text...", "SPC_CALC_DEBUG")
     log_debug(paste("chart_type:", chart_type), "SPC_CALC_DEBUG")
@@ -166,18 +152,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     log_debug("✅ y_data and ylab_text processing completed", "SPC_CALC_DEBUG")
   } else {
     # Get unit labels early - before they are used
-    log_debug("Processing unit labels...", "SPC_CALC_DEBUG")
-    log_debug(paste("y_axis_unit received:", if(is.null(y_axis_unit)) "NULL" else paste("'", y_axis_unit, "' (length:", length(y_axis_unit), ")", sep="")), "SPC_CALC_DEBUG")
 
     x_unit_label <- ""
     # DEFENSIVE: Check for character(0) before calling get_unit_label
     if (length(y_axis_unit) == 0 || identical(y_axis_unit, character(0))) {
-      log_debug("⚠️ y_axis_unit is character(0) - using default 'count'", "SPC_CALC_DEBUG")
       y_unit_label <- get_unit_label("count", Y_AXIS_UNITS_DA)
     } else {
       y_unit_label <- get_unit_label(y_axis_unit, Y_AXIS_UNITS_DA)
     }
-    log_debug(paste("y_unit_label result:", if(is.null(y_unit_label)) "NULL" else paste("'", y_unit_label, "'", sep="")), "SPC_CALC_DEBUG")
 
     # Standard numeric data - filter out missing values first
     complete_rows <- !is.na(y_data_raw) & trimws(as.character(y_data_raw)) != ""
@@ -239,7 +221,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     # Sanitize column name for cache key (remove problematic characters)
     gsub("[^a-zA-Z0-9_]", "_", as.character(config$x_col)[1])
   }
-  log_debug(paste("Safe X column ID for cache:", safe_x_col_id), "SPC_CALC_DEBUG")
 
   cache_key <- paste0("x_validation_", safe_x_col_id, "_", substr(data_hash, 1, 20))
 
@@ -251,8 +232,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   #   if (x_validation$is_date) "Dato" else "Observation"
   # }
 
-  # DEBUG: Log x-validation results
-  log_debug(paste("=== X-VALIDATION DEBUG ===\nx_col:", config$x_col, "\nx_data class:", class(x_data)[1], "\nx_data sample:", paste(head(x_data, 3), collapse = ", "), "\nis_date:", x_validation$is_date, "\nx.period:", x_validation$x.period, "\nx.format:", x_validation$x.format, "\n========================"), "X_VALIDATION")
 
   # Handle phases and freeze configuration
   phase_freeze_config <- process_phase_freeze_config(data, show_phases, skift_column, frys_column)

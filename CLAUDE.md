@@ -252,6 +252,7 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 * Ingen ændringer af `brand.yml` eller hospitalskonfiguration
 * Ingen nye dependencies uden godkendelse
 * Bevar eksisterende API'er medmindre opgaven kræver andet
+* **ALDRIG ændre NAMESPACE filen** – R pakke namespace skal forblive uændret
 
 ---
 

@@ -2,7 +2,7 @@
 # Tests for cross-component reactive dependencies og data flow
 
 # Source required functions
-source("../../R/server/utils_session_helpers.R")
+source("../../R/server_utils_session_helpers.R")
 
 # Cross-Component Reactive Dependencies Tests
 

@@ -25,6 +25,12 @@ req <- shiny::req
 # Naviger til projekt rod og load global.R
 project_root <- here::here()
 
+# Sørg for at lokale pakkeinstallationer i .Rlibs opdages først
+local_lib <- file.path(project_root, ".Rlibs")
+if (dir.exists(local_lib)) {
+  .libPaths(c(local_lib, .libPaths()))
+}
+
 # Skift working directory midlertidigt til project root for at loade global.R korrekt
 old_wd <- getwd()
 on.exit(setwd(old_wd))

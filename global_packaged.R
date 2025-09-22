@@ -37,6 +37,24 @@ if (!exists("log_error")) {
   log_error <- claudespc:::log_error
 }
 
+# UI COMPONENTS --------------------------------
+# Import UI functions from subdirectories using ::: notation
+if (!exists("create_ui_sidebar")) {
+  create_ui_sidebar <- claudespc:::create_ui_sidebar
+}
+
+if (!exists("create_ui_header")) {
+  create_ui_header <- claudespc:::create_ui_header
+}
+
+if (!exists("create_ui_main_content")) {
+  create_ui_main_content <- claudespc:::create_ui_main_content
+}
+
+if (!exists("create_welcome_page")) {
+  create_welcome_page <- claudespc:::create_welcome_page
+}
+
 # RUNTIME CONFIGURATION --------------------------------
 # Initialize runtime configuration (now handled by package .onLoad)
 # But we may need to call it explicitly in some contexts

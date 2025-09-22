@@ -4,7 +4,7 @@
 \alias{\%||\%}
 \title{Null-coalescing operator}
 \usage{
-a \%||\% b
+x \%||\% y
 }
 \arguments{
 \item{x}{Left-hand side value}

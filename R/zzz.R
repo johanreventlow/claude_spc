@@ -128,6 +128,7 @@ initialize_package_globals <- function() {
   assign("HOSPITAL_NAME", claudespc_env$HOSPITAL_NAME, envir = .GlobalEnv)
   assign("my_theme", claudespc_env$my_theme, envir = .GlobalEnv)
   assign("HOSPITAL_LOGO_PATH", claudespc_env$HOSPITAL_LOGO_PATH, envir = .GlobalEnv)
+  assign("HOSPITAL_COLORS", claudespc_env$HOSPITAL_COLORS, envir = .GlobalEnv)
 }
 
 #' Initialize logging system

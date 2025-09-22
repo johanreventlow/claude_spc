@@ -16,44 +16,28 @@ main_app_server <- function(input, output, session) {
   session_debugger <- debug_session_lifecycle(session$token, session)
   session_debugger$event("server_initialization")
 
-  log_debug("===========================================", "APP_SERVER")
-  log_debug("Starting main server function", "APP_SERVER")
-  log_debug(paste("Session ID:", session$token), "APP_SERVER")
+  log_debug(paste("Server starting - Session ID:", session$token), "APP_SERVER")
 
   debug_log("SPC App server initialization started", "SESSION_LIFECYCLE",
             level = "INFO", session_id = session$token)
 
   # Server components now loaded globally in global.R for better performance
-  log_debug("Server components loaded from global.R", "APP_SERVER")
 
   # Centralized state management using unified app_state architecture
-  log_debug("Initializing centralized app state...", "APP_SERVER")
-  debug_log("Creating centralized app_state", "SESSION_LIFECYCLE", level = "TRACE", session_id = session$token)
   app_state <- create_app_state()
-  log_debug("⭐⭐⭐ create_app_state() COMPLETED SUCCESSFULLY ⭐⭐⭐", "APP_SERVER")
-  log_debug("✅ Centralized state initialized", "APP_SERVER")
   session_debugger$event("centralized_state_initialized")
-  log_debug("⭐⭐⭐ session_debugger event COMPLETED ⭐⭐⭐", "APP_SERVER")
 
   # EVENT SYSTEM: Initialize reactive event bus
-  log_debug("==========================================", "APP_SERVER")
-  log_debug("Creating event emit API...", "APP_SERVER")
-  log_debug("About to create emit API", "APP_SERVER")
   emit <- create_emit_api(app_state)
-  log_debug("✅ Emit API created successfully", "APP_SERVER")
-  log_debug("✅ Event system initialized", "APP_SERVER")
+  log_debug("Event system initialized", "APP_SERVER")
 
   # UI SERVICE: Initialize centralized UI update service
-  log_debug("Creating UI update service...", "APP_SERVER")
-  log_debug("About to create UI service", "APP_SERVER")
   ui_service <- create_ui_update_service(session, app_state)
-  log_debug("✅ UI service created successfully", "APP_SERVER")
-  log_debug("✅ UI update service initialized", "APP_SERVER")
+  log_debug("UI update service initialized", "APP_SERVER")
 
 
   # SHINYLOGS: Setup advanced web-based logging (if enabled)
   if (should_enable_shinylogs()) {
-    log_debug("Setting up shinylogs advanced logging...", "APP_SERVER")
     setup_shinylogs(
       enable_tracking = TRUE,
       enable_errors = TRUE,
@@ -65,56 +49,31 @@ main_app_server <- function(input, output, session) {
       app_name = "SPC_Analysis_Tool"
     )
     # integrate_shinylogs_with_logging(session)  # Disabled - causes conflicts
-    log_info("✅ shinylogs advanced logging activated", "APP_SERVER")
-  } else {
-    log_debug("shinylogs disabled via environment variable", "APP_SERVER")
+    log_info("shinylogs advanced logging activated", "APP_SERVER")
   }
 
   # EVENT SYSTEM: Set up reactive event listeners AFTER shinylogs setup
-  log_debug("Line 94 executed - about to start event system setup", "DEBUG")
-  safe_operation(
-    "Log event system setup start",
-    code = {
-      log_debug("🔧 Starting event system setup...", "APP_SERVER")
-    },
-    fallback = function(e) {
-      log_error(paste("ERROR in log_debug at line 95:", e$message), "APP_SERVER")
-    },
-    error_type = "processing"
-  )
 
   # SESSION FLAG: Prevent duplicate event listener registration
-  log_debug("🔧 Checking app_state$system exists...", "APP_SERVER")
-
   # Initialize event listeners setup flag in infrastructure state to prevent double registration
   safe_operation(
     "Initialize event listeners setup flag",
     code = {
-      log_debug("🔧 Checking event_listeners_setup flag...", "APP_SERVER")
       if (is.null(app_state$infrastructure$event_listeners_setup)) {
-        log_debug("🔧 Setting event_listeners_setup = FALSE", "APP_SERVER")
         app_state$infrastructure$event_listeners_setup <- FALSE
       }
-      log_debug("🔧 Event listeners setup flag initialized successfully", "APP_SERVER")
     },
     fallback = function(e) {
-      log_debug(paste("❌ ERROR initializing event_listeners_setup flag:", e$message), "APP_SERVER")
-      print(e)
+      log_error(paste("ERROR initializing event_listeners_setup flag:", e$message), "APP_SERVER")
     },
     error_type = "processing"
   )
 
-  log_debug("==========================================", "APP_SERVER")
-  log_debug("About to set up event listeners AFTER shinylogs", "APP_SERVER")
-  log_debug("Setting up event listeners with all required dependencies...", "APP_SERVER")
   safe_operation(
     "Setup event listeners",
     code = {
-      log_debug("About to call setup_event_listeners...", "DEBUG")
       setup_event_listeners(app_state, emit, input, output, session, ui_service)
-      log_debug("setup_event_listeners call completed", "DEBUG")
       app_state$infrastructure$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
-      log_debug("Event listeners setup flag set to TRUE", "DEBUG")
     },
     fallback = function(e) {
       log_error(paste("ERROR in setup_event_listeners:", e$message), "APP_SERVER")
@@ -181,7 +140,7 @@ main_app_server <- function(input, output, session) {
       })
     }, delay = cleanup_interval_minutes * 60)  # Initial delay
 
-    log_debug(paste("✅ Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), "APP_SERVER")
+    log_debug(paste("Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), "APP_SERVER")
   } else {
     log_warn("later package not available - background cleanup disabled", "APP_SERVER")
   }
@@ -196,23 +155,17 @@ main_app_server <- function(input, output, session) {
         # Check if session is still active before continuing
         session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
         if (session_check) {
-          log_debug("📊 Stopping periodic reporting - session ended", "PERFORMANCE_MONITOR")
           return()
         }
-
-        log_debug("📊 Generating periodic performance report", "PERFORMANCE_MONITOR")
         safe_operation(
           "Performance report generation",
           code = {
             report <- get_performance_report(app_state)
-            log_debug("=== PERIODIC PERFORMANCE REPORT ===", "PERFORMANCE_MONITOR")
             log_debug(report$formatted_text, "PERFORMANCE_MONITOR")
 
             # Check if system needs attention
             if (report$health_status == "WARNING") {
               log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
-            } else if (report$health_status == "CAUTION") {
-              log_debug(paste("System health CAUTION - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
             }
           },
           fallback = NULL,
@@ -234,14 +187,12 @@ main_app_server <- function(input, output, session) {
       })
     }, delay = report_interval_minutes * 60)  # Initial delay
 
-    log_debug(paste("✅ Performance monitoring scheduled every", report_interval_minutes, "minutes"), "APP_SERVER")
+    log_debug(paste("Performance monitoring scheduled every", report_interval_minutes, "minutes"), "APP_SERVER")
   }
 
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
-  log_debug("Checking TEST_MODE configuration...", "APP_SERVER")
   test_mode_auto_load <- get_test_mode_auto_load()
-  log_debug(paste("TEST_MODE_AUTO_LOAD:", test_mode_auto_load), "APP_SERVER")
 
   debug_log("Checking TEST_MODE configuration", "SESSION_LIFECYCLE", level = "TRACE",
             context = list(
@@ -252,12 +203,9 @@ main_app_server <- function(input, output, session) {
   if (test_mode_auto_load) {
     # Start workflow tracer for auto-load process
     autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, session$token)
-    log_debug(paste("🔄 Attempting auto-load with TEST_MODE_AUTO_LOAD =", test_mode_auto_load), "TEST_MODE")
     test_file_path <- get_test_mode_file_path()
-    log_debug(paste("Test file path:", test_file_path %||% "UNDEFINED"), "TEST_MODE")
 
     if (!is.null(test_file_path) && file.exists(test_file_path)) {
-      log_debug("✅ Test file found, starting auto-load...", "TEST_MODE")
       autoload_tracer$step("file_validation_complete")
 
       safe_operation(
@@ -356,7 +304,6 @@ main_app_server <- function(input, output, session) {
   ## Kolonne management logik
   # Pass centralized state to column management via unified event system
   setup_column_management(input, output, session, app_state, emit)
-  log_debug("Column management setup completed with unified event system", .context = "APP_SERVER")
 
   ## Visualiserings logik
   visualization <- setup_visualization(input, output, session, app_state)
@@ -369,9 +316,7 @@ main_app_server <- function(input, output, session) {
 
   # FASE 3: Emit session_started event for name-only detection
   shiny::observeEvent(shiny::reactive(TRUE), {
-    log_debug("Session started, emitting session_started event", "SESSION_LIFECYCLE")
     emit$session_started()
-    log_debug("✅ Session started event emitted", "SESSION_LIFECYCLE")
   }, once = TRUE, ignoreInit = FALSE)
 
   # TEST MODE: Emit test_mode_ready event AFTER all observers are set up
@@ -381,9 +326,7 @@ main_app_server <- function(input, output, session) {
       current_data_check <- app_state$data$current_data
 
       if (!is.null(current_data_check)) {
-        log_debug("Test data loaded, emitting test_mode_ready event", "TEST_MODE")
         emit$test_mode_ready()
-        log_debug("✅ Test mode ready event emitted", "TEST_MODE")
       }
     }) |> bindEvent({
       # Unified state: Use centralized state for reactive triggers
@@ -394,9 +337,7 @@ main_app_server <- function(input, output, session) {
   # Initial UI Setup --------------------------------------------------------
   # Sæt standard chart_type når appen starter
   shiny::observe({
-    log_debug("Setting initial chart_type to 'run'", "APP_SERVER")
     shiny::updateSelectizeInput(session, "chart_type", selected = "run")
-    log_debug("✅ Initial chart_type set", "APP_SERVER")
   }) |> bindEvent(TRUE, once = TRUE)
 
   # Session Cleanup ---------------------------------------------------------
@@ -409,7 +350,6 @@ main_app_server <- function(input, output, session) {
     if (!is.null(app_state$infrastructure)) {
       app_state$infrastructure$session_active <- FALSE
       app_state$infrastructure$background_tasks_active <- FALSE
-      log_debug("🔄 Background tasks stopped", "SESSION_LIFECYCLE")
     }
     if (!is.null(app_state$session)) {
       app_state$session$cleanup_initiated <- TRUE
@@ -425,11 +365,10 @@ main_app_server <- function(input, output, session) {
         if (!is.null(app_state$ui)) {
           app_state$ui$updating_programmatically <- FALSE
           app_state$ui$flag_reset_scheduled <- TRUE
-          log_debug("LOOP_PROTECTION: Flags cleared during session cleanup", .context = "SESSION_CLEANUP")
         }
       },
       fallback = function(e) {
-        log_debug(paste("Session cleanup: Could not clear loop protection flags:", e$message), .context = "SESSION_CLEANUP")
+        log_error(paste("Session cleanup: Could not clear loop protection flags:", e$message), "SESSION_CLEANUP")
       },
       error_type = "processing"
     )
@@ -439,7 +378,7 @@ main_app_server <- function(input, output, session) {
     session_lifecycle_result <- session_debugger$complete()
 
     # Log session statistics
-    log_info(paste("Session afsluttet - Observer count:", obs_manager$count()), "APP_SERVER")
+    log_info(paste("Session ended - Observer count:", obs_manager$count()), "APP_SERVER")
     debug_log("Session ended successfully", "SESSION_LIFECYCLE", level = "INFO",
               context = list(
                 session_duration = round(session_lifecycle_result$total_duration, 3),

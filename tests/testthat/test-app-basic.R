@@ -2,11 +2,19 @@
 # Grundlæggende tests af SPC app funktionalitet
 
 test_that("App kan starte uden fejl", {
+  skip_if_not_installed("shinytest2") # Require shinytest2 for AppDriver
   skip_on_ci() # Skip på CI servere uden browser
   
-  # Midlertidig deaktivering af TEST_MODE for controlled testing
-  old_test_mode <- TEST_MODE_AUTO_LOAD
-  assign("TEST_MODE_AUTO_LOAD", FALSE, envir = .GlobalEnv)
+  # Midlertidigt deaktivér TEST_MODE via miljøvariabel for kontrollerede tests
+  old_test_mode <- Sys.getenv("TEST_MODE_AUTO_LOAD", unset = NA_character_)
+  Sys.setenv(TEST_MODE_AUTO_LOAD = "FALSE")
+  on.exit({
+    if (is.na(old_test_mode)) {
+      Sys.unsetenv("TEST_MODE_AUTO_LOAD")
+    } else {
+      Sys.setenv(TEST_MODE_AUTO_LOAD = old_test_mode)
+    }
+  }, add = TRUE)
   
   app <- AppDriver$new(
     app_dir = "../..", # Peg til rod af project
@@ -27,17 +35,22 @@ test_that("App kan starte uden fejl", {
     grepl("navbar|SPC|Upload|indicator", page_html, ignore.case = TRUE)
   )
   
-  # Gendan TEST_MODE
-  assign("TEST_MODE_AUTO_LOAD", old_test_mode, envir = .GlobalEnv)
-  
   app$stop()
 })
 
 test_that("Velkomstside vises korrekt", {
+  skip_if_not_installed("shinytest2") # Require shinytest2 for AppDriver
   skip_on_ci()
   
-  old_test_mode <- TEST_MODE_AUTO_LOAD
-  assign("TEST_MODE_AUTO_LOAD", FALSE, envir = .GlobalEnv)
+  old_test_mode <- Sys.getenv("TEST_MODE_AUTO_LOAD", unset = NA_character_)
+  Sys.setenv(TEST_MODE_AUTO_LOAD = "FALSE")
+  on.exit({
+    if (is.na(old_test_mode)) {
+      Sys.unsetenv("TEST_MODE_AUTO_LOAD")
+    } else {
+      Sys.setenv(TEST_MODE_AUTO_LOAD = old_test_mode)
+    }
+  }, add = TRUE)
   
   app <- AppDriver$new(
     app_dir = "../..",
@@ -51,6 +64,5 @@ test_that("Velkomstside vises korrekt", {
     grepl("SPC|Upload|Velkommen", page_content, ignore.case = TRUE)
   )
   
-  assign("TEST_MODE_AUTO_LOAD", old_test_mode, envir = .GlobalEnv)
   app$stop()
 })
