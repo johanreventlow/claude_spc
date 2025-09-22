@@ -338,15 +338,15 @@ verify_critical_dependencies <- function() {
 get_dependency_status_report <- function() {
   loaded_packages <- (.packages())
 
-  report <- data.frame(
+  # Create report using tidyverse approach
+  report <- tibble::tibble(
     package = loaded_packages,
-    version = sapply(loaded_packages, function(pkg) {
-      tryCatch(as.character(packageVersion(pkg)), error = function(e) "unknown")
+    version = purrr::map_chr(loaded_packages, ~ {
+      tryCatch(as.character(packageVersion(.x)), error = function(e) "unknown")
     }),
-    namespace_available = sapply(loaded_packages, function(pkg) {
-      requireNamespace(pkg, quietly = TRUE)
-    }),
-    stringsAsFactors = FALSE
+    namespace_available = purrr::map_lgl(loaded_packages, ~ {
+      requireNamespace(.x, quietly = TRUE)
+    })
   )
 
   return(report)

@@ -141,66 +141,47 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
 
   col_names_lower <- tolower(col_names)
 
+  # Helper function for pattern-based column detection
+  find_column_by_patterns <- function(patterns, col_names, col_names_lower) {
+    patterns |>
+      purrr::detect(~ {
+        matched_idx <- which(grepl(.x, col_names_lower, ignore.case = TRUE))
+        length(matched_idx) > 0
+      }) |>
+      (\(pattern) {
+        if (!is.null(pattern)) {
+          matched_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
+          col_names[matched_idx[1]]
+        } else {
+          NULL
+        }
+      })()
+  }
+
   # X-column (date/time detection) - Enhanced time-specific patterns
   dato_patterns <- c("dato", "date", "tid", "time", "år", "year", "måned", "month",
                      "uge", "week", "dag", "day", "periode", "period", "kvartal", "quarter",
                      "jan", "feb", "mar", "apr", "maj", "jun",
                      "jul", "aug", "sep", "okt", "nov", "dec")
-  for (pattern in dato_patterns) {
-    dato_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(dato_idx) > 0) {
-      x_col <- col_names[dato_idx[1]]
-      break
-    }
-  }
+  x_col <- find_column_by_patterns(dato_patterns, col_names, col_names_lower)
 
   # Y-column (count patterns)
   count_patterns <- c("tæller", "tael", "num", "count", "værdi", "value", "antal")
-  for (pattern in count_patterns) {
-    count_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(count_idx) > 0) {
-      y_col <- col_names[count_idx[1]]
-      break
-    }
-  }
+  y_col <- find_column_by_patterns(count_patterns, col_names, col_names_lower)
 
   # N-column (denominator patterns)
   denom_patterns <- c("nævner", "naev", "denom", "total", "samlet")
-  for (pattern in denom_patterns) {
-    denom_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(denom_idx) > 0) {
-      n_col <- col_names[denom_idx[1]]
-      break
-    }
-  }
+  n_col <- find_column_by_patterns(denom_patterns, col_names, col_names_lower)
 
   # Special columns
   skift_patterns <- c("skift", "shift", "ugedag", "weekday")
-  for (pattern in skift_patterns) {
-    skift_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(skift_idx) > 0) {
-      skift_col <- col_names[skift_idx[1]]
-      break
-    }
-  }
+  skift_col <- find_column_by_patterns(skift_patterns, col_names, col_names_lower)
 
   frys_patterns <- c("frys", "freeze", "frossen", "frozen")
-  for (pattern in frys_patterns) {
-    frys_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(frys_idx) > 0) {
-      frys_col <- col_names[frys_idx[1]]
-      break
-    }
-  }
+  frys_col <- find_column_by_patterns(frys_patterns, col_names, col_names_lower)
 
   comment_patterns <- c("kommentar", "comment", "note", "bemærkning")
-  for (pattern in comment_patterns) {
-    comment_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(comment_idx) > 0) {
-      kommentar_col <- col_names[comment_idx[1]]
-      break
-    }
-  }
+  kommentar_col <- find_column_by_patterns(comment_patterns, col_names, col_names_lower)
 
   # Compile results
   results <- list(
@@ -253,12 +234,13 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
   # 1. ROBUST DATE DETECTION using lubridate
   date_candidates <- detect_date_columns_robust(data)
 
-  # Choose best date column based on detection confidence
+  # Choose best date column based on detection confidence using tidyverse
   best_date_col <- NULL
   if (length(date_candidates) > 0) {
     # Sort by score and take highest confidence
-    sorted_dates <- date_candidates[order(sapply(date_candidates, function(x) x$score), decreasing = TRUE)]
-    best_date_col <- names(sorted_dates)[1]
+    best_date_col <- date_candidates |>
+      purrr::map_dbl(~ .x$score) |>
+      (\(scores) names(date_candidates)[which.max(scores)])()
   }
 
   # 2. NUMERIC COLUMN ANALYSIS

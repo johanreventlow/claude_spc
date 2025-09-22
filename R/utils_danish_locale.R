@@ -10,9 +10,9 @@ parse_danish_number <- function(x) {
     return(numeric(0))
   }
 
-  # Handle vectors
+  # Handle vectors using tidyverse approach
   if (length(x) > 1) {
-    return(sapply(x, parse_danish_number, USE.NAMES = FALSE))
+    return(purrr::map_dbl(x, parse_danish_number))
   }
 
   # Convert to character if needed
