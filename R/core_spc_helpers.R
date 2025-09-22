@@ -436,29 +436,31 @@ validate_data_structure <- function(data) {
   potential_date_cols <- character(0)
   potential_numeric_cols <- character(0)
 
-  for (col_name in names(data)) {
-    col_data <- data[[col_name]]
+  # Tidyverse: Use purrr::iwalk to iterate over data columns
+  purrr::iwalk(data, ~ {
+    col_data <- .x
+    col_name <- .y
 
     # Skip completely empty columns
     if (all(is.na(col_data))) {
-      warnings <- c(warnings, paste("Kolonne", col_name, "er helt tom"))
-      next
+      warnings <<- c(warnings, paste("Kolonne", col_name, "er helt tom"))
+      return()
     }
 
     # Check for potential date columns
     char_data <- as.character(col_data)[!is.na(col_data)]
     if (length(char_data) > 0) {
       if (any(grepl("\\d{4}-\\d{2}-\\d{2}|\\d{2}/\\d{2}/\\d{4}|\\d{2}-\\d{2}-\\d{4}", char_data))) {
-        potential_date_cols <- c(potential_date_cols, col_name)
+        potential_date_cols <<- c(potential_date_cols, col_name)
       }
     }
 
     # Check for numeric columns (handle Danish decimal separator)
     if (is.numeric(col_data) ||
       sum(!is.na(parse_danish_number(col_data))) > length(col_data) * MIN_NUMERIC_PERCENT) {
-      potential_numeric_cols <- c(potential_numeric_cols, col_name)
+      potential_numeric_cols <<- c(potential_numeric_cols, col_name)
     }
-  }
+  })
 
   # Validate minimum requirements
   if (length(potential_numeric_cols) == 0) {
@@ -517,7 +519,8 @@ process_phase_freeze_config <- function(data, show_phases, skift_column, frys_co
       }
 
       # Get positions where TRUE values occur (these are where new phases start)
-      skift_points <- which(skift_data == TRUE)
+      # Tidyverse: Use seq_along with logical indexing instead of which()
+      skift_points <- seq_along(skift_data)[skift_data == TRUE]
       if (length(skift_points) > 0) {
         # qic() expects integer vector of positions where new phases start
         part_positions <- sort(skift_points)
@@ -541,7 +544,8 @@ process_phase_freeze_config <- function(data, show_phases, skift_column, frys_co
       }
 
       # Get positions where TRUE values occur (baseline freeze points)
-      frys_points <- which(frys_data == TRUE)
+      # Tidyverse: Use seq_along with logical indexing instead of which()
+      frys_points <- seq_along(frys_data)[frys_data == TRUE]
 
       if (length(frys_points) > 0) {
         # Use the last TRUE position as freeze point (baseline up to this point)

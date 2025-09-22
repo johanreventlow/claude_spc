@@ -733,7 +733,7 @@ handle_upload_error <- function(error, file_info, session_id = NULL) {
         shiny::tags$br(),
         shiny::tags$strong("Suggestions:"),
         shiny::tags$ul(
-          lapply(suggestions, function(s) shiny::tags$li(s))
+          purrr::map(suggestions, ~ shiny::tags$li(.x))
         )
       )
     }
@@ -784,15 +784,16 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
   }
 
   # Check for data content
-  has_data_content <- sapply(data, function(col) {
-    if (is.numeric(col)) {
-      sum(!is.na(col)) > 0
-    } else if (is.character(col)) {
-      sum(nzchar(col, keepNA = FALSE)) > 0
-    } else if (is.logical(col)) {
-      sum(!is.na(col)) > 0
+  # Tidyverse: Use purrr::map_lgl to check for data content
+  has_data_content <- purrr::map_lgl(data, ~ {
+    if (is.numeric(.x)) {
+      sum(!is.na(.x)) > 0
+    } else if (is.character(.x)) {
+      sum(nzchar(.x, keepNA = FALSE)) > 0
+    } else if (is.logical(.x)) {
+      sum(!is.na(.x)) > 0
     } else {
-      sum(!is.na(col)) > 0
+      sum(!is.na(.x)) > 0
     }
   })
 
@@ -804,18 +805,20 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
   }
 
   # Check for potential date columns (for X-axis)
-  potential_date_columns <- sapply(col_names, function(name) {
-    grepl("dato|date|tid|time", tolower(name)) ||
-      grepl("^(x|uge|måned|år|dag)", tolower(name))
+  # Tidyverse: Use purrr::map_lgl for date column detection
+  potential_date_columns <- purrr::map_lgl(col_names, ~ {
+    grepl("dato|date|tid|time", tolower(.x)) ||
+      grepl("^(x|uge|måned|år|dag)", tolower(.x))
   })
   validation_results$potential_date_columns <- sum(potential_date_columns)
 
   # Check for potential numeric columns (for Y-axis)
-  potential_numeric_columns <- sapply(data, function(col) {
-    if (is.numeric(col)) return(TRUE)
-    if (is.character(col)) {
+  # Tidyverse: Use purrr::map_lgl for numeric column detection
+  potential_numeric_columns <- purrr::map_lgl(data, ~ {
+    if (is.numeric(.x)) return(TRUE)
+    if (is.character(.x)) {
       # Check if character data looks like it could be numeric
-      non_empty <- col[nzchar(col, keepNA = FALSE)]
+      non_empty <- .x[nzchar(.x, keepNA = FALSE)]
       if (length(non_empty) == 0) return(FALSE)
       # Try to parse some values as numbers (Danish format)
       sample_size <- min(10, length(non_empty))
@@ -858,13 +861,14 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
   original_dims <- c(nrow(data), ncol(data))
   cleaning_log <- list()
 
-  # Data quality analysis before preprocessing
-  na_counts <- sapply(data, function(col) sum(is.na(col)))
-  empty_counts <- sapply(data, function(col) sum(col == "" | col == " ", na.rm = TRUE))
+  # Data quality analysis before preprocessing (tidyverse)
+  na_counts <- purrr::map_int(data, ~ sum(is.na(.x)))
+  empty_counts <- purrr::map_int(data, ~ sum(.x == "" | .x == " ", na.rm = TRUE))
 
   # Handle completely empty rows
   if (nrow(data) > 0) {
-    empty_rows <- apply(data, 1, function(row) all(is.na(row) | row == "" | row == " "))
+    # Tidyverse: Use purrr::pmap_lgl for row-wise operations
+    empty_rows <- purrr::pmap_lgl(data, ~ all(is.na(c(...)) | c(...) == "" | c(...) == " "))
     if (sum(empty_rows) > 0) {
       data <- data[!empty_rows, ]
       cleaning_log$empty_rows_removed <- sum(empty_rows)
@@ -902,16 +906,16 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
 
   # Data quality check after preprocessing
   if (nrow(data) > 0 && ncol(data) > 0) {
-    # Check for columns with all NA values
-    all_na_cols <- sapply(data, function(col) all(is.na(col)))
+    # Check for columns with all NA values (tidyverse)
+    all_na_cols <- purrr::map_lgl(data, ~ all(is.na(.x)))
 
-    # Check for potential numeric columns
-    potential_numeric <- sapply(data, function(col) {
-      if (is.character(col)) {
-        numeric_values <- suppressWarnings(as.numeric(col))
+    # Check for potential numeric columns (tidyverse)
+    potential_numeric <- purrr::map_lgl(data, ~ {
+      if (is.character(.x)) {
+        numeric_values <- suppressWarnings(as.numeric(.x))
         sum(!is.na(numeric_values)) > 0
       } else {
-        is.numeric(col)
+        is.numeric(.x)
       }
     })
   }
