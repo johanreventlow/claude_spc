@@ -146,7 +146,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
         shiny::strong(" Kolonne advarsler:"),
         shiny::tags$ul(
           style = "margin: 5px 0; padding-left: 20px;",
-          lapply(warnings, function(warn) shiny::tags$li(warn))
+          purrr::map(warnings, ~ shiny::tags$li(.x))
         )
       )
     } else if (length(selected_cols) >= 2) {
@@ -195,14 +195,12 @@ show_column_edit_modal <- function(session, app_state = NULL) {
 
   current_names <- names(current_data_check)
 
-  name_inputs <- lapply(1:length(current_names), function(i) {
-    shiny::textInput(
-      paste0("col_name_", i),
-      paste("Kolonne", i, ":"),
-      value = current_names[i],
-      placeholder = paste("Navn for kolonne", i)
-    )
-  })
+  name_inputs <- purrr::imap(current_names, ~ shiny::textInput(
+    paste0("col_name_", .y),
+    paste("Kolonne", .y, ":"),
+    value = .x,
+    placeholder = paste("Navn for kolonne", .y)
+  ))
 
   shiny::showModal(shiny::modalDialog(
     title = "Redigér kolonnenavne",
@@ -231,16 +229,16 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
   shiny::req(current_data_check)
 
   current_names <- names(current_data_check)
-  new_names <- character(length(current_names))
 
-  for (i in 1:length(current_names)) {
-    input_value <- input[[paste0("col_name_", i)]]
+  # Tidyverse: Use purrr::map_chr to extract input values
+  new_names <- purrr::imap_chr(current_names, ~ {
+    input_value <- input[[paste0("col_name_", .y)]]
     if (!is.null(input_value) && input_value != "") {
-      new_names[i] <- trimws(input_value)
+      trimws(input_value)
     } else {
-      new_names[i] <- current_names[i]
+      .x  # Use original name if input is empty
     }
-  }
+  })
 
   if (any(duplicated(new_names))) {
     shiny::showNotification(
@@ -262,11 +260,18 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
   shiny::removeModal()
 
   if (!identical(current_names, new_names)) {
-    changed_cols <- which(current_names != new_names)
-    change_summary <- paste(
-      paste0("'", current_names[changed_cols], "' -> '", new_names[changed_cols], "'"),
-      collapse = ", "
-    )
+    # Tidyverse: Use dplyr to identify changes
+    changes_df <- tibble::tibble(
+      old = current_names,
+      new = new_names,
+      index = seq_along(current_names)
+    ) %>%
+      dplyr::filter(old != new)
+
+    change_summary <- changes_df %>%
+      dplyr::mutate(change = paste0("'", old, "' -> '", new, "'")) %>%
+      dplyr::pull(change) %>%
+      paste(collapse = ", ")
 
     shiny::showNotification(
       paste("Kolonnenavne opdateret:", change_summary),
@@ -427,22 +432,18 @@ setup_data_table <- function(input, output, session, app_state, emit) {
             # Hent kolonnenavne fra colHeaders
             col_names <- unlist(new_data$colHeaders)
 
-            # Konvertér liste af rækker til data frame
+            # Konvertér liste af rækker til data frame (tidyverse approach)
             row_list <- new_data$data
 
-            # Opret tom data frame med korrekt struktur
-            new_df <- data.frame(matrix(NA, nrow = length(row_list), ncol = length(col_names)))
-            names(new_df) <- col_names
-
-            # Fyld data frame række for række
-            for (i in seq_along(row_list)) {
-              row_data <- row_list[[i]]
-              for (j in seq_along(row_data)) {
-                if (j <= length(col_names)) {
-                  new_df[i, j] <- row_data[[j]]
-                }
-              }
-            }
+            # Tidyverse: Convert nested list to data frame using purrr and tibble
+            new_df <- row_list %>%
+              purrr::map_dfr(~ {
+                # Ensure each row has correct length and names
+                row_data <- .x[1:length(col_names)]
+                names(row_data) <- col_names
+                tibble::as_tibble_row(row_data)
+              }) %>%
+              as.data.frame()  # Convert back to data.frame for compatibility
 
             # Konvertér datatyper korrekt
             # Skift kolonne (logisk) - excelR sender checkbox som logisk allerede
@@ -467,13 +468,12 @@ setup_data_table <- function(input, output, session, app_state, emit) {
               }
             }
 
-            # Numeriske kolonner
+            # Numeriske kolonner (tidyverse conversion)
             numeric_cols <- c("Tæller", "Nævner")
-            for (col in numeric_cols) {
-              if (col %in% names(new_df)) {
-                new_df[[col]] <- as.numeric(new_df[[col]])
-              }
-            }
+
+            # Use dplyr::mutate with across to convert numeric columns
+            new_df <- new_df %>%
+              dplyr::mutate(dplyr::across(dplyr::all_of(numeric_cols), ~ as.numeric(.x), .names = "{.col}"))
 
             # Dato kolonne
             if ("Dato" %in% names(new_df)) {
