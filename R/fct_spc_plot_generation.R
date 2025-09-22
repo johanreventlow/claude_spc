@@ -48,7 +48,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     }
 
     # Filter data to complete rows only
-    data_filtered <- data[complete_rows, , drop = FALSE]
+    data_filtered <- data %>% dplyr::filter(complete_rows)
 
     # PRESERVE POSIXct/Date formats: If x_col was POSIXct/Date, ensure it remains so after filtering
     if (!is.null(config$x_col) && config$x_col %in% names(data)) {
@@ -141,7 +141,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     }
 
     data_backup <- data # Keep reference to original data
-    data <- data[complete_rows, , drop = FALSE]
+    data <- data %>% dplyr::filter(complete_rows)
 
     # Restore POSIXct/Date format if lost during filtering
     if (!is.null(config$x_col) && config$x_col %in% names(data)) {
