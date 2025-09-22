@@ -10,7 +10,7 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 
 ## 2) Udviklingsprincipper (Fundamentale regler)
 
-### 2.0 Obligatorisk Commit-Workflow (KRITISK)
+### 2.0 Obligatorisk Commit-Workflow og Godkendelsesprotokol (KRITISK)
 
 🚨 **ABSOLUT FORBUD MOD UKONTROLLEREDE KODEÆNDRINGER:**
 
@@ -19,32 +19,45 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 ✅ **ALDRIG foretag multiple ændringer uden mellemliggende commits**
 
 **Obligatorisk procedure:**
-1. **Spørg først** – Få eksplicit godkendelse til enhver kodeændring
-2. **Planlæg commits** – Beskriv hvilke filer der ændres og hvorfor
+1. **Spørg om hel implementeringsplan** – Få eksplicit godkendelse til hele opgaven og dens logiske trin
+2. **Implementér et logisk trin ad gangen** – Et trin kan omfatte flere relaterede filer hvis de hører sammen
 3. **Commit efter hvert trin** – Hvert logisk trin skal have sin egen commit
-4. **Automatisk quality checks** – Git hooks kører automatisk lintr/styler
-5. **Test mellem commits** – Kør tests efter hver commit
-6. **Dokumentér ændringer** – Klar commit message med rationale
+4. **Bekræft inden næste trin** – Spørg kun om lov til næste trin hvis det afviger væsentligt fra den godkendte plan
+5. **Automatisk quality checks** – Git hooks kører automatisk lintr/styler
+6. **Test mellem commits** – Kør tests efter hver commit
+7. **Dokumentér ændringer** – Klar commit message med rationale
+
+**Definition af "logisk trin":**
+- En komplet feature implementation (fx "tilføj auto-detection for dato-kolonner")
+- En funktionel refactoring (fx "konverter alle for-loops til purrr i autodetect-modulet")
+- En bug fix med alle relaterede test-opdateringer
+- Dependency opdateringer med tilhørende kode-ændringer
 
 **Eksempel på korrekt workflow:**
 ```bash
-# Trin 1: Spørg bruger om godkendelse
-"Må jeg rette følgende 3 filer for tidyverse konvertering?"
+# Trin 1: Spørg om hele planen
+"Jeg vil implementere tidyverse konvertering i 3 logiske trin:
+1. Tilføj dependencies + konverter fct_autodetect_unified.R (2 filer)
+2. Konverter server_utils_column_management.R (1 fil)
+3. Opdater tests og dokumentation (3 filer)
+Må jeg fortsætte med denne plan?"
 
-# Trin 2: Commit plan
-"Jeg vil lave 3 commits:
-1. Tilføj tidyverse dependencies til DESCRIPTION
-2. Konverter for-loops til map() i fct_autodetect_unified.R
-3. Opdater tests for nye dependencies"
+# Trin 2: Implementér første logiske trin
+[Implementerer DESCRIPTION + fct_autodetect_unified.R]
+git commit -m "feat: tilføj tidyverse deps og konverter autodetect til purrr"
 
-# Trin 3: Implementér med commits mellem hvert trin
-git add DESCRIPTION && git commit -m "feat: tilføj tidyverse dependencies"
-# → Git hooks kører automatisk lintr/styler
-# → Tests køres og bestås
-git add R/fct_autodetect_unified.R && git commit -m "refactor: konverter for-loops til purrr::map"
-# → Git hooks kører automatisk og formatterer kode
-# → Tests køres og bestås
+# Trin 3: Fortsæt til næste trin (automatisk fra godkendt plan)
+[Implementerer server_utils_column_management.R]
+git commit -m "refactor: konverter column management til tidyverse"
+
+# Trin 4: Afslut med tests (automatisk fra godkendt plan)
+[Opdaterer tests + dokumentation]
+git commit -m "test: opdater tests for tidyverse konvertering"
 ```
+
+**Hvornår spørge igen:**
+✅ **Spørg kun igen hvis:** Trinnet viser sig mere komplekst end ventet, nye problemer opdages, eller implementeringen skal afvige fra den godkendte plan
+❌ **Spørg ikke igen hvis:** Du følger den godkendte plan og trinnet er som forventet
 
 **ALDRIG gør:**
 ❌ Rette flere filer på samme tid uden commits imellem
