@@ -363,12 +363,8 @@ get_dependency_status_report <- function() {
 
   report <- data.frame(
     package = loaded_packages,
-    version = sapply(loaded_packages, function(pkg) {
-      tryCatch(as.character(packageVersion(pkg)), error = function(e) "unknown")
-    }),
-    namespace_available = sapply(loaded_packages, function(pkg) {
-      requireNamespace(pkg, quietly = TRUE)
-    }),
+    version = purrr::map_chr(loaded_packages, ~ tryCatch(as.character(packageVersion(.x)), error = function(e) "unknown")),
+    namespace_available = purrr::map_lgl(loaded_packages, ~ requireNamespace(.x, quietly = TRUE)),
     stringsAsFactors = FALSE
   )
 
