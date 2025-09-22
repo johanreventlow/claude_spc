@@ -9,9 +9,11 @@
 #' @examples
 #' \dontrun{
 #' # Monitor reactive execution
-#' result <- measure_reactive_performance({
-#'   expensive_calculation()
-#' }, "calculation_name")
+#' result <- measure_reactive_performance(
+#'   {
+#'     expensive_calculation()
+#'   },
+#'   "calculation_name")
 #' }
 #'
 #' @family performance
@@ -27,7 +29,7 @@ measure_reactive_performance <- function(expr, operation_name = "unknown") {
   if (execution_time > PERFORMANCE_THRESHOLDS$reactive_warning) {
     log_warn(
       paste("Slow reactive operation:", operation_name,
-            "took", round(execution_time, 3), "seconds"),
+        "took", round(execution_time, 3), "seconds"),
       "PERFORMANCE"
     )
   }
@@ -55,15 +57,18 @@ measure_reactive_performance <- function(expr, operation_name = "unknown") {
 #' @examples
 #' \dontrun{
 #' # Cache expensive data processing
-#' processed_data <- create_cached_reactive({
-#'   expensive_data_processing(app_state$data$current_data)
-#' }, "data_processing", cache_timeout = 600, session = session)
+#' processed_data <- create_cached_reactive(
+#'   {
+#'     expensive_data_processing(app_state$data$current_data)
+#'   },
+#'   "data_processing",
+#'   cache_timeout = 600,
+#'   session = session)
 #' }
 #'
 #' @family performance
 #' @export
 create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session = NULL) {
-
   # FAILSAFE: Robust cache key validation to handle NULL, character(0), and malformed keys
   safe_cache_key <- safe_operation(
     "Validate cache key",
@@ -240,7 +245,6 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session
 #' @family performance
 #' @export
 create_performance_debounced <- function(r, millis, operation_name = "debounced") {
-
   # Track debounce statistics
   stats_key <- paste0("debounce_stats_", operation_name)
 
@@ -277,7 +281,7 @@ create_performance_debounced <- function(r, millis, operation_name = "debounced"
     if (execution_time > PERFORMANCE_THRESHOLDS$debounce_warning) {
       log_warn(
         paste("Slow debounced operation:", operation_name,
-              "took", round(execution_time, 3), "seconds"),
+          "took", round(execution_time, 3), "seconds"),
         "PERFORMANCE"
       )
     }
@@ -434,7 +438,7 @@ monitor_memory_usage <- function(operation_name = "unknown") {
     if (abs(memory_diff) > PERFORMANCE_THRESHOLDS$memory_warning) {
       log_info(
         paste("Memory change for", operation_name, ":",
-              ifelse(memory_diff > 0, "+", ""), round(memory_diff, 2), "MB"),
+          ifelse(memory_diff > 0, "+", ""), round(memory_diff, 2), "MB"),
         "PERFORMANCE"
       )
     }

@@ -60,7 +60,6 @@ initialize_app <- function(force_reload = FALSE, config_override = NULL) {
 #'
 #' @return List with verification results
 verify_package_functions <- function() {
-
   # Essential functions that should be available via package loading
   essential_functions <- c(
     "create_app_state",           # State management
@@ -88,8 +87,8 @@ verify_package_functions <- function() {
   })[["elapsed"]]
 
   log_debug(paste("Package functions verified:",
-                   length(results$available_functions), "available,",
-                   length(results$missing_functions), "missing"), .context = "PACKAGE_VERIFICATION")
+    length(results$available_functions), "available,",
+    length(results$missing_functions), "missing"), .context = "PACKAGE_VERIFICATION")
 
   return(results)
 }
@@ -218,15 +217,15 @@ verify_initialization_completeness <- function() {
   # Summary
   verification$complete <- (
     length(verification$missing_functions) == 0 &&
-    length(verification$missing_globals) == 0
+      length(verification$missing_globals) == 0
   )
 
   if (verification$complete) {
     log_debug("Initialization verification PASSED", .context = "VERIFICATION")
   } else {
     log_debug(paste("Initialization verification FAILED:",
-                  length(verification$missing_functions), "missing functions,",
-                  length(verification$missing_globals), "missing globals"), .context = "VERIFICATION")
+      length(verification$missing_functions), "missing functions,",
+      length(verification$missing_globals), "missing globals"), .context = "VERIFICATION")
   }
 
   return(verification)
@@ -265,7 +264,7 @@ get_initialization_status_report <- function(init_results) {
           "All components verified"
         } else {
           paste("Issues:", length(component_data$missing_functions %||% c()), "missing functions,",
-                length(component_data$missing_globals %||% c()), "missing globals")
+            length(component_data$missing_globals %||% c()), "missing globals")
         }
       } else {
         status <- "success"

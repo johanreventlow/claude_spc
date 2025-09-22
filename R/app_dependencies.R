@@ -231,13 +231,15 @@ setup_performance_packages <- function(config) {
   if (requireNamespace("data.table", quietly = TRUE)) {
     # Set appropriate number of threads
     threads <- if (config$environment$is_production) 2 else 4
-    optimizations$data_table_threads <- tryCatch({
-      data.table::setDTthreads(threads)
-      threads
-    }, error = function(e) {
-      # Dependency operation completed
-      NULL
-    })
+    optimizations$data_table_threads <- tryCatch(
+      {
+        data.table::setDTthreads(threads)
+        threads
+      },
+      error = function(e) {
+        # Dependency operation completed
+        NULL
+      })
   }
 
   # Configure readr threading
@@ -269,41 +271,43 @@ safe_load_package <- function(package_name, min_version = NULL, reason = "", req
     required = required
   )
 
-  tryCatch({
-    # Check if package is available
-    if (!requireNamespace(package_name, quietly = TRUE)) {
-      stop(paste("Package", package_name, "is not available"))
-    }
-
-    # Load the package
-    library(package_name, character.only = TRUE)
-
-    # Get version information
-    result$version <- as.character(packageVersion(package_name))
-
-    # Check minimum version if specified
-    if (!is.null(min_version)) {
-      if (compareVersion(result$version, min_version) < 0) {
-        warning(paste("Package", package_name, "version", result$version,
-                     "is below minimum required version", min_version))
+  tryCatch(
+    {
+      # Check if package is available
+      if (!requireNamespace(package_name, quietly = TRUE)) {
+        stop(paste("Package", package_name, "is not available"))
       }
-    }
 
-    result$loaded <- TRUE
-    # Dependency operation completed
+      # Load the package
+      library(package_name, character.only = TRUE)
 
-  }, error = function(e) {
-    result$error <<- e$message
-    log_error(paste("Failed to load package", package_name, ":", e$message), "PACKAGE_LOADER")
+      # Get version information
+      result$version <- as.character(packageVersion(package_name))
 
-    if (required) {
-      # For required packages, this is a critical error
-      stop(paste("Critical dependency", package_name, "could not be loaded:", e$message))
-    } else {
-      # For optional packages, log and continue
+      # Check minimum version if specified
+      if (!is.null(min_version)) {
+        if (compareVersion(result$version, min_version) < 0) {
+          warning(paste("Package", package_name, "version", result$version,
+            "is below minimum required version", min_version))
+        }
+      }
+
+      result$loaded <- TRUE
       # Dependency operation completed
-    }
-  })
+
+    },
+    error = function(e) {
+      result$error <<- e$message
+      log_error(paste("Failed to load package", package_name, ":", e$message), "PACKAGE_LOADER")
+
+      if (required) {
+        # For required packages, this is a critical error
+        stop(paste("Critical dependency", package_name, "could not be loaded:", e$message))
+      } else {
+        # For optional packages, log and continue
+        # Dependency operation completed
+      }
+    })
 
   return(result)
 }

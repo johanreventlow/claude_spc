@@ -22,7 +22,7 @@ create_ui_header <- function() {
       shiny::tags$script(src = "shiny-handlers.js"),
       # Inline CSS styles
       shiny::tags$style(htmltools::HTML(paste0("
-     
+
       /* Navigation and Tab Styling */
     .nav-link {
       padding: .5rem 1rem !important;
@@ -38,7 +38,7 @@ create_ui_header <- function() {
       color: inherit;
     }
 
- 
+
     /* --- Excel-lignende tema til excelR --- */
     .jexcel_container {
       /*font-family: Calibri, 'Segoe UI', Arial, sans-serif;
@@ -163,10 +163,10 @@ create_ui_header <- function() {
     .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
     .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
     .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
-    
 
 
-     
+
+
         ")))
     )
   )
@@ -420,7 +420,7 @@ create_plot_only_card <- function() {
       fill = TRUE,
       shiny::div(
         style = "height: 100%",
-      visualizationModuleUI("visualization")
+        visualizationModuleUI("visualization")
       )
     )
   )

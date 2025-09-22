@@ -34,7 +34,6 @@
 #' @family dependency_injection
 #' @export
 create_dependency_container <- function(config = NULL, test_mode = FALSE) {
-
   # Default config hvis ikke angivet
   if (is.null(config)) {
     config <- list(

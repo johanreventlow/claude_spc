@@ -23,54 +23,64 @@
 #' # Basic usage
 #' result <- safe_operation(
 #'   "Data processing",
-#'   code = { process_data(input_data) },
+#'   code = {
+#'     process_data(input_data)
+#'   },
 #'   fallback = empty_data()
 #' )
 #'
 #' # With session and user notification
 #' result <- safe_operation(
 #'   "File upload",
-#'   code = { read.csv(file_path) },
+#'   code = {
+#'     read.csv(file_path)
+#'   },
 #'   fallback = NULL,
 #'   session = session,
 #'   show_user = TRUE
 #' )
 #' }
 safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE, error_type = "general", ...) {
-  tryCatch({
-    force(code)
-  }, error = function(e) {
-    # Basic error message construction
-    error_msg <- paste(operation_name, "fejlede:", e$message)
+  tryCatch(
+    {
+      force(code)
+    },
+    error = function(e) {
+      # Basic error message construction
+      error_msg <- paste(operation_name, "fejlede:", e$message)
 
-    # Try to use structured logging if available, fallback to basic cat
-    if (exists("log_error", mode = "function")) {
-      tryCatch({
-        log_error(error_msg, paste0("ERROR_HANDLING_", toupper(error_type)))
-      }, error = function(log_err) {
-        # Fallback to basic R messaging if logging fails
+      # Try to use structured logging if available, fallback to basic cat
+      if (exists("log_error", mode = "function")) {
+        tryCatch(
+          {
+            log_error(error_msg, paste0("ERROR_HANDLING_", toupper(error_type)))
+          },
+          error = function(log_err) {
+            # Fallback to basic R messaging if logging fails
+            cat("[ERROR]", format(Sys.time(), "%H:%M:%S"), ":", error_msg, "\n")
+          })
+      } else {
+        # Basic fallback logging without dependencies
         cat("[ERROR]", format(Sys.time(), "%H:%M:%S"), ":", error_msg, "\n")
-      })
-    } else {
-      # Basic fallback logging without dependencies
-      cat("[ERROR]", format(Sys.time(), "%H:%M:%S"), ":", error_msg, "\n")
-    }
+      }
 
-    # User notification if session provided and requested
-    if (!is.null(session) && show_user) {
-      tryCatch({
-        shiny::showNotification(
-          paste("Fejl:", operation_name),
-          type = "error",
-          duration = 5
-        )
-      }, error = function(notification_err) {
-        # Silent failure for notifications to avoid cascading errors
-      })
-    }
+      # User notification if session provided and requested
+      if (!is.null(session) && show_user) {
+        tryCatch(
+          {
+            shiny::showNotification(
+              paste("Fejl:", operation_name),
+              type = "error",
+              duration = 5
+            )
+          },
+          error = function(notification_err) {
+            # Silent failure for notifications to avoid cascading errors
+          })
+      }
 
-    return(fallback)
-  })
+      return(fallback)
+    })
 }
 
 #' Validate required objects exist before operation

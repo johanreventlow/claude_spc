@@ -44,19 +44,21 @@ LOG_LEVELS <- list(
 #'
 #' @examples
 #' get_log_level()
-#' Sys.setenv(SPC_LOG_LEVEL = "DEBUG"); get_log_level()
-#' Sys.setenv(SPC_LOG_LEVEL = "1");     get_log_level()
+#' Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+#' get_log_level()
+#' Sys.setenv(SPC_LOG_LEVEL = "1")
+#' get_log_level()
 get_log_level <- function() {
   env_raw <- Sys.getenv("SPC_LOG_LEVEL", "INFO")
   env_val <- trimws(toupper(as.character(env_raw)))
-  
+
   lvl_num <-
     if (nzchar(env_val) && !is.na(suppressWarnings(as.integer(env_val)))) {
       as.integer(env_val)
     } else {
       LOG_LEVELS[[env_val]]
     }
-  
+
   if (is.null(lvl_num) || is.na(lvl_num)) LOG_LEVELS$INFO else lvl_num
 }
 
@@ -71,39 +73,41 @@ get_log_level <- function() {
 # intern hjælper (ikke-eksporteret)
 .safe_format <- function(x) {
   # Direct tryCatch to avoid circular dependency with safe_operation
-  tryCatch({
-    if (is.null(x))               return("NULL")
-    if (is.character(x))          return(paste(x, collapse = " "))
-    if (is.atomic(x)) {
-      if (length(x) > 10) {
-        return(paste0(
-          paste(utils::head(x, 10), collapse = " "),
-          " … (n=", length(x), ")"
-        ))
-      } else {
-        return(paste(x, collapse = " "))
+  tryCatch(
+    {
+      if (is.null(x)) return("NULL")
+      if (is.character(x)) return(paste(x, collapse = " "))
+      if (is.atomic(x)) {
+        if (length(x) > 10) {
+          return(paste0(
+            paste(utils::head(x, 10), collapse = " "),
+            " … (n=", length(x), ")"
+          ))
+        } else {
+          return(paste(x, collapse = " "))
+        }
       }
-    }
-    if (is.data.frame(x)) {
-      return(sprintf("<data.frame: %d x %d> cols=[%s%s]",
-                     nrow(x), ncol(x),
-                     paste(utils::head(names(x), 6), collapse = ", "),
-                     if (ncol(x) > 6) ", …" else ""))
-    }
-    if (is.list(x)) {
-      nms <- names(x) %||% rep("", length(x))
-      shown <- utils::head(seq_along(x), 6)
-      keys <- ifelse(nchar(nms[shown]) > 0, nms[shown], shown)
-      return(sprintf("<list: %d> [%s%s]",
-                     length(x),
-                     paste(keys, collapse = ", "),
-                     if (length(x) > 6) ", …" else ""))
-    }
-    paste(capture.output(utils::str(x, max.level = 1, vec.len = 10, give.attr = FALSE)),
-          collapse = " ")
-  }, error = function(e) {
-    "<FORMAT_ERROR>"
-  })
+      if (is.data.frame(x)) {
+        return(sprintf("<data.frame: %d x %d> cols=[%s%s]",
+          nrow(x), ncol(x),
+          paste(utils::head(names(x), 6), collapse = ", "),
+          if (ncol(x) > 6) ", …" else ""))
+      }
+      if (is.list(x)) {
+        nms <- names(x) %||% rep("", length(x))
+        shown <- utils::head(seq_along(x), 6)
+        keys <- ifelse(nchar(nms[shown]) > 0, nms[shown], shown)
+        return(sprintf("<list: %d> [%s%s]",
+          length(x),
+          paste(keys, collapse = ", "),
+          if (length(x) > 6) ", …" else ""))
+      }
+      paste(capture.output(utils::str(x, max.level = 1, vec.len = 10, give.attr = FALSE)),
+        collapse = " ")
+    },
+    error = function(e) {
+      "<FORMAT_ERROR>"
+    })
 }
 
 # intern hjælper (ikke-eksporteret)
@@ -134,19 +138,20 @@ get_log_level <- function() {
 #' @examples
 #' log_msg("System startet", "INFO")
 #' log_msg("Data læst", "INFO", "FILE_UPLOAD")
-#' Sys.setenv(SPC_LOG_LEVEL = "DEBUG"); log_msg("Detaljer", "DEBUG", "DATA_PROC")
+#' Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+#' log_msg("Detaljer", "DEBUG", "DATA_PROC")
 log_msg <- function(message, level = "INFO", component = NULL) {
   if (!.should_log(level)) return(invisible(NULL))
-  
+
   ts <- .timestamp()
   comp <- .component_or_fallback(component)
   comp_str <- if (!is.null(component)) paste0("[", comp, "] ") else ""
-  
+
   cat(sprintf("[%s] %s: %s%s\n",
-              ts,
-              toupper(level),
-              comp_str,
-              as.character(message)))
+    ts,
+    toupper(level),
+    comp_str,
+    as.character(message)))
   invisible(NULL)
 }
 
@@ -168,22 +173,24 @@ log_msg <- function(message, level = "INFO", component = NULL) {
 #' log_debug("Række:", 42, list(a = 1), .context = "DATA_PROC")
 log_debug <- function(..., .context = NULL) {
   if (!.should_log("DEBUG")) return(invisible(NULL))
-  
+
   component <- .component_or_fallback(.context)
-  
+
   # Direct tryCatch to avoid circular dependency with safe_operation
-  tryCatch({
-    msg <- .safe_collapse(list(...))
-    if (exists("log_msg", mode = "function")) {
-      log_msg(msg, "DEBUG", component = component)
-    } else {
-      cat(sprintf("[%s] DEBUG: [%s] %s\n", .timestamp(), component, msg))
-    }
-  }, error = function(e) {
-    # Fejlsikker fallback – må ALDRIG vælte Shiny-renderers
-    try(message("[LOGGING_ERROR] Could not format debug message"), silent = TRUE)
-  })
-  
+  tryCatch(
+    {
+      msg <- .safe_collapse(list(...))
+      if (exists("log_msg", mode = "function")) {
+        log_msg(msg, "DEBUG", component = component)
+      } else {
+        cat(sprintf("[%s] DEBUG: [%s] %s\n", .timestamp(), component, msg))
+      }
+    },
+    error = function(e) {
+      # Fejlsikker fallback – må ALDRIG vælte Shiny-renderers
+      try(message("[LOGGING_ERROR] Could not format debug message"), silent = TRUE)
+    })
+
   invisible(NULL)
 }
 
@@ -236,7 +243,7 @@ log_warn <- function(message, component = NULL) {
 #' @examples
 #' log_error("Kunne ikke læse fil", "FILE_UPLOAD")
 #' \dontrun{
-#'   tryCatch(stop("Boom"), error = function(e) log_error(e, "PIPELINE"))
+#' tryCatch(stop("Boom"), error = function(e) log_error(e, "PIPELINE"))
 #' }
 log_error <- function(message, component = NULL) {
   msg <- if (inherits(message, "condition")) conditionMessage(message) else message
@@ -262,12 +269,12 @@ log_error <- function(message, component = NULL) {
 #' log_debug_block("COLUMN_MGMT", "Column detection completed", type = "stop")
 log_debug_block <- function(context, action, type = "start") {
   if (!.should_log("DEBUG")) return(invisible(NULL))
-  
+
   sep <- paste(rep("=", 50), collapse = "")
-  
+
   ctx <- .component_or_fallback(context)
   t <- match.arg(type, choices = c("start", "stop", "both"))
-  
+
   if (t %in% c("start", "both")) {
     log_debug(sep, .context = ctx)
     log_debug(action, .context = ctx)
@@ -276,7 +283,7 @@ log_debug_block <- function(context, action, type = "start") {
     log_debug(paste0(action, " - completed"), .context = ctx)
     log_debug(sep, .context = ctx)
   }
-  
+
   invisible(NULL)
 }
 
@@ -299,9 +306,9 @@ log_debug_block <- function(context, action, type = "start") {
 #' log_debug_kv(.list_data = list(rows = 100, cols = 5), .context = "DATA_PROC")
 log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
   if (!.should_log("DEBUG")) return(invisible(NULL))
-  
+
   ctx <- .component_or_fallback(.context)
-  
+
   dots <- list(...)
   if (length(dots) > 0) {
     nms <- names(dots) %||% rep("", length(dots))
@@ -311,7 +318,7 @@ log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
       log_debug(paste0(key, ": ", val), .context = ctx)
     }
   }
-  
+
   if (!is.null(.list_data) && is.list(.list_data)) {
     nms <- names(.list_data) %||% rep("", length(.list_data))
     for (i in seq_along(.list_data)) {
@@ -320,7 +327,7 @@ log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
       log_debug(paste0(key, ": ", val), .context = ctx)
     }
   }
-  
+
   invisible(NULL)
 }
 

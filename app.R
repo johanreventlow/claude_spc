@@ -9,4 +9,3 @@ library(claudespc)
 
 # Run the application using package-loaded function
 run_app()
-

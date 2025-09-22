@@ -14,7 +14,7 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
   log_debug_block("DATE_DETECT", "Starting robust date detection")
 
   if (is.null(data) || ncol(data) == 0) {
-  # log_debug("No data for date detection", .context = "DATE_DETECT")
+    # log_debug("No data for date detection", .context = "DATE_DETECT")
     return(list())
   }
 

@@ -91,7 +91,6 @@ get_test_mode_file_path <- function() {
   get_package_config("TEST_MODE_FILE_PATH", default = NULL)
 }
 .onLoad <- function(libname, pkgname) {
-
   # Initialize package-level configuration
   initialize_package_globals()
 
@@ -111,7 +110,6 @@ get_test_mode_file_path <- function() {
 #'
 #' @noRd
 initialize_package_globals <- function() {
-
   # Initialize branding configuration using safe getters
   initialize_branding()
 

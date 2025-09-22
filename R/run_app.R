@@ -33,7 +33,6 @@ run_app <- function(port = NULL,
                     launch_browser = NULL,
                     options = list(),
                     ...) {
-
   # Create the Shiny app using golem pattern
   app <- with_golem_options(
     app = shinyApp(
@@ -59,4 +58,3 @@ run_app <- function(port = NULL,
     )
   }
 }
-

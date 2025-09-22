@@ -92,7 +92,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   shiny::observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-
     # Update state
     app_state$columns$auto_detect$in_progress <- FALSE
     app_state$columns$auto_detect$completed <- TRUE
@@ -108,7 +107,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # UI SYNCHRONIZATION EVENTS
   shiny::observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
-
     # Add extra debugging
 
     safe_operation(
@@ -129,7 +127,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   shiny::observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
-
     # Update timestamp
     app_state$columns$ui_sync$last_sync_time <- Sys.time()
 
@@ -139,14 +136,12 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # NAVIGATION EVENTS
   shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
-
     # Increment navigation trigger to update all eventReactive components
     app_state$navigation$trigger <- app_state$navigation$trigger + 1L
   })
 
   # TEST MODE EVENTS
   shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-
     # In test mode, immediately start auto-detection
     if (!is.null(app_state$data$current_data)) {
       emit$auto_detection_started()
@@ -155,7 +150,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # SESSION LIFECYCLE EVENTS
   shiny::observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-
     # FASE 3: Session start trigger for name-only detection
     autodetect_engine(
       data = NULL,  # No data available at session start
@@ -166,7 +160,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   shiny::observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-
     # FASE 3: Manual trigger always runs, bypassing frozen state
     autodetect_engine(
       data = app_state$data$current_data,
@@ -177,7 +170,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
-
     # Reset all state to initial values
     app_state$data$current_data <- NULL
     app_state$columns$auto_detect$in_progress <- FALSE
@@ -203,7 +195,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       log_debug_kv(
         error_type = error_info$type %||% "unknown",
         error_message = error_info$message %||% "no message",
-        session_id = if(!is.null(session)) session$token else "no session",
+        session_id = if (!is.null(session)) session$token else "no session",
         .context = "ERROR_SYSTEM"
       )
     }
@@ -263,7 +255,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     log_info("Error recovery completed", .context = "ERROR_SYSTEM")
     log_debug_kv(
       recovery_time = as.character(Sys.time()),
-      session_id = if(!is.null(session)) session$token else "no session",
+      session_id = if (!is.null(session)) session$token else "no session",
       .context = "ERROR_SYSTEM"
     )
   })
@@ -284,7 +276,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # Form restore needed event listener
   shiny::observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-
     # For form restore, we need metadata from app_state
     # This could be triggered by session restore events
     if (!is.null(ui_service) && !is.null(app_state$session$restore_metadata)) {
@@ -295,7 +286,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # General UI update needed event listener
   shiny::observeEvent(app_state$events$ui_update_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-
     # This could trigger multiple UI updates
     if (!is.null(ui_service)) {
       # Update column choices if data is available
@@ -311,55 +301,60 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   columns_to_observe <- c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
 
   for (col in columns_to_observe) {
-    shiny::observeEvent(input[[col]], {
-      input_received_time <- Sys.time()
-      new_value <- input[[col]]
+    shiny::observeEvent(input[[col]],
+      {
+        input_received_time <- Sys.time()
+        new_value <- input[[col]]
 
-      # DROPDOWN DEBUGGING: Log input change details
-      old_value <- shiny::isolate(app_state$columns[[col]]) %||% ""
-      #               "to", paste0("'", new_value, "'")), "DROPDOWN_DEBUG")
+        # DROPDOWN DEBUGGING: Log input change details
+        old_value <- shiny::isolate(app_state$columns[[col]]) %||% ""
+        #               "to", paste0("'", new_value, "'")), "DROPDOWN_DEBUG")
 
-      # TIMING LOGGING: Calculate time since last programmatic update
-      last_update_time <- shiny::isolate(app_state$ui$last_programmatic_update)
-      time_since_update <- if (!is.null(last_update_time)) {
-        as.numeric(difftime(input_received_time, last_update_time, units = "secs")) * 1000
-      } else { NA }
+        # TIMING LOGGING: Calculate time since last programmatic update
+        last_update_time <- shiny::isolate(app_state$ui$last_programmatic_update)
+        time_since_update <- if (!is.null(last_update_time)) {
+          as.numeric(difftime(input_received_time, last_update_time, units = "secs")) * 1000
+        } else {
+          NA
+        }
 
-      #               if (!is.na(time_since_update)) paste("(", round(time_since_update, 2), "ms after last update)") else ""),
-      #         .context = "LOOP_PROTECTION")
+        #               if (!is.na(time_since_update)) paste("(", round(time_since_update, 2), "ms after last update)") else ""),
+        #         .context = "LOOP_PROTECTION")
 
-      # FREEZE-AWARE LOGGING: Observe freeze state without modification
-      freeze_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
+        # FREEZE-AWARE LOGGING: Observe freeze state without modification
+        freeze_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
-      #               ", autodetect frozen =", freeze_state), "DROPDOWN_DEBUG")
+        #               ", autodetect frozen =", freeze_state), "DROPDOWN_DEBUG")
 
-      # TOKEN CONSUMPTION: Primary and only loop protection mechanism
-      # Check for pending programmatic input tokens
-      pending_token <- app_state$ui$pending_programmatic_inputs[[col]]
+        # TOKEN CONSUMPTION: Primary and only loop protection mechanism
+        # Check for pending programmatic input tokens
+        pending_token <- app_state$ui$pending_programmatic_inputs[[col]]
 
-      if (!is.null(pending_token) && pending_token$value == new_value) {
-        # CONSUME TOKEN: This is a programmatic input, don't emit event
-        app_state$ui$pending_programmatic_inputs[[col]] <- NULL
+        if (!is.null(pending_token) && pending_token$value == new_value) {
+          # CONSUME TOKEN: This is a programmatic input, don't emit event
+          app_state$ui$pending_programmatic_inputs[[col]] <- NULL
+          app_state$columns[[col]] <- new_value
+
+          # PERFORMANCE METRICS: Track token consumption for monitoring
+          shiny::isolate({
+            app_state$ui$performance_metrics$tokens_consumed <- app_state$ui$performance_metrics$tokens_consumed + 1L
+          })
+
+          #               "- no event emitted"), "TOKEN_DEBUG")
+          return()
+        }
+
+        # Update app_state to keep it synchronized with UI
         app_state$columns[[col]] <- new_value
 
-        # PERFORMANCE METRICS: Track token consumption for monitoring
-        shiny::isolate({
-          app_state$ui$performance_metrics$tokens_consumed <- app_state$ui$performance_metrics$tokens_consumed + 1L
-        })
+        # Only emit events for user-driven changes (not programmatic updates)
+        if (exists("column_choices_changed", envir = as.environment(emit))) {
+          emit$column_choices_changed()
+        }
 
-      #               "- no event emitted"), "TOKEN_DEBUG")
-        return()
-      }
-
-      # Update app_state to keep it synchronized with UI
-      app_state$columns[[col]] <- new_value
-
-      # Only emit events for user-driven changes (not programmatic updates)
-      if (exists("column_choices_changed", envir = as.environment(emit))) {
-        emit$column_choices_changed()
-      }
-
-    }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$MEDIUM)
+      },
+      ignoreInit = TRUE,
+      priority = OBSERVER_PRIORITIES$MEDIUM)
   }
 
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
@@ -375,9 +370,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
         autodetect_in_progress <- if (!is.null(app_state$columns)) {
           shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
-        } else { FALSE }
+        } else {
+          FALSE
+        }
 
-      #               ", autodetect active:", autodetect_in_progress), .context = "TIMING_MONITOR")
+        #               ", autodetect active:", autodetect_in_progress), .context = "TIMING_MONITOR")
       }
     })
   }
@@ -463,24 +460,24 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
           x_col_val <- shiny::isolate(columns_state$x_column)
           if (!is.null(x_col_val)) {
             shiny::updateSelectizeInput(session, "x_column",
-                               choices = standard_choices,
-                               selected = x_col_val)
+              choices = standard_choices,
+              selected = x_col_val)
             log_debug_kv(updated_x_column_ui = x_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
           y_col_val <- shiny::isolate(columns_state$y_column)
           if (!is.null(y_col_val)) {
             shiny::updateSelectizeInput(session, "y_column",
-                               choices = standard_choices,
-                               selected = y_col_val)
+              choices = standard_choices,
+              selected = y_col_val)
             log_debug_kv(updated_y_column_ui = y_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
           n_col_val <- shiny::isolate(columns_state$n_column)
           if (!is.null(n_col_val)) {
             shiny::updateSelectizeInput(session, "n_column",
-                               choices = standard_choices,
-                               selected = n_col_val)
+              choices = standard_choices,
+              selected = n_col_val)
             log_debug_kv(updated_n_column_ui = n_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
@@ -488,24 +485,24 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
           skift_col_val <- shiny::isolate(columns_state$skift_column)
           if (!is.null(skift_col_val)) {
             shiny::updateSelectizeInput(session, "skift_column",
-                               choices = standard_choices,
-                               selected = skift_col_val)
+              choices = standard_choices,
+              selected = skift_col_val)
             log_debug_kv(updated_skift_column_ui = skift_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
           frys_col_val <- shiny::isolate(columns_state$frys_column)
           if (!is.null(frys_col_val)) {
             shiny::updateSelectizeInput(session, "frys_column",
-                               choices = standard_choices,
-                               selected = frys_col_val)
+              choices = standard_choices,
+              selected = frys_col_val)
             log_debug_kv(updated_frys_column_ui = frys_col_val, .context = "UI_SYNC_UNIFIED")
           }
 
           kommentar_col_val <- shiny::isolate(columns_state$kommentar_column)
           if (!is.null(kommentar_col_val)) {
             shiny::updateSelectizeInput(session, "kommentar_column",
-                               choices = standard_choices,
-                               selected = kommentar_col_val)
+              choices = standard_choices,
+              selected = kommentar_col_val)
             log_debug_kv(updated_kommentar_column_ui = kommentar_col_val, .context = "UI_SYNC_UNIFIED")
           }
 

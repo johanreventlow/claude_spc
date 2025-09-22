@@ -18,7 +18,6 @@ autodetect_engine <- function(data = NULL,
                               trigger_type = c("session_start", "file_upload", "manual"),
                               app_state,
                               emit) {
-
   # Input validation
   trigger_type <- match.arg(trigger_type)
   if (is.null(app_state)) {
@@ -81,17 +80,17 @@ autodetect_engine <- function(data = NULL,
   shiny::isolate({
     app_state$columns$auto_detect$frozen_until_next_trigger <- TRUE
     app_state$columns$auto_detect$last_run <- list(
-    trigger = trigger_type,
-    timestamp = Sys.time(),
-    data_rows = if (!is.null(data)) nrow(data) else 0,
-    data_cols = if (!is.null(data)) ncol(data) else 0,
-    results_summary = list(
-      x_column = results$x_col,
-      y_column = results$y_col,
-      n_column = results$n_col,
-      cl_column = results$cl_col
+      trigger = trigger_type,
+      timestamp = Sys.time(),
+      data_rows = if (!is.null(data)) nrow(data) else 0,
+      data_cols = if (!is.null(data)) ncol(data) else 0,
+      results_summary = list(
+        x_column = results$x_col,
+        y_column = results$y_col,
+        n_column = results$n_col,
+        cl_column = results$cl_col
+      )
     )
-  )
   })
 
   log_debug_kv(
@@ -141,65 +140,57 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
 
   col_names_lower <- tolower(col_names)
 
-  # X-column (date/time detection) - Enhanced time-specific patterns
+  # X-column (date/time detection) - Enhanced time-specific patterns (tidyverse)
   dato_patterns <- c("dato", "date", "tid", "time", "år", "year", "måned", "month",
-                     "uge", "week", "dag", "day", "periode", "period", "kvartal", "quarter",
-                     "jan", "feb", "mar", "apr", "maj", "jun",
-                     "jul", "aug", "sep", "okt", "nov", "dec")
-  for (pattern in dato_patterns) {
-    dato_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(dato_idx) > 0) {
-      x_col <- col_names[dato_idx[1]]
-      break
-    }
+    "uge", "week", "dag", "day", "periode", "period", "kvartal", "quarter",
+    "jan", "feb", "mar", "apr", "maj", "jun",
+    "jul", "aug", "sep", "okt", "nov", "dec")
+
+  # Tidyverse: Use purrr::map_lgl to find first matching pattern
+  matching_patterns <- purrr::map_lgl(dato_patterns, ~ any(stringr::str_detect(col_names_lower, .x)))
+  if (any(matching_patterns)) {
+    first_match_pattern <- dato_patterns[which(matching_patterns)[1]]
+    x_col <- col_names[stringr::str_detect(col_names_lower, first_match_pattern)][1]
   }
 
-  # Y-column (count patterns)
+  # Y-column (count patterns) - tidyverse conversion
   count_patterns <- c("tæller", "tael", "num", "count", "værdi", "value", "antal")
-  for (pattern in count_patterns) {
-    count_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(count_idx) > 0) {
-      y_col <- col_names[count_idx[1]]
-      break
-    }
+
+  matching_count_patterns <- purrr::map_lgl(count_patterns, ~ any(stringr::str_detect(col_names_lower, .x)))
+  if (any(matching_count_patterns)) {
+    first_count_pattern <- count_patterns[which(matching_count_patterns)[1]]
+    y_col <- col_names[stringr::str_detect(col_names_lower, first_count_pattern)][1]
   }
 
-  # N-column (denominator patterns)
+  # N-column (denominator patterns) - tidyverse conversion
   denom_patterns <- c("nævner", "naev", "denom", "total", "samlet")
-  for (pattern in denom_patterns) {
-    denom_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(denom_idx) > 0) {
-      n_col <- col_names[denom_idx[1]]
-      break
-    }
+
+  matching_denom_patterns <- purrr::map_lgl(denom_patterns, ~ any(stringr::str_detect(col_names_lower, .x)))
+  if (any(matching_denom_patterns)) {
+    first_denom_pattern <- denom_patterns[which(matching_denom_patterns)[1]]
+    n_col <- col_names[stringr::str_detect(col_names_lower, first_denom_pattern)][1]
   }
 
-  # Special columns
+  # Special columns - tidyverse conversion
   skift_patterns <- c("skift", "shift", "ugedag", "weekday")
-  for (pattern in skift_patterns) {
-    skift_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(skift_idx) > 0) {
-      skift_col <- col_names[skift_idx[1]]
-      break
-    }
+  matching_skift_patterns <- purrr::map_lgl(skift_patterns, ~ any(stringr::str_detect(col_names_lower, .x)))
+  if (any(matching_skift_patterns)) {
+    first_skift_pattern <- skift_patterns[which(matching_skift_patterns)[1]]
+    skift_col <- col_names[stringr::str_detect(col_names_lower, first_skift_pattern)][1]
   }
 
   frys_patterns <- c("frys", "freeze", "frossen", "frozen")
-  for (pattern in frys_patterns) {
-    frys_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(frys_idx) > 0) {
-      frys_col <- col_names[frys_idx[1]]
-      break
-    }
+  matching_frys_patterns <- purrr::map_lgl(frys_patterns, ~ any(stringr::str_detect(col_names_lower, .x)))
+  if (any(matching_frys_patterns)) {
+    first_frys_pattern <- frys_patterns[which(matching_frys_patterns)[1]]
+    frys_col <- col_names[stringr::str_detect(col_names_lower, first_frys_pattern)][1]
   }
 
   comment_patterns <- c("kommentar", "comment", "note", "bemærkning")
-  for (pattern in comment_patterns) {
-    comment_idx <- which(grepl(pattern, col_names_lower, ignore.case = TRUE))
-    if (length(comment_idx) > 0) {
-      kommentar_col <- col_names[comment_idx[1]]
-      break
-    }
+  matching_comment_patterns <- purrr::map_lgl(comment_patterns, ~ any(stringr::str_detect(col_names_lower, .x)))
+  if (any(matching_comment_patterns)) {
+    first_comment_pattern <- comment_patterns[which(matching_comment_patterns)[1]]
+    kommentar_col <- col_names[stringr::str_detect(col_names_lower, first_comment_pattern)][1]
   }
 
   # Compile results
@@ -253,11 +244,13 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
   # 1. ROBUST DATE DETECTION using lubridate
   date_candidates <- detect_date_columns_robust(data)
 
-  # Choose best date column based on detection confidence
+  # Choose best date column based on detection confidence - tidyverse conversion
   best_date_col <- NULL
   if (length(date_candidates) > 0) {
-    # Sort by score and take highest confidence
-    sorted_dates <- date_candidates[order(sapply(date_candidates, function(x) x$score), decreasing = TRUE)]
+    # Sort by score and take highest confidence using purrr::map_dbl
+    scores <- purrr::map_dbl(date_candidates, ~ .x$score)
+    sorted_indices <- order(scores, decreasing = TRUE)
+    sorted_dates <- date_candidates[sorted_indices]
     best_date_col <- names(sorted_dates)[1]
   }
 
@@ -300,13 +293,11 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
 
   # SMART APP_STATE DETECTION: If app_state not provided, try to find it from parent environment
   if (is.null(app_state)) {
-    # Look for app_state in the calling environment chain
-    for (i in 1:10) {
-      env <- parent.frame(i)
-      if (exists("app_state", envir = env)) {
-        app_state <- get("app_state", envir = env)
-        break
-      }
+    # Look for app_state in the calling environment chain using purrr::detect
+    parent_frames <- purrr::map(1:10, ~ parent.frame(.x))
+    app_state_env <- purrr::detect(parent_frames, ~ exists("app_state", envir = .x))
+    if (!is.null(app_state_env)) {
+      app_state <- get("app_state", envir = app_state_env)
     }
   }
 

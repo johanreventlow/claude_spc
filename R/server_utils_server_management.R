@@ -327,7 +327,7 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
   log_debug_kv(
     session_reset_started = TRUE,
     centralized_state_available = use_centralized_state,
-    app_state_hash_before = if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL",
+    app_state_hash_before = if (!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL",
     .context = "SESSION_RESET"
   )
   clearDataLocally(session)
@@ -516,7 +516,6 @@ show_clear_confirmation_modal <- function(has_data, has_settings, app_state) {
 ## Hovedfunktion for velkomstside
 # Opsætter alle handlers for velkomstside interaktioner
 setup_welcome_page_handlers <- function(input, output, session, app_state, emit, ui_service = NULL) {
-
   # Håndtér "Start ny analyse" knap fra velkomstsiden
   shiny::observeEvent(input$start_new_session, {
 

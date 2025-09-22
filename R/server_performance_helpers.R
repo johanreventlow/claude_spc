@@ -164,14 +164,17 @@ validate_numeric_column <- function(data, column_name) {
   }
 
   # Try to convert to numeric
-  tryCatch({
-    as.numeric(column_data)
-    return(NULL)
-  }, error = function(e) {
-    return(paste("Column", column_name, "cannot be converted to numeric"))
-  }, warning = function(w) {
-    return(NULL) # Warnings (like NAs) are acceptable
-  })
+  tryCatch(
+    {
+      as.numeric(column_data)
+      return(NULL)
+    },
+    error = function(e) {
+      return(paste("Column", column_name, "cannot be converted to numeric"))
+    },
+    warning = function(w) {
+      return(NULL) # Warnings (like NAs) are acceptable
+    })
 }
 
 #' Safe Date Parse
@@ -197,22 +200,26 @@ safe_date_parse <- function(date_vector) {
   )
 
   for (fmt in formats) {
-    tryCatch({
-      parsed <- as.Date(date_vector, format = fmt)
-      if (sum(!is.na(parsed)) > 0) {
-        return(parsed)
-      }
-    }, error = function(e) {
-      # Continue to next format
-    })
+    tryCatch(
+      {
+        parsed <- as.Date(date_vector, format = fmt)
+        if (sum(!is.na(parsed)) > 0) {
+          return(parsed)
+        }
+      },
+      error = function(e) {
+        # Continue to next format
+      })
   }
 
   # If all formats fail, try automatic parsing
-  tryCatch({
-    return(as.Date(date_vector))
-  }, error = function(e) {
-    return(date_vector) # Return original if all parsing fails
-  })
+  tryCatch(
+    {
+      return(as.Date(date_vector))
+    },
+    error = function(e) {
+      return(date_vector) # Return original if all parsing fails
+    })
 }
 
 #' Validate SPC Requirements

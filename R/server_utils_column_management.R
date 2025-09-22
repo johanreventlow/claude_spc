@@ -340,7 +340,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     current_data_check <- app_state$data$current_data
     shiny::req(current_data_check)
 
-  # log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
+    # log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
 
     # Inkluder table_version for at tvinge re-render efter gendannelse
     # Use unified state management

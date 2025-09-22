@@ -59,7 +59,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # If original was POSIXct/Date but filtered lost the class, restore it
       if (inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
         !inherits(data_filtered[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
-
         # Restore the original class attributes
         data_filtered[[config$x_col]] <- data[[config$x_col]][complete_rows]
         class(data_filtered[[config$x_col]]) <- original_x_class
@@ -150,7 +149,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
       if (inherits(data_backup[[config$x_col]], c("POSIXct", "POSIXt", "Date")) &&
         !inherits(data[[config$x_col]], c("POSIXct", "POSIXt", "Date"))) {
-
         # Restore the original class and attributes
         data[[config$x_col]] <- data_backup[[config$x_col]][complete_rows]
         class(data[[config$x_col]]) <- original_x_class
@@ -187,9 +185,12 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
   cache_key <- paste0("x_validation_", safe_x_col_id, "_", substr(data_hash, 1, 20))
 
-  x_validation <- create_cached_reactive({
-    validate_x_column_format(data, config$x_col, "observation")
-  }, cache_key, cache_timeout = PERFORMANCE_THRESHOLDS$cache_timeout_default)()
+  x_validation <- create_cached_reactive(
+    {
+      validate_x_column_format(data, config$x_col, "observation")
+    },
+    cache_key,
+    cache_timeout = PERFORMANCE_THRESHOLDS$cache_timeout_default)()
   x_data <- x_validation$x_data
   # xlab_text <- if (x_unit_label != "") x_unit_label else {
   #   if (x_validation$is_date) "Dato" else "Observation"

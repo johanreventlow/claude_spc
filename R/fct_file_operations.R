@@ -14,10 +14,10 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
   shiny::observeEvent(input$data_file, {
     # Enhanced debug tracking for comprehensive testing
     debug_user_interaction("file_upload_initiated",
-                          list(filename = input$data_file$name,
-                               size = input$data_file$size,
-                               type = input$data_file$type),
-                          session$token)
+      list(filename = input$data_file$name,
+        size = input$data_file$size,
+        type = input$data_file$type),
+      session$token)
 
     shiny::req(input$data_file)
 
@@ -27,12 +27,12 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
 
 
     debug_log("File upload started", "FILE_UPLOAD_FLOW", level = "INFO",
-              context = list(
-                filename = input$data_file$name,
-                size_bytes = input$data_file$size,
-                file_type = input$data_file$type
-              ),
-              session_id = session$token)
+      context = list(
+        filename = input$data_file$name,
+        size_bytes = input$data_file$size,
+        file_type = input$data_file$type
+      ),
+      session_id = session$token)
 
     upload_tracer$step("file_validation")
 
@@ -41,11 +41,11 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
     if (!validation_result$valid) {
       upload_tracer$complete("file_validation_failed")
       debug_log("File validation failed", "ERROR_HANDLING", level = "ERROR",
-                context = list(
-                  validation_errors = validation_result$errors,
-                  filename = input$data_file$name
-                ),
-                session_id = session$token)
+        context = list(
+          validation_errors = validation_result$errors,
+          filename = input$data_file$name
+        ),
+        session_id = session$token)
 
       shiny::showNotification(
         paste("File validation failed:", paste(validation_result$errors, collapse = "; ")),
@@ -73,8 +73,8 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
     app_state$data$updating_table <- TRUE
 
     debug_log("File upload state flags set", "FILE_UPLOAD_FLOW", level = "TRACE",
-              context = list(updating_table = TRUE),
-              session_id = session$token)
+      context = list(updating_table = TRUE),
+      session_id = session$token)
     on.exit(
       {
         # Unified state assignment only - Clear table updating flag
@@ -258,8 +258,8 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
 handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NULL) {
 
   debug_log("CSV upload processing started", "FILE_UPLOAD_FLOW", level = "INFO",
-            context = list(file_path = file_path),
-            session_id = session_id)
+    context = list(file_path = file_path),
+    session_id = session_id)
 
   # CSV behandling med danske standarder
 
@@ -275,12 +275,12 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
 
 
   debug_log("CSV data loaded successfully", "FILE_UPLOAD_FLOW", level = "INFO",
-            context = list(
-              rows = nrow(data),
-              columns = ncol(data),
-              column_names = names(data)
-            ),
-            session_id = session_id)
+    context = list(
+      rows = nrow(data),
+      columns = ncol(data),
+      column_names = names(data)
+    ),
+    session_id = session_id)
 
   # ENHANCED DATA PREPROCESSING: Clean and validate data
   preprocessing_result <- preprocess_uploaded_data(
@@ -332,8 +332,8 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
 
   # Enhanced state change tracking
   debug_state_change("CSV_UPLOAD", "app_state$data$current_data",
-                    app_state$data$current_data, data_frame,
-                    "file_upload_processing", session_id)
+    app_state$data$current_data, data_frame,
+    "file_upload_processing", session_id)
 
   set_current_data(app_state, data_frame)
   app_state$data$original_data <- data_frame
@@ -360,12 +360,12 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   # ROBUST AUTO-DETECT: Enhanced auto-detection triggering with validation
 
   debug_log("Data loaded event emitted successfully", "FILE_UPLOAD_FLOW", level = "INFO",
-            context = list(
-              rows = nrow(data),
-              columns = ncol(data),
-              event_system = "unified_event_bus"
-            ),
-            session_id = session_id)
+    context = list(
+      rows = nrow(data),
+      columns = ncol(data),
+      event_system = "unified_event_bus"
+    ),
+    session_id = session_id)
 
   # Take state snapshot after all state is set
   if (!is.null(app_state)) {
@@ -508,20 +508,20 @@ validate_uploaded_file <- function(file_info, session_id = NULL) {
   # Log validation results
   if (length(errors) > 0) {
     debug_log("File validation failed", "FILE_UPLOAD_FLOW", level = "WARNING",
-              context = list(
-                filename = file_info$name,
-                file_size = file_info$size,
-                validation_errors = errors
-              ),
-              session_id = session_id)
+      context = list(
+        filename = file_info$name,
+        file_size = file_info$size,
+        validation_errors = errors
+      ),
+      session_id = session_id)
   } else {
     debug_log("File validation successful", "FILE_UPLOAD_FLOW", level = "INFO",
-              context = list(
-                filename = file_info$name,
-                file_size = file_info$size,
-                file_extension = file_ext
-              ),
-              session_id = session_id)
+      context = list(
+        filename = file_info$name,
+        file_size = file_info$size,
+        file_extension = file_ext
+      ),
+      session_id = session_id)
   }
 
   return(list(
@@ -713,15 +713,15 @@ handle_upload_error <- function(error, file_info, session_id = NULL) {
 
   # Log detailed error information
   debug_log("Enhanced error handling triggered", "ERROR_HANDLING", level = "ERROR",
-            context = list(
-              error_type = error_type,
-              error_message = error_message,
-              filename = file_info$name,
-              file_size = file_info$size,
-              file_type = file_info$type,
-              suggestions = suggestions
-            ),
-            session_id = session_id)
+    context = list(
+      error_type = error_type,
+      error_message = error_message,
+      filename = file_info$name,
+      file_size = file_info$size,
+      file_type = file_info$type,
+      suggestions = suggestions
+    ),
+    session_id = session_id)
 
   # Create comprehensive user notification
   notification_html <- shiny::tags$div(
@@ -806,7 +806,7 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
   # Check for potential date columns (for X-axis)
   potential_date_columns <- sapply(col_names, function(name) {
     grepl("dato|date|tid|time", tolower(name)) ||
-    grepl("^(x|uge|måned|år|dag)", tolower(name))
+      grepl("^(x|uge|måned|år|dag)", tolower(name))
   })
   validation_results$potential_date_columns <- sum(potential_date_columns)
 
@@ -836,12 +836,12 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
 
   # Log validation results
   debug_log("Data validation for auto-detection completed", "FILE_UPLOAD_FLOW", level = "INFO",
-            context = list(
-              suitable = suitable,
-              validation_results = validation_results,
-              issues = if (length(issues) > 0) issues else "none"
-            ),
-            session_id = session_id)
+    context = list(
+      suitable = suitable,
+      validation_results = validation_results,
+      issues = if (length(issues) > 0) issues else "none"
+    ),
+    session_id = session_id)
 
   return(list(
     suitable = suitable,
@@ -918,13 +918,13 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
 
   # Log preprocessing results
   debug_log("Data preprocessing completed", "FILE_UPLOAD_FLOW", level = "INFO",
-            context = list(
-              filename = file_info$name,
-              cleaning_log = cleaning_log,
-              original_dimensions = original_dims,
-              final_dimensions = final_dims
-            ),
-            session_id = session_id)
+    context = list(
+      filename = file_info$name,
+      cleaning_log = cleaning_log,
+      original_dimensions = original_dims,
+      final_dimensions = final_dims
+    ),
+    session_id = session_id)
 
 
   return(list(

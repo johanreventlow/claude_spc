@@ -22,10 +22,9 @@
 #' - Export af logs til forskellige formater
 #'
 setup_shinylogs <- function(enable_tracking = TRUE,
-                           enable_errors = TRUE,
-                           enable_performances = TRUE,
-                           log_directory = "logs/") {
-
+                            enable_errors = TRUE,
+                            enable_performances = TRUE,
+                            log_directory = "logs/") {
   # log_info will be available when this is called from app_server
 
   # Ensure log directory exists
@@ -69,9 +68,8 @@ setup_shinylogs <- function(enable_tracking = TRUE,
 #' @param app_name Navn på applikationen (default: "SPC_APP")
 #'
 initialize_shinylogs_tracking <- function(session,
-                                        app_name = "SPC_APP",
-                                        log_directory = "logs/") {
-
+                                          app_name = "SPC_APP",
+                                          log_directory = "logs/") {
   # Initializing shinylogs tracking
 
   # Start tracking with correct API
@@ -167,7 +165,6 @@ shinylogs_dashboard_ui <- function(id, title = "Application Logs") {
 #'
 shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
   shiny::moduleServer(id, function(input, output, session) {
-
     # Starting shinylogs dashboard server
 
     # Reactive log data
@@ -225,8 +222,8 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
 
       if (nrow(perf_logs) == 0) {
         return(ggplot() +
-               ggplot2::labs(title = "No performance data available") +
-               ggplot2::theme_minimal())
+          ggplot2::labs(title = "No performance data available") +
+          ggplot2::theme_minimal())
       }
 
       ggplot(perf_logs, aes(x = as.POSIXct(timestamp), y = duration)) +
@@ -279,7 +276,6 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
 #' @param session Shiny session for tracking
 #'
 integrate_shinylogs_with_logging <- function(session) {
-
   # Integrating shinylogs with existing logging system
 
   # Store original log functions

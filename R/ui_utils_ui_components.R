@@ -24,14 +24,14 @@
 #'
 #' # Multiple selection
 #' create_column_selectize("multi_cols", "Vælg kolonner:",
-#'                         col_choices, multiple = TRUE)
+#'   col_choices, multiple = TRUE)
 #' }
 #'
 #' @family ui_components
 #' @export
 create_column_selectize <- function(inputId, label, choices = NULL, selected = NULL,
-                                   placeholder = "Vælg kolonne...", multiple = FALSE,
-                                   width = UI_INPUT_WIDTHS$full) {
+                                    placeholder = "Vælg kolonne...", multiple = FALSE,
+                                    width = UI_INPUT_WIDTHS$full) {
   shiny::selectizeInput(
     inputId = inputId,
     label = label,
@@ -74,7 +74,7 @@ create_column_selectize <- function(inputId, label, choices = NULL, selected = N
 #' @family ui_components
 #' @export
 create_text_input <- function(inputId, label, value = "", placeholder = "",
-                             width = UI_INPUT_WIDTHS$full, pattern = NULL) {
+                              width = UI_INPUT_WIDTHS$full, pattern = NULL) {
   input_elem <- shiny::textInput(
     inputId = inputId,
     label = label,
@@ -118,7 +118,7 @@ create_text_input <- function(inputId, label, value = "", placeholder = "",
 #' @family ui_components
 #' @export
 create_numeric_input <- function(inputId, label, value = NULL, min = NA, max = NA,
-                                step = 1, width = UI_INPUT_WIDTHS$full) {
+                                 step = 1, width = UI_INPUT_WIDTHS$full) {
   shiny::numericInput(
     inputId = inputId,
     label = label,
@@ -149,7 +149,7 @@ create_numeric_input <- function(inputId, label, value = NULL, min = NA, max = N
 #'
 #' # Med help text
 #' create_checkbox("advanced", "Avancerede indstillinger",
-#'                help_text = "Vis ekstra konfigurationsmuligheder")
+#'   help_text = "Vis ekstra konfigurationsmuligheder")
 #' }
 #'
 #' @family ui_components
@@ -197,8 +197,7 @@ create_checkbox <- function(inputId, label, value = FALSE, help_text = NULL) {
 #' @family ui_components
 #' @export
 create_action_button <- function(inputId, label, style = "primary", icon = NULL,
-                                disabled = FALSE, width = "auto") {
-
+                                 disabled = FALSE, width = "auto") {
   # Map styles til Bootstrap klasser
   class_map <- list(
     primary = "btn-primary",
@@ -244,7 +243,6 @@ create_action_button <- function(inputId, label, style = "primary", icon = NULL,
 #' @family ui_components
 #' @export
 create_info_panel <- function(content, type = "info", dismissible = FALSE, icon = NULL) {
-
   # Map types til Bootstrap alert klasser
   class_map <- list(
     info = "alert-info",

@@ -61,14 +61,14 @@ app_server <- function(input, output, session) {
 golem_add_external_resources <- function() {
 
   add_resource_path(
-    'www', app_sys('app/www')
+    "www", app_sys("app/www")
   )
 
   tags$head(
     favicon(),
     bundle_resources(
-      path = app_sys('app/www'),
-      app_title = 'claudespc'
+      path = app_sys("app/www"),
+      app_title = "claudespc"
     )
     # Add here other external resources
     # for example, you can add shinyalert::useShinyalert()
@@ -96,13 +96,13 @@ app_sys <- function(...) {
 #'
 #' @noRd
 get_golem_config <- function(
-  value,
-  config = Sys.getenv(
-    "GOLEM_CONFIG_ACTIVE",
-    "default"
-  ),
-  use_parent = TRUE
-) {
+    value,
+    config = Sys.getenv(
+      "GOLEM_CONFIG_ACTIVE",
+      "default"
+    ),
+    use_parent = TRUE
+    ) {
   config::get(
     value = value,
     config = config,

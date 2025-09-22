@@ -15,7 +15,7 @@ debug_user_interaction <- function(action, details = NULL, session_id = NULL) {
 
   # Also log to structured debug system
   debug_log(paste("User interaction:", action), "USER_INTERACTION", level = "INFO",
-            context = details, session_id = session_id)
+    context = details, session_id = session_id)
 }
 
 ## Reactive chain step-by-step tracer
@@ -28,13 +28,13 @@ debug_reactive_execution <- function(reactive_name, step, input_values = NULL, o
 
   # Structured logging
   debug_log(paste("Reactive execution:", reactive_name, "step:", step), "REACTIVE_TRACE", level = "TRACE",
-            context = list(
-              reactive_name = reactive_name,
-              step = step,
-              input_summary = if (!is.null(input_values)) names(input_values) else NULL,
-              output_type = if (!is.null(output_value)) class(output_value)[1] else NULL
-            ),
-            session_id = session_id)
+    context = list(
+      reactive_name = reactive_name,
+      step = step,
+      input_summary = if (!is.null(input_values)) names(input_values) else NULL,
+      output_type = if (!is.null(output_value)) class(output_value)[1] else NULL
+    ),
+    session_id = session_id)
 }
 
 ## State change detailed tracker
@@ -47,14 +47,14 @@ debug_state_change <- function(component, state_path, old_value, new_value, trig
 
   # Structured logging
   debug_log(paste("State change in", component, "at", state_path), "STATE_CHANGE", level = "TRACE",
-            context = list(
-              component = component,
-              state_path = state_path,
-              old_type = class(old_value)[1],
-              new_type = class(new_value)[1],
-              trigger = trigger
-            ),
-            session_id = session_id)
+    context = list(
+      component = component,
+      state_path = state_path,
+      old_type = class(old_value)[1],
+      new_type = class(new_value)[1],
+      trigger = trigger
+    ),
+    session_id = session_id)
 }
 
 ## Workflow step tracer with detailed context
@@ -67,7 +67,7 @@ debug_workflow_step <- function(workflow_name, step_name, step_data = NULL, sess
 
   # Structured logging
   debug_log(paste("Workflow step:", workflow_name, "->", step_name), "WORKFLOW_STEP", level = "INFO",
-            context = step_data, session_id = session_id)
+    context = step_data, session_id = session_id)
 }
 
 ## Error boundary with comprehensive context
@@ -80,13 +80,13 @@ debug_error_boundary <- function(operation, error, context = NULL, session_id = 
 
   # Structured logging
   debug_log(paste("Error in operation:", operation), "ERROR_BOUNDARY", level = "ERROR",
-            context = list(
-              operation = operation,
-              error_message = error$message,
-              error_class = class(error),
-              context = context
-            ),
-            session_id = session_id)
+    context = list(
+      operation = operation,
+      error_message = error$message,
+      error_class = class(error),
+      context = context
+    ),
+    session_id = session_id)
 }
 
 ## Memory and performance tracker
@@ -103,12 +103,12 @@ debug_performance_checkpoint <- function(checkpoint_name, additional_data = NULL
 
   # Structured logging
   debug_log(paste("Performance checkpoint:", checkpoint_name), "PERFORMANCE", level = "INFO",
-            context = list(
-              checkpoint = checkpoint_name,
-              memory_mb = round(memory_used, 2),
-              additional_data = additional_data
-            ),
-            session_id = session_id)
+    context = list(
+      checkpoint = checkpoint_name,
+      memory_mb = round(memory_used, 2),
+      additional_data = additional_data
+    ),
+    session_id = session_id)
 }
 
 # COMPREHENSIVE TEST SCENARIOS ==============================================
@@ -178,7 +178,7 @@ run_e2e_test_scenario <- function(scenario_name, test_steps, session_id = NULL) 
   scenario_result$total_duration <- total_duration
 
   debug_performance_checkpoint(paste("scenario_end", scenario_name),
-                                list(total_duration = total_duration), session_id = session_id)
+    list(total_duration = total_duration), session_id = session_id)
 
   status <- if (scenario_result$success) "COMPLETED" else "FAILED"
   log_debug_block("E2E_SCENARIO", paste("Scenario", status, ":", scenario_name, "(", round(total_duration, 3), "s)"))

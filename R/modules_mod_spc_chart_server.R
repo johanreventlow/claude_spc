@@ -22,7 +22,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # Create a reactive-safe data function
     get_module_data <- function() {
-
       # Use shiny::isolate() to safely access reactive values
       current_data_check <- shiny::isolate(app_state$data$current_data)
       if (is.null(current_data_check)) {
@@ -57,7 +56,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # UNIFIED EVENT SYSTEM: Update data cache when relevant events occur
     shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
-
       # Use the pure function to get data
       result_data <- get_module_data()
 
@@ -176,7 +174,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       # Check if we can use cached plot
       if (!is.null(plot_cache()) && !is.null(plot_cache_key()) &&
-          plot_cache_key() == current_cache_key) {
+        plot_cache_key() == current_cache_key) {
         return(plot_cache())
       }
 
@@ -319,7 +317,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Separat renderPlot for det faktiske SPC plot
     # PRODUCTION VERSION with fixes applied
     output$spc_plot_actual <- shiny::renderPlot({
-
       # Use the fixed spc_plot() reactive which handles NULL chart_config gracefully
       plot_result <- spc_plot()
 

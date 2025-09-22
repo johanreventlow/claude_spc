@@ -9,7 +9,6 @@
 #' @family memory_management
 #' @export
 setup_session_cleanup <- function(session, app_state = NULL, observers = NULL) {
-
   # Register cleanup på session end
   session$onSessionEnded(function() {
     log_info("Starting session cleanup", "MEMORY_MGMT")
@@ -58,7 +57,6 @@ cleanup_reactive_values <- function(values) {
         # Try to check if value exists and clear it
         # This might fail during session shutdown when no reactive context exists
         if (value_name %in% names(values)) {
-
           # Handle different types of values objects
           if (inherits(values, "reactivevalues")) {
             # It's a real ReactiveValues object
@@ -256,7 +254,7 @@ start_memory_monitoring <- function(operation_name = "unknown", warn_threshold =
     if (memory_diff > warn_threshold) {
       log_warn(
         paste("High memory usage for", operation_name, ":",
-              round(memory_diff, 2), "MB increase"),
+          round(memory_diff, 2), "MB increase"),
         "MEMORY_MGMT"
       )
     }
@@ -386,7 +384,7 @@ reset_app_to_clean_state <- function(app_state, session = NULL, emit = NULL) {
   memory_stats <- memory_monitor()
   log_info(
     paste("App reset completed. Memory change:",
-          round(memory_stats$memory_diff, 2), "MB"),
+      round(memory_stats$memory_diff, 2), "MB"),
     "MEMORY_MGMT"
   )
 }
