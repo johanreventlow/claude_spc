@@ -3,16 +3,16 @@
 
 test_that("modular config files load correctly", {
   # Test at de nye modulære config filer eksisterer
-  expect_true(file.exists("../../R/config_ui_config.R"))
-  expect_true(file.exists("../../R/config_spc_config.R"))
-  expect_true(file.exists("../../R/config_system_config.R"))
-  expect_true(file.exists("../../R/config_chart_types.R"))
+  expect_true(file.exists(here::here("R", "config_ui_config.R")))
+  expect_true(file.exists(here::here("R", "config_spc_config.R")))
+  expect_true(file.exists(here::here("R", "config_system_config.R")))
+  expect_true(file.exists(here::here("R", "config_chart_types.R")))
 
   # Source alle config filer
-  source("../../R/config_ui_config.R")
-  source("../../R/config_spc_config.R")
-  source("../../R/config_system_config.R")
-  source("../../R/config_chart_types.R")
+  source(here::here("R", "config_ui_config.R"))
+  source(here::here("R", "config_spc_config.R"))
+  source(here::here("R", "config_system_config.R"))
+  source(here::here("R", "config_chart_types.R"))
 
   # Test at hovedkonstanter eksisterer (nu spredt på tværs af config filer)
   expect_true(exists("UI_COLUMN_WIDTHS"))
@@ -22,7 +22,7 @@ test_that("modular config files load correctly", {
 })
 
 test_that("system configuration konstanter", {
-  source("../../R/config_system_config.R")
+  source(here::here("R", "config_system_config.R"))
 
   # Test performance thresholds
   expect_true(exists("PERFORMANCE_THRESHOLDS"))
@@ -38,7 +38,7 @@ test_that("system configuration konstanter", {
 })
 
 test_that("SPC configuration konstanter", {
-  source("../../R/config_spc_config.R")
+  source(here::here("R", "config_spc_config.R"))
 
   # Test SPC validation constants
   expect_true(exists("MIN_SPC_ROWS"))
@@ -54,7 +54,7 @@ test_that("SPC configuration konstanter", {
 })
 
 test_that("UI layout konstanter", {
-  source("../../R/config_ui_config.R")
+  source(here::here("R", "config_ui_config.R"))
 
   # Test UI column widths
   expect_type(UI_COLUMN_WIDTHS, "list")
@@ -76,7 +76,7 @@ test_that("UI layout konstanter", {
 })
 
 test_that("chart types konstanter", {
-  source("../../R/config_chart_types.R")
+  source(here::here("R", "config_chart_types.R"))
 
   # Test chart types
   expect_type(CHART_TYPES_DA, "list")
@@ -93,7 +93,7 @@ test_that("chart types konstanter", {
 
 test_that("Y-axis units konstanter", {
   # Source Y_AXIS_UNITS_DA from its proper location
-  source("../../R/config_spc_config.R")
+  source(here::here("R", "config_spc_config.R"))
 
   # Test Y-axis units structure
   expect_type(Y_AXIS_UNITS_DA, "list")
@@ -108,7 +108,7 @@ test_that("Y-axis units konstanter", {
 })
 
 test_that("logging og performance konstanter", {
-  source("../../R/config_system_config.R")
+  source(here::here("R", "config_system_config.R"))
 
   # Test observer priorities
   expect_type(OBSERVER_PRIORITIES, "list")
@@ -134,8 +134,8 @@ test_that("logging og performance konstanter", {
 
 test_that("konstanter konsistens med eksisterende global.R", {
   # Load only the config files needed without hospital branding
-  source("../../R/config_chart_types.R")
-  source("../../R/config_ui_config.R")
+  source(here::here("R", "config_chart_types.R"))
+  source(here::here("R", "config_ui_config.R"))
 
   # Test at chart types har de forventede keys
   expected_charts <- c("I-kort (Individuelle værdier)", "P-kort (Andele)", "C-kort (Tællinger)")
@@ -153,7 +153,7 @@ test_that("konstanter konsistens med eksisterende global.R", {
 
 test_that("UI helpers module funktionalitet", {
   # Test at UI config filen fungerer
-  source("../../R/config_ui_config.R")
+  source(here::here("R", "config_ui_config.R"))
 
   # Test UI config indlæsning
   expect_true(exists("UI_COLUMN_WIDTHS"))
