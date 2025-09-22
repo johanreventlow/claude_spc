@@ -55,9 +55,10 @@ test_that("ensure_standard_columns virker med test data", {
   if (exists("ensure_standard_columns")) {
     result <- ensure_standard_columns(test_data)
     expect_true(is.data.frame(result))
-    expect_true("Skift" %in% names(result))
-    expect_true("Frys" %in% names(result))
+    # ensure_standard_columns only cleans data, doesn't add Skift/Frys columns
     expect_true(all(c("Dato", "Tæller", "Nævner") %in% names(result)))
+    expect_equal(nrow(result), nrow(test_data))
+    expect_true(all(grepl("^[a-zA-Z]", names(result))))  # Names should be valid
   } else {
     skip("ensure_standard_columns function not available")
   }

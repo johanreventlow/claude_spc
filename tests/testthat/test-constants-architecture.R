@@ -1,149 +1,176 @@
 # test-constants-architecture.R
 # Tests af D) Architecture Improvements - modular config files og reusable modules
 
-test_that("modular config files load correctly", {
-  # Test at de nye modulære config filer eksisterer
-  expect_true(file.exists(here::here("R", "config_ui_config.R")))
-  expect_true(file.exists(here::here("R", "config_spc_config.R")))
-  expect_true(file.exists(here::here("R", "config_system_config.R")))
-  expect_true(file.exists(here::here("R", "config_chart_types.R")))
+# Load config consolidation utilities for testing
+source(here::here("R", "utils_config_consolidation.R"))
 
-  # Source alle config filer
-  source(here::here("R", "config_ui_config.R"))
-  source(here::here("R", "config_spc_config.R"))
-  source(here::here("R", "config_system_config.R"))
-  source(here::here("R", "config_chart_types.R"))
+test_that("config registry loads all domains correctly", {
+  # Test config registry loading via package-based system
+  config_registry <- create_config_registry()
 
-  # Test at hovedkonstanter eksisterer (nu spredt på tværs af config filer)
-  expect_true(exists("UI_COLUMN_WIDTHS"))
-  expect_true(exists("MIN_SPC_ROWS"))
-  expect_true(exists("OBSERVER_PRIORITIES"))
-  expect_true(exists("CHART_TYPES_DA"))
+  # Test at alle config domæner kan loades
+  charts_config <- config_registry$get("charts")
+  expect_type(charts_config, "list")
+  expect_true("chart_types_da" %in% names(charts_config))
+  expect_true("default_chart" %in% names(charts_config))
+
+  system_config <- config_registry$get("system")
+  expect_type(system_config, "list")
+  expect_true("observer_priorities" %in% names(system_config))
+  expect_true("system_settings" %in% names(system_config))
+
+  ui_config <- config_registry$get("ui")
+  expect_type(ui_config, "list")
+  expect_true("ui_column_widths" %in% names(ui_config))
+
+  spc_config <- config_registry$get("spc")
+  expect_type(spc_config, "list")
+  expect_true("spc_settings" %in% names(spc_config))
 })
 
-test_that("system configuration konstanter", {
-  source(here::here("R", "config_system_config.R"))
-
-  # Test performance thresholds
-  expect_true(exists("PERFORMANCE_THRESHOLDS"))
-  expect_type(PERFORMANCE_THRESHOLDS, "list")
-
-  # Test operation timeouts
-  expect_true(exists("OPERATION_TIMEOUTS"))
-  expect_type(OPERATION_TIMEOUTS, "list")
+test_that("system configuration via registry", {
+  config_registry <- create_config_registry()
+  system_config <- config_registry$get("system")
 
   # Test observer priorities
-  expect_true(exists("OBSERVER_PRIORITIES"))
-  expect_type(OBSERVER_PRIORITIES, "list")
+  expect_true("observer_priorities" %in% names(system_config))
+  observer_priorities <- system_config$observer_priorities
+  expect_type(observer_priorities, "list")
+  expect_true("STATE_MANAGEMENT" %in% names(observer_priorities))
+  expect_true("DATA_PROCESSING" %in% names(observer_priorities))
+
+  # Test system settings
+  expect_true("system_settings" %in% names(system_config))
+  system_settings <- system_config$system_settings
+  expect_type(system_settings, "list")
+  expect_true("OPERATION_TIMEOUTS" %in% names(system_settings))
+  expect_true("PERFORMANCE_THRESHOLDS" %in% names(system_settings))
 })
 
-test_that("SPC configuration konstanter", {
-  source(here::here("R", "config_spc_config.R"))
+test_that("SPC configuration via registry", {
+  config_registry <- create_config_registry()
+  spc_config <- config_registry$get("spc")
+
+  # Test SPC settings structure
+  expect_true("spc_settings" %in% names(spc_config))
+  spc_settings <- spc_config$spc_settings
+  expect_type(spc_settings, "list")
 
   # Test SPC validation constants
-  expect_true(exists("MIN_SPC_ROWS"))
-  expect_true(exists("RECOMMENDED_SPC_POINTS"))
-  expect_true(exists("MAX_MISSING_PERCENT"))
-  expect_true(exists("MIN_NUMERIC_PERCENT"))
+  expect_true("MIN_SPC_ROWS" %in% names(spc_settings))
+  expect_true("RECOMMENDED_SPC_POINTS" %in% names(spc_settings))
+  expect_true("MAX_MISSING_PERCENT" %in% names(spc_settings))
+  expect_true("MIN_NUMERIC_PERCENT" %in% names(spc_settings))
 
   # Test at værdier er logiske
-  expect_true(MIN_SPC_ROWS > 0)
-  expect_true(RECOMMENDED_SPC_POINTS >= MIN_SPC_ROWS)
-  expect_true(MAX_MISSING_PERCENT > 0 && MAX_MISSING_PERCENT <= 100)
-  expect_true(MIN_NUMERIC_PERCENT > 0 && MIN_NUMERIC_PERCENT <= 1)
+  expect_true(spc_settings$MIN_SPC_ROWS > 0)
+  expect_true(spc_settings$RECOMMENDED_SPC_POINTS >= spc_settings$MIN_SPC_ROWS)
+  expect_true(spc_settings$MAX_MISSING_PERCENT > 0 && spc_settings$MAX_MISSING_PERCENT <= 100)
+  expect_true(spc_settings$MIN_NUMERIC_PERCENT > 0 && spc_settings$MIN_NUMERIC_PERCENT <= 1)
 })
 
-test_that("UI layout konstanter", {
-  source(here::here("R", "config_ui_config.R"))
+test_that("UI layout via registry", {
+  config_registry <- create_config_registry()
+  ui_config <- config_registry$get("ui")
 
   # Test UI column widths
-  expect_type(UI_COLUMN_WIDTHS, "list")
-  expect_equal(UI_COLUMN_WIDTHS$quarter, c(6, 6, 6, 6))
-  expect_equal(UI_COLUMN_WIDTHS$half, c(6, 6))
-  expect_equal(UI_COLUMN_WIDTHS$thirds, c(4, 4, 4))
-  expect_equal(UI_COLUMN_WIDTHS$sidebar, c(3, 9))
+  ui_column_widths <- ui_config$ui_column_widths
+  expect_type(ui_column_widths, "list")
+  expect_equal(ui_column_widths$quarter, c(6, 6, 6, 6))
+  expect_equal(ui_column_widths$half, c(6, 6))
+  expect_equal(ui_column_widths$thirds, c(4, 4, 4))
+  expect_equal(ui_column_widths$sidebar, c(3, 9))
 
   # Test UI heights
-  expect_type(UI_HEIGHTS, "list")
-  expect_equal(UI_HEIGHTS$logo, "40px")
-  expect_equal(UI_HEIGHTS$modal_content, "300px")
-  expect_match(UI_HEIGHTS$chart_container, "calc\\(.*\\)")
+  ui_heights <- ui_config$ui_heights
+  expect_type(ui_heights, "list")
+  expect_equal(ui_heights$logo, "40px")
+  expect_equal(ui_heights$modal_content, "300px")
+  expect_match(ui_heights$chart_container, "calc\\(.*\\)")
 
   # Test UI styles
-  expect_type(UI_STYLES, "list")
-  expect_match(UI_STYLES$flex_column, "display: flex")
-  expect_match(UI_STYLES$scroll_auto, "overflow-y: auto")
+  ui_styles <- ui_config$ui_styles
+  expect_type(ui_styles, "list")
+  expect_match(ui_styles$flex_column, "display: flex")
+  expect_match(ui_styles$scroll_auto, "overflow-y: auto")
 })
 
-test_that("chart types konstanter", {
-  source(here::here("R", "config_chart_types.R"))
+test_that("chart types via registry", {
+  config_registry <- create_config_registry()
+  charts_config <- config_registry$get("charts")
 
   # Test chart types
-  expect_type(CHART_TYPES_DA, "list")
-  expect_type(CHART_TYPES_EN, "list")
+  chart_types_da <- charts_config$chart_types_da
+  expect_type(chart_types_da, "list")
 
   # Test specifikke chart mappings
-  expect_equal(CHART_TYPES_DA[["I-kort (Individuelle værdier)"]], "i")
-  expect_equal(CHART_TYPES_DA[["P-kort (Andele)"]], "p")
-  expect_equal(CHART_TYPES_DA[["C-kort (Tællinger)"]], "c")
+  expect_equal(chart_types_da[["I-kort (Individuelle værdier)"]], "i")
+  expect_equal(chart_types_da[["P-kort (Andele)"]], "p")
+  expect_equal(chart_types_da[["C-kort (Tællinger)"]], "c")
 
-  # Test at der er sammenhæng mellem DA og EN versioner
-  expect_equal(length(CHART_TYPES_DA), length(CHART_TYPES_EN))
+  # Test default chart
+  expect_equal(charts_config$default_chart, "i")
 })
 
-test_that("Y-axis units konstanter", {
-  # Source Y_AXIS_UNITS_DA from its proper location
-  source(here::here("R", "config_spc_config.R"))
+test_that("Y-axis units via registry", {
+  config_registry <- create_config_registry()
+  spc_config <- config_registry$get("spc")
 
   # Test Y-axis units structure
-  expect_type(Y_AXIS_UNITS_DA, "list")
-  expect_true("Antal" %in% names(Y_AXIS_UNITS_DA))
-  expect_true("Procent (%)" %in% names(Y_AXIS_UNITS_DA))
-  expect_true("Promille (‰)" %in% names(Y_AXIS_UNITS_DA))
+  y_axis_units_da <- spc_config$spc_settings$Y_AXIS_UNITS_DA
+  expect_type(y_axis_units_da, "list")
+  expect_true("Antal" %in% names(y_axis_units_da))
+  expect_true("Procent (%)" %in% names(y_axis_units_da))
+  expect_true("Promille (‰)" %in% names(y_axis_units_da))
 
   # Test that values are correct runtime codes (not Danish)
-  expect_equal(Y_AXIS_UNITS_DA[["Antal"]], "count")
-  expect_equal(Y_AXIS_UNITS_DA[["Procent (%)"]], "percent")
-  expect_equal(Y_AXIS_UNITS_DA[["Promille (‰)"]], "permille")
+  expect_equal(y_axis_units_da[["Antal"]], "count")
+  expect_equal(y_axis_units_da[["Procent (%)"]], "percent")
+  expect_equal(y_axis_units_da[["Promille (‰)"]], "permille")
 })
 
-test_that("logging og performance konstanter", {
-  source(here::here("R", "config_system_config.R"))
+test_that("logging og performance via registry", {
+  config_registry <- create_config_registry()
+  system_config <- config_registry$get("system")
 
   # Test observer priorities
-  expect_type(OBSERVER_PRIORITIES, "list")
-  expect_true(OBSERVER_PRIORITIES$highest > OBSERVER_PRIORITIES$high)
-  expect_true(OBSERVER_PRIORITIES$high > OBSERVER_PRIORITIES$medium)
-  expect_true(OBSERVER_PRIORITIES$medium > OBSERVER_PRIORITIES$low)
+  observer_priorities <- system_config$observer_priorities
+  expect_type(observer_priorities, "list")
+  expect_true(observer_priorities$highest > observer_priorities$high)
+  expect_true(observer_priorities$high > observer_priorities$medium)
+  expect_true(observer_priorities$medium > observer_priorities$low)
 
   # Test log components
-  expect_type(LOG_COMPONENTS, "list")
-  expect_true("DATA_PROC" %in% names(LOG_COMPONENTS))
-  expect_true("AUTO_DETECT" %in% names(LOG_COMPONENTS))
-  expect_true("ERROR_HANDLING" %in% names(LOG_COMPONENTS))
+  log_components <- system_config$system_settings$LOG_COMPONENTS
+  expect_type(log_components, "list")
+  expect_true("DATA_PROC" %in% names(log_components))
+  expect_true("AUTO_DETECT" %in% names(log_components))
+  expect_true("ERROR_HANDLING" %in% names(log_components))
 
   # Test timeouts
-  expect_type(OPERATION_TIMEOUTS, "list")
-  expect_true(OPERATION_TIMEOUTS$file_read > OPERATION_TIMEOUTS$chart_render)
-  expect_true(all(sapply(OPERATION_TIMEOUTS, function(x) x > 0)))
+  operation_timeouts <- system_config$system_settings$OPERATION_TIMEOUTS
+  expect_type(operation_timeouts, "list")
+  expect_true(operation_timeouts$file_read > operation_timeouts$chart_render)
+  expect_true(all(sapply(operation_timeouts, function(x) x > 0)))
 
   # Test debounce delays
-  expect_type(DEBOUNCE_DELAYS, "list")
-  expect_true(all(sapply(DEBOUNCE_DELAYS, function(x) x > 0 && x < 2000)))
+  debounce_delays <- system_config$system_settings$DEBOUNCE_DELAYS
+  expect_type(debounce_delays, "list")
+  expect_true(all(sapply(debounce_delays, function(x) x > 0 && x < 2000)))
 })
 
-test_that("konstanter konsistens med eksisterende global.R", {
-  # Load only the config files needed without hospital branding
-  source(here::here("R", "config_chart_types.R"))
-  source(here::here("R", "config_ui_config.R"))
+test_that("konstanter konsistens via registry", {
+  config_registry <- create_config_registry()
 
-  # Test at chart types har de forventede keys
+  # Test chart types consistency
+  charts_config <- config_registry$get("charts")
   expected_charts <- c("I-kort (Individuelle værdier)", "P-kort (Andele)", "C-kort (Tællinger)")
-  expect_true(all(expected_charts %in% names(CHART_TYPES_DA)))
+  expect_true(all(expected_charts %in% names(charts_config$chart_types_da)))
 
   # Test at UI helpers har fornuftige strukturer
-  expect_type(UI_COLUMN_WIDTHS, "list")
-  expect_true("quarter" %in% names(UI_COLUMN_WIDTHS))
+  ui_config <- config_registry$get("ui")
+  expect_type(ui_config$ui_column_widths, "list")
+  expect_true("quarter" %in% names(ui_config$ui_column_widths))
 
   # Test that TEST_MODE_AUTO_LOAD environment variable handling works
   TEST_MODE_AUTO_LOAD <- as.logical(Sys.getenv("TEST_MODE_AUTO_LOAD", "TRUE"))
@@ -151,20 +178,20 @@ test_that("konstanter konsistens med eksisterende global.R", {
   expect_true(TEST_MODE_AUTO_LOAD %in% c(TRUE, FALSE))
 })
 
-test_that("UI helpers module funktionalitet", {
-  # Test at UI config filen fungerer
-  source(here::here("R", "config_ui_config.R"))
+test_that("UI helpers module funktionalitet via registry", {
+  config_registry <- create_config_registry()
+  ui_config <- config_registry$get("ui")
 
   # Test UI config indlæsning
-  expect_true(exists("UI_COLUMN_WIDTHS"))
-  expect_true(exists("UI_HEIGHTS"))
-  expect_true(exists("UI_STYLES"))
+  expect_true("ui_column_widths" %in% names(ui_config))
+  expect_true("ui_heights" %in% names(ui_config))
+  expect_true("ui_styles" %in% names(ui_config))
 
   # Test config funktionalitet
-  expect_equal(UI_COLUMN_WIDTHS$quarter, c(6, 6, 6, 6))
-  expect_equal(UI_COLUMN_WIDTHS$half, c(6, 6))
-  expect_equal(UI_HEIGHTS$logo, "40px")
-  expect_match(UI_STYLES$flex_column, "display: flex")
+  expect_equal(ui_config$ui_column_widths$quarter, c(6, 6, 6, 6))
+  expect_equal(ui_config$ui_column_widths$half, c(6, 6))
+  expect_equal(ui_config$ui_heights$logo, "40px")
+  expect_match(ui_config$ui_styles$flex_column, "display: flex")
 })
 
 test_that("integration med eksisterende kode", {

@@ -123,12 +123,12 @@ initialize_package_globals <- function() {
   claudespc_env$HOSPITAL_COLORS <- get_hospital_colors()
   claudespc_env$HOSPITAL_THEME <- get_hospital_ggplot_theme()
 
-  # For backward compatibility, also expose in global environment during transition
-  # TODO: Remove these once all consumers are updated to use package getters
-  assign("HOSPITAL_NAME", claudespc_env$HOSPITAL_NAME, envir = .GlobalEnv)
-  assign("my_theme", claudespc_env$my_theme, envir = .GlobalEnv)
-  assign("HOSPITAL_LOGO_PATH", claudespc_env$HOSPITAL_LOGO_PATH, envir = .GlobalEnv)
-  assign("HOSPITAL_COLORS", claudespc_env$HOSPITAL_COLORS, envir = .GlobalEnv)
+  # NOTE: Global environment exposure removed as part of legacy cleanup
+  # All consumers should now use package getters:
+  # - get_package_hospital_name() instead of HOSPITAL_NAME
+  # - get_package_theme() instead of my_theme
+  # - get_package_config("HOSPITAL_LOGO_PATH") instead of HOSPITAL_LOGO_PATH
+  # - get_package_config("HOSPITAL_COLORS") instead of HOSPITAL_COLORS
 }
 
 #' Initialize logging system
@@ -188,16 +188,7 @@ setup_resource_paths <- function() {
     rm("claudespc_globals", envir = parent.env(environment()))
   }
 
-  # Remove globals from global environment
-  if (exists("HOSPITAL_NAME", envir = .GlobalEnv)) {
-    rm("HOSPITAL_NAME", envir = .GlobalEnv)
-  }
-  if (exists("HOSPITAL_LOGO_PATH", envir = .GlobalEnv)) {
-    rm("HOSPITAL_LOGO_PATH", envir = .GlobalEnv)
-  }
-  if (exists("my_theme", envir = .GlobalEnv)) {
-    rm("my_theme", envir = .GlobalEnv)
-  }
+  # Global environment cleanup no longer needed since globals are not exposed
 
   invisible()
 }
