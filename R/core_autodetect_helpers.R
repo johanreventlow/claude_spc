@@ -42,12 +42,10 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
     .context = "DATE_DETECT"
   )
 
-  for (col_name in names(data)) {
-    col_data <- data[[col_name]]
-
+  purrr::iwalk(data, function(col_data, col_name) {
     # Skip if already Date/POSIXct class
     if (inherits(col_data, c("Date", "POSIXct", "POSIXt"))) {
-      date_candidates[[col_name]] <- list(
+      date_candidates[[col_name]] <<- list(
         score = 1.0,
         suggested_format = "native_date_class",
         reason = "Already date/time class"
@@ -57,12 +55,12 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
         result = "native_date_class",
         .context = "DATE_DETECT"
       )
-      next
+      return()
     }
 
     # Skip non-character/non-factor columns
     if (!is.character(col_data) && !is.factor(col_data)) {
-      next
+      return()
     }
 
     # Convert factor to character for testing
@@ -73,7 +71,7 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
     # Remove missing values for testing
     non_missing <- col_data[!is.na(col_data) & col_data != ""]
     if (length(non_missing) == 0) {
-      next
+      return()
     }
 
     # Test sample (first 10 non-missing values for performance)
@@ -116,7 +114,7 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
 
     # Add to candidates if meets threshold
     if (best_score >= success_threshold) {
-      date_candidates[[col_name]] <- list(
+      date_candidates[[col_name]] <<- list(
         score = best_score,
         suggested_format = best_format,
         reason = best_reason
@@ -129,7 +127,7 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
         .context = "DATE_DETECT"
       )
     }
-  }
+  })
 
   log_debug_kv(
     date_candidates_found = length(date_candidates),
@@ -182,13 +180,10 @@ find_numeric_columns <- function(data) {
 
   numeric_cols <- character(0)
 
-  for (col_name in names(data)) {
-    col_data <- data[[col_name]]
-
+  numeric_cols <- purrr::imap_chr(data, function(col_data, col_name) {
     # Direct numeric columns
     if (is.numeric(col_data)) {
-      numeric_cols <- c(numeric_cols, col_name)
-      next
+      return(col_name)
     }
 
     # Test if character/factor can be converted to numeric
@@ -200,7 +195,7 @@ find_numeric_columns <- function(data) {
 
       # Test conversion on non-missing values
       non_missing <- col_data[!is.na(col_data) & col_data != ""]
-      if (length(non_missing) == 0) next
+      if (length(non_missing) == 0) return(NA_character_)
 
       # Test sample for performance
       test_sample <- head(non_missing, 20)
@@ -211,15 +206,17 @@ find_numeric_columns <- function(data) {
 
       # If most values convert successfully, consider it numeric
       if (success_rate >= 0.8) {
-        numeric_cols <- c(numeric_cols, col_name)
         log_debug_kv(
           convertible_column = col_name,
           success_rate = round(success_rate, 3),
           .context = "NUMERIC_DETECT"
         )
+        return(col_name)
       }
     }
-  }
+
+    return(NA_character_)
+  }) %>% purrr::discard(is.na)
 
   log_debug_kv(
     numeric_columns_found = length(numeric_cols),
@@ -250,9 +247,8 @@ score_column_candidates <- function(data, numeric_candidates, role = c("y_column
 
   scores <- setNames(numeric(length(numeric_candidates)), numeric_candidates)
 
-  for (col_name in numeric_candidates) {
+  scores <- purrr::map_dbl(purrr::set_names(numeric_candidates), function(col_name) {
     col_data <- data[[col_name]]
-    score <- 0
 
     # 1. NAME-BASED SCORING (30% weight)
     name_score <- score_by_name_patterns(col_name, role) * 0.3
@@ -264,7 +260,6 @@ score_column_candidates <- function(data, numeric_candidates, role = c("y_column
     stat_score <- score_by_statistical_properties(col_data, role) * 0.3
 
     total_score <- name_score + char_score + stat_score
-    scores[col_name] <- total_score
 
     log_debug_kv(
       column = col_name,
@@ -275,7 +270,9 @@ score_column_candidates <- function(data, numeric_candidates, role = c("y_column
       total_score = round(total_score, 3),
       .context = "COLUMN_SCORING"
     )
-  }
+
+    total_score
+  })
 
   # Sort by score (descending)
   scores <- sort(scores, decreasing = TRUE)
