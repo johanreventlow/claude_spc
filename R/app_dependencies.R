@@ -73,17 +73,12 @@ load_core_packages <- function() {
     )
   )
 
-  results <- list()
-
-  for (pkg_name in names(core_packages)) {
-    pkg_info <- core_packages[[pkg_name]]
-    results[[pkg_name]] <- safe_load_package(
-      pkg_info$package,
-      pkg_info$min_version,
-      pkg_info$reason,
-      required = TRUE
-    )
-  }
+  results <- purrr::imap(core_packages, ~safe_load_package(
+    .x$package,
+    .x$min_version,
+    .x$reason,
+    required = TRUE
+  ))
 
   # Dependency operation completed
   return(results)
@@ -163,17 +158,12 @@ load_feature_packages <- function(config) {
     )
   )
 
-  results <- list()
-
-  for (pkg_name in names(feature_packages)) {
-    pkg_info <- feature_packages[[pkg_name]]
-    results[[pkg_name]] <- safe_load_package(
-      pkg_info$package,
-      pkg_info$min_version,
-      pkg_info$reason,
-      required = pkg_info$required
-    )
-  }
+  results <- purrr::imap(feature_packages, ~safe_load_package(
+    .x$package,
+    .x$min_version,
+    .x$reason,
+    required = .x$required
+  ))
 
   # Dependency operation completed
   return(results)
@@ -199,17 +189,12 @@ load_development_packages <- function(config) {
     # Currently no dev-only packages identified
   )
 
-  results <- list()
-
-  for (pkg_name in names(dev_packages)) {
-    pkg_info <- dev_packages[[pkg_name]]
-    results[[pkg_name]] <- safe_load_package(
-      pkg_info$package,
-      pkg_info$min_version,
-      pkg_info$reason,
-      required = FALSE
-    )
-  }
+  results <- purrr::imap(dev_packages, ~safe_load_package(
+    .x$package,
+    .x$min_version,
+    .x$reason,
+    required = FALSE
+  ))
 
   # Dependency operation completed
   return(results)
@@ -328,16 +313,12 @@ verify_critical_dependencies <- function() {
     dplyr = c("case_when")
   )
 
-  missing_functions <- c()
-
-  for (pkg in names(critical_functions)) {
-    functions <- critical_functions[[pkg]]
-    for (func in functions) {
-      if (!exists(func, mode = "function")) {
-        missing_functions <- c(missing_functions, paste0(pkg, "::", func))
-      }
-    }
-  }
+  missing_functions <- purrr::imap(critical_functions, ~{
+    purrr::map(.x, ~if (!exists(.x, mode = "function")) paste0(.y, "::", .x) else NULL)
+  }) %>%
+    purrr::flatten() %>%
+    purrr::discard(is.null) %>%
+    unlist()
 
   if (length(missing_functions) > 0) {
     log_error(paste("Missing critical functions:", paste(missing_functions, collapse = ", ")), "DEPENDENCY_VERIFY")
