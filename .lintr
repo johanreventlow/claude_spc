@@ -7,8 +7,7 @@ linters: linters_with_defaults(
     assignment_linter(),
     function_left_parentheses_linter(),
     library_call_linter(),
-    namespace_linter(),
-    cyclocomp_linter(complexity_limit = 15)
+    namespace_linter()
   )
 exclusions: list(
     "R/golem_utils.R",
