@@ -10,6 +10,45 @@ Dette er en **R Shiny** applikation til **Statistical Process Control (SPC)** me
 
 ## 2) Udviklingsprincipper (Fundamentale regler)
 
+### 2.0 Obligatorisk Commit-Workflow (KRITISK)
+
+🚨 **ABSOLUT FORBUD MOD UKONTROLLEREDE KODEÆNDRINGER:**
+
+✅ **ALDRIG ret kode uden eksplicit godkendelse og commit-plan**
+✅ **ALTID commit efter hvert logisk trin**
+✅ **ALDRIG foretag multiple ændringer uden mellemliggende commits**
+
+**Obligatorisk procedure:**
+1. **Spørg først** – Få eksplicit godkendelse til enhver kodeændring
+2. **Planlæg commits** – Beskriv hvilke filer der ændres og hvorfor
+3. **Commit efter hvert trin** – Hvert logisk trin skal have sin egen commit
+4. **Test mellem commits** – Kør tests efter hver commit
+5. **Dokumentér ændringer** – Klar commit message med rationale
+
+**Eksempel på korrekt workflow:**
+```bash
+# Trin 1: Spørg bruger om godkendelse
+"Må jeg rette følgende 3 filer for tidyverse konvertering?"
+
+# Trin 2: Commit plan
+"Jeg vil lave 3 commits:
+1. Tilføj tidyverse dependencies til DESCRIPTION
+2. Konverter for-loops til map() i fct_autodetect_unified.R
+3. Opdater tests for nye dependencies"
+
+# Trin 3: Implementér med commits mellem hvert trin
+git add DESCRIPTION && git commit -m "feat: tilføj tidyverse dependencies"
+# Test køres og bestås
+git add R/fct_autodetect_unified.R && git commit -m "refactor: konverter for-loops til purrr::map"
+# Test køres og bestås
+```
+
+**ALDRIG gør:**
+❌ Rette flere filer på samme tid uden commits imellem
+❌ Starte kodeændringer uden eksplicit brugerregodkendelse
+❌ Skip commits "fordi det bare er små ændringer"
+❌ Fortsætte hvis tests fejler efter en commit
+
 ### 2.1 Test-First Development (TDD)
 
 ✅ **OBLIGATORISK:** Al udvikling følger Test-Driven Development:
@@ -528,6 +567,35 @@ app_state$columns$x_column <- "Dato"                    # Brug i stedet: mapping
 
 ### Primært Mål
 Deltag i ærlig, indsigtsfuld dialog der fremmer forståelse og produktiv udvikling.
+
+### STOP-AND-ASK Protokol (OBLIGATORISK)
+
+🛑 **Claude SKAL altid stoppe og spørge før kodeændringer:**
+
+**Før enhver fil-ændring:**
+1. **Beskriv præcist** hvilke filer der skal ændres
+2. **Forklar rationale** for hver ændring
+3. **Angiv commit-plan** - hvor mange commits og hvad hver indeholder
+4. **Vent på eksplicit godkendelse** fra bruger
+5. **Implementér kun ét trin ad gangen** med commit mellem hvert
+
+**Eksempel på korrekt stop-and-ask:**
+```
+"Jeg har identificeret følgende områder til tidyverse konvertering:
+
+1. DESCRIPTION fil: Tilføj dplyr, tidyr, purrr dependencies
+2. fct_autodetect_unified.R: Konverter 3 for-loops til purrr::map()
+3. server_utils_column_management.R: Erstat sapply() med map_lgl()
+
+Dette vil resultere i 3 separate commits. Skal jeg fortsætte?"
+
+[Venter på bruger svar før implementering]
+```
+
+**ALDRIG gør:**
+❌ Implementér ændringer uden at spørge først
+❌ Antag at "ja til projektet" betyder "ja til alle ændringer"
+❌ Fortsæt med næste fil uden at vente på bekræftelse
 
 ### Kerneprincipper
 
