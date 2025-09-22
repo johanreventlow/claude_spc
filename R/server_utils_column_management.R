@@ -109,7 +109,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
       if (!is.numeric(y_data)) {
         numeric_test <- parse_danish_number(y_data)
         if (sum(!is.na(numeric_test)) < length(y_data) * 0.8) {
-          warnings <- c(warnings, paste("Y-kolonne '", input$y_column, "' er ikke numerisk"))
+          warnings <- c(warnings, glue::glue("Y-kolonne '{input$y_column}' er ikke numerisk"))
         }
       }
     }
@@ -117,13 +117,13 @@ setup_column_management <- function(input, output, session, app_state, emit) {
     # Tjek P/U chart krav
     if (chart_type %in% c("p", "pp", "u", "up")) {
       if (is.null(input$n_column) || input$n_column == "") {
-        warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne (N)"))
+        warnings <- c(warnings, glue::glue("Chart type {chart_type} kræver en nævner-kolonne (N)"))
       } else if (input$n_column %in% names(current_data_check)) {
         n_data <- current_data_check[[input$n_column]]
         if (!is.numeric(n_data)) {
           numeric_test <- parse_danish_number(n_data)
           if (sum(!is.na(numeric_test)) < length(n_data) * 0.8) {
-            warnings <- c(warnings, paste("Nævner-kolonne '", input$n_column, "' er ikke numerisk"))
+            warnings <- c(warnings, glue::glue("Nævner-kolonne '{input$n_column}' er ikke numerisk"))
           }
         }
       }
@@ -196,10 +196,10 @@ show_column_edit_modal <- function(session, app_state = NULL) {
   current_names <- names(current_data_check)
 
   name_inputs <- purrr::imap(current_names, ~ shiny::textInput(
-    paste0("col_name_", .y),
-    paste("Kolonne", .y, ":"),
+    glue::glue("col_name_{.y}"),
+    glue::glue("Kolonne {.y}:"),
     value = .x,
-    placeholder = paste("Navn for kolonne", .y)
+    placeholder = glue::glue("Navn for kolonne {.y}")
   ))
 
   shiny::showModal(shiny::modalDialog(
@@ -208,7 +208,7 @@ show_column_edit_modal <- function(session, app_state = NULL) {
     shiny::div(
       style = "margin-bottom: 15px;",
       shiny::h6("Nuværende kolonnenavne:", style = "font-weight: 500;"),
-      shiny::p(paste(current_names, collapse = ", "), style = "color: #666; font-style: italic;")
+      shiny::p(stringr::str_c(current_names, collapse = ", "), style = "color: #666; font-style: italic;")
     ),
     shiny::div(
       style = "max-height: 300px; overflow-y: auto;",
@@ -232,7 +232,7 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
 
   # Tidyverse: Use purrr::map_chr to extract input values
   new_names <- purrr::imap_chr(current_names, ~ {
-    input_value <- input[[paste0("col_name_", .y)]]
+    input_value <- input[[glue::glue("col_name_{.y}")]]
     if (!is.null(input_value) && input_value != "") {
       trimws(input_value)
     } else {
@@ -269,9 +269,9 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
       dplyr::filter(old != new)
 
     change_summary <- changes_df %>%
-      dplyr::mutate(change = paste0("'", old, "' -> '", new, "'")) %>%
+      dplyr::mutate(change = glue::glue("'{old}' -> '{new}'")) %>%
       dplyr::pull(change) %>%
-      paste(collapse = ", ")
+      stringr::str_c(collapse = ", ")
 
     shiny::showNotification(
       paste("Kolonnenavne opdateret:", change_summary),
@@ -521,7 +521,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
 
     # Dual-state sync for compatibility during migration
     current_data <- get_current_data(app_state)
-    set_current_data(app_state, rbind(current_data, new_row))
+    set_current_data(app_state, dplyr::bind_rows(current_data, new_row))
 
     # Emit event to trigger downstream effects
     emit$data_changed()
