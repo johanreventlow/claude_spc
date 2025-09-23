@@ -162,7 +162,7 @@ setup_testing_config <- function(override_options = list()) {
   testing_config$test_file_path <- get_override_or_default(
     override_options,
     "test_file_path",
-    "R/data/spc_exampledata.csv"
+    "inst/extdata/spc_exampledata.csv"
   )
 
   # Alternative test files

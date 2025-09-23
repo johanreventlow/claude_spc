@@ -509,7 +509,7 @@ get_fallback_golem_config <- function(env) {
 
     testing = list(
       auto_load_test_data = (env == "development"),
-      test_data_file = if (env == "development") "R/data/spc_exampledata.csv" else NULL
+      test_data_file = if (env == "development") "inst/extdata/spc_exampledata.csv" else NULL
     ),
 
     session = list(

@@ -125,7 +125,7 @@ development:
   # Testing and data (convenient defaults)
   testing:
     auto_load_test_data: true
-    test_data_file: "R/data/spc_exampledata.csv"
+    test_data_file: "inst/extdata/spc_exampledata.csv"
     enable_test_endpoints: true
     mock_external_services: false
     validate_test_data: true

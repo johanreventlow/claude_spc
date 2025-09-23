@@ -6,6 +6,7 @@
 #' @param port Port number for the application (default: NULL for auto-assignment)
 #' @param launch_browser TRUE for browser, FALSE for no launch, or leave default for environment-aware decision
 #' @param options List of application options (golem-style configuration)
+#' @param enable_test_mode TRUE/FALSE to force test mode, or NULL for auto-detection based on environment
 #' @param ... Additional arguments to pass to shiny::shinyApp()
 #'
 #' @details
@@ -32,7 +33,28 @@
 run_app <- function(port = NULL,
                     launch_browser = NULL,
                     options = list(),
+                    enable_test_mode = NULL,
                     ...) {
+
+  # Configure test mode based on context
+  if (is.null(enable_test_mode)) {
+    # Auto-detect: enable test mode in development environments
+    enable_test_mode <- interactive() || Sys.getenv("GOLEM_CONFIG_ACTIVE", "production") == "development"
+  }
+
+  if (enable_test_mode) {
+    # Enable test mode with automatic data loading
+    Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
+    Sys.setenv(GOLEM_CONFIG_ACTIVE = "development")
+    Sys.setenv(TEST_MODE_FILE_PATH = "inst/extdata/spc_exampledata.csv")
+
+    # Update package configuration to ensure it takes effect
+    if (exists("get_claudespc_environment", mode = "function")) {
+      claudespc_env <- get_claudespc_environment()
+      claudespc_env$TEST_MODE_AUTO_LOAD <- TRUE
+      claudespc_env$TEST_MODE_FILE_PATH <- "inst/extdata/spc_exampledata.csv"
+    }
+  }
 
   # Create the Shiny app using golem pattern
   # Load golem function directly to avoid package conflicts
@@ -48,18 +70,23 @@ run_app <- function(port = NULL,
     golem_opts = options
   )
 
+  # Set default browser behavior if not specified
+  if (is.null(launch_browser)) {
+    launch_browser <- getOption("shiny.launch.browser", TRUE)
+  }
+
   # Run the app with proper port and browser handling
   if (is.null(port)) {
     shiny::runApp(
       app,
-      launch.browser = launch_browser %||% TRUE,
+      launch.browser = launch_browser,
       ...
     )
   } else {
     shiny::runApp(
       app,
       port = port,
-      launch.browser = launch_browser %||% TRUE,
+      launch.browser = launch_browser,
       ...
     )
   }

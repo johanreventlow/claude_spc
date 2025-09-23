@@ -586,7 +586,7 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
   # Håndtér "Quick start demo" knap
   shiny::observeEvent(input$quick_start_demo, {
     # Indlæs eksempel data
-    test_file_path <- "R/data/spc_exampledata.csv"
+    test_file_path <- "inst/extdata/spc_exampledata.csv"
 
     if (file.exists(test_file_path)) {
       safe_operation(

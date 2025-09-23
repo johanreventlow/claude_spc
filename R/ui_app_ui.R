@@ -180,24 +180,18 @@ create_ui_header <- function() {
 #' @export
 create_ui_main_content <- function() {
   shiny::tagList(
-    # Welcome page when no meaningful data is loaded
-    shiny::conditionalPanel(condition = "output.dataLoaded != 'TRUE'", create_welcome_page()),
+    # Welcome page when no meaningful data is loaded - DISABLED FOR DEVELOPMENT
+    # shiny::conditionalPanel(condition = "output.dataLoaded != 'TRUE'", create_welcome_page()),
 
-    # Data table and visualization - only when user has started
-    shiny::conditionalPanel(
-      condition = "output.dataLoaded == 'TRUE'",
-
-
-      # Main content in 2x2 grid layout
-      bslib::layout_columns(
-        col_widths = c(6, 6, 6, 6),
-        height = "auto",
-        max_height = "100%",
-        create_plot_only_card(),
-        create_status_value_boxes(),
-        create_data_table_card(),
-        create_chart_settings_card()
-      )
+    # Main content in 2x2 grid layout - ALWAYS VISIBLE FOR DEVELOPMENT
+    bslib::layout_columns(
+      col_widths = c(6, 6, 6, 6),
+      height = "auto",
+      max_height = "100%",
+      create_plot_only_card(),
+      create_status_value_boxes(),
+      create_data_table_card(),
+      create_chart_settings_card()
     )
   )
 }
