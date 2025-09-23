@@ -85,7 +85,29 @@ golem_add_external_resources <- function() {
 #'
 #' @noRd
 app_sys <- function(...) {
-  system.file(..., package = "claudespc")
+  # Try package installation first
+  result <- system.file(..., package = "claudespc")
+
+  # If package not found, try development paths
+  if (result == "") {
+    # Development mode fallback
+    path_components <- c(...)
+    dev_path <- file.path("inst", path_components)
+    if (file.exists(dev_path) || dir.exists(dev_path)) {
+      return(dev_path)
+    }
+
+    # Try without inst/ prefix
+    direct_path <- do.call(file.path, as.list(path_components))
+    if (file.exists(direct_path) || dir.exists(direct_path)) {
+      return(direct_path)
+    }
+
+    # Return empty string to maintain golem compatibility
+    return("")
+  }
+
+  return(result)
 }
 
 #' Read App Config

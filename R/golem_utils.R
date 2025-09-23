@@ -276,21 +276,74 @@ get_app_info <- function() {
 #' @param prefix Prefix for the resource path
 #' @return Invisibly returns TRUE if successful
 add_resource_path <- function(path = "www", prefix = "www") {
+  # Input validation
+  if (is.null(prefix) || length(prefix) == 0 || prefix == "" || is.na(prefix)) {
+    if (exists("log_warn")) {
+      log_warn("Invalid prefix provided to add_resource_path", "RESOURCE_PATHS")
+    } else {
+      warning("Invalid prefix provided to add_resource_path")
+    }
+    return(invisible(FALSE))
+  }
+
+  if (is.null(path) || length(path) == 0 || path == "" || is.na(path)) {
+    if (exists("log_warn")) {
+      log_warn("Invalid path provided to add_resource_path", "RESOURCE_PATHS")
+    } else {
+      warning("Invalid path provided to add_resource_path")
+    }
+    return(invisible(FALSE))
+  }
+
   # Use system.file() for packaged apps, fallback for development
   if (path == "www") {
     www_path <- system.file("app", "www", package = "claudespc")
     if (www_path == "") {
-      www_path <- file.path("inst", "app", "www")
+      # Development mode fallbacks
+      possible_paths <- c(
+        file.path("inst", "app", "www"),
+        file.path("www"),
+        file.path("app", "www")
+      )
+
+      www_path <- NULL
+      for (possible_path in possible_paths) {
+        if (dir.exists(possible_path)) {
+          www_path <- possible_path
+          break
+        }
+      }
+
+      if (is.null(www_path)) {
+        if (exists("log_debug")) {
+          log_debug("No www directory found in development mode", "RESOURCE_PATHS")
+        }
+        return(invisible(FALSE))
+      }
     }
     path <- www_path
   }
 
   if (dir.exists(path)) {
-    shiny::addResourcePath(prefix, path)
-    log_debug( paste("Added resource path:", prefix, "->", path), .context = "RESOURCE_PATHS")
-    return(invisible(TRUE))
+    # Additional validation for shiny::addResourcePath requirements
+    tryCatch({
+      shiny::addResourcePath(prefix, path)
+      if (exists("log_debug")) {
+        log_debug(paste("Added resource path:", prefix, "->", path), "RESOURCE_PATHS")
+      }
+      return(invisible(TRUE))
+    }, error = function(e) {
+      if (exists("log_warn")) {
+        log_warn(paste("Failed to add resource path:", e$message), "RESOURCE_PATHS")
+      } else {
+        warning(paste("Failed to add resource path:", e$message))
+      }
+      return(invisible(FALSE))
+    })
   } else {
-    log_debug( paste("Resource path not found:", path), .context = "RESOURCE_PATHS")
+    if (exists("log_debug")) {
+      log_debug(paste("Resource path not found:", path), "RESOURCE_PATHS")
+    }
     return(invisible(FALSE))
   }
 }
