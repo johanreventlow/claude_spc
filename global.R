@@ -3,7 +3,12 @@
 
 # DEVELOPMENT MODE LOADING --------------------------------
 # Always use source-based loading for development
-# NOTE: Package self-loading (library(claudespc)) creates circular dependency and should be avoided
+# NOTE: Package self-loading creates circular dependency and should be avoided
+# Clear any existing SPCify package conflicts first
+if (exists("SPCify") && "package:SPCify" %in% search()) {
+  detach("package:SPCify", unload = TRUE, force = TRUE)
+}
+
 message("Loading development configuration...")
 
 # Load core functions via sourcing in dependency order
@@ -12,6 +17,10 @@ source_files <- c(
   "R/utils_logging.R",
   "R/utils_error_handling.R",
   "R/utils_performance.R",
+  "R/utils_dependency_injection.R",
+  "R/utils_advanced_debug.R",
+  "R/utils_shinylogs_config.R",
+  "R/utils_memory_management.R",
   "R/golem_utils.R",
   "R/zzz.R",
 
@@ -21,13 +30,33 @@ source_files <- c(
   "R/config_branding_getters.R",
   "R/config_observer_priorities.R",
   "R/config_chart_types.R",
+  "R/config_spc_config.R",
   "R/app_config.R",
   "R/app_runtime_config.R",
+  "R/state_management.R",
 
   # App initialization
   "R/app_dependencies.R",
   "R/app_initialization.R",
-  "R/app_run.R"
+  "R/app_run.R",
+
+  # UI components
+  "R/config_ui_config.R",
+  "R/ui_utils_ui_components.R",
+  "R/ui_utils_ui_updates.R",
+  "R/ui_app_ui.R",
+
+  # Shiny modules
+  "R/modules_mod_spc_chart_ui.R",
+  "R/modules_mod_spc_chart_server.R",
+
+  # Server components
+  "R/server_observer_manager.R",
+  "R/server_utils_server_management.R",
+  "R/app_server_main.R",
+  "R/server_utils_session_helpers.R",
+  "R/server_utils_event_system.R",
+  "R/fct_visualization_server.R"
 )
 
 for (file in source_files) {

@@ -15,10 +15,10 @@ app_ui <- function(request) {
         shiny::img(
           src = get_hospital_logo_path(),
           height = "40px",
-          style = "margin-right: 10px;",
+          style = "margin-right: 15px;",
           onerror = "this.style.display='none'"
         ),
-        shiny::div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
+        # shiny::div("BFH SPC-værktøj", style = "position: absolute; right: 20px; top: 20px; font-weight: bold;")
       ),
       theme = get_bootstrap_theme(),
       navbar_options = bslib::navbar_options(theme = "light", underline = FALSE),
@@ -60,15 +60,15 @@ app_server <- function(input, output, session) {
 #' @noRd
 golem_add_external_resources <- function() {
 
-  add_resource_path(
+  golem::add_resource_path(
     'www', app_sys('app/www')
   )
 
-  tags$head(
-    favicon(),
-    bundle_resources(
+  shiny::tags$head(
+    golem::favicon(),
+    golem::bundle_resources(
       path = app_sys('app/www'),
-      app_title = 'claudespc'
+      app_title = 'SPCify'
     )
     # Add here other external resources
     # for example, you can add shinyalert::useShinyalert()
@@ -86,7 +86,7 @@ golem_add_external_resources <- function() {
 #' @noRd
 app_sys <- function(...) {
   # Try package installation first
-  result <- system.file(..., package = "claudespc")
+  result <- system.file(..., package = "SPCify")
 
   # If package not found, try development paths
   if (result == "") {

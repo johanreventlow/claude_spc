@@ -13,7 +13,9 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
 
   # UNIFIED EVENT SYSTEM: Use centralized app_state for dataLoaded status
   # Initialize dataLoaded status in app_state if not already present
-  if (is.null(app_state$session$dataLoaded_status)) {
+  # Use isolate() to safely check reactive value outside reactive context
+  current_status <- isolate(app_state$session$dataLoaded_status)
+  if (is.null(current_status)) {
     app_state$session$dataLoaded_status <- "FALSE"
   }
 
@@ -95,7 +97,9 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
 
   # UNIFIED EVENT SYSTEM: Use centralized app_state for has_data status
   # Initialize has_data status in app_state if not already present
-  if (is.null(app_state$session$has_data_status)) {
+  # Use isolate() to safely check reactive value outside reactive context
+  current_has_data_status <- isolate(app_state$session$has_data_status)
+  if (is.null(current_has_data_status)) {
     app_state$session$has_data_status <- "false"
   }
 

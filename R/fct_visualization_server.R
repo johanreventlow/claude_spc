@@ -21,7 +21,9 @@ setup_visualization <- function(input, output, session, app_state) {
   # Store last valid config to avoid NULL during input updates
   # Operation completed
   # Initialize last_valid_config in app_state if not already present
-  if (is.null(app_state$visualization$last_valid_config)) {
+  # Use isolate() to safely check reactive value outside reactive context
+  current_config <- isolate(app_state$visualization$last_valid_config)
+  if (is.null(current_config)) {
     app_state$visualization$last_valid_config <- list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run")
   }
 
@@ -174,6 +176,14 @@ setup_visualization <- function(input, output, session, app_state) {
 
       # Tjek om Skift kolonne har nogen TRUE værdier
       skift_data <- data[[skift_col]]
+      # Handle case where skift_data might be a list or non-logical type
+      if (is.list(skift_data)) {
+        skift_data <- unlist(skift_data)
+      }
+      # Convert to logical if needed
+      if (!is.logical(skift_data)) {
+        skift_data <- as.logical(skift_data)
+      }
       has_phase_shifts <- any(skift_data == TRUE, na.rm = TRUE)
 
       return(list(

@@ -9,7 +9,7 @@ claudespc_branding <- new.env(parent = emptyenv())
 #' @noRd
 get_brand_config_path <- function() {
   # Try package installation first
-  brand_path <- system.file("config", "brand.yml", package = "claudespc")
+  brand_path <- system.file("config", "brand.yml", package = "SPCify")
 
   if (brand_path == "" || !file.exists(brand_path)) {
     # Fallback for development (package not installed)
@@ -46,7 +46,7 @@ load_brand_config <- function() {
         description = "Statistical Process Control værktøj"
       ),
       logo = list(
-        image = "www/hospital_logo.png"
+        image = "www/SPCify.png"
       ),
       color = list(
         palette = list(
@@ -159,7 +159,7 @@ get_hospital_logo_path <- function() {
   if (is.null(claudespc_branding$logo_path)) {
     initialize_branding()
   }
-  claudespc_branding$logo_path %||% "www/hospital_logo.png"
+  claudespc_branding$logo_path %||% "www/SPCify.png"
 }
 
 #' Get Bootstrap Theme

@@ -377,6 +377,9 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
 
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
   # Generate SPC plot with specified parameters
+  # Get hospital colors using the proper package function
+  HOSPITAL_COLORS <- get_hospital_colors()
+
   log_debug(paste("generateSPCPlot:", chart_type, "|", nrow(data), "rows"), "SPC_CALC_DEBUG")
 
   # Input validation and configuration sanitization
@@ -428,9 +431,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     validate_x_column_format(data, config$x_col, "observation")
   }, cache_key, cache_timeout = PERFORMANCE_THRESHOLDS$cache_timeout_default)()
   x_data <- x_validation$x_data
-  # xlab_text <- if (x_unit_label != "") x_unit_label else {
-  #   if (x_validation$is_date) "Dato" else "Observation"
-  # }
+
+  # Define x_unit_label for axis labeling
+  x_unit_label <- if (x_validation$is_date) "Dato" else "Observation"
 
 
   # Handle phases and freeze configuration
@@ -675,6 +678,9 @@ applyHospitalTheme <- function(plot) {
   if (is.null(plot) || !inherits(plot, "ggplot")) {
     return(plot)
   }
+
+  # Get hospital colors using the proper package function
+  HOSPITAL_COLORS <- get_hospital_colors()
 
   safe_operation(
     "Apply hospital theme to plot",

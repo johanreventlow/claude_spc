@@ -252,7 +252,7 @@ get_app_info <- function() {
   })
 
   info <- list(
-    package_name = "claudespc",
+    package_name = "SPCify",
     version = version,
     mode = if (is_prod_mode()) "production" else "development",
     options = list()
@@ -297,7 +297,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
   # Use system.file() for packaged apps, fallback for development
   if (path == "www") {
-    www_path <- system.file("app", "www", package = "claudespc")
+    www_path <- system.file("app", "www", package = "SPCify")
     if (www_path == "") {
       # Development mode fallbacks
       possible_paths <- c(
@@ -358,7 +358,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
 favicon <- function(path = "www/favicon.ico") {
   # For packaged apps, adjust favicon path
   if (path == "www/favicon.ico") {
-    favicon_path <- system.file("app", "www", "favicon.ico", package = "claudespc")
+    favicon_path <- system.file("app", "www", "favicon.ico", package = "SPCify")
     if (favicon_path == "") {
       favicon_path <- file.path("inst", "app", "www", "favicon.ico")
     }

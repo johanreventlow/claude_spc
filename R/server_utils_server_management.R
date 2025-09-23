@@ -434,11 +434,14 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
 }
 
 show_upload_modal <- function() {
+  # Get hospital colors using the proper package function
+  hospital_colors <- get_hospital_colors()
+
   shiny::showModal(shiny::modalDialog(
     title = shiny::div(
       shiny::icon("upload"),
       " Upload datafil",
-      style = paste("color:", HOSPITAL_COLORS$primary)
+      style = paste("color:", hospital_colors$primary)
     ),
     size = "m",
     shiny::div(

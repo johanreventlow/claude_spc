@@ -1,11 +1,11 @@
 meta:
-  name: "Bispebjerg og Frederiksberg Hospital SPC"
-  description: "Statistical Process Control værktøj for BFH"
+  name: "SPCify"
+  description: "Statistical Process Control charts til Bispebjerg og Frederiksberg Hospital"
   link: "https://bfh.dk"
 
 logo:
-  image: "www/hospital_logo.png"
-  alt: "Bispebjerg og Frederiksberg Hospital Logo"
+  image: "www/SPCify.png"
+  alt: "SPCify Logo"
 
 # RegionH Hospitalsfarver
 # --celestial-blue: #009ce8ff;

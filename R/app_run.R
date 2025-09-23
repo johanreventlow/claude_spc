@@ -35,8 +35,13 @@ run_app <- function(port = NULL,
                     ...) {
 
   # Create the Shiny app using golem pattern
+  # Load golem function directly to avoid package conflicts
+  if (!exists("with_golem_options")) {
+    with_golem_options <- golem::with_golem_options
+  }
+
   app <- with_golem_options(
-    app = shinyApp(
+    app = shiny::shinyApp(
       ui = app_ui,
       server = app_server
     ),

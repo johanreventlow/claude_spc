@@ -19,7 +19,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # Cached data storage - use centralized app_state
     # Initialize module cache in app_state if not already present
-    if (is.null(app_state$visualization$module_cached_data)) {
+    # Use isolate() to safely check reactive value outside reactive context
+    current_cached_data <- isolate(app_state$visualization$module_cached_data)
+    if (is.null(current_cached_data)) {
       app_state$visualization$module_cached_data <- NULL
     }
 
@@ -53,7 +55,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # UNIFIED EVENT SYSTEM: Event-driven data reactive - use centralized app_state
     # Initialize module data cache in app_state if not already present
-    if (is.null(app_state$visualization$module_data_cache)) {
+    # Use isolate() to safely check reactive value outside reactive context
+    current_data_cache <- isolate(app_state$visualization$module_data_cache)
+    if (is.null(current_data_cache)) {
       app_state$visualization$module_data_cache <- NULL
     }
 
@@ -155,10 +159,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Plot caching infrastructure
     # Use centralized app_state for plot caching
     # Initialize plot cache in app_state if not already present
-    if (is.null(app_state$visualization$plot_cache)) {
+    # Use isolate() to safely check reactive values outside reactive context
+    current_plot_cache <- isolate(app_state$visualization$plot_cache)
+    if (is.null(current_plot_cache)) {
       app_state$visualization$plot_cache <- NULL
     }
-    if (is.null(app_state$visualization$plot_cache_key)) {
+    current_plot_cache_key <- isolate(app_state$visualization$plot_cache_key)
+    if (is.null(current_plot_cache_key)) {
       app_state$visualization$plot_cache_key <- NULL
     }
 
@@ -234,6 +241,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         code = {
           # Hent fase konfiguration
           skift_config <- skift_config_reactive()
+          # Ensure skift_config is valid
+          if (is.null(skift_config)) {
+            skift_config <- list(show_phases = FALSE, skift_column = NULL)
+          }
 
           # Hent freeze konfiguration
           frys_column <- frys_config_reactive()

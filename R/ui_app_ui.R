@@ -9,6 +9,9 @@
 # Opretter alle header komponenter inklusive scripts og styles
 #' @export
 create_ui_header <- function() {
+  # Get hospital colors using the proper package function
+  hospital_colors <- get_hospital_colors()
+
   shiny::tagList(
     # Aktivér shinyjs
     shinyjs::useShinyjs(),
@@ -159,10 +162,10 @@ create_ui_header <- function() {
     }
 
     /* Dynamic hospital color styles that need R variables */
-    .status-ready { background-color: ", HOSPITAL_COLORS$success, "; }
-    .status-warning { background-color: ", HOSPITAL_COLORS$warning, "; }
-    .status-error { background-color: ", HOSPITAL_COLORS$danger, "; }
-    .status-processing { background-color: ", HOSPITAL_COLORS$primary, "; }
+    .status-ready { background-color: ", hospital_colors$success, "; }
+    .status-warning { background-color: ", hospital_colors$warning, "; }
+    .status-error { background-color: ", hospital_colors$danger, "; }
+    .status-processing { background-color: ", hospital_colors$primary, "; }
     
 
 
@@ -650,6 +653,9 @@ create_ui_sidebar <- function() {
 # Opretter komplet velkomstside med hero sektion og handlingsknapper
 #' @export
 create_welcome_page <- function() {
+  # Get hospital colors using the proper package function
+  hospital_colors <- get_hospital_colors()
+
   shiny::div(
     class = "welcome-page",
     style = "min-height: 100vh; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);",
@@ -665,7 +671,7 @@ create_welcome_page <- function() {
             class = "col-12 text-center",
             shiny::h1(
               class = "display-4 fw-bold",
-              style = paste0("color: ", HOSPITAL_COLORS$primary, "; margin-bottom: 1rem;"),
+              style = paste0("color: ", hospital_colors$primary, "; margin-bottom: 1rem;"),
               "Velkommen til BFH SPC-værktøj"
             ),
             shiny::p(
@@ -702,7 +708,7 @@ create_welcome_page <- function() {
     # Call to Action Section
     shiny::div(
       class = "cta-section py-5",
-      style = paste0("background-color: ", HOSPITAL_COLORS$primary, "; color: white;"),
+      style = paste0("background-color: ", hospital_colors$primary, "; color: white;"),
       shiny::div(
         class = "container text-center",
         shiny::div(
@@ -735,6 +741,8 @@ create_welcome_page <- function() {
 
 # Left Column - Getting Started Guide
 create_getting_started_card <- function() {
+  # Get hospital colors using the proper package function
+  hospital_colors <- get_hospital_colors()
   bslib::card(
     class = "h-100 shadow-sm",
     style = "border: none; border-radius: 15px;",
@@ -745,7 +753,7 @@ create_getting_started_card <- function() {
         class = "d-flex align-items-center",
         shiny::div(
           class = "me-3",
-          style = paste0("background: ", HOSPITAL_COLORS$primary, "; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;"),
+          style = paste0("background: ", hospital_colors$primary, "; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;"),
           shiny::icon("rocket", style = "color: white; font-size: 1.5rem;")
         ),
         shiny::div(
@@ -808,6 +816,8 @@ create_getting_started_card <- function() {
 
 # Right Column - Understanding SPC
 create_understanding_spc_card <- function() {
+  # Get hospital colors using the proper package function
+  hospital_colors <- get_hospital_colors()
   bslib::card(
     class = "h-100 shadow-sm",
     style = "border: none; border-radius: 15px;",
@@ -818,7 +828,7 @@ create_understanding_spc_card <- function() {
         class = "d-flex align-items-center",
         shiny::div(
           class = "me-3",
-          style = paste0("background: ", HOSPITAL_COLORS$secondary, "; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;"),
+          style = paste0("background: ", hospital_colors$secondary, "; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;"),
           shiny::icon("lightbulb", style = "color: white; font-size: 1.5rem;")
         ),
         shiny::div(
@@ -890,12 +900,14 @@ create_understanding_spc_card <- function() {
 
 # Helper function for step items
 create_step_item <- function(number, icon, title, description, example = NULL) {
+  # Get hospital colors using the proper package function
+  hospital_colors <- get_hospital_colors()
   shiny::div(
     class = "step-item d-flex mb-4",
     # Step Number Circle
     shiny::div(
       class = "step-number me-3 flex-shrink-0",
-      style = paste0("width: 40px; height: 40px; background: ", HOSPITAL_COLORS$primary, "; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem;"),
+      style = paste0("width: 40px; height: 40px; background: ", hospital_colors$primary, "; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem;"),
       number
     ),
     # Step Content
