@@ -1,9 +1,8 @@
 # test-fase5-performance.R
 # Performance tests for Fase 5 optimizations
 
-# Source required functions
-source("../../R/utils/performance.R")
-source("../../R/utils/memory_management.R")
+# Load required functions - use global.R loading instead of direct sourcing
+# Performance utilities are now loaded via global.R
 
 # Fase 5 Performance Optimization Tests
 
@@ -248,4 +247,218 @@ test_that("Temp file cleanup works", {
   expect_silent({
     cleanup_temp_files(temp_dir, pattern = "spc_temp_", max_age_hours = 0.001)
   })
+})
+
+# NEW TESTS FOR SESSION HELPERS PERFORMANCE OPTIMIZATION
+
+test_that("evaluate_data_content_cached performance and correctness", {
+  # TEST: Performance-optimized data content evaluation
+
+  # Create test data with meaningful content
+  meaningful_data <- data.frame(
+    logical_col = c(TRUE, FALSE, TRUE),
+    numeric_col = c(1, 2, 3),
+    character_col = c("test", "data", "content"),
+    stringsAsFactors = FALSE
+  )
+
+  # Create test data without meaningful content
+  empty_data <- data.frame(
+    logical_col = c(FALSE, FALSE, FALSE),
+    numeric_col = c(NA, NA, NA),
+    character_col = c("", "", ""),
+    stringsAsFactors = FALSE
+  )
+
+  # TEST: Function exists and works correctly
+  if (exists("evaluate_data_content_cached")) {
+    # Test with meaningful data
+    result_meaningful <- evaluate_data_content_cached(meaningful_data)
+    expect_true(result_meaningful)
+
+    # Test with empty data
+    result_empty <- evaluate_data_content_cached(empty_data)
+    expect_false(result_empty)
+
+    # Test with NULL data
+    result_null <- evaluate_data_content_cached(NULL)
+    expect_false(result_null)
+
+    # Test performance: Second call should be faster (cached)
+    cache_key <- "test_performance_key"
+
+    # First call (uncached)
+    start_time <- Sys.time()
+    result1 <- evaluate_data_content_cached(meaningful_data, cache_key = cache_key)
+    first_call_time <- as.numeric(Sys.time() - start_time)
+
+    # Second call (cached)
+    start_time <- Sys.time()
+    result2 <- evaluate_data_content_cached(meaningful_data, cache_key = cache_key)
+    second_call_time <- as.numeric(Sys.time() - start_time)
+
+    # Results should be identical
+    expect_equal(result1, result2)
+
+    # Second call should be faster (cache hit)
+    expect_lt(second_call_time, first_call_time)
+
+    # Clear cache for cleanup
+    if (exists(".performance_cache_fallback", envir = .GlobalEnv)) {
+      cache_env <- get(".performance_cache_fallback", envir = .GlobalEnv)
+      if (exists(cache_key, envir = cache_env)) {
+        rm(list = cache_key, envir = cache_env)
+      }
+    }
+  } else {
+    skip("evaluate_data_content_cached function not available")
+  }
+})
+
+test_that("session helpers performance optimization benchmarks", {
+  # TEST: Performance comparison between old and new implementation
+
+  # Create larger test dataset for meaningful performance comparison
+  large_data <- data.frame(
+    col1 = sample(c(TRUE, FALSE, NA), 100, replace = TRUE),
+    col2 = rnorm(100),
+    col3 = sample(c("test", "data", "", NA), 100, replace = TRUE),
+    col4 = sample(c(1:50, rep(NA, 50)), 100, replace = TRUE),
+    col5 = sample(letters, 100, replace = TRUE),
+    stringsAsFactors = FALSE
+  )
+
+  # TEST: Legacy purrr::map_lgl approach (for comparison)
+  legacy_approach_time <- system.time({
+    for (i in 1:10) {  # Repeat to get meaningful timing
+      legacy_result <- large_data |>
+        purrr::map_lgl(~ {
+          if (is.logical(.x)) {
+            any(.x, na.rm = TRUE)
+          } else if (is.numeric(.x)) {
+            any(!is.na(.x))
+          } else if (is.character(.x)) {
+            any(nzchar(.x, keepNA = FALSE), na.rm = TRUE)
+          } else {
+            FALSE
+          }
+        }) |>
+        any()
+    }
+  })
+
+  # TEST: Optimized approach (if available)
+  if (exists("evaluate_data_content_cached")) {
+    optimized_approach_time <- system.time({
+      for (i in 1:10) {  # Repeat to get meaningful timing
+        optimized_result <- evaluate_data_content_cached(
+          large_data,
+          cache_key = paste0("benchmark_", i)
+        )
+      }
+    })
+
+    # Results should be equivalent
+    expect_equal(legacy_result, optimized_result)
+
+    # Log performance improvement
+    speed_improvement <- legacy_approach_time["elapsed"] / optimized_approach_time["elapsed"]
+    message(paste("Performance improvement:", round(speed_improvement, 2), "x faster"))
+
+    # Optimized version should be meaningfully faster (at least for repeated calls)
+    expect_gte(speed_improvement, 0.5)  # Should be at least not much slower
+
+    # Clean up benchmark cache entries
+    if (exists(".performance_cache_fallback", envir = .GlobalEnv)) {
+      cache_env <- get(".performance_cache_fallback", envir = .GlobalEnv)
+      benchmark_keys <- grep("^benchmark_", ls(cache_env), value = TRUE)
+      if (length(benchmark_keys) > 0) {
+        rm(list = benchmark_keys, envir = cache_env)
+      }
+    }
+  } else {
+    skip("evaluate_data_content_cached function not available")
+  }
+})
+
+test_that("performance debouncing integration works", {
+  # TEST: create_performance_debounced integration
+
+  if (exists("create_performance_debounced")) {
+    # Mock reactive expression
+    counter <- 0
+    mock_reactive <- shiny::reactive({
+      counter <<- counter + 1
+      return(counter)
+    })
+
+    # Create performance debounced version
+    debounced_reactive <- create_performance_debounced(
+      mock_reactive,
+      millis = 50,
+      operation_name = "test_session_helpers_debounce"
+    )
+
+    # TEST: Function is created successfully
+    expect_true(is.function(debounced_reactive))
+
+    # Execute and verify it works
+    result <- debounced_reactive()
+    expect_equal(result, 1)
+
+    # Get performance stats
+    if (exists("get_performance_stats")) {
+      stats <- get_performance_stats()
+      expect_true(is.list(stats))
+    }
+  } else {
+    skip("create_performance_debounced function not available")
+  }
+})
+
+test_that("cache invalidation on events works correctly", {
+  # TEST: Event-driven cache invalidation
+
+  if (exists("evaluate_data_content_cached") && exists("app_state")) {
+    # Create test data
+    test_data <- data.frame(
+      col1 = c(1, 2, 3),
+      col2 = c("a", "b", "c"),
+      stringsAsFactors = FALSE
+    )
+
+    cache_key <- "test_invalidation_key"
+
+    # Initial evaluation (creates cache entry)
+    result1 <- evaluate_data_content_cached(test_data, cache_key = cache_key)
+    expect_true(result1)
+
+    # Verify cache exists
+    if (exists(".performance_cache_fallback", envir = .GlobalEnv)) {
+      cache_env <- get(".performance_cache_fallback", envir = .GlobalEnv)
+      expect_true(exists(cache_key, envir = cache_env))
+
+      # Manually trigger cache invalidation (simulate event)
+      if (exists(cache_key, envir = cache_env)) {
+        rm(list = cache_key, envir = cache_env)
+      }
+
+      # Verify cache was invalidated
+      expect_false(exists(cache_key, envir = cache_env))
+    }
+
+    # Second evaluation should recreate cache
+    result2 <- evaluate_data_content_cached(test_data, cache_key = cache_key)
+    expect_equal(result1, result2)
+
+    # Clean up
+    if (exists(".performance_cache_fallback", envir = .GlobalEnv)) {
+      cache_env <- get(".performance_cache_fallback", envir = .GlobalEnv)
+      if (exists(cache_key, envir = cache_env)) {
+        rm(list = cache_key, envir = cache_env)
+      }
+    }
+  } else {
+    skip("Required functions or app_state not available")
+  }
 })

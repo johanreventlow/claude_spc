@@ -17,7 +17,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     app_state$session$dataLoaded_status <- "FALSE"
   }
 
-  # Helper function to evaluate dataLoaded status
+  # Helper function to evaluate dataLoaded status (PERFORMANCE OPTIMIZED)
   evaluate_dataLoaded_status <- function() {
     current_data_check <- app_state$data$current_data
 
@@ -28,22 +28,13 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   # log_debug("No current data - showing welcome screen", .context = "NAVIGATION_UNIFIED")
       "FALSE"
     } else {
-      # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
-      # Tjek også om bruger aktivt er startet på at arbejde (fil uploadet eller startet manuelt)
-      # Check if data has meaningful content using tidyverse approach
-      meaningful_data <- current_data_check |>
-        purrr::map_lgl(~ {
-          if (is.logical(.x)) {
-            any(.x, na.rm = TRUE)
-          } else if (is.numeric(.x)) {
-            any(!is.na(.x))
-          } else if (is.character(.x)) {
-            any(nzchar(.x, keepNA = FALSE), na.rm = TRUE)
-          } else {
-            FALSE
-          }
-        }) |>
-        any()
+      # PERFORMANCE OPTIMIZED: Use cached content validator instead of repeated purrr::map_lgl
+      meaningful_data <- evaluate_data_content_cached(
+        current_data_check,
+        cache_key = "dataLoaded_content_check",
+        session = session,
+        invalidate_events = c("data_loaded", "session_reset", "navigation_changed")
+      )
 
       # Betragt kun data som indlæst hvis:
       # 1. Der er meningsfuldt data, ELLER
@@ -108,28 +99,20 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     app_state$session$has_data_status <- "false"
   }
 
-  # Helper function to evaluate has_data status
+  # Helper function to evaluate has_data status (PERFORMANCE OPTIMIZED)
   evaluate_has_data_status <- function() {
     current_data_check <- app_state$data$current_data
 
     if (is.null(current_data_check)) {
       "false"
     } else {
-      # Tjek om data har meningsfuldt indhold (ikke bare tom skabelon)
-      # Check if data has meaningful content using tidyverse approach
-      meaningful_data <- current_data_check |>
-        purrr::map_lgl(~ {
-          if (is.logical(.x)) {
-            any(.x, na.rm = TRUE)
-          } else if (is.numeric(.x)) {
-            any(!is.na(.x))
-          } else if (is.character(.x)) {
-            any(nzchar(.x, keepNA = FALSE), na.rm = TRUE)
-          } else {
-            FALSE
-          }
-        }) |>
-        any()
+      # PERFORMANCE OPTIMIZED: Use shared cached content validator
+      meaningful_data <- evaluate_data_content_cached(
+        current_data_check,
+        cache_key = "has_data_content_check",
+        session = session,
+        invalidate_events = c("data_loaded", "session_reset", "navigation_changed")
+      )
       if (meaningful_data) "true" else "false"
     }
   }
@@ -209,43 +192,47 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   })
 
 
-  # Reaktiv debounced auto-save - følger Shiny best practices
-  auto_save_trigger <- shiny::debounce(shiny::reactive({
-    # Guards for at forhindre auto-gem under tabel operationer
-    # Use unified state management
-    updating_table_check <- app_state$data$updating_table
+  # PERFORMANCE OPTIMIZED: Reaktiv debounced auto-save med performance monitoring
+  auto_save_trigger <- create_performance_debounced(
+    shiny::reactive({
+      # Guards for at forhindre auto-gem under tabel operationer
+      # Use unified state management
+      updating_table_check <- app_state$data$updating_table
 
-    # Use unified state management
-    auto_save_enabled_check <- app_state$session$auto_save_enabled
+      # Use unified state management
+      auto_save_enabled_check <- app_state$session$auto_save_enabled
 
-    # Use unified state management
-    restoring_session_check <- app_state$session$restoring_session
+      # Use unified state management
+      restoring_session_check <- app_state$session$restoring_session
 
-    # Use unified state management
-    table_operation_check <- app_state$data$table_operation_in_progress
+      # Use unified state management
+      table_operation_check <- app_state$data$table_operation_in_progress
 
-    if (!auto_save_enabled_check ||
-      updating_table_check ||
-      table_operation_check ||
-      restoring_session_check) {
-      return(NULL)
-    }
+      if (!auto_save_enabled_check ||
+        updating_table_check ||
+        table_operation_check ||
+        restoring_session_check) {
+        return(NULL)
+      }
 
-    # Use unified state management
-    current_data_check <- app_state$data$current_data
+      # Use unified state management
+      current_data_check <- app_state$data$current_data
 
-    if (!is.null(current_data_check) &&
-      nrow(current_data_check) > 0 &&
-      any(!is.na(current_data_check))) {
-      list(
-        data = current_data_check,
-        metadata = collect_metadata(input),
-        timestamp = Sys.time()
-      )
-    } else {
-      NULL
-    }
-  }), millis = 2000)
+      if (!is.null(current_data_check) &&
+        nrow(current_data_check) > 0 &&
+        any(!is.na(current_data_check))) {
+        list(
+          data = current_data_check,
+          metadata = collect_metadata(input),
+          timestamp = Sys.time()
+        )
+      } else {
+        NULL
+      }
+    }),
+    millis = 2000,
+    operation_name = "auto_save_trigger"
+  )
 
   obs_data_save <- shiny::observe({
     save_data <- auto_save_trigger()
@@ -261,41 +248,45 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     obs_manager$add(obs_data_save, "data_auto_save")
   }
 
-  # Reaktiv debounced settings save - følger Shiny best practices
-  settings_save_trigger <- shiny::debounce(shiny::reactive({
-    # Samme guards som data auto-gem
-    # Use unified state management
-    updating_table_check <- app_state$data$updating_table
+  # PERFORMANCE OPTIMIZED: Reaktiv debounced settings save med performance monitoring
+  settings_save_trigger <- create_performance_debounced(
+    shiny::reactive({
+      # Samme guards som data auto-gem
+      # Use unified state management
+      updating_table_check <- app_state$data$updating_table
 
-    # Use unified state management
-    auto_save_enabled_check <- app_state$session$auto_save_enabled
+      # Use unified state management
+      auto_save_enabled_check <- app_state$session$auto_save_enabled
 
-    # Use unified state management
-    restoring_session_check <- app_state$session$restoring_session
+      # Use unified state management
+      restoring_session_check <- app_state$session$restoring_session
 
-    # Use unified state management
-    table_operation_check_settings <- app_state$data$table_operation_in_progress
+      # Use unified state management
+      table_operation_check_settings <- app_state$data$table_operation_in_progress
 
-    if (!auto_save_enabled_check ||
-      updating_table_check ||
-      table_operation_check_settings ||
-      restoring_session_check) {
-      return(NULL)
-    }
+      if (!auto_save_enabled_check ||
+        updating_table_check ||
+        table_operation_check_settings ||
+        restoring_session_check) {
+        return(NULL)
+      }
 
-    # Use unified state management
-    current_data_check <- app_state$data$current_data
+      # Use unified state management
+      current_data_check <- app_state$data$current_data
 
-    if (!is.null(current_data_check)) {
-      list(
-        data = current_data_check,
-        metadata = collect_metadata(input),
-        timestamp = Sys.time()
-      )
-    } else {
-      NULL
-    }
-  }), millis = 1000)  # Faster debounce for settings
+      if (!is.null(current_data_check)) {
+        list(
+          data = current_data_check,
+          metadata = collect_metadata(input),
+          timestamp = Sys.time()
+        )
+      } else {
+        NULL
+      }
+    }),
+    millis = 1000,  # Faster debounce for settings
+    operation_name = "settings_save_trigger"
+  )
 
   obs_settings_save <- shiny::observe({
     save_data <- settings_save_trigger()
@@ -325,17 +316,21 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
       ignoreInit = TRUE
     )
 
-  # Event-driven table operation cleanup - replaces later::later() anti-pattern
-  table_cleanup_trigger <- shiny::debounce(shiny::reactive({
-    # Use unified state management
-    table_operation_cleanup_needed_check <- app_state$data$table_operation_cleanup_needed
+  # PERFORMANCE OPTIMIZED: Event-driven table operation cleanup med monitoring
+  table_cleanup_trigger <- create_performance_debounced(
+    shiny::reactive({
+      # Use unified state management
+      table_operation_cleanup_needed_check <- app_state$data$table_operation_cleanup_needed
 
-    if (table_operation_cleanup_needed_check) {
-      Sys.time()  # Return timestamp to trigger cleanup
-    } else {
-      NULL
-    }
-  }), millis = 2000)
+      if (table_operation_cleanup_needed_check) {
+        Sys.time()  # Return timestamp to trigger cleanup
+      } else {
+        NULL
+      }
+    }),
+    millis = 2000,
+    operation_name = "table_cleanup_trigger"
+  )
 
   shiny::observe({
     cleanup_time <- table_cleanup_trigger()
