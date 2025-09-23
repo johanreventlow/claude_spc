@@ -2,8 +2,9 @@
 # New packaged version of global.R - replaces source() chain with package loading
 
 # PACKAGE LOADING --------------------------------
-# Load the claudespc package which contains all functionality
-library(claudespc)
+# NOTE: Cannot load claudespc package here due to circular dependency
+# This file is part of the claudespc package, so loading it would be circular
+# Instead, provide compatibility functions and configuration
 
 # BACKWARD COMPATIBILITY --------------------------------
 # Ensure critical functions are available in global environment for existing code

@@ -8,7 +8,11 @@ if (dir.exists(local_lib)) {
   .libPaths(c(local_lib, .libPaths()))
 }
 
-library(claudespc)
+# NOTE: Cannot load claudespc package in its own tests due to circular dependency
+# Load components directly from source instead
+if (file.exists(file.path(project_root, "R/branding_globals.R"))) {
+  source(file.path(project_root, "R/branding_globals.R"), local = FALSE)
+}
 
 test_that("HOSPITAL_COLORS er tilgængelig globalt", {
   expect_true(exists("HOSPITAL_COLORS", envir = globalenv()))

@@ -53,10 +53,19 @@ for (helper_path in session_helper_paths) {
   }
 }
 
-# Sikr adgang til centrale hjælpefunktioner via pakket namespace
+# Sikr adgang til centrale hjælpefunktioner via direct sourcing
+# NOTE: Cannot use claudespc package namespace from within package tests
 if (!exists("observer_manager", envir = .GlobalEnv)) {
-  if (requireNamespace("claudespc", quietly = TRUE)) {
-    assign("observer_manager", claudespc::observer_manager, envir = .GlobalEnv)
+  # Try to load observer_manager from source files
+  obs_manager_paths <- c(
+    file.path(project_root, "R", "utils_observer_management.R"),
+    file.path(project_root, "dev", "global_packaged.R")
+  )
+  for (obs_path in obs_manager_paths) {
+    if (file.exists(obs_path)) {
+      source(obs_path, local = FALSE)
+      if (exists("observer_manager", envir = .GlobalEnv)) break
+    }
   }
 }
 

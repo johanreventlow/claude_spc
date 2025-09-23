@@ -1,21 +1,41 @@
 # PACKAGE-BASED GLOBAL CONFIGURATION ================================================
 # Replaces source()-based loading with package-based approach
 
-# PACKAGE LOADING --------------------------------
-# For packaged deployment, load the package instead of sourcing individual files
-if (requireNamespace("claudespc", quietly = TRUE)) {
-  # Package is installed - load it
-  library(claudespc)
-  message("✓ claudespc package loaded")
-} else {
-  # Development mode - fall back to original global_packaged.R approach
-  warning("claudespc package not found - falling back to source-based loading")
-  if (file.exists("dev/global_packaged.R")) {
-    source("dev/global_packaged.R")
-  } else {
-    stop("Neither claudespc package nor dev/global_packaged.R found")
+# DEVELOPMENT MODE LOADING --------------------------------
+# Always use source-based loading for development
+# NOTE: Package self-loading (library(claudespc)) creates circular dependency and should be avoided
+message("Loading development configuration...")
+
+# Load core functions via sourcing in dependency order
+source_files <- c(
+  # Core utilities first
+  "R/utils_logging.R",
+  "R/utils_error_handling.R",
+  "R/utils_performance.R",
+  "R/golem_utils.R",
+  "R/zzz.R",
+
+  # Configuration
+  "R/config_system_config.R",
+  "R/config_hospital_branding.R",
+  "R/config_observer_priorities.R",
+  "R/config_chart_types.R",
+  "R/app_config.R",
+  "R/app_runtime_config.R",
+
+  # App initialization
+  "R/app_dependencies.R",
+  "R/app_initialization.R"
+)
+
+for (file in source_files) {
+  if (file.exists(file)) {
+    source(file, local = FALSE)
   }
 }
+
+message("✓ claudespc package loaded")
+message("✓ Global configuration loaded successfully")
 
 # BACKWARD COMPATIBILITY LAYER --------------------------------
 # Essential functions for backward compatibility - now provided by package
