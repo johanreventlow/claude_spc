@@ -321,6 +321,9 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 ## Add Plot Enhancements
 # Tilføjer target lines, phase separations og comment annotations
 add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
+  # Get hospital colors using the proper package function
+  HOSPITAL_COLORS <- get_hospital_colors()
+
   # Add phase separation lines if parts exist
   if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
     # Find phase change points
