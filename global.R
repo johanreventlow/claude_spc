@@ -18,6 +18,7 @@ source_files <- c(
   # Configuration
   "R/config_system_config.R",
   "R/config_hospital_branding.R",
+  "R/config_branding_getters.R",
   "R/config_observer_priorities.R",
   "R/config_chart_types.R",
   "R/app_config.R",
@@ -25,7 +26,8 @@ source_files <- c(
 
   # App initialization
   "R/app_dependencies.R",
-  "R/app_initialization.R"
+  "R/app_initialization.R",
+  "R/app_run.R"
 )
 
 for (file in source_files) {
@@ -36,6 +38,23 @@ for (file in source_files) {
 
 message("✓ claudespc package loaded")
 message("✓ Global configuration loaded successfully")
+
+# Initialize critical global variables for development
+if (exists("get_hospital_colors")) {
+  HOSPITAL_COLORS <- get_hospital_colors()
+  message("✓ Hospital branding loaded: ", ifelse(exists("get_hospital_name") && !is.null(get_hospital_name()), get_hospital_name(), "Default Hospital"), " SPC")
+} else {
+  # Fallback hospital colors
+  HOSPITAL_COLORS <- list(
+    primary = "#375a7f",
+    secondary = "#6c757d",
+    success = "#28a745",
+    warning = "#ffc107",
+    danger = "#dc3545",
+    accent = "#FF6B35"
+  )
+  message("⚠ Hospital branding not available - using fallback colors")
+}
 
 # BACKWARD COMPATIBILITY LAYER --------------------------------
 # Essential functions for backward compatibility - now provided by package
