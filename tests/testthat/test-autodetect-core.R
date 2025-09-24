@@ -12,38 +12,47 @@ test_that("Auto-detect identificerer kolonnetyper korrekt", {
   )
 
   # Test appears_date function
-  if (exists("appears_date")) {
-    expect_true(appears_date(test_data$Dato))
-    expect_false(appears_date(test_data$Tæller))
-  }
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("appears_date", mode = "function"),
+              "appears_date must be available for this test")
+
+  expect_true(appears_date(test_data$Dato))
+  expect_false(appears_date(test_data$Tæller))
 
   # Test appears_numeric function
-  if (exists("appears_numeric")) {
-    expect_true(appears_numeric(test_data$Tæller))
-    expect_true(appears_numeric(test_data$Nævner))
-    expect_false(appears_numeric(test_data$Kommentarer))
-  }
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("appears_numeric", mode = "function"),
+              "appears_numeric must be available for this test")
+
+  expect_true(appears_numeric(test_data$Tæller))
+  expect_true(appears_numeric(test_data$Nævner))
+  expect_false(appears_numeric(test_data$Kommentarer))
 
   # Test find_numeric_columns
-  if (exists("find_numeric_columns")) {
-    numeric_cols <- find_numeric_columns(test_data)
-    expect_true(is.character(numeric_cols))
-    expect_true("Tæller" %in% numeric_cols)
-    expect_true("Nævner" %in% numeric_cols)
-  }
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("find_numeric_columns", mode = "function"),
+              "find_numeric_columns must be available for this test")
+
+  numeric_cols <- find_numeric_columns(test_data)
+  expect_true(is.character(numeric_cols))
+  expect_true("Tæller" %in% numeric_cols)
+  expect_true("Nævner" %in% numeric_cols)
 })
 
 test_that("Auto-detect håndterer dansk dato format", {
   danish_dates <- c("01-01-2024", "15-02-2024", "31-12-2023")
 
-  if (exists("appears_date")) {
-    expect_true(appears_date(danish_dates))
-  }
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("appears_date", mode = "function"),
+              "appears_date must be available for this test")
 
-  if (exists("safe_date_parse")) {
-    parsed_dates <- safe_date_parse(danish_dates[1])
-    expect_true(!is.na(parsed_dates) || is.null(parsed_dates))
-  }
+  expect_true(appears_date(danish_dates))
+
+  skip_if_not(exists("safe_date_parse", mode = "function"),
+              "safe_date_parse not available - check test setup")
+
+  parsed_dates <- safe_date_parse(danish_dates[1])
+  expect_true(!is.na(parsed_dates) || is.null(parsed_dates))
 })
 
 test_that("Auto-detect håndterer edge cases", {
@@ -55,16 +64,20 @@ test_that("Auto-detect håndterer edge cases", {
   )
 
   # Test at edge cases ikke crasher auto-detect
-  if (exists("appears_numeric")) {
-    expect_false(appears_numeric(edge_case_data$empty_col))
-    expect_false(appears_numeric(edge_case_data$na_col))
-    expect_false(appears_numeric(edge_case_data$mixed_col))
-  }
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("appears_numeric", mode = "function"),
+              "appears_numeric must be available for this test")
 
-  if (exists("appears_date")) {
-    expect_false(appears_date(edge_case_data$empty_col))
-    expect_false(appears_date(edge_case_data$single_value))
-  }
+  expect_false(appears_numeric(edge_case_data$empty_col))
+  expect_false(appears_numeric(edge_case_data$na_col))
+  expect_false(appears_numeric(edge_case_data$mixed_col))
+
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("appears_date", mode = "function"),
+              "appears_date must be available for this test")
+
+  expect_false(appears_date(edge_case_data$empty_col))
+  expect_false(appears_date(edge_case_data$single_value))
 })
 
 test_that("Column mapping logic fungerer korrekt", {
@@ -76,22 +89,24 @@ test_that("Column mapping logic fungerer korrekt", {
     Total = c(100, 120, 110)
   )
 
-  if (exists("detect_columns_with_cache")) {
-    # Test 1: Med app_state parameter (eksisterende funktionalitet)
-    app_state <- create_test_app_state()
-    detected_with_state <- detect_columns_with_cache(test_data, app_state)
-    expect_true(is.list(detected_with_state))
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("detect_columns_with_cache", mode = "function"),
+              "detect_columns_with_cache must be available for this test")
 
-    # Test 2: Uden app_state parameter (ny funktionalitet)
-    detected_without_state <- detect_columns_with_cache(test_data)
-    expect_true(is.list(detected_without_state))
+  # Test 1: Med app_state parameter (eksisterende funktionalitet)
+  app_state <- create_test_app_state()
+  detected_with_state <- detect_columns_with_cache(test_data, app_state)
+  expect_true(is.list(detected_with_state))
 
-    # Test at begge resultater er sammenlignelige
-    expect_true(identical(names(detected_with_state), names(detected_without_state)))
+  # Test 2: Uden app_state parameter (ny funktionalitet)
+  detected_without_state <- detect_columns_with_cache(test_data)
+  expect_true(is.list(detected_without_state))
 
-    # Test at vi får relevante mapping forslag
-    if ("x_col" %in% names(detected_without_state)) {
-      expect_true(is.character(detected_without_state$x_col))
-    }
+  # Test at begge resultater er sammenlignelige
+  expect_true(identical(names(detected_with_state), names(detected_without_state)))
+
+  # Test at vi får relevante mapping forslag
+  if ("x_col" %in% names(detected_without_state)) {
+    expect_true(is.character(detected_without_state$x_col))
   }
 })

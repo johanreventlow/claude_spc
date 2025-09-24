@@ -4,21 +4,50 @@
 
 # Functions should be available through global.R loading
 
-test_that("parse_danish_target respects explicit y_axis_unit parameter", {
+test_that("parse_danish_target prioritizes Y-data context over explicit y_axis_unit", {
 
-  # TEST: Procent enhed prioriteres over automatisk detektion
+  # TEST: PRIORITY 1 - Y-data skala har højeste prioritet (intelligent kontekst)
 
-  # SCENARIO: Bruger vælger "percent" som y-akse enhed
+  # SCENARIO A: Decimal Y-data skala - input skal tilpasses til 0-1 skala
+  decimal_y_data <- c(0.1, 0.3, 0.6, 0.8)
+
+  # Med decimal Y-data skal "80%" blive 0.8 (uanset y_axis_unit)
+  expect_equal(parse_danish_target("80%", decimal_y_data, "percent"), 0.8)
+  expect_equal(parse_danish_target("80%", decimal_y_data, "count"), 0.8)
+  expect_equal(parse_danish_target("80", decimal_y_data, "percent"), 0.8)  # 80 → 0.8
+  expect_equal(parse_danish_target("0.8", decimal_y_data, "percent"), 0.8) # bevarer decimal
+
+  # SCENARIO B: Procent Y-data skala - input skal tilpasses til 0-100 skala
+  percent_y_data <- c(10, 25, 60, 85)
+
+  # Med procent Y-data skal "80%" blive 80 (uanset y_axis_unit)
+  expect_equal(parse_danish_target("80%", percent_y_data, "count"), 80)
+  expect_equal(parse_danish_target("80%", percent_y_data, "percent"), 80)
+  expect_equal(parse_danish_target("0.8", percent_y_data, "count"), 80)   # 0.8 → 80
+  expect_equal(parse_danish_target("80", percent_y_data, "count"), 80)    # bevarer procent
+
+  # SCENARIO C: Integer/rate Y-data skala - fjern symboler men behold værdi
+  integer_y_data <- c(150, 250, 450, 800)
+
+  expect_equal(parse_danish_target("80%", integer_y_data, "percent"), 80) # fjern % symbol
+  expect_equal(parse_danish_target("80", integer_y_data, "percent"), 80)  # behold værdi
+})
+
+test_that("parse_danish_target respects explicit y_axis_unit when no Y-data", {
+
+  # TEST: PRIORITY 2 - Eksplicit y_axis_unit bruges kun når ingen Y-data
+
+  # SCENARIO: Bruger vælger "percent" som y-akse enhed (ingen Y-data)
   expect_equal(parse_danish_target("80%", NULL, "percent"), 80)
   expect_equal(parse_danish_target("0.8", NULL, "percent"), 80) # decimal → procent
   expect_equal(parse_danish_target("80", NULL, "percent"), 80)  # allerede procent
 
-  # SCENARIO: Bruger vælger "count" som y-akse enhed
+  # SCENARIO: Bruger vælger "count" som y-akse enhed (ingen Y-data)
   expect_equal(parse_danish_target("80%", NULL, "count"), 80)   # fjern % symbol
   expect_equal(parse_danish_target("80", NULL, "count"), 80)    # behold tal
   expect_equal(parse_danish_target("0.8", NULL, "count"), 0.8)  # behold decimal
 
-  # SCENARIO: Bruger vælger "permille" som y-akse enhed
+  # SCENARIO: Bruger vælger "permille" som y-akse enhed (ingen Y-data)
   expect_equal(parse_danish_target("8‰", NULL, "permille"), 8)   # 8‰ → 8
   expect_equal(parse_danish_target("0.008", NULL, "permille"), 8) # 0.008 → 8
   expect_equal(parse_danish_target("8", NULL, "permille"), 8)    # 8 → 8
@@ -100,6 +129,39 @@ test_that("parse_danish_target handles edge cases gracefully", {
   expect_null(parse_danish_target("80%‰", NULL, "percent"))  # invalid format
 })
 
+test_that("improved detect_y_axis_scale function works correctly", {
+
+  # TEST: Forbedret skala-detektion med bedre decimal vs procent distinction
+
+  # SCENARIO: Decimal skala detection
+  pure_decimal <- c(0.1, 0.3, 0.6, 0.8, 0.9)
+  expect_equal(detect_y_axis_scale(pure_decimal), "decimal")
+
+  mixed_decimal <- c(0.1, 0.5, 0.8, 1.0)  # Max = 1.0 men mixed
+  expect_equal(detect_y_axis_scale(mixed_decimal), "decimal")
+
+  # SCENARIO: Procent skala detection (forbedret kriterier)
+  typical_percent <- c(10, 25, 45, 60, 85)  # hele tal i 0-100 range
+  expect_equal(detect_y_axis_scale(typical_percent), "percent")
+
+  some_decimals_percent <- c(10.5, 25, 45, 60.2, 85)  # nogle decimaler men stadig procent-range
+  expect_equal(detect_y_axis_scale(some_decimals_percent), "integer")  # Falder tilbage til integer
+
+  # SCENARIO: Integer/rate skala detection
+  large_numbers <- c(150, 250, 450, 800)
+  expect_equal(detect_y_axis_scale(large_numbers), "integer")
+
+  # SCENARIO: Edge cases
+  empty_data <- numeric(0)
+  expect_equal(detect_y_axis_scale(empty_data), "integer")
+
+  all_na <- c(NA, NA, NA)
+  expect_equal(detect_y_axis_scale(all_na), "integer")
+
+  single_value <- c(0.5)
+  expect_equal(detect_y_axis_scale(single_value), "decimal")
+})
+
 test_that("parse_danish_target preserves Danish number formats", {
 
   # TEST: Danske komma-decimaler håndteres korrekt
@@ -124,23 +186,25 @@ test_that("convert_by_unit_type helper function works correctly", {
   expect_equal(convert_by_unit_type(50, "count", FALSE, FALSE), 50)     # 50 → 50
 })
 
-test_that("unit conversion priority over scale detection works", {
+test_that("intelligent context parsing works correctly (Y-data prioritized)", {
 
-  # TEST: Eksplicit enhed prioriteres over automatisk detektion
+  # TEST: Y-data kontekst prioriteres over eksplicit enhed (ny adfærd)
 
-  # SCENARIO: Y-data antyder decimal skala, men bruger vælger procent
-  decimal_y_data <- c(0.1, 0.2, 0.3, 0.4)  # ville normalt foreslå decimal
-  percent_y_numeric <- parse_danish_number(decimal_y_data)
+  # SCENARIO: Decimal Y-data skal altid resultere i decimal output
+  decimal_y_data <- c(0.1, 0.2, 0.3, 0.4)
+  decimal_y_numeric <- parse_danish_number(decimal_y_data)
 
-  # Med eksplicit "percent" unit skal input behandles som procent
-  expect_equal(parse_danish_target("80%", percent_y_numeric, "percent"), 80)
-  expect_equal(parse_danish_target("0.8", percent_y_numeric, "percent"), 80)
+  # Med decimal Y-data skal input tilpasses til decimal-skala (uanset y_axis_unit)
+  expect_equal(parse_danish_target("80%", decimal_y_numeric, "percent"), 0.8)  # intelligent kontekst
+  expect_equal(parse_danish_target("0.8", decimal_y_numeric, "percent"), 0.8)  # bevar decimal
+  expect_equal(parse_danish_target("80", decimal_y_numeric, "percent"), 0.8)   # konverter til decimal
 
-  # SCENARIO: Y-data antyder procent skala, men bruger vælger count
-  percent_y_data <- c(10, 20, 30, 40)  # ville normalt foreslå procent
-  count_y_numeric <- parse_danish_number(percent_y_data)
+  # SCENARIO: Procent Y-data skal altid resultere i procent output
+  percent_y_data <- c(10, 20, 30, 40)
+  percent_y_numeric <- parse_danish_number(percent_y_data)
 
-  # Med eksplicit "count" unit skal input behandles som absolutte tal
-  expect_equal(parse_danish_target("80%", count_y_numeric, "count"), 80)
-  expect_equal(parse_danish_target("25", count_y_numeric, "count"), 25)
+  # Med procent Y-data skal input tilpasses til procent-skala (uanset y_axis_unit)
+  expect_equal(parse_danish_target("80%", percent_y_numeric, "count"), 80)    # intelligent kontekst
+  expect_equal(parse_danish_target("0.8", percent_y_numeric, "count"), 80)    # konverter til procent
+  expect_equal(parse_danish_target("25", percent_y_numeric, "count"), 25)     # bevar procent
 })

@@ -198,7 +198,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
 
     # Centralized error logging with context
-    log_error("Error event triggered", .context = "ERROR_SYSTEM")
+    log_error("Error event triggered", "ERROR_SYSTEM")
     if (!is.null(error_info)) {
       log_debug_kv(
         error_type = error_info$type %||% "unknown",

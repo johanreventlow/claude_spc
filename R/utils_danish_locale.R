@@ -101,50 +101,50 @@ parse_danish_target <- function(target_input, y_data = NULL, y_axis_unit = NULL)
     return(NULL) # Invalid input
   }
 
-  # Prioriter eksplicit y_axis_unit over automatisk detektion
+  # PRIORITY 1: Hvis Y-data findes, brug intelligent skala-baseret konvertering
+  if (!is.null(y_data) && length(y_data) > 0) {
+    scale_type <- detect_y_axis_scale(y_data)
+
+    # Convert based on detected data scale and input format
+    if (scale_type == "decimal") {
+      # Y-data er i decimal skala (0-1) - konverter input til decimal
+      if (has_percent || numeric_value > 1) {
+        return(numeric_value / 100) # 80% → 0.8, 80 → 0.8
+      } else {
+        return(numeric_value) # 0.8 → 0.8 (allerede decimal)
+      }
+    } else if (scale_type == "percent") {
+      # Y-data er i procent skala (0-100+) - konverter input til procent
+      if (has_percent) {
+        return(numeric_value) # 80% → 80
+      } else if (numeric_value <= 1) {
+        return(numeric_value * 100) # 0.8 → 80
+      } else {
+        return(numeric_value) # 80 → 80 (allerede procent)
+      }
+    } else {
+      # Y-data er integer/rate skala - fjern symboler men behold værdi
+      if (has_percent) {
+        return(numeric_value) # 80% → 80 (fjern % symbol)
+      } else {
+        return(numeric_value) # 80 → 80
+      }
+    }
+  }
+
+  # PRIORITY 2: Hvis ingen Y-data men eksplicit y_axis_unit, brug unit-baseret konvertering
   if (!is.null(y_axis_unit) && y_axis_unit != "") {
     return(convert_by_unit_type(numeric_value, y_axis_unit, has_percent, has_permille))
   }
 
-  # Fallback: Brug automatisk skala-detektion hvis ingen enhed er specificeret
-  if (is.null(y_data)) {
-    # Ingen y_data og ingen unit - brug simple konverteringsregler
-    if (has_permille) {
-      return(numeric_value) # Behold promille-værdi som-den-er
-    } else if (has_percent && numeric_value > 1) {
-      return(numeric_value / 100) # Konverter procent til decimal
-    }
-    return(numeric_value)
+  # PRIORITY 3: Fallback - ingen Y-data og ingen unit
+  # Brug simple konverteringsregler
+  if (has_permille) {
+    return(numeric_value) # Behold promille-værdi som-den-er
+  } else if (has_percent && numeric_value > 1) {
+    return(numeric_value / 100) # Konverter procent til decimal
   }
-
-  # Use scale detection logic som fallback
-  scale_type <- detect_y_axis_scale(y_data)
-
-  # Convert based on detected scale and input format
-  if (scale_type == "decimal") {
-    # Y-axis is 0-1 scale
-    if (has_percent || numeric_value > 1) {
-      return(numeric_value / 100) # Convert to decimal
-    } else {
-      return(numeric_value) # Already decimal
-    }
-  } else if (scale_type == "percent") {
-    # Y-axis is 0-100+ scale
-    if (has_percent) {
-      return(numeric_value) # Remove % but keep value
-    } else if (numeric_value <= 1) {
-      return(numeric_value * 100) # Convert decimal to percent
-    } else {
-      return(numeric_value) # Already in percent range
-    }
-  } else {
-    # Y-axis is integer/rate scale
-    if (has_percent) {
-      return(numeric_value) # Remove % symbol but keep numeric value
-    } else {
-      return(numeric_value) # Use as-is
-    }
-  }
+  return(numeric_value)
 }
 
 ## Konverter baseret på eksplicit enhedstype
@@ -202,7 +202,7 @@ is_valid_danish_number <- function(x) {
 }
 
 ## Y-akse Skalerings Detektering
-# Automatisk detektering af passende Y-akse format (decimal, procent, heltal)
+# Forbedret automatisk detektering af Y-akse format med bedre decimal vs procent distinction
 detect_y_axis_scale <- function(y_data) {
   if (is.null(y_data) || length(y_data) == 0) {
     return("integer")
@@ -218,20 +218,31 @@ detect_y_axis_scale <- function(y_data) {
   max_val <- max(y_clean)
   min_val <- min(y_clean)
 
-  # Rule 1: Decimal scale (0-1)
+  # Rule 1: Decimal scale (0-1) - stærkere prioritet for decimal detection
   if (max_val <= 1.0) {
-    return("decimal")
+    # Tjek om det virkelig er decimal format (ikke bare tilfældigt små tal)
+    has_decimals <- any(y_clean != floor(y_clean))
+    small_values <- sum(y_clean <= 1) / length(y_clean) >= 0.8  # 80% af værdier ≤ 1
+
+    if (has_decimals || small_values) {
+      return("decimal")
+    }
   }
 
-  # Rule 2: Percent scale (0-100+ with most values looking like percentages)
+  # Rule 2: Percent scale (0-100+) - forbedret procent detection
   if (min_val >= 0 && max_val <= 200) {
-    # Check if most values look like percentages (0-100 range)
-    percent_like_count <- sum(y_clean >= 0 & y_clean <= 100)
-    if (percent_like_count / length(y_clean) >= 0.7) { # 70% threshold
+    # Mere stringente kriterier for procent-scale detection
+    percent_range_count <- sum(y_clean >= 0 & y_clean <= 100)
+    whole_number_ratio <- sum(y_clean == floor(y_clean)) / length(y_clean)
+
+    # Detektér procent hvis:
+    # - Mindst 80% af værdier er i 0-100 range
+    # - Mindst 70% af værdier er hele tal (typisk for procent data)
+    if (percent_range_count / length(y_clean) >= 0.8 && whole_number_ratio >= 0.7) {
       return("percent")
     }
   }
 
-  # Rule 3: Integer/rate scale
+  # Rule 3: Integer/rate scale (default fallback)
   return("integer")
 }

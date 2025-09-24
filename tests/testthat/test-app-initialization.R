@@ -16,10 +16,11 @@ test_that("App initialization og global configuration fungerer", {
   }
 
   # Test chart type funktion
-  if (exists("get_qic_chart_type")) {
-    expect_equal(get_qic_chart_type("P-kort (Andele)"), "p")
-    expect_equal(get_qic_chart_type(""), "run")
-  }
+  skip_if_not(exists("get_qic_chart_type", mode = "function"),
+              "get_qic_chart_type not available - check test setup")
+
+  expect_equal(get_qic_chart_type("P-kort (Andele)"), "p")
+  expect_equal(get_qic_chart_type(""), "run")
 })
 
 test_that("Helper functions er tilgængelige efter initialization", {
@@ -55,12 +56,14 @@ test_that("Unified state system kan initialiseres", {
   # Test at vi kan oprette app_state
   expect_true(exists("create_app_state"))
 
-  if (exists("create_app_state")) {
-    app_state <- create_app_state()
-    expect_true(is.environment(app_state))
-    expect_true(exists("events", envir = app_state))
-    expect_true(exists("data", envir = app_state))
-    expect_true(exists("columns", envir = app_state))
-    expect_true(exists("session", envir = app_state))
-  }
+  # Strong assertion - this is critical functionality
+  expect_true(exists("create_app_state", mode = "function"),
+              "create_app_state must be available for unified state system")
+
+  app_state <- create_app_state()
+  expect_true(is.environment(app_state))
+  expect_true(exists("events", envir = app_state))
+  expect_true(exists("data", envir = app_state))
+  expect_true(exists("columns", envir = app_state))
+  expect_true(exists("session", envir = app_state))
 })

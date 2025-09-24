@@ -492,12 +492,14 @@ test_that("generateSPCPlot hospital theme integration works", {
   expect_s3_class(result$plot, "ggplot")
 
   # TEST: Hospital theme can be applied
-  if (exists("applyHospitalTheme")) {
+  # Use skip_if_not for helper functions
+  if (exists("applyHospitalTheme", mode = "function")) {
     themed_plot <- applyHospitalTheme(result$plot)
     expect_s3_class(themed_plot, "ggplot")
   }
 
   # TEST: Color scheme should use hospital colors (if HOSPITAL_COLORS exists)
+  # Use skip_if_not for configuration objects
   if (exists("HOSPITAL_COLORS")) {
     # Verify hospital colors are defined
     expect_true(is.list(HOSPITAL_COLORS))

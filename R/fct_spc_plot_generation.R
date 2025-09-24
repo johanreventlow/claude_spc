@@ -314,7 +314,14 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
 
   # Add centerline if provided
   if (!is.null(centerline_value) && is.numeric(centerline_value) && !is.na(centerline_value)) {
-    qic_args$cl <- centerline_value
+    adjusted_centerline <- centerline_value
+
+    # RUN charts med nævner skal have centerline i decimal form til qicharts2
+    if (!is.null(n_col_name) && chart_type == "run" && adjusted_centerline > 1) {
+      adjusted_centerline <- adjusted_centerline / 100
+    }
+
+    qic_args$cl <- adjusted_centerline
   }
 
   return(qic_args)
@@ -392,19 +399,19 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
         data = comment_data,
         ggplot2::aes(x = x, y = y, label = comment),
         size = 3,
-        color = HOSPITAL_COLORS$darkgrey,
-        bg.color = "white",
-        bg.r = 0.1,
-        box.padding = 0.5,
-        point.padding = 0.5,
-        segment.color = HOSPITAL_COLORS$mediumgrey,
-        segment.size = 0.3,
-        nudge_x = .15,
-        nudge_y = .5,
-        segment.curvature = -1e-20,
-        arrow = grid::arrow(length = grid::unit(0.015, "npc")),
-        max.overlaps = Inf,
-        inherit.aes = FALSE
+        color = HOSPITAL_COLORS$darkgrey
+        # bg.color = "white",
+        # bg.r = 0.1,
+        # box.padding = 0.5,
+        # point.padding = 0.5,
+        # segment.color = HOSPITAL_COLORS$mediumgrey,
+        # segment.size = 0.3,
+        # nudge_x = .15,
+        # nudge_y = .5,
+        # segment.curvature = -1e-20,
+        # arrow = grid::arrow(length = grid::unit(0.015, "npc")),
+        # max.overlaps = Inf,
+        # inherit.aes = FALSE
       )
   }
 

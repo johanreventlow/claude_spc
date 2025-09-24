@@ -52,19 +52,19 @@ create_cached_reactive <- function(reactive_expr, cache_key, cache_timeout = 300
 
     if (!is.null(cached_result)) {
       log_debug(
-        component = "[PERFORMANCE_CACHE]",
-        message = "Cache hit - returning cached result",
-        details = list(cache_key = actual_key)
+        "Cache hit - returning cached result",
+        .context = "PERFORMANCE_CACHE"
       )
+      log_debug_kv(cache_key = actual_key, .context = "PERFORMANCE_CACHE")
       return(cached_result$value)
     }
 
     # Cache miss - compute new result
     log_debug(
-      component = "[PERFORMANCE_CACHE]",
-      message = "Cache miss - computing new result",
-      details = list(cache_key = actual_key)
+      "Cache miss - computing new result",
+      .context = "PERFORMANCE_CACHE"
     )
+    log_debug_kv(cache_key = actual_key, .context = "PERFORMANCE_CACHE")
 
     # Execute expensive computation
     start_time <- Sys.time()
@@ -78,12 +78,13 @@ create_cached_reactive <- function(reactive_expr, cache_key, cache_timeout = 300
     manage_cache_size(cache_size_limit)
 
     log_debug(
-      component = "[PERFORMANCE_CACHE]",
-      message = "Result cached successfully",
-      details = list(
-        cache_key = actual_key,
-        computation_time = computation_time
-      )
+      "Result cached successfully",
+      .context = "PERFORMANCE_CACHE"
+    )
+    log_debug_kv(
+      cache_key = actual_key,
+      computation_time = computation_time,
+      .context = "PERFORMANCE_CACHE"
     )
 
     return(result)
