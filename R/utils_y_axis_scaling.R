@@ -15,6 +15,14 @@ INTERNAL_UNITS_BY_PLOTTYPE <- list(
   absolute = "absolute"        # c/u-charts, count run charts
 )
 
+#' Chart types that use proportion internal unit [0,1]
+#' @keywords internal
+PROPORTION_CHART_TYPES <- c("p", "pp", "run")
+
+#' Chart types that use absolute internal unit (no scaling)
+#' @keywords internal
+ABSOLUTE_CHART_TYPES <- c("c", "u", "up", "i", "mr", "g")
+
 # LAYER 1: PARSING ============================================================
 
 #' Parse Danish number with symbol detection
@@ -72,6 +80,31 @@ parse_number_da <- function(x) {
   ))
 }
 
+# CHART-TYPE AWARE UNIT SELECTION ============================================
+
+#' Determine internal unit based on chart type (eliminates 100× mismatch)
+#'
+#' @param chart_type Character. QIC chart type (e.g., "p", "run", "c", "u")
+#' @return Character. Internal unit: "proportion" for [0,1] charts, "absolute" for count charts
+#' @export
+determine_internal_unit_by_chart_type <- function(chart_type) {
+  if (is.null(chart_type) || chart_type == "") {
+    log_debug("No chart type specified, defaulting to proportion internal unit", .context = "Y_AXIS_SCALING")
+    return("proportion")  # Safe default for most SPC contexts
+  }
+
+  if (chart_type %in% PROPORTION_CHART_TYPES) {
+    log_debug("Chart type", chart_type, "uses proportion internal unit [0,1]", .context = "Y_AXIS_SCALING")
+    return("proportion")
+  } else if (chart_type %in% ABSOLUTE_CHART_TYPES) {
+    log_debug("Chart type", chart_type, "uses absolute internal unit (no scaling)", .context = "Y_AXIS_SCALING")
+    return("absolute")
+  } else {
+    log_debug("Unknown chart type", chart_type, "defaulting to proportion internal unit", .context = "Y_AXIS_SCALING")
+    return("proportion")  # Conservative fallback
+  }
+}
+
 # LAYER 2: UNIT CLARIFICATION ================================================
 
 #' Resolve target unit for Y-axis using priority system
@@ -101,6 +134,52 @@ resolve_y_unit <- function(user_unit = NULL, col_unit = NULL, y_sample = NULL) {
   }
 
   # Priority 3: Data heuristics
+  if (!is.null(y_sample) && length(y_sample) > 0) {
+    heuristic_unit <- detect_unit_from_data(y_sample)
+    log_debug("Y-axis unit resolved via data heuristics:", heuristic_unit, "n_observations:", length(y_sample), .context = "Y_AXIS_SCALING")
+    return(heuristic_unit)
+  }
+
+  # Fallback: absolute
+  log_debug("Y-axis unit fallback to absolute", .context = "Y_AXIS_SCALING")
+  return("absolute")
+}
+
+#' Smart Y-axis unit resolution that considers input symbols
+#'
+#' Enhanced version that prioritizes symbols in the input over data heuristics
+#' to prevent conflicts when input has explicit unit information.
+#'
+#' Priority: User choice > Column metadata > Input symbol > Data heuristics > Fallback
+#'
+#' @param user_unit Character. User-specified unit or NULL
+#' @param col_unit Character. Column metadata unit or NULL
+#' @param y_sample Numeric vector. Data sample for heuristics or NULL
+#' @param parsed List. Parsed input with value and symbol
+#' @return Character. One of "proportion", "percent", "permille", "absolute"
+#' @keywords internal
+resolve_y_unit_smart <- function(user_unit = NULL, col_unit = NULL, y_sample = NULL, parsed = NULL) {
+
+  # Priority 1: User explicit choice
+  if (!is.null(user_unit) && user_unit %in% VALID_UNITS) {
+    log_debug("Y-axis unit resolved via user choice:", user_unit, .context = "Y_AXIS_SCALING")
+    return(user_unit)
+  }
+
+  # Priority 2: Column metadata
+  if (!is.null(col_unit) && col_unit %in% VALID_UNITS) {
+    log_debug("Y-axis unit resolved via column metadata:", col_unit, .context = "Y_AXIS_SCALING")
+    return(col_unit)
+  }
+
+  # Priority 3: Input symbol (NEW - prevents conflicts with data heuristics)
+  if (!is.null(parsed) && !is.null(parsed$symbol) && parsed$symbol %in% c("percent", "permille")) {
+    symbol_unit <- parsed$symbol
+    log_debug("Y-axis unit resolved via input symbol:", symbol_unit, "from parsed:", parsed$symbol, .context = "Y_AXIS_SCALING")
+    return(symbol_unit)
+  }
+
+  # Priority 4: Data heuristics (only when no symbol present)
   if (!is.null(y_sample) && length(y_sample) > 0) {
     heuristic_unit <- detect_unit_from_data(y_sample)
     log_debug("Y-axis unit resolved via data heuristics:", heuristic_unit, "n_observations:", length(y_sample), .context = "Y_AXIS_SCALING")
@@ -153,7 +232,12 @@ detect_unit_from_data <- function(y_data) {
 
 # LAYER 3A: HARMONIZATION TO TARGET UNIT ====================================
 
-#' Convert parsed input to target unit using deterministic matrix
+#' Convert parsed input to target unit using deterministic matrix (100×-mismatch safe)
+#'
+#' Enhanced conversion matrix that prevents 100×-mismatch by being explicit
+#' about when scaling occurs and when it doesn't.
+#'
+#' KEY RULE: Only symbols (%, ‰) trigger scaling. No symbols = no implicit scaling.
 #'
 #' @param parsed List from parse_number_da() with value and symbol
 #' @param target_unit Character. Target unit to convert to
@@ -162,53 +246,70 @@ detect_unit_from_data <- function(y_data) {
 coerce_to_target_unit <- function(parsed, target_unit) {
 
   if (is.na(parsed$value) || parsed$symbol == "invalid") {
+    log_debug("Invalid parsed input - returning NA", .context = "Y_AXIS_SCALING")
     return(NA_real_)
   }
 
   value <- parsed$value
   symbol <- parsed$symbol
 
-  # Conversion matrix: from symbol × to target_unit
+  log_debug("Converting:", value, "with symbol:", symbol, "to target unit:", target_unit, .context = "Y_AXIS_SCALING")
+
+  # Enhanced conversion matrix: from symbol × to target_unit
   if (target_unit == "proportion") {
 
     if (symbol == "percent") {
-      return(value / 100)  # 80% → 0.8
+      result <- value / 100  # 80% → 0.8
+      log_debug("Percent to proportion:", value, "% →", result, .context = "Y_AXIS_SCALING")
+      return(result)
     } else if (symbol == "permille") {
-      return(value / 1000)  # 8‰ → 0.008
+      result <- value / 1000  # 8‰ → 0.008
+      log_debug("Permille to proportion:", value, "‰ →", result, .context = "Y_AXIS_SCALING")
+      return(result)
     } else if (symbol == "none") {
-      # No implicit scaling - treat as already in target unit
-      return(value)  # 0.8 → 0.8
+      # CRITICAL: No implicit scaling - treat as already in target unit
+      log_debug("No symbol to proportion: treating", value, "as already in proportion scale", .context = "Y_AXIS_SCALING")
+      return(value)  # 0.8 → 0.8 (NOT 0.008)
     }
 
   } else if (target_unit == "percent") {
 
     if (symbol == "percent") {
+      log_debug("Percent to percent (identity):", value, .context = "Y_AXIS_SCALING")
       return(value)  # 80% → 80
     } else if (symbol == "permille") {
-      return(value / 10)  # 80‰ → 8
+      result <- value / 10  # 80‰ → 8%
+      log_debug("Permille to percent:", value, "‰ →", result, "%", .context = "Y_AXIS_SCALING")
+      return(result)
     } else if (symbol == "none") {
-      # No implicit scaling - treat as already in target unit
-      return(value)  # 80 → 80
+      # CRITICAL: No implicit scaling - treat as already in target unit
+      log_debug("No symbol to percent: treating", value, "as already in percent scale", .context = "Y_AXIS_SCALING")
+      return(value)  # 80 → 80 (NOT 0.8)
     }
 
   } else if (target_unit == "permille") {
 
     if (symbol == "percent") {
-      return(value * 10)  # 8% → 80‰
+      result <- value * 10  # 8% → 80‰
+      log_debug("Percent to permille:", value, "% →", result, "‰", .context = "Y_AXIS_SCALING")
+      return(result)
     } else if (symbol == "permille") {
+      log_debug("Permille to permille (identity):", value, .context = "Y_AXIS_SCALING")
       return(value)  # 80‰ → 80
     } else if (symbol == "none") {
-      # No implicit scaling - treat as already in target unit
-      return(value)  # 80 → 80
+      # CRITICAL: No implicit scaling - treat as already in target unit
+      log_debug("No symbol to permille: treating", value, "as already in permille scale", .context = "Y_AXIS_SCALING")
+      return(value)  # 80 → 80 (NOT 0.08)
     }
 
   } else if (target_unit == "absolute") {
 
     # For absolute units, remove symbols but keep numeric value
+    log_debug("Converting to absolute: removing symbols, keeping value", value, .context = "Y_AXIS_SCALING")
     return(value)  # 80% → 80, 80‰ → 80, 80 → 80
 
   } else {
-    # Unknown target unit
+    # Unknown target unit - this should be caught earlier
     log_error(
       paste("Unknown target unit in coerce_to_target_unit:", target_unit, "symbol:", symbol, "value:", value),
       "Y_AXIS_SCALING"
@@ -219,7 +320,10 @@ coerce_to_target_unit <- function(parsed, target_unit) {
 
 # LAYER 3B: CONVERSION TO INTERNAL CANONICAL ================================
 
-#' Convert from target unit to internal canonical unit
+#' Convert from target unit to internal canonical unit (100×-mismatch safe)
+#'
+#' Enhanced internal conversion that prevents 100×-mismatch with better logging
+#' and more explicit error handling for incompatible conversions.
 #'
 #' @param value_in_target_unit Numeric value in target unit
 #' @param target_unit Character. The unit value is currently in
@@ -228,10 +332,16 @@ coerce_to_target_unit <- function(parsed, target_unit) {
 #' @export
 to_internal_scale <- function(value_in_target_unit, target_unit, internal_unit) {
 
-  if (is.na(value_in_target_unit)) return(NA_real_)
+  if (is.na(value_in_target_unit)) {
+    log_debug("NA value in to_internal_scale", .context = "Y_AXIS_SCALING")
+    return(NA_real_)
+  }
+
+  log_debug("Converting", value_in_target_unit, "from", target_unit, "to internal", internal_unit, .context = "Y_AXIS_SCALING")
 
   # Same unit - no conversion needed
   if (target_unit == internal_unit) {
+    log_debug("Same unit - no conversion needed", .context = "Y_AXIS_SCALING")
     return(value_in_target_unit)
   }
 
@@ -239,47 +349,72 @@ to_internal_scale <- function(value_in_target_unit, target_unit, internal_unit) 
   if (internal_unit == "proportion") {
 
     if (target_unit == "percent") {
-      return(value_in_target_unit / 100)  # 80 → 0.8
+      result <- value_in_target_unit / 100  # 80 → 0.8
+      log_debug("Target percent to internal proportion:", value_in_target_unit, "→", result, .context = "Y_AXIS_SCALING")
+      return(result)
     } else if (target_unit == "permille") {
-      return(value_in_target_unit / 1000)  # 80 → 0.08
+      result <- value_in_target_unit / 1000  # 80 → 0.08
+      log_debug("Target permille to internal proportion:", value_in_target_unit, "→", result, .context = "Y_AXIS_SCALING")
+      return(result)
     } else if (target_unit == "absolute") {
+      # This is problematic - absolute values can't be converted to proportions without context
       log_error(
         paste("Cannot convert absolute to proportion without context - target:", target_unit, "internal:", internal_unit),
         "Y_AXIS_SCALING"
       )
       return(NA_real_)
+    } else if (target_unit == "proportion") {
+      # Should have been caught by same-unit check above, but include for completeness
+      return(value_in_target_unit)
     }
 
   } else if (internal_unit == "absolute") {
 
-    # Absolute internal - no scaling
+    # Absolute internal unit - values pass through without scaling
+    log_debug("Internal unit is absolute - no scaling applied", .context = "Y_AXIS_SCALING")
     return(value_in_target_unit)
 
   } else {
+    # Unknown internal unit
     log_error(
       paste("Unknown internal unit in to_internal_scale - target:", target_unit, "internal:", internal_unit),
       "Y_AXIS_SCALING"
     )
     return(NA_real_)
   }
+
+  # Should never reach here, but include for safety
+  log_error(
+    paste("Unexpected code path in to_internal_scale - target:", target_unit, "internal:", internal_unit, "value:", value_in_target_unit),
+    "Y_AXIS_SCALING"
+  )
+  return(NA_real_)
 }
 
 # MAIN API FUNCTION ===========================================================
 
-#' Normalize axis value using complete 3-layer architecture
+#' Normalize axis value using complete 3-layer architecture (100×-mismatch safe)
 #'
 #' Main entry point that combines parsing, unit resolution, and conversion.
 #' This replaces parse_danish_target() with cleaner separation of concerns.
+#' Now includes chart-type awareness to prevent 100×-mismatch.
 #'
 #' @param x Character string input (e.g., "80%", "0,8", "25‰")
 #' @param user_unit Character. Explicit user unit choice (priority 1)
 #' @param col_unit Character. Column metadata unit (priority 2)
 #' @param y_sample Numeric. Sample of Y data for heuristics (priority 3)
-#' @param internal_unit Character. Internal canonical unit for this plot type
+#' @param internal_unit Character. Internal canonical unit for this plot type (if not using chart_type)
+#' @param chart_type Character. QIC chart type - if provided, determines internal_unit automatically
 #' @return Numeric value in internal unit, ready for qicharts2
 #' @export
 normalize_axis_value <- function(x, user_unit = NULL, col_unit = NULL,
-                                 y_sample = NULL, internal_unit = "proportion") {
+                                 y_sample = NULL, internal_unit = "proportion", chart_type = NULL) {
+
+  # CRITICAL: If chart_type is provided, determine internal_unit from it (prevents 100×-mismatch)
+  if (!is.null(chart_type)) {
+    internal_unit <- determine_internal_unit_by_chart_type(chart_type)
+    log_debug("Chart type", chart_type, "determined internal unit:", internal_unit, .context = "Y_AXIS_SCALING")
+  }
 
   # Layer 1: Parse input
   parsed <- parse_number_da(x)
@@ -289,8 +424,8 @@ normalize_axis_value <- function(x, user_unit = NULL, col_unit = NULL,
     return(NULL)
   }
 
-  # Layer 2: Resolve target unit
-  target_unit <- resolve_y_unit(user_unit, col_unit, y_sample)
+  # Layer 2: Resolve target unit (with symbol awareness to prevent conflicts)
+  target_unit <- resolve_y_unit_smart(user_unit, col_unit, y_sample, parsed)
 
   # Layer 3A: Harmonize to target unit
   value_in_target <- coerce_to_target_unit(parsed, target_unit)
