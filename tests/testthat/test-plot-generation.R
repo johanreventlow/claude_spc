@@ -77,6 +77,30 @@ test_that("target line addition works correctly", {
   # Note: Internal ggplot structure can vary, just verify it's a horizontal line geom
 })
 
+test_that("target line uses display scaler when available", {
+  qic_data <- data.frame(
+    x = 1:5,
+    y = c(40, 55, 60, 70, 65),
+    cl = rep(55, 5)
+  )
+
+  attr(qic_data, "display_scaler") <- list(
+    factor = 100,
+    mode = "percent",
+    to_display = function(value) value * 100,
+    to_internal = function(value) value / 100
+  )
+
+  base_plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) +
+    ggplot2::geom_line(color = "#6c757d", linewidth = 1) +
+    ggplot2::geom_point(size = 2, color = "#6c757d")
+
+  plot_with_target <- add_plot_enhancements(base_plot, qic_data, 0.8, NULL)
+
+  target_layer <- plot_with_target$layers[[length(plot_with_target$layers)]]
+  expect_equal(target_layer$geom_params$yintercept, 80)
+})
+
 test_that("phase separation lines work correctly", {
   # TEST: Adding phase separation lines
 
