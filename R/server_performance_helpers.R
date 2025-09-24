@@ -133,13 +133,10 @@ parse_danish_date_vectorized <- function(x) {
 ensure_standard_columns <- function(data) {
   if (is.null(data) || nrow(data) == 0) return(data)
 
-  # Remove any completely empty columns
-  empty_columns <- sapply(data, function(col) all(is.na(col) | col == ""))
-  if (any(empty_columns)) {
-    data <- data[!empty_columns]
-  }
+  # NOTE: Removed automatic empty column removal as empty columns can be meaningful
+  # Empty columns are preserved to allow users to work with their data structure as intended
 
-  # Ensure reasonable column names
+  # Only ensure reasonable column names (remove problematic characters, ensure uniqueness)
   names(data) <- make.names(names(data), unique = TRUE)
 
   return(data)
