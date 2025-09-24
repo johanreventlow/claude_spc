@@ -7,6 +7,7 @@
 #' @param launch_browser TRUE for browser, FALSE for no launch, or leave default for environment-aware decision
 #' @param options List of application options (golem-style configuration)
 #' @param enable_test_mode TRUE/FALSE to force test mode, or NULL for auto-detection based on environment
+#' @param log_level Set logging level for the session: "DEBUG", "INFO", "WARN", "ERROR", or NULL for auto-detection
 #' @param ... Additional arguments to pass to shiny::shinyApp()
 #'
 #' @details
@@ -14,16 +15,27 @@
 #' It supports environment-aware configuration and graceful fallbacks for different
 #' deployment contexts (development, production, testing).
 #'
+#' Log levels determine what messages are displayed:
+#' \describe{
+#'   \item{DEBUG}{All messages (most verbose) - ideal for troubleshooting reactive flows}
+#'   \item{INFO}{Informational messages and above - good for monitoring app behavior}
+#'   \item{WARN}{Warnings and errors only - standard production setting}
+#'   \item{ERROR}{Only error messages - minimal logging}
+#' }
+#'
 #' @examples
 #' \dontrun{
 #' # Basic usage
 #' run_app()
 #'
-#' # Development with specific options
-#' run_app(port = 4040, options = list(test_mode = TRUE))
+#' # Development with debug logging
+#' run_app(port = 4040, log_level = "DEBUG")
 #'
-#' # Production deployment
-#' run_app(launch_browser = TRUE, options = list(production_mode = TRUE))
+#' # Troubleshooting with detailed logging
+#' run_app(log_level = "DEBUG", enable_test_mode = TRUE)
+#'
+#' # Production with minimal logging
+#' run_app(log_level = "WARN", launch_browser = TRUE)
 #' }
 #'
 #' @import shiny
@@ -34,7 +46,37 @@ run_app <- function(port = NULL,
                     launch_browser = NULL,
                     options = list(),
                     enable_test_mode = NULL,
+                    log_level = NULL,
                     ...) {
+
+  # Configure logging level
+  if (!is.null(log_level)) {
+    # Validate and set log level
+    valid_levels <- c("DEBUG", "INFO", "WARN", "ERROR")
+    log_level <- toupper(trimws(log_level))
+
+    if (log_level %in% valid_levels) {
+      Sys.setenv(SPC_LOG_LEVEL = log_level)
+      cat(sprintf("[LOG_CONFIG] Log level set to %s for this session\n", log_level))
+    } else {
+      warning(sprintf("Invalid log level '%s'. Valid options: %s",
+                     log_level, paste(valid_levels, collapse = ", ")))
+      cat("[LOG_CONFIG] Using default log level\n")
+    }
+  } else {
+    # Auto-detect log level based on context
+    if (interactive() || Sys.getenv("GOLEM_CONFIG_ACTIVE", "production") == "development") {
+      if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
+        Sys.setenv(SPC_LOG_LEVEL = "INFO")
+        cat("[LOG_CONFIG] Auto-detected development environment - using INFO level\n")
+      }
+    } else {
+      if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
+        Sys.setenv(SPC_LOG_LEVEL = "WARN")
+        cat("[LOG_CONFIG] Auto-detected production environment - using WARN level\n")
+      }
+    }
+  }
 
   # Configure test mode based on context
   if (is.null(enable_test_mode)) {
