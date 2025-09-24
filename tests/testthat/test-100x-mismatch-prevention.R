@@ -205,6 +205,55 @@ test_that("Run chart target line uses display scale with denominators", {
   })
 })
 
+test_that("generateSPCPlot scales target line exactly once", {
+  skip_if_not(exists("generateSPCPlot", mode = "function"), "generateSPCPlot function not available")
+  skip_if_not_installed("ggplot2")
+
+  test_data <- data.frame(
+    Dato = seq.Date(from = as.Date("2024-01-01"), by = "week", length.out = 6),
+    `Tæller` = c(40, 42, 41, 43, 44, 45),
+    `Nævner` = rep(50, 6),
+    check.names = FALSE
+  )
+
+  config <- list(
+    x_col = "Dato",
+    y_col = "Tæller",
+    n_col = "Nævner"
+  )
+
+  target_internal <- normalize_axis_value("80%", chart_type = "run")
+
+  result <- generateSPCPlot(
+    data = test_data,
+    config = config,
+    chart_type = "run",
+    target_value = target_internal,
+    centerline_value = NULL,
+    show_phases = FALSE,
+    skift_column = NULL,
+    frys_column = NULL,
+    chart_title_reactive = NULL,
+    y_axis_unit = "percent",
+    kommentar_column = NULL
+  )
+
+  built_plot <- ggplot2::ggplot_build(result$plot)
+  yintercepts <- unlist(lapply(built_plot$data, function(layer) {
+    if ("yintercept" %in% names(layer)) layer$yintercept else NULL
+  }))
+  yintercepts <- yintercepts[!is.na(yintercepts)]
+
+  expect_true(
+    any(abs(yintercepts - 80) < 1e-6),
+    info = "Target line should be positioned at 80 on percent display scale"
+  )
+  expect_false(
+    any(yintercepts > 200),
+    info = "Target line should not be double-scaled into thousands"
+  )
+})
+
 test_that("Absolute charts don't scale proportion-like inputs", {
 
   # C-charts and U-charts should treat numbers as absolute counts/rates
