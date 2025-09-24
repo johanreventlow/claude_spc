@@ -69,8 +69,8 @@ setup_visualization <- function(input, output, session, app_state) {
     )
   })
 
-  # Performance-optimized column config med debouncing for bedre UI responsiveness
-  column_config_raw <- shiny::reactive({
+  # Simplified column config - single source of truth without debouncing for valuebox stability
+  column_config <- shiny::reactive({
     # Operation completed
     # Operation completed
 
@@ -112,23 +112,16 @@ setup_visualization <- function(input, output, session, app_state) {
     }
   })
 
-  # Performance debouncing for reactive expressions ved hyppige changes
-  column_config <- shiny::debounce(column_config_raw, millis = 500)
-
-  # Chart type med debouncing for performance
-  chart_type_raw <- shiny::reactive({
-    chart_selection <- if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type
-    get_qic_chart_type(chart_selection)
-  })
-  chart_type_debounced <- shiny::debounce(chart_type_raw, millis = 300)
-
-  # Initialiser visualiserings modul med debounced reactives
+  # Initialiser visualiserings modul - no debouncing for valuebox stability
   # Operation completed
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = NULL,  # Module uses its own event-driven data access
     column_config_reactive = column_config,
-    chart_type_reactive = chart_type_debounced,
+    chart_type_reactive = shiny::reactive({
+      chart_selection <- if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type
+      get_qic_chart_type(chart_selection)
+    }),
     target_value_reactive = shiny::reactive({
       if (is.null(input$target_value) || input$target_value == "") {
         return(NULL)
