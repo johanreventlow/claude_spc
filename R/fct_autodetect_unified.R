@@ -46,6 +46,35 @@ autodetect_engine <- function(data = NULL,
     .context = "UNIFIED_AUTODETECT"
   )
 
+  # 0. GUARD CONDITIONS - Prevent duplicate processing
+  current_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
+  if (current_in_progress) {
+    log_debug("Skipping autodetect - already in progress", .context = "UNIFIED_AUTODETECT")
+    return(invisible(NULL))
+  }
+
+  # Check if we recently completed the same operation
+  last_trigger <- shiny::isolate(app_state$columns$auto_detect$last_trigger_type) %||% ""
+  if (trigger_type == last_trigger && trigger_type != "manual") {
+    current_time <- Sys.time()
+    last_run_time <- shiny::isolate(app_state$columns$auto_detect$last_run)
+    if (!is.null(last_run_time)) {
+      time_since_last <- as.numeric(difftime(current_time, last_run_time, units = "secs"))
+      if (time_since_last < 2) { # Prevent duplicate runs within 2 seconds
+        log_debug(paste("Skipping autodetect - same trigger type ran", round(time_since_last, 2), "seconds ago"), .context = "UNIFIED_AUTODETECT")
+        return(invisible(NULL))
+      }
+    }
+  }
+
+  # Set guard flag
+  shiny::isolate(app_state$columns$auto_detect$in_progress <- TRUE)
+  shiny::isolate(app_state$columns$auto_detect$last_trigger_type <- trigger_type)
+  on.exit({
+    shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
+    shiny::isolate(app_state$columns$auto_detect$last_run <- Sys.time())
+  }, add = TRUE)
+
   # 1. TRIGGER VALIDATION - smart unfreezing when data is available
   frozen_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 

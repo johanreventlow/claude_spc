@@ -63,6 +63,13 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     safe_operation(
       "Auto-detection processing",
       code = {
+        # Check if autodetect is already in progress (guard condition)
+        current_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
+        if (current_in_progress) {
+          log_debug("Skipping data_loaded autodetect - already in progress", .context = "AUTO_DETECT_EVENT")
+          return()
+        }
+
         if (!is.null(app_state$data$current_data)) {
           # Use unified autodetect engine - data available, so full analysis
           autodetect_engine(
@@ -156,13 +163,26 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # SESSION LIFECYCLE EVENTS
   shiny::observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
 
-    # FASE 3: Session start trigger for name-only detection
-    autodetect_engine(
-      data = NULL,  # No data available at session start
-      trigger_type = "session_start",
-      app_state = app_state,
-      emit = emit
-    )
+    # CONSOLIDATED: Only run session_start autodetect if no data is available
+    # This prevents duplicate runs with data_loaded event
+    current_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
+    if (current_in_progress) {
+      log_debug("Skipping session_started autodetect - already in progress", .context = "AUTO_DETECT_EVENT")
+      return()
+    }
+
+    # Only run if no data is available (prevents overlap with data_loaded)
+    if (is.null(app_state$data$current_data) || nrow(app_state$data$current_data) == 0) {
+      # FASE 3: Session start trigger for name-only detection
+      autodetect_engine(
+        data = NULL,  # No data available at session start
+        trigger_type = "session_start",
+        app_state = app_state,
+        emit = emit
+      )
+    } else {
+      log_debug("Skipping session_started autodetect - data already available, will be handled by data_loaded event", .context = "AUTO_DETECT_EVENT")
+    }
   })
 
   shiny::observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {

@@ -130,6 +130,7 @@ create_app_state <- function() {
       results = NULL,
       trigger = NULL,
       last_run = NULL,
+      last_trigger_type = NULL,
       frozen_until_next_trigger = FALSE
     ),
 

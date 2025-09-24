@@ -79,13 +79,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       app_state$visualization$module_data_cache <- NULL
     }
 
-    # Debounced data reactive to prevent multiple rapid invalidations
+    # Smart debounced data reactive to prevent multiple rapid invalidations
     module_data_reactive <- shiny::debounce(
       shiny::reactive({
         # Directly depend on the events that should trigger data updates
         app_state$events$data_loaded
         app_state$events$data_changed
         app_state$events$navigation_changed
+
+        # GUARD: Skip if data processing is in progress
+        if (shiny::isolate(app_state$data$updating_table) %||% FALSE) {
+          log_debug("module_data_reactive: skipping - data update in progress", "VISUALIZATION")
+          return(shiny::isolate(app_state$visualization$module_cached_data))
+        }
+
+        # GUARD: Skip if autodetect is in progress (prevents conflicts)
+        if (shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE) {
+          log_debug("module_data_reactive: skipping - autodetect in progress", "VISUALIZATION")
+          return(shiny::isolate(app_state$visualization$module_cached_data))
+        }
 
         # Get fresh data every time any of these events fire
         result <- get_module_data()
@@ -98,7 +110,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         log_debug(paste("module_data_reactive called (debounced), returning:", data_info), "VISUALIZATION")
         return(result)
       }),
-      millis = 300  # Wait 300ms before processing to batch rapid events
+      millis = 500  # Increased to 500ms for better event batching
     )
 
     # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy
