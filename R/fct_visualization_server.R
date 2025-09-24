@@ -112,51 +112,76 @@ setup_visualization <- function(input, output, session, app_state) {
     }
   })
 
+  # Chart type reactive (shared by target and centerline)
+  chart_type_reactive <- shiny::reactive({
+    chart_selection <- if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type
+    get_qic_chart_type(chart_selection)
+  })
+
   # Initialiser visualiserings modul - no debouncing for valuebox stability
   # Operation completed
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = NULL,  # Module uses its own event-driven data access
     column_config_reactive = column_config,
-    chart_type_reactive = shiny::reactive({
-      chart_selection <- if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type
-      get_qic_chart_type(chart_selection)
-    }),
+    chart_type_reactive = chart_type_reactive,
     target_value_reactive = shiny::reactive({
       if (is.null(input$target_value) || input$target_value == "") {
         return(NULL)
       }
 
-      # Hent y-akse data og enhed til smart konvertering
-      data <- app_state$data$current_data
-      config <- column_config()
+      # Use unified axis value processing with chart-type awareness
+      chart_type <- chart_type_reactive()  # Get chart type from reactive
       y_unit <- if (is.null(input$y_axis_unit) || input$y_axis_unit == "") NULL else input$y_axis_unit
 
-      if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
-        y_data <- data[[config$y_col]]
-        y_numeric <- parse_danish_number(y_data)
-        return(parse_danish_target(input$target_value, y_numeric, y_unit))
-      } else {
-        return(parse_danish_target(input$target_value, NULL, y_unit))
+      # Get Y sample data for heuristics (if no explicit user unit)
+      y_sample <- NULL
+      if (is.null(y_unit)) {
+        data <- app_state$data$current_data
+        config <- column_config()
+        if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
+          y_data <- data[[config$y_col]]
+          y_sample <- parse_danish_number(y_data)
+        }
       }
+
+      # Use chart-type aware normalization (eliminates 100×-mismatch)
+      return(normalize_axis_value(
+        x = input$target_value,
+        user_unit = y_unit,
+        col_unit = NULL,  # Could be added if we have column metadata
+        y_sample = y_sample,
+        chart_type = chart_type  # This determines internal_unit automatically
+      ))
     }),
     centerline_value_reactive = shiny::reactive({
       if (is.null(input$centerline_value) || input$centerline_value == "") {
         return(NULL)
       }
 
-      # Hent y-akse data og enhed til smart konvertering
-      data <- app_state$data$current_data
-      config <- column_config()
+      # Use identical processing as target_value_reactive for consistency
+      chart_type <- chart_type_reactive()  # Get chart type from reactive
       y_unit <- if (is.null(input$y_axis_unit) || input$y_axis_unit == "") NULL else input$y_axis_unit
 
-      if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
-        y_data <- data[[config$y_col]]
-        y_numeric <- parse_danish_number(y_data)
-        return(parse_danish_target(input$centerline_value, y_numeric, y_unit))
-      } else {
-        return(parse_danish_target(input$centerline_value, NULL, y_unit))
+      # Get Y sample data for heuristics (if no explicit user unit)
+      y_sample <- NULL
+      if (is.null(y_unit)) {
+        data <- app_state$data$current_data
+        config <- column_config()
+        if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
+          y_data <- data[[config$y_col]]
+          y_sample <- parse_danish_number(y_data)
+        }
       }
+
+      # Use identical chart-type aware normalization as target (prevents inconsistencies)
+      return(normalize_axis_value(
+        x = input$centerline_value,
+        user_unit = y_unit,
+        col_unit = NULL,  # Could be added if we have column metadata
+        y_sample = y_sample,
+        chart_type = chart_type  # This determines internal_unit automatically
+      ))
     }),
     skift_config_reactive = shiny::reactive({
       # Bestem om vi skal vise faser baseret på Skift kolonne valg og data

@@ -225,11 +225,23 @@ prepare_qic_data_optimized <- function(preprocessed_data, chart_type, target_val
   }
 
   if (!is.null(target_value) && !is.na(target_value)) {
-    qic_params$target <- target_value
+    adjusted_target <- target_value
+
+    if (!is.null(config$n_col) && chart_type == "run" && is.numeric(adjusted_target) && adjusted_target > 1) {
+      adjusted_target <- adjusted_target / 100
+    }
+
+    qic_params$target <- adjusted_target
   }
 
   if (!is.null(centerline_value) && !is.na(centerline_value)) {
-    qic_params$center <- centerline_value
+    adjusted_centerline <- centerline_value
+
+    if (!is.null(config$n_col) && chart_type == "run" && is.numeric(adjusted_centerline) && adjusted_centerline > 1) {
+      adjusted_centerline <- adjusted_centerline / 100
+    }
+
+    qic_params$cl <- adjusted_centerline
   }
 
   if (show_phases && !is.null(skift_column)) {

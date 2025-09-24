@@ -18,7 +18,6 @@ data/*.csv
 data/*.xlsx
 data/*.rds
 inst/extdata/*.xlsx
-inst/extdata/*.csv
 # Logs
 *.log
 logs/

@@ -309,9 +309,11 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
           input$y_column,
           input$n_column,
           input$skift_column,
+          input$frys_column,
           input$kommentar_column,
           input$chart_type,
           input$target_value,
+          input$centerline_value,
           input$y_axis_unit
         )
       },

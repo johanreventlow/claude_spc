@@ -427,7 +427,7 @@ get_golem_config <- function(env = NULL, config_path = "inst/golem-config.yml") 
       return(config_data[["default"]] %||% get_fallback_golem_config(env))
     }
   }, error = function(e) {
-    log_error(paste("Failed to load golem config:", e$message), .context = "GOLEM_CONFIG")
+    log_error(paste("Failed to load golem config:", e$message), "GOLEM_CONFIG")
     return(get_fallback_golem_config(env))
   })
 }
