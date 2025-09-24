@@ -340,23 +340,56 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
   qic_data <- do.call(qicharts2::qic, qic_args)
 
-  # Convert proportions to percentages for run charts with rate data
-  if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(qic_args$data)) {
-    qic_data$y <- qic_data$y * 100
-    qic_data$cl <- qic_data$cl * 100
-
-    if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
-      qic_data$ucl <- qic_data$ucl * 100
-    }
-    if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
-      qic_data$lcl <- qic_data$lcl * 100
-    }
-  }
+  has_denominator <- !is.null(config$n_col) && config$n_col %in% names(qic_args$data)
+  display_scaler <- create_qic_display_scaler(chart_type, has_denominator = has_denominator)
+  qic_data <- apply_qic_display_scaler(qic_data, display_scaler)
 
   return(qic_data)
 }
 
 # PLOT ENHANCEMENT UTILITIES ==================================================
+
+## Convert Target Value to Display Scale
+# Konverterer target value til samme skala som qic_data for korrekt visning
+convert_target_for_display <- function(target_value, qic_data) {
+  if (is.null(target_value) || !is.numeric(target_value) || length(target_value) == 0 ||
+      all(is.na(target_value))) {
+    return(target_value)
+  }
+
+  numeric_target <- target_value[!is.na(target_value)][1]
+
+  if (is.null(qic_data)) {
+    return(numeric_target)
+  }
+
+  display_scaler <- attr(qic_data, "display_scaler")
+  if (!is.null(display_scaler) && is.list(display_scaler) &&
+      !is.null(display_scaler$to_display) && is.function(display_scaler$to_display)) {
+    scaled_value <- display_scaler$to_display(numeric_target)
+    if (is.numeric(scaled_value) && length(scaled_value) > 0 && !all(is.na(scaled_value))) {
+      return(scaled_value[1])
+    }
+  }
+
+  if ("target" %in% names(qic_data)) {
+    target_column <- qic_data$target
+    target_column <- target_column[!is.na(target_column)]
+    if (length(target_column) > 0) {
+      return(target_column[1])
+    }
+  }
+
+  if ("y" %in% names(qic_data)) {
+    y_values <- qic_data$y
+    y_values <- y_values[!is.na(y_values)]
+    if (length(y_values) > 0 && max(y_values) > 1 && numeric_target <= 1) {
+      return(numeric_target * 100)
+    }
+  }
+
+  return(numeric_target)
+}
 
 ## Add Plot Enhancements
 # Tilføjer target lines, phase separations og comment annotations
@@ -383,10 +416,13 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
   }
 
   # Add target line if provided
-  if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+  display_target_value <- convert_target_for_display(target_value, qic_data)
+
+  if (!is.null(display_target_value) && is.numeric(display_target_value) &&
+      !is.na(display_target_value)) {
     plot <- plot +
       ggplot2::geom_hline(
-        yintercept = target_value,
+        yintercept = display_target_value,
         color = HOSPITAL_COLORS$darkgrey, linetype = "42", linewidth = 1.2,
         alpha = 0.8
       )
@@ -718,9 +754,12 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
       # Add target line if provided
       if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+        fallback_reference <- data.frame(y = call_args$y)
+        display_target_value <- convert_target_for_display(target_value, fallback_reference)
+
         plot <- plot +
           ggplot2::geom_hline(
-            yintercept = target_value,
+            yintercept = display_target_value,
             color = SPC_COLORS$target_line,
             linetype = SPC_LINE_TYPES$solid,
             linewidth = SPC_LINE_WIDTHS$thick,
