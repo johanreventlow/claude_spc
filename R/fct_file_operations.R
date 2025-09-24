@@ -88,7 +88,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
 
     # Verificer at filen befinder sig i et sikkert directory (tempdir eller upload area)
     safe_dirs <- c(tempdir(), dirname(tempfile()))
-    safe_path <- any(purrr::map_lgl(safe_dirs, ~ startsWith(file_path, .x)))
+    safe_path <- any(vapply(safe_dirs, function(dir) startsWith(file_path, dir), logical(1)))
 
     if (!safe_path) {
       log_error(
@@ -892,18 +892,18 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
     issues <- c(issues, paste(empty_names, "columns have missing or invalid names"))
   }
 
-  # Check for data content
-  has_data_content <- purrr::map_lgl(data, ~{
-    if (is.numeric(.x)) {
-      sum(!is.na(.x)) > 0
-    } else if (is.character(.x)) {
-      sum(nzchar(.x, keepNA = FALSE)) > 0
-    } else if (is.logical(.x)) {
-      sum(!is.na(.x)) > 0
+  # Check for data content - optimized med vectorized base R operations
+  has_data_content <- vapply(data, function(col) {
+    if (is.numeric(col)) {
+      sum(!is.na(col)) > 0
+    } else if (is.character(col)) {
+      sum(nzchar(col, keepNA = FALSE)) > 0
+    } else if (is.logical(col)) {
+      sum(!is.na(col)) > 0
     } else {
-      sum(!is.na(.x)) > 0
+      sum(!is.na(col)) > 0
     }
-  })
+  }, logical(1))
 
   columns_with_data <- sum(has_data_content)
   validation_results$columns_with_data <- columns_with_data
@@ -912,15 +912,14 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
     issues <- c(issues, "Insufficient columns with meaningful data")
   }
 
-  # Check for potential date columns (for X-axis)
-  potential_date_columns <- purrr::map_lgl(col_names, ~{
-    grepl("dato|date|tid|time", tolower(.x)) ||
-    grepl("^(x|uge|måned|år|dag)", tolower(.x))
-  })
+  # Check for potential date columns (for X-axis) - optimized med vectorized base R
+  col_names_lower <- tolower(col_names)
+  potential_date_columns <- grepl("dato|date|tid|time", col_names_lower) |
+                           grepl("^(x|uge|måned|år|dag)", col_names_lower)
   validation_results$potential_date_columns <- sum(potential_date_columns)
 
-  # Check for potential numeric columns (for Y-axis)
-  potential_numeric_columns <- purrr::map_lgl(data, ~{
+  # Check for potential numeric columns (for Y-axis) - optimized med vectorized base R
+  potential_numeric_columns <- vapply(data, function(col) {
     if (is.numeric(col)) return(TRUE)
     if (is.character(col)) {
       # Check if character data looks like it could be numeric
@@ -933,7 +932,7 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
       return(sum(!is.na(parsed)) > 0)
     }
     return(FALSE)
-  })
+  }, logical(1))
   validation_results$potential_numeric_columns <- sum(potential_numeric_columns)
 
   if (sum(potential_numeric_columns) < 1) {
@@ -967,16 +966,16 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
   original_dims <- c(nrow(data), ncol(data))
   cleaning_log <- list()
 
-  # Data quality analysis before preprocessing
-  na_counts <- purrr::map_int(data, ~sum(is.na(.x)))
+  # Data quality analysis before preprocessing - optimized med vectorized base R
+  na_counts <- vapply(data, function(col) sum(is.na(col)), integer(1))
   # Fix: Only check character columns for empty strings to avoid NA-warnings
-  empty_counts <- purrr::map_int(data, ~ {
-    if (is.character(.x)) {
-      sum(stringr::str_trim(.x) == "", na.rm = TRUE)
+  empty_counts <- vapply(data, function(col) {
+    if (is.character(col)) {
+      sum(trimws(col) == "", na.rm = TRUE)
     } else {
       0L
     }
-  })
+  }, integer(1))
 
   # Handle completely empty rows using tidyverse approach
   if (nrow(data) > 0) {
@@ -1028,18 +1027,18 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
 
   # Data quality check after preprocessing
   if (nrow(data) > 0 && ncol(data) > 0) {
-    # Check for columns with all NA values
-    all_na_cols <- purrr::map_lgl(data, ~all(is.na(.x)))
+    # Check for columns with all NA values - optimized med vectorized base R
+    all_na_cols <- vapply(data, function(col) all(is.na(col)), logical(1))
 
-    # Check for potential numeric columns
-    potential_numeric <- purrr::map_lgl(data, ~{
-      if (is.character(.x)) {
-        numeric_values <- suppressWarnings(as.numeric(.x))
+    # Check for potential numeric columns - optimized med vectorized base R
+    potential_numeric <- vapply(data, function(col) {
+      if (is.character(col)) {
+        numeric_values <- suppressWarnings(as.numeric(col))
         sum(!is.na(numeric_values)) > 0
       } else {
-        is.numeric(.x)
+        is.numeric(col)
       }
-    })
+    }, logical(1))
   }
 
   # Log preprocessing results
