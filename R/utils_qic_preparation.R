@@ -232,6 +232,16 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
   log_debug("QIC call prepared:", "chart_type:", chart_type, "internal_unit:", qic_inputs$internal_unit,
            "target:", target_value, "centerline:", centerline_value, .context = "QIC_PREPARATION")
 
+  # PERFORMANCE MONITORING: Track actual qic() function calls
+  if (!exists("actual_qic_call_counter", envir = .GlobalEnv)) {
+    assign("actual_qic_call_counter", 0, envir = .GlobalEnv)
+  }
+  assign("actual_qic_call_counter", get("actual_qic_call_counter", envir = .GlobalEnv) + 1, envir = .GlobalEnv)
+
+  current_time <- Sys.time()
+  qic_call_number <- get("actual_qic_call_counter", envir = .GlobalEnv)
+  log_debug(paste("ACTUAL qic() CALL #", qic_call_number, "at", format(current_time, "%H:%M:%S.%OS3")), "QIC_CALL_DEBUG")
+
   # Call qicharts2::qic() with prepared inputs
   do.call(qicharts2::qic, qic_args)
 }

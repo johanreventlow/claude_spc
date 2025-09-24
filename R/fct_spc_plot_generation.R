@@ -483,7 +483,17 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Get hospital colors using the proper package function
   HOSPITAL_COLORS <- get_hospital_colors()
 
-  log_debug(paste("generateSPCPlot:", chart_type, "|", nrow(data), "rows"), "SPC_CALC_DEBUG")
+  # PERFORMANCE MONITORING: Track QIC calculation calls
+  if (!exists("qic_call_counter", envir = .GlobalEnv)) {
+    assign("qic_call_counter", 0, envir = .GlobalEnv)
+  }
+  assign("qic_call_counter", get("qic_call_counter", envir = .GlobalEnv) + 1, envir = .GlobalEnv)
+
+  current_time <- Sys.time()
+  call_number <- get("qic_call_counter", envir = .GlobalEnv)
+
+  log_debug(paste("generateSPCPlot CALL #", call_number, "at", format(current_time, "%H:%M:%S.%OS3"),
+                  "| chart_type:", chart_type, "| data:", nrow(data), "rows"), "SPC_CALC_DEBUG")
 
   # Input validation and configuration sanitization
   validate_spc_inputs(data, config)

@@ -17,6 +17,7 @@ source_files <- c(
   "R/utils_logging.R",
   "R/utils_error_handling.R",
   "R/utils_performance.R",
+  "R/utils_performance_monitoring.R",
   "R/utils_dependency_injection.R",
   "R/utils_advanced_debug.R",
   "R/utils_shinylogs_config.R",
