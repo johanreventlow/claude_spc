@@ -160,6 +160,51 @@ test_that("Run chart vs P-chart consistency for same data", {
 
 })
 
+test_that("Run chart target line uses display scale with denominators", {
+  skip_if_not_installed("ggplot2")
+
+  test_data <- data.frame(
+    Dato = seq.Date(from = as.Date("2024-01-01"), by = "week", length.out = 10),
+    Taeller = c(40, 38, 42, 39, 41, 40, 43, 37, 44, 42),
+    Naevner = rep(50, 10)
+  )
+
+  config <- list(
+    x_col = "Dato",
+    y_col = "Taeller",
+    n_col = "Naevner"
+  )
+
+  target_internal <- normalize_axis_value("80", user_unit = "percent", chart_type = "run")
+  expect_equal(target_internal, 0.8)
+
+  shiny::testServer(function(input, output, session) {
+    result <- generateSPCPlot(
+      data = test_data,
+      config = config,
+      chart_type = "run",
+      target_value = target_internal,
+      centerline_value = target_internal,
+      show_phases = FALSE,
+      skift_column = NULL,
+      frys_column = NULL,
+      chart_title_reactive = NULL,
+      y_axis_unit = "percent",
+      kommentar_column = NULL
+    )
+
+    qic_data <- result$qic_data
+    display_scaler <- result$display_scaler
+
+    expect_false(is.null(display_scaler))
+    expect_equal(display_scaler$factor, 100)
+    expect_equal(display_scaler$to_display(target_internal), 80)
+
+    cl_values <- qic_data$cl[!is.na(qic_data$cl)]
+    expect_true(any(cl_values > 1))
+  })
+})
+
 test_that("Absolute charts don't scale proportion-like inputs", {
 
   # C-charts and U-charts should treat numbers as absolute counts/rates
