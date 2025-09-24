@@ -168,7 +168,6 @@ apply_qic_display_scaler <- function(qic_data, display_scaler) {
   attr(qic_data, "display_scaler") <- display_scaler
   qic_data
 }
-
 # QIC CALL WRAPPER ============================================================
 
 #' Create complete qicharts2::qic() call with consistent inputs

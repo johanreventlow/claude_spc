@@ -329,7 +329,7 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
 
 ## Execute QIC Call with Post-processing
 # Udfører qicharts2::qic() kald og post-processerer resultaterne
-execute_qic_call <- function(qic_args, chart_type, config) {
+execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL) {
   # Call qic() with prepared arguments
   if (getOption("debug.mode", FALSE)) {
     log_debug("qic_args structure:", "QIC_CALL")
@@ -340,11 +340,12 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
   qic_data <- do.call(qicharts2::qic, qic_args)
 
-  has_denominator <- !is.null(config$n_col) && config$n_col %in% names(qic_args$data)
-  display_scaler <- create_qic_display_scaler(chart_type, has_denominator = has_denominator)
-  qic_data <- apply_qic_display_scaler(qic_data, display_scaler)
+  if (is.null(display_scaler)) {
+    has_denominator <- !is.null(config$n_col) && config$n_col %in% names(qic_args$data)
+    display_scaler <- create_qic_display_scaler(chart_type, has_denominator)
+  }
 
-  return(qic_data)
+  apply_qic_display_scaler(qic_data, display_scaler)
 }
 
 # PLOT ENHANCEMENT UTILITIES ==================================================
@@ -487,6 +488,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   ylab_text <- data_result$ylab_text
   y_unit_label <- data_result$y_unit_label
 
+  has_denominator <- !is.null(n_data)
+  display_scaler <- create_qic_display_scaler(chart_type, has_denominator)
+  target_display <- display_scaler$to_display(target_value)
+
   # Ensure we have minimum data points after filtering
   if (length(y_data) < 3) {
     stop(paste("For få gyldige datapunkter efter filtrering (", length(y_data), " fundet, minimum 3 påkrævet). Tilføj flere gyldige datapunkter."))
@@ -595,7 +600,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           )
 
           # Execute QIC call with post-processing
-          qic_data <- execute_qic_call(qic_args, chart_type, config)
+          qic_data <- execute_qic_call(qic_args, chart_type, config, display_scaler)
 
           qic_data
         },
@@ -734,9 +739,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       }
 
       # Add plot enhancements (phase lines, target line, comments)
-      plot <- add_plot_enhancements(plot, qic_data, target_value, comment_data)
+      plot <- add_plot_enhancements(plot, qic_data, target_display, comment_data)
 
-      return(list(plot = plot, qic_data = qic_data))
+      return(list(plot = plot, qic_data = qic_data, display_scaler = display_scaler))
     },
     fallback = function(e) {
       # Fallback to basic ggplot if qic() fails
@@ -753,13 +758,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         ggplot2::theme_minimal()
 
       # Add target line if provided
-      if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
-        fallback_reference <- data.frame(y = call_args$y)
-        display_target_value <- convert_target_for_display(target_value, fallback_reference)
-
+      if (!is.null(target_display) && is.numeric(target_display) && !is.na(target_display)) {
         plot <- plot +
           ggplot2::geom_hline(
-            yintercept = display_target_value,
+            yintercept = target_display,
             color = SPC_COLORS$target_line,
             linetype = SPC_LINE_TYPES$solid,
             linewidth = SPC_LINE_WIDTHS$thick,
@@ -767,7 +769,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           )
       }
 
-      return(list(plot = plot, qic_data = NULL))
+      return(list(plot = plot, qic_data = NULL, display_scaler = display_scaler))
     },
     error_type = "processing"
   ))
