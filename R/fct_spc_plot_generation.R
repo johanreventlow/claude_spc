@@ -89,26 +89,49 @@ clean_qic_call_args <- function(call_args) {
       call_args$n <- call_args$n[complete_cases]
     }
 
+    removed_positions <- which(!complete_cases)
+    total_remaining <- sum(complete_cases)
+
     # Håndter part positioner: juster for fjernede rækker
-    if ("part" %in% names(call_args)) {
-      removed_positions <- which(!complete_cases)
+    if ("part" %in% names(call_args) && length(removed_positions) > 0) {
+      # Juster part positioner ved at trække fjernede rækker før hver position using tidyverse
+      adjusted_part <- call_args$part |>
+        purrr::map_dbl(~ {
+          pos <- .x
+          removed_before <- sum(removed_positions < pos)
+          pos - removed_before
+        })
 
-      if (length(removed_positions) > 0) {
-        # Juster part positioner ved at trække fjernede rækker før hver position using tidyverse
-        adjusted_part <- call_args$part |>
-          purrr::map_dbl(~ {
-            pos <- .x
-            removed_before <- sum(removed_positions < pos)
-            pos - removed_before
-          })
-
-        # Fjern ugyldige positioner
-        valid_parts <- adjusted_part > 0 & adjusted_part <= sum(complete_cases)
+      # Fjern ugyldige positioner
+      if (length(adjusted_part) > 0) {
+        valid_parts <- adjusted_part > 0 & adjusted_part <= total_remaining
         call_args$part <- adjusted_part[valid_parts]
 
         if (length(call_args$part) == 0) {
           call_args$part <- NULL
         }
+      }
+    }
+
+    # Håndter freeze position: juster eller fjern hvis ugyldig
+    if ("freeze" %in% names(call_args)) {
+      adjusted_freeze <- call_args$freeze
+
+      if (length(removed_positions) > 0) {
+        removed_before_freeze <- sum(removed_positions <= call_args$freeze)
+        adjusted_freeze <- adjusted_freeze - removed_before_freeze
+      }
+
+      if (is.null(adjusted_freeze) || is.na(adjusted_freeze) || adjusted_freeze <= 0) {
+        call_args$freeze <- NULL
+      } else if (adjusted_freeze > total_remaining) {
+        if (total_remaining > 0) {
+          call_args$freeze <- total_remaining
+        } else {
+          call_args$freeze <- NULL
+        }
+      } else {
+        call_args$freeze <- adjusted_freeze
       }
     }
   }
