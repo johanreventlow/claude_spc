@@ -369,7 +369,7 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
         nudge_x = .15,
         nudge_y = .5,
         segment.curvature = -1e-20,
-        arrow = arrow(length = unit(0.015, "npc")),
+        arrow = grid::arrow(length = grid::unit(0.015, "npc")),
         max.overlaps = Inf,
         inherit.aes = FALSE
       )
@@ -511,7 +511,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # Handle comment data for labels
       comment_data <- extract_comment_data(data, kommentar_column, qic_data)
 
-      # Build custom ggplot using qic calculations
+      # Build custom ggplot using qic calculations ----
 
       plot <- safe_operation(
         "Build custom ggplot",
