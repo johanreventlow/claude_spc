@@ -247,9 +247,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Hovedfunktion for SPC plot generering med caching
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- shiny::reactive({
-      # Enhanced debugging for multiple invalidation detection
-      current_time <- Sys.time()
-      log_info(paste("spc_plot reactive triggered at", format(current_time, "%H:%M:%S.%OS3")), "VISUALIZATION")
+      # DEBUG: Remove detailed timing after fix verification
+      # current_time <- Sys.time()
+      # log_debug(paste("spc_plot reactive triggered at", format(current_time, "%H:%M:%S.%OS3")), "VISUALIZATION")
 
       # FIXED: Safe chart_config validation without hanging shiny::req()
       config <- chart_config()
@@ -281,17 +281,19 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         y_axis_unit = if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL
       ))
 
-      log_info(paste("Cache key generated:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
+      # DEBUG: Reduce cache logging verbosity
+      # log_debug(paste("Cache key generated:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
 
       # Check if we can use cached plot
       cached_key <- app_state$visualization$plot_cache_key
       if (!is.null(app_state$visualization$plot_cache) && !is.null(cached_key) &&
           cached_key == current_cache_key) {
-        log_info(paste("CACHE HIT - using cached plot and results, key:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
+        # DEBUG: Keep minimal cache logging for troubleshooting
+        # log_debug(paste("CACHE HIT - using cached plot and results, key:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
         return(app_state$visualization$plot_cache)
       } else {
-        log_info(paste("CACHE MISS - will generate new plot, key:", substr(current_cache_key, 1, 8),
-                      "vs cached:", if(is.null(cached_key)) "NULL" else substr(cached_key, 1, 8)), "VISUALIZATION")
+        # log_debug(paste("CACHE MISS - will generate new plot, key:", substr(current_cache_key, 1, 8),
+        #               "vs cached:", if(is.null(cached_key)) "NULL" else substr(cached_key, 1, 8)), "VISUALIZATION")
       }
 
       # Cache miss - generating new plot
@@ -402,18 +404,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               }
             )
 
-            # Only update anhoej_results if we got valid non-NA values
+            # Only update anhoej_results if we got valid non-NA values (NA-beskyttelse)
             if (!is.na(qic_results$longest_run) || !is.na(qic_results$n_crossings)) {
-              log_info(paste("Setting anhoej_results with VALID values:",
+              log_debug(paste("Setting anhoej_results with valid values:",
                              "longest_run=", qic_results$longest_run,
                              "n_crossings=", qic_results$n_crossings), "VISUALIZATION")
               set_plot_state("anhoej_results", qic_results)
             } else {
-              log_info(paste("SKIPPING anhoej_results update - all NA values:",
+              log_warn(paste("Skipping anhoej_results update - all NA values:",
                              "longest_run=", qic_results$longest_run,
                              "n_crossings=", qic_results$n_crossings,
-                             "- keeping existing results"), "VISUALIZATION")
-              # Don't overwrite existing valid results with NA values
+                             "- preserving existing results"), "VISUALIZATION")
+              # Don't overwrite existing valid results with NA values - this prevents "Beregner..." issue
             }
           } else {
             log_info("Setting anhoej_results to NULL - no qic_data available", "VISUALIZATION")
@@ -635,15 +637,15 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       current_is_computing <- get_plot_state("is_computing")
       current_plot_ready <- get_plot_state("plot_ready")
 
-      # Detaljeret debug for status determination
-      log_info(paste(
-        "Status determination:",
-        "has_meaningful_data=", has_meaningful_data,
-        "config_y_col=", !is.null(config) && !is.null(config$y_col),
-        "anhoej_exists=", !is.null(current_anhoej),
-        "is_computing=", current_is_computing %||% FALSE,
-        "plot_ready=", current_plot_ready %||% FALSE
-      ), "VISUALIZATION")
+      # DEBUG: Keep status determination at debug level
+      # log_debug(paste(
+      #   "Status determination:",
+      #   "has_meaningful_data=", has_meaningful_data,
+      #   "config_y_col=", !is.null(config) && !is.null(config$y_col),
+      #   "anhoej_exists=", !is.null(current_anhoej),
+      #   "is_computing=", current_is_computing %||% FALSE,
+      #   "plot_ready=", current_plot_ready %||% FALSE
+      # ), "VISUALIZATION")
 
       status_info <- if (!has_meaningful_data) {
         list(
@@ -703,17 +705,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
-              log_debug(paste("longest_run_box: showing values -",
-                            "longest_run=", anhoej$longest_run,
-                            "longest_run_max=", anhoej$longest_run_max), "VISUALIZATION")
+              # DEBUG: Minimal valuebox logging
+              # log_debug(paste("longest_run_box: showing values -", "longest_run=", anhoej$longest_run), "VISUALIZATION")
               bslib::layout_column_wrap(
                 width = 1 / 2,
                 shiny::div(anhoej$longest_run_max),
                 shiny::div(anhoej$longest_run)
               )
             } else {
-              log_info(paste("longest_run_box: showing 'Beregner...' -",
-                            "anhoej_null=", is.null(anhoej),
+              # Only log if this still happens (should be rare now with NA protection)
+              log_warn(paste("longest_run_box showing 'Beregner...' -",
+                            "anhoej_exists=", !is.null(anhoej),
                             "longest_run=", if(is.null(anhoej)) "NULL" else anhoej$longest_run), "VISUALIZATION")
               "Beregner..."
             }
