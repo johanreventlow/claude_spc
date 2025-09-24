@@ -739,7 +739,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       }
 
       # Add plot enhancements (phase lines, target line, comments)
-      plot <- add_plot_enhancements(plot, qic_data, target_display, comment_data)
+      plot <- add_plot_enhancements(plot, qic_data, target_value, comment_data)
 
       return(list(plot = plot, qic_data = qic_data, display_scaler = display_scaler))
     },
