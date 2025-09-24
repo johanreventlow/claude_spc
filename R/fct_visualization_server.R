@@ -69,7 +69,7 @@ setup_visualization <- function(input, output, session, app_state) {
     )
   })
 
-  # Simplified column config - single source of truth
+  # Simplified column config - single source of truth without debouncing for valuebox stability
   column_config <- shiny::reactive({
     # Operation completed
     # Operation completed
@@ -112,8 +112,7 @@ setup_visualization <- function(input, output, session, app_state) {
     }
   })
 
-
-  # Initialiser visualiserings modul
+  # Initialiser visualiserings modul - no debouncing for valuebox stability
   # Operation completed
   visualization <- visualizationModuleServer(
     "visualization",

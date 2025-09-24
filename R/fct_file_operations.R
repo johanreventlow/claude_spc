@@ -83,7 +83,24 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
       add = TRUE
     )
 
-    file_path <- input$data_file$datapath
+    # Sikker path validation - forhindrer path traversal attacks
+    file_path <- normalizePath(input$data_file$datapath, mustWork = TRUE)
+
+    # Verificer at filen befinder sig i et sikkert directory (tempdir eller upload area)
+    safe_dirs <- c(tempdir(), dirname(tempfile()))
+    safe_path <- any(vapply(safe_dirs, function(dir) startsWith(file_path, dir), logical(1)))
+
+    if (!safe_path) {
+      log_error(
+        component = "[SECURITY]",
+        message = "Path traversal attempt detected",
+        details = list(attempted_path = file_path, safe_dirs = safe_dirs),
+        session = session,
+        show_user = FALSE
+      )
+      stop("Sikkerhedsfejl: Ugyldig fil sti")
+    }
+
     file_ext <- tools::file_ext(input$data_file$name)
 
 
@@ -474,10 +491,63 @@ validate_uploaded_file <- function(file_info, session_id = NULL) {
     return(list(valid = FALSE, errors = errors))
   }
 
-  # File size validation (max 50MB)
+  # Enhanced file size validation med DoS protection
   max_size_mb <- 50
   if (file_info$size > max_size_mb * 1024 * 1024) {
-    errors <- c(errors, paste("File size exceeds maximum allowed size of", max_size_mb, "MB"))
+    # Log potential DoS attempt for large files
+    if (file_info$size > 100 * 1024 * 1024) { # Over 100MB is suspicious
+      log_warn(
+        component = "[FILE_SECURITY]",
+        message = "Extremely large file upload attempt - potential DoS",
+        details = list(
+          filename = file_info$name,
+          size_mb = round(file_info$size / (1024 * 1024), 2),
+          max_allowed_mb = max_size_mb
+        )
+      )
+    }
+    errors <- c(errors, paste("Filstørrelse overskrider maksimum på", max_size_mb, "MB"))
+  }
+
+  # Additional DoS protection: Row count limits for data files
+  if (tolower(tools::file_ext(file_info$name)) == "csv") {
+    # Quick row count check for CSV files uden at læse al data
+    safe_operation(
+      "Quick CSV row count validation",
+      code = {
+        # Count lines i file (approximation)
+        con <- file(file_info$datapath, "r")
+        line_count <- 0
+        while (length(readLines(con, n = 1)) > 0) {
+          line_count <- line_count + 1
+          if (line_count > 100000) { # Stop counting at reasonable limit
+            break
+          }
+        }
+        close(con)
+
+        # Maximum 50k rows for reasonable performance
+        if (line_count > 50000) {
+          log_warn(
+            component = "[FILE_SECURITY]",
+            message = "Large row count detected - performance risk",
+            details = list(
+              filename = file_info$name,
+              estimated_rows = line_count
+            )
+          )
+          errors <- c(errors, "CSV fil har for mange rækker (maksimum 50,000)")
+        }
+      },
+      fallback = function(e) {
+        # If we can't count, allow file but log warning
+        log_warn(
+          component = "[FILE_VALIDATION]",
+          message = "Could not validate row count",
+          details = list(filename = file_info$name, error = e$message)
+        )
+      }
+    )
   }
 
   # Empty file check
@@ -485,11 +555,50 @@ validate_uploaded_file <- function(file_info, session_id = NULL) {
     errors <- c(errors, "Uploaded file is empty")
   }
 
-  # File extension validation
+  # Enhanced file extension validation med security hardening
   file_ext <- tools::file_ext(file_info$name)
-  allowed_extensions <- c("csv", "xlsx", "xls")
-  if (!tolower(file_ext) %in% allowed_extensions) {
-    errors <- c(errors, paste("File type not supported. Allowed types:", paste(allowed_extensions, collapse = ", ")))
+
+  # Brug centraliseret validation med sikkerhedshardening
+  if (!validate_file_extension(file_ext)) {
+    errors <- c(errors, "Ikke-tilladt filtype. Kun CSV, Excel tilladt")
+  }
+
+  # MIME type validation - sikr at file extension matcher content type
+  if (length(errors) == 0) {
+    # Basic MIME type check baseret på file header
+    file_header <- readBin(file_info$datapath, what = "raw", n = 8)
+
+    # Check for common malicious patterns eller uoverensstemmelser
+    is_valid_mime <- switch(tolower(trimws(file_ext)),
+      "csv" = {
+        # CSV filer bør ikke have binary headers
+        !any(file_header[1:4] == as.raw(c(0x50, 0x4B, 0x03, 0x04))) # ZIP header (Excel)
+      },
+      "xlsx" = {
+        # Excel files should have ZIP/OLE header
+        identical(file_header[1:4], as.raw(c(0x50, 0x4B, 0x03, 0x04))) # ZIP header
+      },
+      "xls" = {
+        # Legacy Excel files have OLE header
+        identical(file_header[1:8], as.raw(c(0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1))) ||
+        identical(file_header[1:4], as.raw(c(0x09, 0x08, 0x10, 0x00))) ||
+        identical(file_header[1:4], as.raw(c(0x50, 0x4B, 0x03, 0x04)))
+      },
+      FALSE  # Default - reject if unknown
+    )
+
+    if (!is_valid_mime) {
+      log_warn(
+        component = "[FILE_SECURITY]",
+        message = "MIME type mismatch detected - potential file masquerading",
+        details = list(
+          filename = file_info$name,
+          extension = file_ext,
+          header_bytes = as.character(file_header[1:8])
+        )
+      )
+      errors <- c(errors, "Filtype stemmer ikke overens med indhold")
+    }
   }
 
   # Additional validation for specific file types
@@ -783,18 +892,18 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
     issues <- c(issues, paste(empty_names, "columns have missing or invalid names"))
   }
 
-  # Check for data content
-  has_data_content <- purrr::map_lgl(data, ~{
-    if (is.numeric(.x)) {
-      sum(!is.na(.x)) > 0
-    } else if (is.character(.x)) {
-      sum(nzchar(.x, keepNA = FALSE)) > 0
-    } else if (is.logical(.x)) {
-      sum(!is.na(.x)) > 0
+  # Check for data content - optimized med vectorized base R operations
+  has_data_content <- vapply(data, function(col) {
+    if (is.numeric(col)) {
+      sum(!is.na(col)) > 0
+    } else if (is.character(col)) {
+      sum(nzchar(col, keepNA = FALSE)) > 0
+    } else if (is.logical(col)) {
+      sum(!is.na(col)) > 0
     } else {
-      sum(!is.na(.x)) > 0
+      sum(!is.na(col)) > 0
     }
-  })
+  }, logical(1))
 
   columns_with_data <- sum(has_data_content)
   validation_results$columns_with_data <- columns_with_data
@@ -803,15 +912,14 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
     issues <- c(issues, "Insufficient columns with meaningful data")
   }
 
-  # Check for potential date columns (for X-axis)
-  potential_date_columns <- purrr::map_lgl(col_names, ~{
-    grepl("dato|date|tid|time", tolower(.x)) ||
-    grepl("^(x|uge|måned|år|dag)", tolower(.x))
-  })
+  # Check for potential date columns (for X-axis) - optimized med vectorized base R
+  col_names_lower <- tolower(col_names)
+  potential_date_columns <- grepl("dato|date|tid|time", col_names_lower) |
+                           grepl("^(x|uge|måned|år|dag)", col_names_lower)
   validation_results$potential_date_columns <- sum(potential_date_columns)
 
-  # Check for potential numeric columns (for Y-axis)
-  potential_numeric_columns <- purrr::map_lgl(data, ~{
+  # Check for potential numeric columns (for Y-axis) - optimized med vectorized base R
+  potential_numeric_columns <- vapply(data, function(col) {
     if (is.numeric(col)) return(TRUE)
     if (is.character(col)) {
       # Check if character data looks like it could be numeric
@@ -824,7 +932,7 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
       return(sum(!is.na(parsed)) > 0)
     }
     return(FALSE)
-  })
+  }, logical(1))
   validation_results$potential_numeric_columns <- sum(potential_numeric_columns)
 
   if (sum(potential_numeric_columns) < 1) {
@@ -858,16 +966,16 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
   original_dims <- c(nrow(data), ncol(data))
   cleaning_log <- list()
 
-  # Data quality analysis before preprocessing
-  na_counts <- purrr::map_int(data, ~sum(is.na(.x)))
+  # Data quality analysis before preprocessing - optimized med vectorized base R
+  na_counts <- vapply(data, function(col) sum(is.na(col)), integer(1))
   # Fix: Only check character columns for empty strings to avoid NA-warnings
-  empty_counts <- purrr::map_int(data, ~ {
-    if (is.character(.x)) {
-      sum(stringr::str_trim(.x) == "", na.rm = TRUE)
+  empty_counts <- vapply(data, function(col) {
+    if (is.character(col)) {
+      sum(trimws(col) == "", na.rm = TRUE)
     } else {
       0L
     }
-  })
+  }, integer(1))
 
   # Handle completely empty rows using tidyverse approach
   if (nrow(data) > 0) {
@@ -919,18 +1027,18 @@ preprocess_uploaded_data <- function(data, file_info, session_id = NULL) {
 
   # Data quality check after preprocessing
   if (nrow(data) > 0 && ncol(data) > 0) {
-    # Check for columns with all NA values
-    all_na_cols <- purrr::map_lgl(data, ~all(is.na(.x)))
+    # Check for columns with all NA values - optimized med vectorized base R
+    all_na_cols <- vapply(data, function(col) all(is.na(col)), logical(1))
 
-    # Check for potential numeric columns
-    potential_numeric <- purrr::map_lgl(data, ~{
-      if (is.character(.x)) {
-        numeric_values <- suppressWarnings(as.numeric(.x))
+    # Check for potential numeric columns - optimized med vectorized base R
+    potential_numeric <- vapply(data, function(col) {
+      if (is.character(col)) {
+        numeric_values <- suppressWarnings(as.numeric(col))
         sum(!is.na(numeric_values)) > 0
       } else {
-        is.numeric(.x)
+        is.numeric(col)
       }
-    })
+    }, logical(1))
   }
 
   # Log preprocessing results
