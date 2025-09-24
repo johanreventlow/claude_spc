@@ -245,7 +245,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     spc_plot <- shiny::reactive({
       # Enhanced debugging for multiple invalidation detection
       current_time <- Sys.time()
-      log_debug(paste("spc_plot reactive triggered at", format(current_time, "%H:%M:%S.%OS3")), "VISUALIZATION")
+      log_info(paste("spc_plot reactive triggered at", format(current_time, "%H:%M:%S.%OS3")), "VISUALIZATION")
 
       # FIXED: Safe chart_config validation without hanging shiny::req()
       config <- chart_config()
@@ -389,12 +389,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               }
             )
 
-            log_debug(paste("Setting anhoej_results with",
+            log_info(paste("Setting anhoej_results with",
                            "longest_run=", qic_results$longest_run,
                            "n_crossings=", qic_results$n_crossings), "VISUALIZATION")
             set_plot_state("anhoej_results", qic_results)
           } else {
-            log_debug("Setting anhoej_results to NULL - no qic_data available", "VISUALIZATION")
+            log_info("Setting anhoej_results to NULL - no qic_data available", "VISUALIZATION")
             set_plot_state("anhoej_results", NULL)
           }
 
@@ -614,7 +614,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       current_plot_ready <- get_plot_state("plot_ready")
 
       # Detaljeret debug for status determination
-      log_debug(paste(
+      log_info(paste(
         "Status determination:",
         "has_meaningful_data=", has_meaningful_data,
         "config_y_col=", !is.null(config) && !is.null(config$y_col),
@@ -690,7 +690,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 shiny::div(anhoej$longest_run)
               )
             } else {
-              log_debug(paste("longest_run_box: showing 'Beregner...' -",
+              log_info(paste("longest_run_box: showing 'Beregner...' -",
                             "anhoej_null=", is.null(anhoej),
                             "longest_run=", if(is.null(anhoej)) "NULL" else anhoej$longest_run), "VISUALIZATION")
               "Beregner..."
