@@ -127,36 +127,60 @@ setup_visualization <- function(input, output, session, app_state) {
         return(NULL)
       }
 
-      # Hent y-akse data og enhed til smart konvertering
+      # Hent y-akse data og enhed til smart konvertering via nye Y-axis scaling API
       data <- app_state$data$current_data
       config <- column_config()
       y_unit <- if (is.null(input$y_axis_unit) || input$y_axis_unit == "") NULL else input$y_axis_unit
 
+      # Bestem Y sample data for heuristics
+      y_sample <- NULL
       if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
         y_data <- data[[config$y_col]]
-        y_numeric <- parse_danish_number(y_data)
-        return(parse_danish_target(input$target_value, y_numeric, y_unit))
-      } else {
-        return(parse_danish_target(input$target_value, NULL, y_unit))
+        y_sample <- parse_danish_number(y_data)
       }
+
+      # Bestem intern enhed baseret på plot type (for now, brug proportion som standard)
+      # TODO: Dette kunne forbedres ved at bestemme baseret på chart_type_reactive()
+      internal_unit <- "proportion"
+
+      # Brug det nye normaliserede API
+      return(normalize_axis_value(
+        x = input$target_value,
+        user_unit = y_unit,
+        col_unit = NULL,  # Kunne tilføjes hvis vi har column metadata
+        y_sample = y_sample,
+        internal_unit = internal_unit
+      ))
     }),
     centerline_value_reactive = shiny::reactive({
       if (is.null(input$centerline_value) || input$centerline_value == "") {
         return(NULL)
       }
 
-      # Hent y-akse data og enhed til smart konvertering
+      # Hent y-akse data og enhed til smart konvertering via nye Y-axis scaling API
       data <- app_state$data$current_data
       config <- column_config()
       y_unit <- if (is.null(input$y_axis_unit) || input$y_axis_unit == "") NULL else input$y_axis_unit
 
+      # Bestem Y sample data for heuristics
+      y_sample <- NULL
       if (!is.null(data) && !is.null(config) && !is.null(config$y_col) && config$y_col %in% names(data)) {
         y_data <- data[[config$y_col]]
-        y_numeric <- parse_danish_number(y_data)
-        return(parse_danish_target(input$centerline_value, y_numeric, y_unit))
-      } else {
-        return(parse_danish_target(input$centerline_value, NULL, y_unit))
+        y_sample <- parse_danish_number(y_data)
       }
+
+      # Bestem intern enhed baseret på plot type (for now, brug proportion som standard)
+      # TODO: Dette kunne forbedres ved at bestemme baseret på chart_type_reactive()
+      internal_unit <- "proportion"
+
+      # Brug det nye normaliserede API
+      return(normalize_axis_value(
+        x = input$centerline_value,
+        user_unit = y_unit,
+        col_unit = NULL,  # Kunne tilføjes hvis vi har column metadata
+        y_sample = y_sample,
+        internal_unit = internal_unit
+      ))
     }),
     skift_config_reactive = shiny::reactive({
       # Bestem om vi skal vise faser baseret på Skift kolonne valg og data
