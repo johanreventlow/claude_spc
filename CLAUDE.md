@@ -40,7 +40,30 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 * **Graceful degradation** – Implementér fallback-mønstre hvor komponenter kan fejle
 * **State consistency** – Sikr dual-state synkronisering for kompatibilitet
 
-### 2.3 Observability & Debugging
+### 2.3 Git Workflow & Version Control (OBLIGATORISK)
+
+✅ **KRITISKE GIT-REGLER** – Følg disse regler nøje:
+
+1. **ALDRIG merge til master uden eksplicit bruger-godkendelse**
+2. **ALDRIG push til remote uden eksplicit anmodning**
+3. **ALTID stop efter feature branch commit og vent på instruktioner**
+4. **ALTID spørg før merge, rebase eller andre git-operationer på master**
+
+**Git workflow:**
+```bash
+# Korrekt: Opret feature branch og commit
+git checkout -b feature/my-feature
+# ... arbejd og commit ...
+git commit -m "beskrivelse"
+# STOP HER - Vent på bruger-instruktion
+
+# Forkert: Automatisk merge uden tilladelse
+git checkout master && git merge feature/my-feature  # ALDRIG GØR DETTE
+```
+
+**Undtagelser:** Kun simple git-operationer som `git status`, `git diff`, `git log` kan udføres frit.
+
+### 2.4 Observability & Debugging
 
 **DEBUG-FIRST Approach:**
 
