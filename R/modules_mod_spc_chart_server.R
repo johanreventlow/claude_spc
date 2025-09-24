@@ -11,6 +11,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Module initialization
     ns <- session$ns
 
+    # Helper function: Safe max that handles empty vectors
+    safe_max <- function(x, na.rm = TRUE) {
+      if (length(x) == 0 || all(is.na(x))) {
+        return(NA_real_)
+      }
+      max(x, na.rm = na.rm)
+    }
+
     # State Management --------------------------------------------------------
     # Use unified state management if available, fallback to local reactiveValues
 
@@ -76,7 +84,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       app_state$visualization$module_cached_data <- result_data
     })
 
-    # UNIFIED EVENT SYSTEM: Update when data is loaded
+    # UNIFIED EVENT SYSTEM: Update when data is loaded or changed
     shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
       # Use the pure function to get data
       result_data <- get_module_data()
@@ -84,10 +92,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Update cache
       app_state$visualization$module_data_cache <- result_data
       app_state$visualization$module_cached_data <- result_data
+
+      log_debug("Visualization module updated after data_loaded event", "VISUALIZATION")
     })
 
     # UNIFIED EVENT SYSTEM: Also update when data changes (table edits)
-    shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = 1000, {
+    shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = 900, {
       # Use the pure function to get data
       result_data <- get_module_data()
 
@@ -301,16 +311,16 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               # Anhøj rules (meningsfulde for alle chart typer)
               runs_signal = if ("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE,
               crossings_signal = if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
-                n_cross <- max(qic_data$n.crossings, na.rm = TRUE)
-                n_cross_min <- max(qic_data$n.crossings.min, na.rm = TRUE)
+                n_cross <- safe_max(qic_data$n.crossings)
+                n_cross_min <- safe_max(qic_data$n.crossings.min)
                 !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
               } else {
                 FALSE
               },
-              longest_run = if ("longest.run" %in% names(qic_data)) max(qic_data$longest.run, na.rm = TRUE) else NA_real_,
-              longest_run_max = if ("longest.run.max" %in% names(qic_data)) max(qic_data$longest.run.max, na.rm = TRUE) else NA_real_,
-              n_crossings = if ("n.crossings" %in% names(qic_data)) max(qic_data$n.crossings, na.rm = TRUE) else NA_real_,
-              n_crossings_min = if ("n.crossings.min" %in% names(qic_data)) max(qic_data$n.crossings.min, na.rm = TRUE) else NA_real_,
+              longest_run = if ("longest.run" %in% names(qic_data)) safe_max(qic_data$longest.run) else NA_real_,
+              longest_run_max = if ("longest.run.max" %in% names(qic_data)) safe_max(qic_data$longest.run.max) else NA_real_,
+              n_crossings = if ("n.crossings" %in% names(qic_data)) safe_max(qic_data$n.crossings) else NA_real_,
+              n_crossings_min = if ("n.crossings.min" %in% names(qic_data)) safe_max(qic_data$n.crossings.min) else NA_real_,
 
               # Chart-type specifik besked
               message = if (chart_type == "run") {
