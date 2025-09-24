@@ -109,7 +109,9 @@ setup_column_management <- function(input, output, session, app_state, emit) {
       if (!is.numeric(y_data)) {
         numeric_test <- parse_danish_number(y_data)
         if (sum(!is.na(numeric_test)) < length(y_data) * 0.8) {
-          warnings <- c(warnings, paste("Y-kolonne '", input$y_column, "' er ikke numerisk"))
+          # Sanitize column name i warning message for at forhindre XSS
+          safe_column_name <- sanitize_column_name(input$y_column)
+          warnings <- c(warnings, paste("Y-kolonne '", safe_column_name, "' er ikke numerisk"))
         }
       }
     }
@@ -123,7 +125,9 @@ setup_column_management <- function(input, output, session, app_state, emit) {
         if (!is.numeric(n_data)) {
           numeric_test <- parse_danish_number(n_data)
           if (sum(!is.na(numeric_test)) < length(n_data) * 0.8) {
-            warnings <- c(warnings, paste("Nævner-kolonne '", input$n_column, "' er ikke numerisk"))
+            # Sanitize column name i warning message for at forhindre XSS
+            safe_n_column_name <- sanitize_column_name(input$n_column)
+            warnings <- c(warnings, paste("Nævner-kolonne '", safe_n_column_name, "' er ikke numerisk"))
           }
         }
       }
@@ -146,7 +150,10 @@ setup_column_management <- function(input, output, session, app_state, emit) {
         shiny::strong(" Kolonne advarsler:"),
         shiny::tags$ul(
           style = "margin: 5px 0; padding-left: 20px;",
-          lapply(warnings, function(warn) shiny::tags$li(warn))
+          lapply(warnings, function(warn) {
+            # HTML escape warning content for XSS protection
+            shiny::tags$li(htmltools::htmlEscape(warn))
+          })
         )
       )
     } else if (length(selected_cols) >= 2) {

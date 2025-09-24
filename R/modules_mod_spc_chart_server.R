@@ -486,7 +486,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           shiny::icon("exclamation-triangle"),
           shiny::strong(" Graf-advarsler:"),
           shiny::tags$ul(
-            lapply(warnings, function(warn) shiny::tags$li(warn))
+            lapply(warnings, function(warn) {
+              # HTML escape warning content for XSS protection
+              shiny::tags$li(htmltools::htmlEscape(warn))
+            })
           )
         )
       } else if (plot_ready) {

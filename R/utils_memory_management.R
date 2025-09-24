@@ -67,12 +67,19 @@ cleanup_reactive_values <- function(values) {
             # It's a list-like environment (test mock)
             values[[value_name]] <- NULL
           } else if (is.list(values)) {
-            # It's a simple list (test mock) - need to modify in place using assign
-            # This works for test scenarios where values is passed by reference
-            if (exists("mock_values", envir = parent.frame(n = 2))) {
-              eval(substitute(mock_values[[value_name]] <- NULL), envir = parent.frame(n = 2))
+            # Sikker list modification uden eval() - eliminerer code injection risiko
+            # Tjek om mock_values eksisterer i parent environment
+            parent_env <- parent.frame(n = 2)
+            if (exists("mock_values", envir = parent_env)) {
+              # Sikker direct assignment til mock_values
+              mock_values_ref <- get("mock_values", envir = parent_env)
+              if (is.list(mock_values_ref) && value_name %in% names(mock_values_ref)) {
+                mock_values_ref[[value_name]] <- NULL
+                # Opdater reference tilbage til parent environment
+                assign("mock_values", mock_values_ref, envir = parent_env)
+              }
             } else {
-              # Standard list modification (limited effectiveness in tests)
+              # Standard list modification for normale scenarios
               values[[value_name]] <- NULL
             }
           }
