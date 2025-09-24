@@ -59,21 +59,52 @@ autodetect_engine <- function(data = NULL,
     return(invisible(NULL))
   }
 
-  # 2. SCENARIO ROUTING - based on trigger type and data availability
-  if (is.null(data) || nrow(data) == 0) {
-    # Session start / name-only scenario
-    col_names <- if (is.null(data)) character(0) else names(data)
-    results <- detect_columns_name_based(col_names, app_state)
-  } else {
-    # Full data analysis scenario
-    log_debug_kv(
-      column_names = paste(names(data), collapse = ", "),
-      .context = "UNIFIED_AUTODETECT"
+  # 2. PERFORMANCE CACHING - check cached results first
+  force_refresh <- (trigger_type == "manual")
+  use_cached <- FALSE
+
+  # Try to get cached results for full data analysis
+  if (!is.null(data) && nrow(data) > 0) {
+    safe_operation(
+      "Auto-detection caching lookup",
+      code = {
+        cached_results <- cache_auto_detection_results(data, app_state, force_refresh)
+        if (!is.null(cached_results) && !force_refresh) {
+          log_debug(
+            "Auto-detection: using cached results for performance boost",
+            .context = "UNIFIED_AUTODETECT",
+            trigger = trigger_type,
+            cache_hit = TRUE,
+            data_dims = paste(dim(data), collapse = "x")
+          )
+          results <- cached_results
+          use_cached <- TRUE
+        }
+      },
+      fallback = function(e) {
+        log_warn("Auto-detection caching failed, continuing with regular detection", .context = "UNIFIED_AUTODETECT")
+      }
     )
-    results <- detect_columns_full_analysis(data, app_state)
   }
 
-  # 3. STATE UPDATE & FREEZE
+  # 3. SCENARIO ROUTING - if no cache hit, perform fresh analysis
+  if (!use_cached) {
+    if (is.null(data) || nrow(data) == 0) {
+      # Session start / name-only scenario
+      col_names <- if (is.null(data)) character(0) else names(data)
+      results <- detect_columns_name_based(col_names, app_state)
+    } else {
+      # Full data analysis scenario
+      log_debug_kv(
+        column_names = paste(names(data), collapse = ", "),
+        cache_status = "computing_fresh",
+        .context = "UNIFIED_AUTODETECT"
+      )
+      results <- detect_columns_full_analysis(data, app_state)
+    }
+  }
+
+  # 4. STATE UPDATE & FREEZE
   # Update all column mappings in unified location - pass app_state for direct updates
   app_state$columns <- update_all_column_mappings(results, app_state$columns, app_state)
 

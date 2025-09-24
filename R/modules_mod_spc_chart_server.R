@@ -11,6 +11,24 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Module initialization
     ns <- session$ns
 
+    # Helper function: Safe max that handles empty vectors and preserves actual values
+    safe_max <- function(x, na.rm = TRUE) {
+      if (length(x) == 0) {
+        log_debug("safe_max: empty vector", "VISUALIZATION")
+        return(NA_real_)
+      }
+      if (all(is.na(x))) {
+        log_debug("safe_max: all NA values", "VISUALIZATION")
+        return(NA_real_)
+      }
+      result <- max(x, na.rm = na.rm)
+      if (is.infinite(result)) {
+        log_debug(paste("safe_max: infinite result, returning NA. Input:", paste(x, collapse=", ")), "VISUALIZATION")
+        return(NA_real_)
+      }
+      return(result)
+    }
+
     # State Management --------------------------------------------------------
     # Use unified state management if available, fallback to local reactiveValues
 
@@ -61,30 +79,86 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       app_state$visualization$module_data_cache <- NULL
     }
 
-    module_data_reactive <- shiny::reactive({
-      return(app_state$visualization$module_data_cache)
+    # Debounced data reactive to prevent multiple rapid invalidations
+    module_data_reactive <- shiny::debounce(
+      shiny::reactive({
+        # Directly depend on the events that should trigger data updates
+        app_state$events$data_loaded
+        app_state$events$data_changed
+        app_state$events$navigation_changed
+
+        # Get fresh data every time any of these events fire
+        result <- get_module_data()
+
+        data_info <- if (!is.null(result)) {
+          paste("rows:", nrow(result), "cols:", ncol(result))
+        } else {
+          "NULL"
+        }
+        log_debug(paste("module_data_reactive called (debounced), returning:", data_info), "VISUALIZATION")
+        return(result)
+      }),
+      millis = 300  # Wait 300ms before processing to batch rapid events
+    )
+
+    # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy
+    # Implements Event Consolidation (CLAUDE.md Section 3.1.1) for functionally related events
+
+    # DISABLED: Create reactive expression that responds to multiple events
+    # Now using event-driven module_data_reactive instead
+    # consolidated_trigger <- shiny::reactive({
+    #   list(
+    #     data_loaded = app_state$events$data_loaded,
+    #     data_changed = app_state$events$data_changed,
+    #     navigation_changed = app_state$events$navigation_changed
+    #   )
+    # })
+    if (FALSE) { # Disable consolidated event handler
+    shiny::observeEvent(consolidated_trigger(), ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
+
+      # Level 3: Guard condition - prevent concurrent operations (Overlap Prevention)
+      if (shiny::isolate(app_state$visualization$cache_updating)) {
+        log_debug("Skipping visualization cache update - already in progress", "VISUALIZATION")
+        return()
+      }
+
+      # Level 2: Atomic state update with guard flag (State-Based Atomicity)
+      safe_operation(
+        operation_name = "Update visualization cache (consolidated)",
+        code = {
+          # Set guard flag atomically
+          app_state$visualization$cache_updating <- TRUE
+
+          on.exit({
+            # Clear guard flag on function exit (success or error)
+            app_state$visualization$cache_updating <- FALSE
+          }, add = TRUE)
+
+          # Use the pure function to get data
+          result_data <- get_module_data()
+
+          # Debug: Log data info
+          data_info <- if (!is.null(result_data)) {
+            paste("rows:", nrow(result_data), "cols:", ncol(result_data))
+          } else {
+            "NULL"
+          }
+          log_debug(paste("Cache update - result_data:", data_info), "VISUALIZATION")
+
+          # Atomic cache update - both values updated together
+          app_state$visualization$module_data_cache <- result_data
+          app_state$visualization$module_cached_data <- result_data
+
+          log_debug("Visualization cache updated successfully (consolidated)", "VISUALIZATION")
+        },
+        fallback = function(e) {
+          log_error(paste("Visualization cache update failed:", e$message), "VISUALIZATION")
+          # Guard flag cleared by on.exit() even in error case
+        },
+        error_type = "processing"
+      )
     })
-
-    # UNIFIED EVENT SYSTEM: Update data cache when relevant events occur
-    shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
-
-      # Use the pure function to get data
-      result_data <- get_module_data()
-
-      # Update cache
-      app_state$visualization$module_data_cache <- result_data
-      app_state$visualization$module_cached_data <- result_data
-    })
-
-    # UNIFIED EVENT SYSTEM: Also update when data changes
-    shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
-      # Use the pure function to get data
-      result_data <- get_module_data()
-
-      # Update cache
-      app_state$visualization$module_data_cache <- result_data
-      app_state$visualization$module_cached_data <- result_data
-    })
+    } # End disable consolidated event handler
 
     # UNIFIED EVENT SYSTEM: Initialize data at startup if available
     if (!is.null(shiny::isolate(app_state$data$current_data))) {
@@ -173,17 +247,31 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Hovedfunktion for SPC plot generering med caching
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- shiny::reactive({
+      # DEBUG: Remove detailed timing after fix verification
+      # current_time <- Sys.time()
+      # log_debug(paste("spc_plot reactive triggered at", format(current_time, "%H:%M:%S.%OS3")), "VISUALIZATION")
+
       # FIXED: Safe chart_config validation without hanging shiny::req()
       config <- chart_config()
       if (is.null(config)) {
+        log_debug("spc_plot: config is NULL", "VISUALIZATION")
         return(NULL)
       }
 
       data <- module_data_reactive()
+      data_info <- if (!is.null(data)) {
+        paste("rows:", nrow(data), "cols:", ncol(data))
+      } else {
+        "NULL"
+      }
+      log_debug(paste("spc_plot: data from cache:", data_info), "VISUALIZATION")
 
       # Generate cache key based on data and config
+      # Enhanced cache key to better detect actual changes
       current_cache_key <- digest::digest(list(
-        data = data,
+        data_hash = if (!is.null(data)) digest::digest(data) else NULL,
+        data_nrow = if (!is.null(data)) nrow(data) else 0,
+        data_ncol = if (!is.null(data)) ncol(data) else 0,
         config = config,
         target = target_value_reactive(),
         centerline = centerline_value_reactive(),
@@ -193,19 +281,30 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         y_axis_unit = if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL
       ))
 
+      # DEBUG: Reduce cache logging verbosity
+      # log_debug(paste("Cache key generated:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
+
       # Check if we can use cached plot
-      if (!is.null(app_state$visualization$plot_cache) && !is.null(app_state$visualization$plot_cache_key) &&
-          app_state$visualization$plot_cache_key == current_cache_key) {
+      cached_key <- app_state$visualization$plot_cache_key
+      if (!is.null(app_state$visualization$plot_cache) && !is.null(cached_key) &&
+          cached_key == current_cache_key) {
+        # DEBUG: Keep minimal cache logging for troubleshooting
+        # log_debug(paste("CACHE HIT - using cached plot and results, key:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
         return(app_state$visualization$plot_cache)
+      } else {
+        # log_debug(paste("CACHE MISS - will generate new plot, key:", substr(current_cache_key, 1, 8),
+        #               "vs cached:", if(is.null(cached_key)) "NULL" else substr(cached_key, 1, 8)), "VISUALIZATION")
       }
 
       # Cache miss - generating new plot
+      log_debug("Cache miss - starting new plot generation", "VISUALIZATION")
 
-      # Clean state management - only set computing when actually needed
+      # Clean state management - preserve existing results during computation
       # Unified state assignment using helper functions
       set_plot_state("plot_ready", FALSE)
       set_plot_state("plot_warnings", character(0))
-      set_plot_state("anhoej_results", NULL)
+      set_plot_state("is_computing", TRUE)
+      # FIX: Don't clear anhoej_results until new computation is complete
 
       # Starting plot generation
 
@@ -216,9 +315,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         },
         add = TRUE
       )
-
-      # Use unified state assignment
-      set_plot_state("is_computing", TRUE)
 
       # Get chart type from config (already validated)
       chart_type <- config$chart_type
@@ -289,16 +385,16 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               # Anhøj rules (meningsfulde for alle chart typer)
               runs_signal = if ("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE,
               crossings_signal = if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
-                n_cross <- max(qic_data$n.crossings, na.rm = TRUE)
-                n_cross_min <- max(qic_data$n.crossings.min, na.rm = TRUE)
+                n_cross <- safe_max(qic_data$n.crossings)
+                n_cross_min <- safe_max(qic_data$n.crossings.min)
                 !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
               } else {
                 FALSE
               },
-              longest_run = if ("longest.run" %in% names(qic_data)) max(qic_data$longest.run, na.rm = TRUE) else NA_real_,
-              longest_run_max = if ("longest.run.max" %in% names(qic_data)) max(qic_data$longest.run.max, na.rm = TRUE) else NA_real_,
-              n_crossings = if ("n.crossings" %in% names(qic_data)) max(qic_data$n.crossings, na.rm = TRUE) else NA_real_,
-              n_crossings_min = if ("n.crossings.min" %in% names(qic_data)) max(qic_data$n.crossings.min, na.rm = TRUE) else NA_real_,
+              longest_run = if ("longest.run" %in% names(qic_data)) safe_max(qic_data$longest.run) else NA_real_,
+              longest_run_max = if ("longest.run.max" %in% names(qic_data)) safe_max(qic_data$longest.run.max) else NA_real_,
+              n_crossings = if ("n.crossings" %in% names(qic_data)) safe_max(qic_data$n.crossings) else NA_real_,
+              n_crossings_min = if ("n.crossings.min" %in% names(qic_data)) safe_max(qic_data$n.crossings.min) else NA_real_,
 
               # Chart-type specifik besked
               message = if (chart_type == "run") {
@@ -308,8 +404,21 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               }
             )
 
-            set_plot_state("anhoej_results", qic_results)
+            # Only update anhoej_results if we got valid non-NA values (NA-beskyttelse)
+            if (!is.na(qic_results$longest_run) || !is.na(qic_results$n_crossings)) {
+              log_debug(paste("Setting anhoej_results with valid values:",
+                             "longest_run=", qic_results$longest_run,
+                             "n_crossings=", qic_results$n_crossings), "VISUALIZATION")
+              set_plot_state("anhoej_results", qic_results)
+            } else {
+              log_warn(paste("Skipping anhoej_results update - all NA values:",
+                             "longest_run=", qic_results$longest_run,
+                             "n_crossings=", qic_results$n_crossings,
+                             "- preserving existing results"), "VISUALIZATION")
+              # Don't overwrite existing valid results with NA values - this prevents "Beregner..." issue
+            }
           } else {
+            log_info("Setting anhoej_results to NULL - no qic_data available", "VISUALIZATION")
             set_plot_state("anhoej_results", NULL)
           }
 
@@ -377,7 +486,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           shiny::icon("exclamation-triangle"),
           shiny::strong(" Graf-advarsler:"),
           shiny::tags$ul(
-            lapply(warnings, function(warn) shiny::tags$li(warn))
+            lapply(warnings, function(warn) {
+              # HTML escape warning content for XSS protection
+              shiny::tags$li(htmltools::htmlEscape(warn))
+            })
           )
         )
       } else if (plot_ready) {
@@ -524,6 +636,20 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         }))
 
       # Bestem nuværende status og passende indhold
+      current_anhoej <- get_plot_state("anhoej_results")
+      current_is_computing <- get_plot_state("is_computing")
+      current_plot_ready <- get_plot_state("plot_ready")
+
+      # DEBUG: Keep status determination at debug level
+      # log_debug(paste(
+      #   "Status determination:",
+      #   "has_meaningful_data=", has_meaningful_data,
+      #   "config_y_col=", !is.null(config) && !is.null(config$y_col),
+      #   "anhoej_exists=", !is.null(current_anhoej),
+      #   "is_computing=", current_is_computing %||% FALSE,
+      #   "plot_ready=", current_plot_ready %||% FALSE
+      # ), "VISUALIZATION")
+
       status_info <- if (!has_meaningful_data) {
         list(
           status = "no_data",
@@ -548,6 +674,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           list(
             status = "insufficient_data",
             message = "Mindst 10 datapunkter nødvendigt for SPC analyse"
+          )
+        } else if (get_plot_state("is_computing") %||% FALSE) {
+          list(
+            status = "calculating",
+            message = "Beregner nye værdier...",
+            theme = "info"
           )
         } else if (!(get_plot_state("plot_ready") %||% FALSE)) {
           list(
@@ -576,12 +708,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
+              # DEBUG: Minimal valuebox logging
+              # log_debug(paste("longest_run_box: showing values -", "longest_run=", anhoej$longest_run), "VISUALIZATION")
               bslib::layout_column_wrap(
                 width = 1 / 2,
                 shiny::div(anhoej$longest_run_max),
                 shiny::div(anhoej$longest_run)
               )
             } else {
+              # Only log if this still happens (should be rare now with NA protection)
+              log_warn(paste("longest_run_box showing 'Beregner...' -",
+                            "anhoej_exists=", !is.null(anhoej),
+                            "longest_run=", if(is.null(anhoej)) "NULL" else anhoej$longest_run), "VISUALIZATION")
               "Beregner..."
             }
           } else {

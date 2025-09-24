@@ -225,11 +225,23 @@ prepare_qic_data_optimized <- function(preprocessed_data, chart_type, target_val
   }
 
   if (!is.null(target_value) && !is.na(target_value)) {
-    qic_params$target <- target_value
+    adjusted_target <- target_value
+
+    if (!is.null(config$n_col) && chart_type == "run" && is.numeric(adjusted_target) && adjusted_target > 1) {
+      adjusted_target <- adjusted_target / 100
+    }
+
+    qic_params$target <- adjusted_target
   }
 
   if (!is.null(centerline_value) && !is.na(centerline_value)) {
-    qic_params$center <- centerline_value
+    adjusted_centerline <- centerline_value
+
+    if (!is.null(config$n_col) && chart_type == "run" && is.numeric(adjusted_centerline) && adjusted_centerline > 1) {
+      adjusted_centerline <- adjusted_centerline / 100
+    }
+
+    qic_params$cl <- adjusted_centerline
   }
 
   if (show_phases && !is.null(skift_column)) {
@@ -252,7 +264,17 @@ build_plot_optimized <- function(plot_data, config, chart_title_reactive, y_axis
   qic_result <- safe_operation(
     "Generate QIC plot",
     code = {
-      do.call(qicharts2::qic, plot_data)
+      # Get the qic data (return.data = TRUE)
+      qic_params_data <- plot_data
+      qic_params_data$return.data <- TRUE
+      qic_data <- do.call(qicharts2::qic, qic_params_data)
+
+      # Generate plot from qic data
+      qic_params_plot <- plot_data
+      qic_params_plot$return.data <- FALSE
+      qic_plot <- do.call(qicharts2::qic, qic_params_plot)
+
+      list(plot = qic_plot, data = qic_data)
     },
     fallback = NULL
   )
@@ -262,11 +284,11 @@ build_plot_optimized <- function(plot_data, config, chart_title_reactive, y_axis
   }
 
   # Apply cached theme and styling
-  styled_plot <- apply_plot_styling_optimized(qic_result, config, chart_title_reactive, y_axis_unit)
+  styled_plot <- apply_plot_styling_optimized(qic_result$plot, config, chart_title_reactive, y_axis_unit)
 
-  # Add comments if specified
+  # Add comments if specified - now with correct qic_data parameter
   if (!is.null(kommentar_column)) {
-    styled_plot <- add_comments_optimized(styled_plot, plot_data$data, kommentar_column, config)
+    styled_plot <- add_comments_optimized(styled_plot, plot_data$data, kommentar_column, qic_result$data)
   }
 
   return(styled_plot)

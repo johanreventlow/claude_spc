@@ -197,7 +197,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
 
 
   # PERFORMANCE OPTIMIZED: Reaktiv debounced auto-save med performance monitoring
-  auto_save_trigger <- create_performance_debounced(
+  auto_save_trigger <- shiny::debounce(
     shiny::reactive({
       # Guards for at forhindre auto-gem under tabel operationer
       # Use unified state management
@@ -234,8 +234,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
         NULL
       }
     }),
-    millis = 2000,
-    operation_name = "auto_save_trigger"
+    millis = 2000
   )
 
   obs_data_save <- shiny::observe({
@@ -253,7 +252,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   }
 
   # PERFORMANCE OPTIMIZED: Reaktiv debounced settings save med performance monitoring
-  settings_save_trigger <- create_performance_debounced(
+  settings_save_trigger <- shiny::debounce(
     shiny::reactive({
       # Samme guards som data auto-gem
       # Use unified state management
@@ -288,8 +287,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
         NULL
       }
     }),
-    millis = 1000,  # Faster debounce for settings
-    operation_name = "settings_save_trigger"
+    millis = 1000  # Faster debounce for settings
   )
 
   obs_settings_save <- shiny::observe({
@@ -311,9 +309,11 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
           input$y_column,
           input$n_column,
           input$skift_column,
+          input$frys_column,
           input$kommentar_column,
           input$chart_type,
           input$target_value,
+          input$centerline_value,
           input$y_axis_unit
         )
       },
@@ -321,7 +321,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
     )
 
   # PERFORMANCE OPTIMIZED: Event-driven table operation cleanup med monitoring
-  table_cleanup_trigger <- create_performance_debounced(
+  table_cleanup_trigger <- shiny::debounce(
     shiny::reactive({
       # Use unified state management
       table_operation_cleanup_needed_check <- app_state$data$table_operation_cleanup_needed
@@ -332,8 +332,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
         NULL
       }
     }),
-    millis = 2000,
-    operation_name = "table_cleanup_trigger"
+    millis = 2000
   )
 
   shiny::observe({

@@ -40,7 +40,30 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 * **Graceful degradation** – Implementér fallback-mønstre hvor komponenter kan fejle
 * **State consistency** – Sikr dual-state synkronisering for kompatibilitet
 
-### 2.3 Observability & Debugging
+### 2.3 Git Workflow & Version Control (OBLIGATORISK)
+
+✅ **KRITISKE GIT-REGLER** – Følg disse regler nøje:
+
+1. **ALDRIG merge til master uden eksplicit bruger-godkendelse**
+2. **ALDRIG push til remote uden eksplicit anmodning**
+3. **ALTID stop efter feature branch commit og vent på instruktioner**
+4. **ALTID spørg før merge, rebase eller andre git-operationer på master**
+
+**Git workflow:**
+```bash
+# Korrekt: Opret feature branch og commit
+git checkout -b feature/my-feature
+# ... arbejd og commit ...
+git commit -m "beskrivelse"
+# STOP HER - Vent på bruger-instruktion
+
+# Forkert: Automatisk merge uden tilladelse
+git checkout master && git merge feature/my-feature  # ALDRIG GØR DETTE
+```
+
+**Undtagelser:** Kun simple git-operationer som `git status`, `git diff`, `git log` kan udføres frit.
+
+### 2.4 Observability & Debugging
 
 **DEBUG-FIRST Approach:**
 
@@ -112,6 +135,100 @@ values$some_data <- data
 * **Explicit dependencies** – `req()` og `validate()` før logik
 * **Isolation når nødvendigt** – Brug `isolate()` med omtanke og kun i reaktiverede kontekster
 * **Error boundaries** – Wrap komplekse reactive udtryk i `safe_operation()`
+
+### 3.1.1 Race Condition Prevention (OBLIGATORISK)
+
+✅ **Hybrid Anti-Race Strategy** – Kombination af flere lag for at eliminere race conditions:
+
+**Niveau 1: Event Architecture (Fundament)**
+```r
+# Centraliserede event listeners med prioritering
+setup_event_listeners() {
+  observeEvent(app_state$events$data_loaded,
+    ignoreInit = TRUE,
+    priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
+    # Kritisk logik først
+  })
+
+  observeEvent(app_state$events$data_changed,
+    ignoreInit = TRUE,
+    priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
+    # Data behandling sekundært
+  })
+}
+```
+
+**Niveau 2: State-Baseret Atomicity**
+```r
+# Atomiske state-opdateringer via single source of truth
+safe_operation("Update visualization cache", {
+  app_state$visualization$cache_updating <- TRUE
+  app_state$visualization$data <- get_module_data()
+  app_state$visualization$cache_updating <- FALSE
+})
+```
+
+**Niveau 3: Functional Guards (Overlap Prevention)**
+```r
+# Guard conditions forhindrer samtidige operationer
+update_column_choices_unified() {
+  if (app_state$data$updating_table ||
+      app_state$columns$auto_detect$in_progress ||
+      app_state$ui$sync_in_progress) {
+    return()  # Skip hvis anden operation kører
+  }
+  # ... sikker opdatering
+}
+```
+
+**Niveau 4: UI Atomicity (Interface Locks)**
+```r
+# UI opdateringer gennem sikre wrappere
+safe_programmatic_ui_update() {
+  # Låser UI-opdateringer
+  # Registrerer tokens for programmatiske ændringer
+  # Undgår feedback-loops mellem UI og server
+}
+```
+
+**Niveau 5: Input Debouncing (Noise Reduction)**
+```r
+# Strategisk debouncing på hyppige events
+debounced_search <- shiny::debounce(
+  reactive({input$search_field}),
+  millis = 800  # Standard app delay
+)
+```
+
+**Event Consolidation Guidelines:**
+
+✅ **KONSOLIDER events når:**
+- Events har samme logiske outcome (fx data_loaded + data_changed → visualization update)
+- Status tracking på tværs af flere events
+- Form state synchronization
+
+```r
+# Konsolideret pattern:
+observeEvent(list(
+  app_state$events$data_loaded,
+  app_state$events$data_changed
+), ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
+  update_visualization_cache()
+})
+```
+
+❌ **BEVAR SEPARATE observers når:**
+- Dependency chains skal køre i bestemt rækkefølge
+- Forskellige error handling kræves
+- Performance-kritiske operationer med forskellige prioriteter
+
+**Implementering af nye features:**
+1. **Emit via centraliseret event-bus** (`emit$new_feature()`)
+2. **Observer i `setup_event_listeners()`** med korrekt prioritet fra `OBSERVER_PRIORITIES`
+3. **Guard conditions** først for at undgå overlap
+4. **Atomisk state update** gennem `safe_operation()`
+5. **UI opdatering** gennem `safe_programmatic_ui_update()`
+6. **Debounce** hyppige inputs med standard delays
 
 ### 3.2 R Code Quality
 
@@ -304,7 +421,7 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 
 **Reactive chain problems:**
 * **Infinite loops** – Tjek cirkulære event-afhængigheder
-* **Race conditions** – Brug `priority` og `req()` guards
+* **Race conditions** – Følg Hybrid Anti-Race Strategy (sektion 3.1.1) med prioritering, guard conditions og event consolidation
 * **State inconsistency** – Sikr at `app_state` opdateres atomisk og via events
 
 **Performance issues:**

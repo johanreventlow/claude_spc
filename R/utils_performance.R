@@ -112,12 +112,23 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session
     }
     session$userData$performance_cache
   } else {
-    # Fallback to global environment for non-session contexts (e.g., tests)
-    if (!exists(".performance_cache_fallback", envir = .GlobalEnv)) {
-      assign(".performance_cache_fallback", new.env(), envir = .GlobalEnv)
-      log_debug("Created fallback performance cache (no session available)", "PERFORMANCE")
+    # NAMESPACED FALLBACK: Create process-specific cache to avoid collisions in tests/concurrent contexts
+    # Look for existing cache for this process first
+    process_cache_pattern <- paste0(".performance_cache_fallback_", Sys.getpid(), "_")
+    existing_caches <- ls(pattern = process_cache_pattern, envir = .GlobalEnv, all.names = TRUE)
+
+    if (length(existing_caches) > 0) {
+      # Reuse existing process-specific cache
+      fallback_cache_name <- existing_caches[1]
+      log_debug(paste("Reusing existing process cache:", fallback_cache_name), "PERFORMANCE")
+    } else {
+      # Create new process-specific cache with random suffix to avoid conflicts
+      fallback_cache_name <- paste0(".performance_cache_fallback_", Sys.getpid(), "_", sample(1000:9999, 1))
+      assign(fallback_cache_name, new.env(parent = emptyenv()), envir = .GlobalEnv)
+      log_debug(paste("Created process-specific fallback cache:", fallback_cache_name), "PERFORMANCE")
     }
-    get(".performance_cache_fallback", envir = .GlobalEnv)
+
+    get(fallback_cache_name, envir = .GlobalEnv)
   }
 
   # Define cache logic as function for reuse
@@ -347,13 +358,19 @@ clear_performance_cache <- function(cache_pattern = NULL, session = NULL) {
     )
   }
 
-  # Get cache environment
+  # Get cache environment - handle process-specific fallback caches
   cache_env <- if (!is.null(session) && !is.null(session$userData$performance_cache)) {
     session$userData$performance_cache
-  } else if (exists(".performance_cache_fallback", envir = .GlobalEnv)) {
-    get(".performance_cache_fallback", envir = .GlobalEnv)
   } else {
-    NULL
+    # Look for process-specific fallback cache
+    process_cache_pattern <- paste0(".performance_cache_fallback_", Sys.getpid(), "_")
+    existing_caches <- ls(pattern = process_cache_pattern, envir = .GlobalEnv, all.names = TRUE)
+
+    if (length(existing_caches) > 0) {
+      get(existing_caches[1], envir = .GlobalEnv)
+    } else {
+      NULL
+    }
   }
 
   if (!is.null(cache_env)) {
@@ -654,10 +671,18 @@ get_session_cache <- function(session = NULL) {
     }
     return(session$userData$performance_cache)
   } else {
-    # Global fallback cache
-    if (!exists(".performance_cache_fallback", envir = .GlobalEnv)) {
-      assign(".performance_cache_fallback", new.env(parent = emptyenv()), envir = .GlobalEnv)
+    # PROCESS-SPECIFIC FALLBACK: Use same logic as create_cached_reactive
+    process_cache_pattern <- paste0(".performance_cache_fallback_", Sys.getpid(), "_")
+    existing_caches <- ls(pattern = process_cache_pattern, envir = .GlobalEnv, all.names = TRUE)
+
+    if (length(existing_caches) > 0) {
+      # Reuse existing process-specific cache
+      return(get(existing_caches[1], envir = .GlobalEnv))
+    } else {
+      # Create new process-specific cache
+      fallback_cache_name <- paste0(".performance_cache_fallback_", Sys.getpid(), "_", sample(1000:9999, 1))
+      assign(fallback_cache_name, new.env(parent = emptyenv()), envir = .GlobalEnv)
+      return(get(fallback_cache_name, envir = .GlobalEnv))
     }
-    return(get(".performance_cache_fallback", envir = .GlobalEnv))
   }
 }

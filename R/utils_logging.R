@@ -367,3 +367,55 @@ set_log_level_info <- function() {
   cat("[LOG_CONFIG] Log level set to INFO (standard mode)\n")
   invisible(NULL)
 }
+
+#' Set custom log level
+#'
+#' @description
+#' Set any custom log level by name. Validates input and provides helpful
+#' error messages for invalid levels.
+#'
+#' @param level Log level string: "DEBUG", "INFO", "WARN", or "ERROR"
+#'
+#' @examples
+#' \dontrun{
+#' set_log_level("DEBUG")    # Enable all debug messages
+#' set_log_level("WARN")     # Only warnings and errors
+#' set_log_level("invalid")  # Shows available options
+#' }
+#'
+#' @export
+set_log_level <- function(level) {
+  valid_levels <- c("DEBUG", "INFO", "WARN", "ERROR")
+  level <- toupper(trimws(level))
+
+  if (level %in% valid_levels) {
+    Sys.setenv(SPC_LOG_LEVEL = level)
+    cat(sprintf("[LOG_CONFIG] Log level set to %s\n", level))
+    invisible(NULL)
+  } else {
+    stop(sprintf("Invalid log level '%s'. Valid options: %s",
+                level, paste(valid_levels, collapse = ", ")),
+         call. = FALSE)
+  }
+}
+
+#' Get current log level name
+#'
+#' @description
+#' Returns the current log level as a string for easy checking
+#' and debugging purposes.
+#'
+#' @return Character string of current log level
+#'
+#' @examples
+#' \dontrun{
+#' current_level <- get_log_level_name()
+#' cat("Current log level:", current_level)
+#' }
+#'
+#' @export
+get_log_level_name <- function() {
+  level_names <- c("DEBUG", "INFO", "WARN", "ERROR")
+  current_numeric <- get_log_level()
+  level_names[current_numeric]
+}

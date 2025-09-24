@@ -14,16 +14,42 @@ extract_comment_data <- function(data, kommentar_column, qic_data) {
     return(NULL)
   }
 
-  # Udtrækker kommentarer og synkroniserer med qic_data
-  comments_raw <- data[[kommentar_column]]
+  # STABLE ROW MAPPING: Use row-id to correctly map comments to qic_data points
+  # This prevents comment drift when qicharts2 reorders/filters rows
+  if (!".original_row_id" %in% names(qic_data)) {
+    log_warn("Missing .original_row_id in qic_data - falling back to positional mapping", "PLOT_COMMENT")
+    # Fallback til gamle positionsbaserede mapping
+    comments_raw <- data[[kommentar_column]]
+    comment_data <- data.frame(
+      x = qic_data$x,
+      y = qic_data$y,
+      comment = comments_raw[1:min(length(comments_raw), nrow(qic_data))],
+      stringsAsFactors = FALSE
+    )
+  } else {
+    # ROBUST MAPPING: Join på .original_row_id for korrekt kommentar-punkt mapping
+    original_data_with_comments <- data.frame(
+      .original_row_id = 1:nrow(data),
+      comment = data[[kommentar_column]],
+      stringsAsFactors = FALSE
+    )
 
-  # Opret kommentar data frame aligned med qic_data
-  comment_data <- data.frame(
-    x = qic_data$x,
-    y = qic_data$y,
-    comment = comments_raw[1:nrow(qic_data)], # Sikr samme længde som qic_data
-    stringsAsFactors = FALSE
-  )
+    # Join qic_data med original kommentarer via row-id
+    qic_data_with_comments <- merge(
+      qic_data[, c("x", "y", ".original_row_id")],
+      original_data_with_comments,
+      by = ".original_row_id",
+      all.x = TRUE,
+      sort = FALSE
+    )
+
+    comment_data <- data.frame(
+      x = qic_data_with_comments$x,
+      y = qic_data_with_comments$y,
+      comment = qic_data_with_comments$comment,
+      stringsAsFactors = FALSE
+    )
+  }
 
   # Filtrer til kun ikke-tomme kommentarer
   comment_data <- comment_data[
@@ -257,9 +283,16 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
 # Bygger qicharts2::qic() argumenter med non-standard evaluation
 build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
                                chart_type, freeze_position, part_positions, centerline_value) {
+  # STABLE ROW ID: Add row identifier for comment mapping resilience
+  # This prevents comment misalignment when qicharts2 reorders/filters rows
+  data_with_row_id <- data
+  if (!".original_row_id" %in% names(data)) {
+    data_with_row_id$.original_row_id <- 1:nrow(data)
+  }
+
   # Build qic call arguments
   qic_args <- list(
-    data = data,
+    data = data_with_row_id,
     chart = chart_type,
     return.data = TRUE
   )
@@ -281,7 +314,14 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
 
   # Add centerline if provided
   if (!is.null(centerline_value) && is.numeric(centerline_value) && !is.na(centerline_value)) {
-    qic_args$cl <- centerline_value
+    adjusted_centerline <- centerline_value
+
+    # RUN charts med nævner skal have centerline i decimal form til qicharts2
+    if (!is.null(n_col_name) && chart_type == "run" && adjusted_centerline > 1) {
+      adjusted_centerline <- adjusted_centerline / 100
+    }
+
+    qic_args$cl <- adjusted_centerline
   }
 
   return(qic_args)
@@ -300,23 +340,56 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
   qic_data <- do.call(qicharts2::qic, qic_args)
 
-  # Convert proportions to percentages for run charts with rate data
-  if (chart_type == "run" && !is.null(config$n_col) && config$n_col %in% names(qic_args$data)) {
-    qic_data$y <- qic_data$y * 100
-    qic_data$cl <- qic_data$cl * 100
-
-    if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
-      qic_data$ucl <- qic_data$ucl * 100
-    }
-    if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
-      qic_data$lcl <- qic_data$lcl * 100
-    }
-  }
+  has_denominator <- !is.null(config$n_col) && config$n_col %in% names(qic_args$data)
+  display_scaler <- create_qic_display_scaler(chart_type, has_denominator = has_denominator)
+  qic_data <- apply_qic_display_scaler(qic_data, display_scaler)
 
   return(qic_data)
 }
 
 # PLOT ENHANCEMENT UTILITIES ==================================================
+
+## Convert Target Value to Display Scale
+# Konverterer target value til samme skala som qic_data for korrekt visning
+convert_target_for_display <- function(target_value, qic_data) {
+  if (is.null(target_value) || !is.numeric(target_value) || length(target_value) == 0 ||
+      all(is.na(target_value))) {
+    return(target_value)
+  }
+
+  numeric_target <- target_value[!is.na(target_value)][1]
+
+  if (is.null(qic_data)) {
+    return(numeric_target)
+  }
+
+  display_scaler <- attr(qic_data, "display_scaler")
+  if (!is.null(display_scaler) && is.list(display_scaler) &&
+      !is.null(display_scaler$to_display) && is.function(display_scaler$to_display)) {
+    scaled_value <- display_scaler$to_display(numeric_target)
+    if (is.numeric(scaled_value) && length(scaled_value) > 0 && !all(is.na(scaled_value))) {
+      return(scaled_value[1])
+    }
+  }
+
+  if ("target" %in% names(qic_data)) {
+    target_column <- qic_data$target
+    target_column <- target_column[!is.na(target_column)]
+    if (length(target_column) > 0) {
+      return(target_column[1])
+    }
+  }
+
+  if ("y" %in% names(qic_data)) {
+    y_values <- qic_data$y
+    y_values <- y_values[!is.na(y_values)]
+    if (length(y_values) > 0 && max(y_values) > 1 && numeric_target <= 1) {
+      return(numeric_target * 100)
+    }
+  }
+
+  return(numeric_target)
+}
 
 ## Add Plot Enhancements
 # Tilføjer target lines, phase separations og comment annotations
@@ -343,10 +416,13 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
   }
 
   # Add target line if provided
-  if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+  display_target_value <- convert_target_for_display(target_value, qic_data)
+
+  if (!is.null(display_target_value) && is.numeric(display_target_value) &&
+      !is.na(display_target_value)) {
     plot <- plot +
       ggplot2::geom_hline(
-        yintercept = target_value,
+        yintercept = display_target_value,
         color = HOSPITAL_COLORS$darkgrey, linetype = "42", linewidth = 1.2,
         alpha = 0.8
       )
@@ -359,19 +435,19 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
         data = comment_data,
         ggplot2::aes(x = x, y = y, label = comment),
         size = 3,
-        color = HOSPITAL_COLORS$darkgrey,
-        bg.color = "white",
-        bg.r = 0.1,
-        box.padding = 0.5,
-        point.padding = 0.5,
-        segment.color = HOSPITAL_COLORS$mediumgrey,
-        segment.size = 0.3,
-        nudge_x = .15,
-        nudge_y = .5,
-        segment.curvature = -1e-20,
-        arrow = arrow(length = unit(0.015, "npc")),
-        max.overlaps = Inf,
-        inherit.aes = FALSE
+        color = HOSPITAL_COLORS$darkgrey
+        # bg.color = "white",
+        # bg.r = 0.1,
+        # box.padding = 0.5,
+        # point.padding = 0.5,
+        # segment.color = HOSPITAL_COLORS$mediumgrey,
+        # segment.size = 0.3,
+        # nudge_x = .15,
+        # nudge_y = .5,
+        # segment.curvature = -1e-20,
+        # arrow = grid::arrow(length = grid::unit(0.015, "npc")),
+        # max.overlaps = Inf,
+        # inherit.aes = FALSE
       )
   }
 
@@ -418,7 +494,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
   # Handle x-axis data med intelligent formatering - EFTER data filtrering
   # FASE 5: Performance optimization - cache expensive x-column validation
-  data_hash <- paste0(nrow(data), "_", ncol(data), "_", paste(names(data), collapse = "_"))
+  # IMPROVED CACHE KEY: Include x-column content hash to invalidate cache when data content changes
+  data_structure_hash <- paste0(nrow(data), "_", ncol(data), "_", paste(names(data), collapse = "_"))
 
   # ROBUST CACHE KEY: Safe ID generation to handle character(0) and NULL values
   safe_x_col_id <- if (is.null(config$x_col) || length(config$x_col) == 0 || identical(config$x_col, character(0)) || is.na(config$x_col)) {
@@ -428,7 +505,27 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     gsub("[^a-zA-Z0-9_]", "_", as.character(config$x_col)[1])
   }
 
-  cache_key <- paste0("x_validation_", safe_x_col_id, "_", substr(data_hash, 1, 20))
+  # CONTENT-AWARE CACHE KEY: Include hash of x-column + row count (used in validate_x_column_format fallback)
+  x_content_hash <- safe_operation(
+    "Generate x-column content hash for cache key",
+    code = {
+      if (!is.null(config$x_col) && config$x_col %in% names(data)) {
+        x_column_data <- data[[config$x_col]]
+        # Use fast hash of x-column content + row count to detect any changes affecting validation
+        paste0(digest::digest(x_column_data, algo = "xxhash32"), "_", nrow(data))
+      } else {
+        # Row count still matters for fallback case (1:nrow(data))
+        paste0("NO_XCOL_", nrow(data))
+      }
+    },
+    fallback = function(e) {
+      log_debug(paste("Failed to hash x-column content:", e$message), "PERFORMANCE")
+      paste0("fallback_", as.integer(Sys.time()), "_", nrow(data))
+    },
+    error_type = "processing"
+  )
+
+  cache_key <- paste0("x_validation_", safe_x_col_id, "_", substr(data_structure_hash, 1, 12), "_", x_content_hash)
 
   x_validation <- create_cached_reactive({
     validate_x_column_format(data, config$x_col, "observation")
@@ -511,7 +608,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # Handle comment data for labels
       comment_data <- extract_comment_data(data, kommentar_column, qic_data)
 
-      # Build custom ggplot using qic calculations
+      # Build custom ggplot using qic calculations ----
 
       plot <- safe_operation(
         "Build custom ggplot",
@@ -657,9 +754,12 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
       # Add target line if provided
       if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+        fallback_reference <- data.frame(y = call_args$y)
+        display_target_value <- convert_target_for_display(target_value, fallback_reference)
+
         plot <- plot +
           ggplot2::geom_hline(
-            yintercept = target_value,
+            yintercept = display_target_value,
             color = SPC_COLORS$target_line,
             linetype = SPC_LINE_TYPES$solid,
             linewidth = SPC_LINE_WIDTHS$thick,

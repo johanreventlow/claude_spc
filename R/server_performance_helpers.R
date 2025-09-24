@@ -133,13 +133,10 @@ parse_danish_date_vectorized <- function(x) {
 ensure_standard_columns <- function(data) {
   if (is.null(data) || nrow(data) == 0) return(data)
 
-  # Remove any completely empty columns
-  empty_columns <- sapply(data, function(col) all(is.na(col) | col == ""))
-  if (any(empty_columns)) {
-    data <- data[!empty_columns]
-  }
+  # NOTE: Removed automatic empty column removal as empty columns can be meaningful
+  # Empty columns are preserved to allow users to work with their data structure as intended
 
-  # Ensure reasonable column names
+  # Only ensure reasonable column names (remove problematic characters, ensure uniqueness)
   names(data) <- make.names(names(data), unique = TRUE)
 
   return(data)
@@ -240,41 +237,78 @@ validate_spc_requirements <- function(data) {
 
 #' Add Comments Optimized
 #'
-#' Add comments to plot with optimization
+#' Add comments to plot with optimization - matches extract_comment_data approach
 #'
 #' @param plot ggplot object
-#' @param data Data frame
+#' @param data Original data frame
 #' @param kommentar_column Column name for comments
-#' @param config Plot configuration
+#' @param qic_data QIC processed data with transformed coordinates
 #'
-add_comments_optimized <- function(plot, data, kommentar_column, config) {
-  if (is.null(kommentar_column) || !kommentar_column %in% names(data)) {
+add_comments_optimized <- function(plot, data, kommentar_column, qic_data) {
+  if (is.null(kommentar_column) || !kommentar_column %in% names(data) || is.null(qic_data)) {
     return(plot)
   }
 
-  # Get non-empty comments
-  comment_data <- data[!is.na(data[[kommentar_column]]) & data[[kommentar_column]] != "", ]
+  # Use same approach as extract_comment_data for consistency
+  comments_raw <- data[[kommentar_column]]
+
+  # Create comment data frame aligned with qic_data
+  comment_data <- data.frame(
+    x = qic_data$x,
+    y = qic_data$y,
+    comment = comments_raw[1:nrow(qic_data)], # Ensure same length as qic_data
+    stringsAsFactors = FALSE
+  )
+
+  # Filter to only non-empty comments
+  comment_data <- comment_data[
+    !is.na(comment_data$comment) &
+      trimws(comment_data$comment) != "",
+  ]
 
   if (nrow(comment_data) == 0) {
     return(plot)
   }
 
+  # Truncate very long comments
+  if (nrow(comment_data) > 0) {
+    comment_data$comment <- dplyr::if_else(
+      nchar(comment_data$comment) > 40,
+      stringr::str_c(substr(comment_data$comment, 1, 37), "..."),
+      comment_data$comment
+    )
+  }
+
+  # Get hospital colors for consistent styling
+  HOSPITAL_COLORS <- get_hospital_colors()
+
   # Add comments with ggrepel for better positioning
   if (requireNamespace("ggrepel", quietly = TRUE)) {
     plot <- plot + ggrepel::geom_text_repel(
       data = comment_data,
-      aes_string(x = config$x_col, y = config$y_col, label = kommentar_column),
+      ggplot2::aes(x = x, y = y, label = comment),
       size = 3,
-      color = "red",
-      max.overlaps = 10
+      color = HOSPITAL_COLORS$darkgrey,
+      bg.color = "white",
+      bg.r = 0.1,
+      box.padding = 0.5,
+      point.padding = 0.5,
+      segment.color = HOSPITAL_COLORS$mediumgrey,
+      segment.size = 0.3,
+      nudge_x = .15,
+      nudge_y = .5,
+      segment.curvature = -1e-20,
+      arrow = grid::arrow(length = grid::unit(0.015, "npc")),
+      max.overlaps = Inf,
+      inherit.aes = FALSE
     )
   } else {
-    # Fallback without ggrepel
+    # Fallback without ggrepel - use same styling as main function
     plot <- plot + ggplot2::geom_text(
       data = comment_data,
-      aes_string(x = config$x_col, y = config$y_col, label = kommentar_column),
+      ggplot2::aes(x = x, y = y, label = comment),
       size = 3,
-      color = "red",
+      color = HOSPITAL_COLORS$darkgrey,
       vjust = -0.5
     )
   }

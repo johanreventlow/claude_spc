@@ -198,23 +198,24 @@ test_that("detect_date_columns_robust works correctly", {
     check.names = FALSE
   )
 
-  # TEST: Date detection
-  if (exists("detect_date_columns_robust")) {
-    date_results <- detect_date_columns_robust(mixed_date_data)
+  # TEST: Date detection - robust assertion without weak exists() guard
+  expect_true(exists("detect_date_columns_robust", mode = "function"),
+              "detect_date_columns_robust function must be available")
 
-    # Should detect all date columns
-    expect_true("Danish_Date" %in% names(date_results))
-    expect_true("ISO_Date" %in% names(date_results))
-    expect_true("US_Date" %in% names(date_results))
-    expect_true("Native_Date" %in% names(date_results))
+  date_results <- detect_date_columns_robust(mixed_date_data)
 
-    # Should not detect non-date column
-    expect_false("Not_Date" %in% names(date_results))
+  # Should detect all date columns
+  expect_true("Danish_Date" %in% names(date_results))
+  expect_true("ISO_Date" %in% names(date_results))
+  expect_true("US_Date" %in% names(date_results))
+  expect_true("Native_Date" %in% names(date_results))
 
-    # Native date should have highest score
-    expect_equal(date_results$Native_Date$score, 1.0)
-    expect_equal(date_results$Native_Date$suggested_format, "native_date_class")
-  }
+  # Should not detect non-date column
+  expect_false("Not_Date" %in% names(date_results))
+
+  # Native date should have highest score
+  expect_equal(date_results$Native_Date$score, 1.0)
+  expect_equal(date_results$Native_Date$suggested_format, "native_date_class")
 })
 
 test_that("detect_columns_full_analysis works comprehensively", {
@@ -239,24 +240,26 @@ test_that("detect_columns_full_analysis works comprehensively", {
   app_state <- create_test_app_state()
 
   # TEST: Full analysis
-  if (exists("detect_columns_full_analysis")) {
-    results <- detect_columns_full_analysis(complex_data, app_state)
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("detect_columns_full_analysis", mode = "function"),
+              "detect_columns_full_analysis must be available for this test")
 
-    # Should detect X column (date preferred over character week)
-    expect_equal(results$x_col, "Dato")
+  results <- detect_columns_full_analysis(complex_data, app_state)
 
-    # Should detect Y column (numerator)
-    expect_equal(results$y_col, "Komplikationer")
+  # Should detect X column (date preferred over character week)
+  expect_equal(results$x_col, "Dato")
 
-    # Should detect N column (denominator)
-    expect_equal(results$n_col, "Operationer")
+  # Should detect Y column (numerator)
+  expect_equal(results$y_col, "Komplikationer")
 
-    # Should detect special columns
-    expect_equal(results$cl_col, "Control_Limit")
-    expect_equal(results$skift_col, "Skift")
-    expect_equal(results$frys_col, "Frys")
-    expect_equal(results$kommentar_col, "Kommentar")
-  }
+  # Should detect N column (denominator)
+  expect_equal(results$n_col, "Operationer")
+
+  # Should detect special columns
+  expect_equal(results$cl_col, "Control_Limit")
+  expect_equal(results$skift_col, "Skift")
+  expect_equal(results$frys_col, "Frys")
+  expect_equal(results$kommentar_col, "Kommentar")
 })
 
 test_that("detect_columns_name_based works with column names only", {
@@ -274,23 +277,25 @@ test_that("detect_columns_name_based works with column names only", {
   app_state <- create_test_app_state()
 
   # TEST: Name-based detection
-  if (exists("detect_columns_name_based")) {
-    results <- detect_columns_name_based(danish_column_names, app_state)
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("detect_columns_name_based", mode = "function"),
+              "detect_columns_name_based must be available for this test")
 
-    # Should detect X column from names
-    expect_true(results$x_col %in% c("Dato", "Måned", "Uge"))
+  results <- detect_columns_name_based(danish_column_names, app_state)
 
-    # Should detect Y column from names
-    expect_true(results$y_col %in% c("Tæller", "Komplikationer", "Hændelser"))
+  # Should detect X column from names
+  expect_true(results$x_col %in% c("Dato", "Måned", "Uge"))
 
-    # Should detect N column from names
-    expect_true(results$n_col %in% c("Nævner", "Total", "Samlet"))
+  # Should detect Y column from names
+  expect_true(results$y_col %in% c("Tæller", "Komplikationer", "Hændelser"))
 
-    # Should detect special columns
-    expect_true(results$skift_col %in% c("Skift", "Fase"))
-    expect_equal(results$frys_col, "Frys")
-    expect_true(results$kommentar_col %in% c("Kommentar", "Bemærkning"))
-  }
+  # Should detect N column from names
+  expect_true(results$n_col %in% c("Nævner", "Total", "Samlet"))
+
+  # Should detect special columns
+  expect_true(results$skift_col %in% c("Skift", "Fase"))
+  expect_equal(results$frys_col, "Frys")
+  expect_true(results$kommentar_col %in% c("Kommentar", "Bemærkning"))
 })
 
 test_that("update_all_column_mappings works correctly", {
@@ -311,27 +316,29 @@ test_that("update_all_column_mappings works correctly", {
   original_columns <- app_state$columns
 
   # TEST: Update mappings
-  if (exists("update_all_column_mappings")) {
-    updated_columns <- update_all_column_mappings(detection_results, original_columns, app_state)
+  # Strong assertion that fails the test if function is missing
+  expect_true(exists("update_all_column_mappings", mode = "function"),
+              "update_all_column_mappings must be available for this test")
 
-    # Verify hierarchical structure is preserved
-    expect_true(exists("mappings", envir = updated_columns))
-    expect_true(exists("auto_detect", envir = updated_columns))
+  updated_columns <- update_all_column_mappings(detection_results, original_columns, app_state)
 
-    # Verify mappings were updated
-    expect_equal(updated_columns$mappings$x_column, "Dato")
-    expect_equal(updated_columns$mappings$y_column, "Tæller")
-    expect_equal(updated_columns$mappings$n_column, "Nævner")
-    expect_equal(updated_columns$mappings$cl_column, "Control_Limit")
-    expect_equal(updated_columns$mappings$skift_column, "Skift")
-    expect_equal(updated_columns$mappings$frys_column, "Frys")
-    expect_equal(updated_columns$mappings$kommentar_column, "Kommentar")
+  # Verify hierarchical structure is preserved
+  expect_true(exists("mappings", envir = updated_columns))
+  expect_true(exists("auto_detect", envir = updated_columns))
 
-    # Verify auto_detect state is preserved
-    expect_true(exists("in_progress", envir = updated_columns$auto_detect))
-    expect_true(exists("completed", envir = updated_columns$auto_detect))
-    expect_true(exists("results", envir = updated_columns$auto_detect))
-  }
+  # Verify mappings were updated
+  expect_equal(updated_columns$mappings$x_column, "Dato")
+  expect_equal(updated_columns$mappings$y_column, "Tæller")
+  expect_equal(updated_columns$mappings$n_column, "Nævner")
+  expect_equal(updated_columns$mappings$cl_column, "Control_Limit")
+  expect_equal(updated_columns$mappings$skift_column, "Skift")
+  expect_equal(updated_columns$mappings$frys_column, "Frys")
+  expect_equal(updated_columns$mappings$kommentar_column, "Kommentar")
+
+  # Verify auto_detect state is preserved
+  expect_true(exists("in_progress", envir = updated_columns$auto_detect))
+  expect_true(exists("completed", envir = updated_columns$auto_detect))
+  expect_true(exists("results", envir = updated_columns$auto_detect))
 })
 
 test_that("autodetect_engine error handling works", {
@@ -436,47 +443,48 @@ test_that("autodetect_engine integration with reactive system works", {
   # TEST: Integration with full reactive app_state
 
   # SETUP: Full reactive app_state (if available)
-  if (exists("create_app_state")) {
-    app_state <- create_app_state()
+  skip_if_not(exists("create_app_state", mode = "function"),
+              "create_app_state not available - check test setup")
 
-    # Ensure event counters exist
-    if (exists("ensure_event_counters")) {
-      app_state <- ensure_event_counters(app_state)
-    }
+  app_state <- create_app_state()
 
-    emit_events <- list()
-    mock_emit <- list(
-      auto_detection_started = function() { emit_events$started <- TRUE },
-      auto_detection_completed = function() { emit_events$completed <- TRUE }
-    )
+  # Ensure event counters exist
+  if (exists("ensure_event_counters", mode = "function")) {
+    app_state <- ensure_event_counters(app_state)
+  }
 
-    test_data <- data.frame(
-      Date = as.Date(c("2024-01-01", "2024-02-01")),
-      Count = c(45, 43),
-      Total = c(50, 50),
-      stringsAsFactors = FALSE
-    )
+  emit_events <- list()
+  mock_emit <- list(
+    auto_detection_started = function() { emit_events$started <- TRUE },
+    auto_detection_completed = function() { emit_events$completed <- TRUE }
+  )
 
-    # TEST: With full reactive state
-    autodetect_engine(
-      data = test_data,
-      trigger_type = "file_upload",
-      app_state = app_state,
-      emit = mock_emit
-    )
+  test_data <- data.frame(
+    Date = as.Date(c("2024-01-01", "2024-02-01")),
+    Count = c(45, 43),
+    Total = c(50, 50),
+    stringsAsFactors = FALSE
+  )
 
-    # Verify reactive state was updated
-    if (exists("isolate")) {
-      expect_equal(isolate(app_state$columns$mappings$x_column), "Date")
-      expect_equal(isolate(app_state$columns$mappings$y_column), "Count")
-      expect_equal(isolate(app_state$columns$mappings$n_column), "Total")
-      expect_true(isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
-    } else {
-      # Fallback for non-reactive environment
-      expect_equal(app_state$columns$mappings$x_column, "Date")
-      expect_equal(app_state$columns$mappings$y_column, "Count")
-      expect_equal(app_state$columns$mappings$n_column, "Total")
-    }
+  # TEST: With full reactive state
+  autodetect_engine(
+    data = test_data,
+    trigger_type = "file_upload",
+    app_state = app_state,
+    emit = mock_emit
+  )
+
+  # Verify reactive state was updated
+  if (exists("isolate", mode = "function")) {
+    expect_equal(isolate(app_state$columns$mappings$x_column), "Date")
+    expect_equal(isolate(app_state$columns$mappings$y_column), "Count")
+    expect_equal(isolate(app_state$columns$mappings$n_column), "Total")
+    expect_true(isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
+  } else {
+    # Fallback for non-reactive environment
+    expect_equal(app_state$columns$mappings$x_column, "Date")
+    expect_equal(app_state$columns$mappings$y_column, "Count")
+    expect_equal(app_state$columns$mappings$n_column, "Total")
   }
 })
 

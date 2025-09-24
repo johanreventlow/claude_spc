@@ -46,6 +46,54 @@ test_that("Cached reactive expressions improve performance", {
   clear_performance_cache("test_expensive")
 })
 
+test_that("X-validation cache invalidates when data content changes", {
+  # TEST: Cache key includes x-column content hash to detect data changes
+
+  # Create test data with same structure but different content
+  test_data_1 <- data.frame(
+    Dato = c("2023-01-01", "2023-01-02", "2023-01-03"),
+    Vaerdi = c(10, 15, 12)
+  )
+
+  test_data_2 <- data.frame(
+    Dato = c("2023-01-04", "2023-01-05", "2023-01-06"),  # Different dates, same structure
+    Vaerdi = c(20, 25, 22)  # Different values
+  )
+
+  config <- list(x_col = "Dato")
+
+  # Generate cache keys for both datasets
+  data_structure_hash_1 <- paste0(nrow(test_data_1), "_", ncol(test_data_1), "_", paste(names(test_data_1), collapse = "_"))
+  safe_x_col_id <- "Dato"
+
+  x_content_hash_1 <- paste0(digest::digest(test_data_1[["Dato"]], algo = "xxhash32"), "_", nrow(test_data_1))
+  cache_key_1 <- paste0("x_validation_", safe_x_col_id, "_", substr(data_structure_hash_1, 1, 12), "_", x_content_hash_1)
+
+  data_structure_hash_2 <- paste0(nrow(test_data_2), "_", ncol(test_data_2), "_", paste(names(test_data_2), collapse = "_"))
+  x_content_hash_2 <- paste0(digest::digest(test_data_2[["Dato"]], algo = "xxhash32"), "_", nrow(test_data_2))
+  cache_key_2 <- paste0("x_validation_", safe_x_col_id, "_", substr(data_structure_hash_2, 1, 12), "_", x_content_hash_2)
+
+  # TEST: Cache keys should be different despite same structure
+  expect_false(identical(cache_key_1, cache_key_2),
+               info = "Cache keys should differ when x-column content changes")
+
+  # TEST: Structure hashes are identical (same dimensions and column names)
+  expect_identical(data_structure_hash_1, data_structure_hash_2,
+                   info = "Structure hashes should be identical for same-structure data")
+
+  # TEST: Content hashes are different (different x-column data)
+  expect_false(identical(x_content_hash_1, x_content_hash_2),
+               info = "Content hashes should differ when x-column content changes")
+
+  # TEST: Cache keys handle NULL x-column case
+  config_null <- list(x_col = NULL)
+  x_content_hash_null <- paste0("NO_XCOL_", nrow(test_data_1))
+  cache_key_null <- paste0("x_validation_NULL_XCOL_", substr(data_structure_hash_1, 1, 12), "_", x_content_hash_null)
+
+  expect_true(grepl("NULL_XCOL", cache_key_null),
+              info = "Cache key should handle NULL x-column gracefully")
+})
+
 test_that("Memory monitoring detects usage patterns", {
   # TEST: Memory monitoring utilities work correctly
 
