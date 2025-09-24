@@ -76,7 +76,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       app_state$visualization$module_cached_data <- result_data
     })
 
-    # UNIFIED EVENT SYSTEM: Also update when data changes
+    # UNIFIED EVENT SYSTEM: Update when data is loaded
     shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
       # Use the pure function to get data
       result_data <- get_module_data()
@@ -84,6 +84,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Update cache
       app_state$visualization$module_data_cache <- result_data
       app_state$visualization$module_cached_data <- result_data
+    })
+
+    # UNIFIED EVENT SYSTEM: Also update when data changes (table edits)
+    shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = 1000, {
+      # Use the pure function to get data
+      result_data <- get_module_data()
+
+      # Update cache
+      app_state$visualization$module_data_cache <- result_data
+      app_state$visualization$module_cached_data <- result_data
+
+      log_debug("Visualization module updated after data_changed event", "VISUALIZATION")
     })
 
     # UNIFIED EVENT SYSTEM: Initialize data at startup if available
