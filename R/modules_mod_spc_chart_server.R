@@ -11,12 +11,22 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Module initialization
     ns <- session$ns
 
-    # Helper function: Safe max that handles empty vectors
+    # Helper function: Safe max that handles empty vectors and preserves actual values
     safe_max <- function(x, na.rm = TRUE) {
-      if (length(x) == 0 || all(is.na(x))) {
+      if (length(x) == 0) {
+        log_debug("safe_max: empty vector", "VISUALIZATION")
         return(NA_real_)
       }
-      max(x, na.rm = na.rm)
+      if (all(is.na(x))) {
+        log_debug("safe_max: all NA values", "VISUALIZATION")
+        return(NA_real_)
+      }
+      result <- max(x, na.rm = na.rm)
+      if (is.infinite(result)) {
+        log_debug(paste("safe_max: infinite result, returning NA. Input:", paste(x, collapse=", ")), "VISUALIZATION")
+        return(NA_real_)
+      }
+      return(result)
     }
 
     # State Management --------------------------------------------------------
@@ -70,18 +80,37 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     }
 
     module_data_reactive <- shiny::reactive({
-      return(app_state$visualization$module_data_cache)
+      # Directly depend on the events that should trigger data updates
+      app_state$events$data_loaded
+      app_state$events$data_changed
+      app_state$events$navigation_changed
+
+      # Get fresh data every time any of these events fire
+      result <- get_module_data()
+
+      data_info <- if (!is.null(result)) {
+        paste("rows:", nrow(result), "cols:", ncol(result))
+      } else {
+        "NULL"
+      }
+      log_debug(paste("module_data_reactive called (event-driven), returning:", data_info), "VISUALIZATION")
+      return(result)
     })
 
     # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy
     # Implements Event Consolidation (CLAUDE.md Section 3.1.1) for functionally related events
-    shiny::observeEvent({
-      list(
-        app_state$events$data_loaded,      # Initial data load
-        app_state$events$data_changed,     # Table edits and modifications
-        app_state$events$navigation_changed # Navigation refresh
-      )
-    }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
+
+    # DISABLED: Create reactive expression that responds to multiple events
+    # Now using event-driven module_data_reactive instead
+    # consolidated_trigger <- shiny::reactive({
+    #   list(
+    #     data_loaded = app_state$events$data_loaded,
+    #     data_changed = app_state$events$data_changed,
+    #     navigation_changed = app_state$events$navigation_changed
+    #   )
+    # })
+    if (FALSE) { # Disable consolidated event handler
+    shiny::observeEvent(consolidated_trigger(), ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
 
       # Level 3: Guard condition - prevent concurrent operations (Overlap Prevention)
       if (shiny::isolate(app_state$visualization$cache_updating)) {
@@ -104,6 +133,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           # Use the pure function to get data
           result_data <- get_module_data()
 
+          # Debug: Log data info
+          data_info <- if (!is.null(result_data)) {
+            paste("rows:", nrow(result_data), "cols:", ncol(result_data))
+          } else {
+            "NULL"
+          }
+          log_debug(paste("Cache update - result_data:", data_info), "VISUALIZATION")
+
           # Atomic cache update - both values updated together
           app_state$visualization$module_data_cache <- result_data
           app_state$visualization$module_cached_data <- result_data
@@ -117,6 +154,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         error_type = "processing"
       )
     })
+    } # End disable consolidated event handler
 
     # UNIFIED EVENT SYSTEM: Initialize data at startup if available
     if (!is.null(shiny::isolate(app_state$data$current_data))) {
@@ -205,13 +243,21 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Hovedfunktion for SPC plot generering med caching
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- shiny::reactive({
+      log_debug("spc_plot reactive triggered", "VISUALIZATION")
       # FIXED: Safe chart_config validation without hanging shiny::req()
       config <- chart_config()
       if (is.null(config)) {
+        log_debug("spc_plot: config is NULL", "VISUALIZATION")
         return(NULL)
       }
 
       data <- module_data_reactive()
+      data_info <- if (!is.null(data)) {
+        paste("rows:", nrow(data), "cols:", ncol(data))
+      } else {
+        "NULL"
+      }
+      log_debug(paste("spc_plot: data from cache:", data_info), "VISUALIZATION")
 
       # Generate cache key based on data and config
       current_cache_key <- digest::digest(list(
