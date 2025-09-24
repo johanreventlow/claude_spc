@@ -241,6 +241,9 @@ create_app_state <- function() {
     module_cached_data = NULL,
     module_data_cache = NULL,
     plot_cache = NULL,
+
+    # Race condition prevention guards
+    cache_updating = FALSE,
     plot_cache_key = NULL,
 
     # Configuration caching (migrated from reactiveVal)

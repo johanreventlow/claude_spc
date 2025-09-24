@@ -73,39 +73,49 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       return(app_state$visualization$module_data_cache)
     })
 
-    # UNIFIED EVENT SYSTEM: Update data cache when relevant events occur
-    shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = 1000, {
+    # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy
+    # Implements Event Consolidation (CLAUDE.md Section 3.1.1) for functionally related events
+    shiny::observeEvent({
+      list(
+        app_state$events$data_loaded,      # Initial data load
+        app_state$events$data_changed,     # Table edits and modifications
+        app_state$events$navigation_changed # Navigation refresh
+      )
+    }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
 
-      # Use the pure function to get data
-      result_data <- get_module_data()
+      # Level 3: Guard condition - prevent concurrent operations (Overlap Prevention)
+      if (shiny::isolate(app_state$visualization$cache_updating)) {
+        log_debug("Skipping visualization cache update - already in progress", "VISUALIZATION")
+        return()
+      }
 
-      # Update cache
-      app_state$visualization$module_data_cache <- result_data
-      app_state$visualization$module_cached_data <- result_data
-    })
+      # Level 2: Atomic state update with guard flag (State-Based Atomicity)
+      safe_operation(
+        operation_name = "Update visualization cache (consolidated)",
+        code = {
+          # Set guard flag atomically
+          app_state$visualization$cache_updating <- TRUE
 
-    # UNIFIED EVENT SYSTEM: Update when data is loaded or changed
-    shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
-      # Use the pure function to get data
-      result_data <- get_module_data()
+          on.exit({
+            # Clear guard flag on function exit (success or error)
+            app_state$visualization$cache_updating <- FALSE
+          }, add = TRUE)
 
-      # Update cache
-      app_state$visualization$module_data_cache <- result_data
-      app_state$visualization$module_cached_data <- result_data
+          # Use the pure function to get data
+          result_data <- get_module_data()
 
-      log_debug("Visualization module updated after data_loaded event", "VISUALIZATION")
-    })
+          # Atomic cache update - both values updated together
+          app_state$visualization$module_data_cache <- result_data
+          app_state$visualization$module_cached_data <- result_data
 
-    # UNIFIED EVENT SYSTEM: Also update when data changes (table edits)
-    shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = 900, {
-      # Use the pure function to get data
-      result_data <- get_module_data()
-
-      # Update cache
-      app_state$visualization$module_data_cache <- result_data
-      app_state$visualization$module_cached_data <- result_data
-
-      log_debug("Visualization module updated after data_changed event", "VISUALIZATION")
+          log_debug("Visualization cache updated successfully (consolidated)", "VISUALIZATION")
+        },
+        fallback = function(e) {
+          log_error(paste("Visualization cache update failed:", e$message), "VISUALIZATION")
+          # Guard flag cleared by on.exit() even in error case
+        },
+        error_type = "processing"
+      )
     })
 
     # UNIFIED EVENT SYSTEM: Initialize data at startup if available
