@@ -79,23 +79,27 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       app_state$visualization$module_data_cache <- NULL
     }
 
-    module_data_reactive <- shiny::reactive({
-      # Directly depend on the events that should trigger data updates
-      app_state$events$data_loaded
-      app_state$events$data_changed
-      app_state$events$navigation_changed
+    # Debounced data reactive to prevent multiple rapid invalidations
+    module_data_reactive <- shiny::debounce(
+      shiny::reactive({
+        # Directly depend on the events that should trigger data updates
+        app_state$events$data_loaded
+        app_state$events$data_changed
+        app_state$events$navigation_changed
 
-      # Get fresh data every time any of these events fire
-      result <- get_module_data()
+        # Get fresh data every time any of these events fire
+        result <- get_module_data()
 
-      data_info <- if (!is.null(result)) {
-        paste("rows:", nrow(result), "cols:", ncol(result))
-      } else {
-        "NULL"
-      }
-      log_debug(paste("module_data_reactive called (event-driven), returning:", data_info), "VISUALIZATION")
-      return(result)
-    })
+        data_info <- if (!is.null(result)) {
+          paste("rows:", nrow(result), "cols:", ncol(result))
+        } else {
+          "NULL"
+        }
+        log_debug(paste("module_data_reactive called (debounced), returning:", data_info), "VISUALIZATION")
+        return(result)
+      }),
+      millis = 300  # Wait 300ms before processing to batch rapid events
+    )
 
     # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy
     # Implements Event Consolidation (CLAUDE.md Section 3.1.1) for functionally related events
