@@ -243,7 +243,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Hovedfunktion for SPC plot generering med caching
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- shiny::reactive({
-      log_debug("spc_plot reactive triggered", "VISUALIZATION")
+      # Enhanced debugging for multiple invalidation detection
+      current_time <- Sys.time()
+      log_debug(paste("spc_plot reactive triggered at", format(current_time, "%H:%M:%S.%OS3")), "VISUALIZATION")
+
       # FIXED: Safe chart_config validation without hanging shiny::req()
       config <- chart_config()
       if (is.null(config)) {
@@ -274,16 +277,19 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Check if we can use cached plot
       if (!is.null(app_state$visualization$plot_cache) && !is.null(app_state$visualization$plot_cache_key) &&
           app_state$visualization$plot_cache_key == current_cache_key) {
+        log_debug("Using cached plot - not clearing anhoej_results", "VISUALIZATION")
         return(app_state$visualization$plot_cache)
       }
 
       # Cache miss - generating new plot
+      log_debug("Cache miss - starting new plot generation", "VISUALIZATION")
 
-      # Clean state management - only set computing when actually needed
+      # Clean state management - preserve existing results during computation
       # Unified state assignment using helper functions
       set_plot_state("plot_ready", FALSE)
       set_plot_state("plot_warnings", character(0))
-      set_plot_state("anhoej_results", NULL)
+      set_plot_state("is_computing", TRUE)
+      # FIX: Don't clear anhoej_results until new computation is complete
 
       # Starting plot generation
 
@@ -294,9 +300,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         },
         add = TRUE
       )
-
-      # Use unified state assignment
-      set_plot_state("is_computing", TRUE)
 
       # Get chart type from config (already validated)
       chart_type <- config$chart_type
@@ -626,6 +629,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           list(
             status = "insufficient_data",
             message = "Mindst 10 datapunkter nødvendigt for SPC analyse"
+          )
+        } else if (get_plot_state("is_computing") %||% FALSE) {
+          list(
+            status = "calculating",
+            message = "Beregner nye værdier...",
+            theme = "info"
           )
         } else if (!(get_plot_state("plot_ready") %||% FALSE)) {
           list(
