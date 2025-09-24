@@ -389,8 +389,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               }
             )
 
+            log_debug(paste("Setting anhoej_results with",
+                           "longest_run=", qic_results$longest_run,
+                           "n_crossings=", qic_results$n_crossings), "VISUALIZATION")
             set_plot_state("anhoej_results", qic_results)
           } else {
+            log_debug("Setting anhoej_results to NULL - no qic_data available", "VISUALIZATION")
             set_plot_state("anhoej_results", NULL)
           }
 
@@ -605,6 +609,20 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         }))
 
       # Bestem nuværende status og passende indhold
+      current_anhoej <- get_plot_state("anhoej_results")
+      current_is_computing <- get_plot_state("is_computing")
+      current_plot_ready <- get_plot_state("plot_ready")
+
+      # Detaljeret debug for status determination
+      log_debug(paste(
+        "Status determination:",
+        "has_meaningful_data=", has_meaningful_data,
+        "config_y_col=", !is.null(config) && !is.null(config$y_col),
+        "anhoej_exists=", !is.null(current_anhoej),
+        "is_computing=", current_is_computing %||% FALSE,
+        "plot_ready=", current_plot_ready %||% FALSE
+      ), "VISUALIZATION")
+
       status_info <- if (!has_meaningful_data) {
         list(
           status = "no_data",
@@ -663,12 +681,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
+              log_debug(paste("longest_run_box: showing values -",
+                            "longest_run=", anhoej$longest_run,
+                            "longest_run_max=", anhoej$longest_run_max), "VISUALIZATION")
               bslib::layout_column_wrap(
                 width = 1 / 2,
                 shiny::div(anhoej$longest_run_max),
                 shiny::div(anhoej$longest_run)
               )
             } else {
+              log_debug(paste("longest_run_box: showing 'Beregner...' -",
+                            "anhoej_null=", is.null(anhoej),
+                            "longest_run=", if(is.null(anhoej)) "NULL" else anhoej$longest_run), "VISUALIZATION")
               "Beregner..."
             }
           } else {
