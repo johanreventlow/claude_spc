@@ -14,16 +14,42 @@ extract_comment_data <- function(data, kommentar_column, qic_data) {
     return(NULL)
   }
 
-  # Udtrækker kommentarer og synkroniserer med qic_data
-  comments_raw <- data[[kommentar_column]]
+  # STABLE ROW MAPPING: Use row-id to correctly map comments to qic_data points
+  # This prevents comment drift when qicharts2 reorders/filters rows
+  if (!".original_row_id" %in% names(qic_data)) {
+    log_warn("Missing .original_row_id in qic_data - falling back to positional mapping", "PLOT_COMMENT")
+    # Fallback til gamle positionsbaserede mapping
+    comments_raw <- data[[kommentar_column]]
+    comment_data <- data.frame(
+      x = qic_data$x,
+      y = qic_data$y,
+      comment = comments_raw[1:min(length(comments_raw), nrow(qic_data))],
+      stringsAsFactors = FALSE
+    )
+  } else {
+    # ROBUST MAPPING: Join på .original_row_id for korrekt kommentar-punkt mapping
+    original_data_with_comments <- data.frame(
+      .original_row_id = 1:nrow(data),
+      comment = data[[kommentar_column]],
+      stringsAsFactors = FALSE
+    )
 
-  # Opret kommentar data frame aligned med qic_data
-  comment_data <- data.frame(
-    x = qic_data$x,
-    y = qic_data$y,
-    comment = comments_raw[1:nrow(qic_data)], # Sikr samme længde som qic_data
-    stringsAsFactors = FALSE
-  )
+    # Join qic_data med original kommentarer via row-id
+    qic_data_with_comments <- merge(
+      qic_data[, c("x", "y", ".original_row_id")],
+      original_data_with_comments,
+      by = ".original_row_id",
+      all.x = TRUE,
+      sort = FALSE
+    )
+
+    comment_data <- data.frame(
+      x = qic_data_with_comments$x,
+      y = qic_data_with_comments$y,
+      comment = qic_data_with_comments$comment,
+      stringsAsFactors = FALSE
+    )
+  }
 
   # Filtrer til kun ikke-tomme kommentarer
   comment_data <- comment_data[
@@ -257,9 +283,16 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
 # Bygger qicharts2::qic() argumenter med non-standard evaluation
 build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
                                chart_type, freeze_position, part_positions, centerline_value) {
+  # STABLE ROW ID: Add row identifier for comment mapping resilience
+  # This prevents comment misalignment when qicharts2 reorders/filters rows
+  data_with_row_id <- data
+  if (!".original_row_id" %in% names(data)) {
+    data_with_row_id$.original_row_id <- 1:nrow(data)
+  }
+
   # Build qic call arguments
   qic_args <- list(
-    data = data,
+    data = data_with_row_id,
     chart = chart_type,
     return.data = TRUE
   )
@@ -418,7 +451,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
   # Handle x-axis data med intelligent formatering - EFTER data filtrering
   # FASE 5: Performance optimization - cache expensive x-column validation
-  data_hash <- paste0(nrow(data), "_", ncol(data), "_", paste(names(data), collapse = "_"))
+  # IMPROVED CACHE KEY: Include x-column content hash to invalidate cache when data content changes
+  data_structure_hash <- paste0(nrow(data), "_", ncol(data), "_", paste(names(data), collapse = "_"))
 
   # ROBUST CACHE KEY: Safe ID generation to handle character(0) and NULL values
   safe_x_col_id <- if (is.null(config$x_col) || length(config$x_col) == 0 || identical(config$x_col, character(0)) || is.na(config$x_col)) {
@@ -428,7 +462,27 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     gsub("[^a-zA-Z0-9_]", "_", as.character(config$x_col)[1])
   }
 
-  cache_key <- paste0("x_validation_", safe_x_col_id, "_", substr(data_hash, 1, 20))
+  # CONTENT-AWARE CACHE KEY: Include hash of x-column + row count (used in validate_x_column_format fallback)
+  x_content_hash <- safe_operation(
+    "Generate x-column content hash for cache key",
+    code = {
+      if (!is.null(config$x_col) && config$x_col %in% names(data)) {
+        x_column_data <- data[[config$x_col]]
+        # Use fast hash of x-column content + row count to detect any changes affecting validation
+        paste0(digest::digest(x_column_data, algo = "xxhash32"), "_", nrow(data))
+      } else {
+        # Row count still matters for fallback case (1:nrow(data))
+        paste0("NO_XCOL_", nrow(data))
+      }
+    },
+    fallback = function(e) {
+      log_debug(paste("Failed to hash x-column content:", e$message), "PERFORMANCE")
+      paste0("fallback_", as.integer(Sys.time()), "_", nrow(data))
+    },
+    error_type = "processing"
+  )
+
+  cache_key <- paste0("x_validation_", safe_x_col_id, "_", substr(data_structure_hash, 1, 12), "_", x_content_hash)
 
   x_validation <- create_cached_reactive({
     validate_x_column_format(data, config$x_col, "observation")

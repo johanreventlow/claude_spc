@@ -21,6 +21,7 @@ source_files <- c(
   "R/utils_advanced_debug.R",
   "R/utils_shinylogs_config.R",
   "R/utils_memory_management.R",
+  "R/utils_danish_locale.R",
   "R/golem_utils.R",
   "R/zzz.R",
 
