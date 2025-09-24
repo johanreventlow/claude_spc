@@ -267,8 +267,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       log_debug(paste("spc_plot: data from cache:", data_info), "VISUALIZATION")
 
       # Generate cache key based on data and config
+      # Enhanced cache key to better detect actual changes
       current_cache_key <- digest::digest(list(
-        data = data,
+        data_hash = if (!is.null(data)) digest::digest(data) else NULL,
+        data_nrow = if (!is.null(data)) nrow(data) else 0,
+        data_ncol = if (!is.null(data)) ncol(data) else 0,
         config = config,
         target = target_value_reactive(),
         centerline = centerline_value_reactive(),
@@ -278,11 +281,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         y_axis_unit = if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL
       ))
 
+      log_info(paste("Cache key generated:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
+
       # Check if we can use cached plot
-      if (!is.null(app_state$visualization$plot_cache) && !is.null(app_state$visualization$plot_cache_key) &&
-          app_state$visualization$plot_cache_key == current_cache_key) {
-        log_debug("Using cached plot - not clearing anhoej_results", "VISUALIZATION")
+      cached_key <- app_state$visualization$plot_cache_key
+      if (!is.null(app_state$visualization$plot_cache) && !is.null(cached_key) &&
+          cached_key == current_cache_key) {
+        log_info(paste("CACHE HIT - using cached plot and results, key:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
         return(app_state$visualization$plot_cache)
+      } else {
+        log_info(paste("CACHE MISS - will generate new plot, key:", substr(current_cache_key, 1, 8),
+                      "vs cached:", if(is.null(cached_key)) "NULL" else substr(cached_key, 1, 8)), "VISUALIZATION")
       }
 
       # Cache miss - generating new plot
@@ -393,10 +402,19 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               }
             )
 
-            log_info(paste("Setting anhoej_results with",
-                           "longest_run=", qic_results$longest_run,
-                           "n_crossings=", qic_results$n_crossings), "VISUALIZATION")
-            set_plot_state("anhoej_results", qic_results)
+            # Only update anhoej_results if we got valid non-NA values
+            if (!is.na(qic_results$longest_run) || !is.na(qic_results$n_crossings)) {
+              log_info(paste("Setting anhoej_results with VALID values:",
+                             "longest_run=", qic_results$longest_run,
+                             "n_crossings=", qic_results$n_crossings), "VISUALIZATION")
+              set_plot_state("anhoej_results", qic_results)
+            } else {
+              log_info(paste("SKIPPING anhoej_results update - all NA values:",
+                             "longest_run=", qic_results$longest_run,
+                             "n_crossings=", qic_results$n_crossings,
+                             "- keeping existing results"), "VISUALIZATION")
+              # Don't overwrite existing valid results with NA values
+            }
           } else {
             log_info("Setting anhoej_results to NULL - no qic_data available", "VISUALIZATION")
             set_plot_state("anhoej_results", NULL)
