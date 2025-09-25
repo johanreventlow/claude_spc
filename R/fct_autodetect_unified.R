@@ -46,39 +46,43 @@ autodetect_engine <- function(data = NULL,
     .context = "UNIFIED_AUTODETECT"
   )
 
-  # 0. GUARD CONDITIONS - Prevent duplicate processing
-  # TEMP DISABLED: This guard is causing deadlock, needs debugging
-  # current_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
-  # if (current_in_progress) {
-  #   log_debug("Skipping autodetect - already in progress", .context = "UNIFIED_AUTODETECT")
-  #   return(invisible(NULL))
-  # }
-
-  # SELECTIVE: Only prevent true duplicates - same trigger with identical data
+  # 0. GUARD CONDITIONS - Smart duplicate prevention with deadlock protection
+  current_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
   last_trigger <- shiny::isolate(app_state$columns$auto_detect$last_trigger_type) %||% ""
-  if (trigger_type == last_trigger && trigger_type != "manual") {
-    current_time <- Sys.time()
-    last_run_time <- shiny::isolate(app_state$columns$auto_detect$last_run)
+  frozen_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
-    # Only block if very recent AND data hasn't changed
-    if (!is.null(last_run_time)) {
-      time_since_last <- as.numeric(difftime(current_time, last_run_time, units = "secs"))
+  # FROZEN STATE GUARD: Respect frozen_until_next_trigger (except for manual overrides)
+  if (frozen_state && trigger_type == last_trigger && trigger_type != "manual") {
+    log_debug(paste("Skipping autodetect - frozen state active for", trigger_type), .context = "UNIFIED_AUTODETECT")
+    return(invisible(NULL))
+  }
 
-      # Allow if enough time passed OR if this is first data load after session start
-      data_available <- !is.null(data) && nrow(data) > 0
-      is_initial_data_load <- trigger_type == "file_upload" && last_trigger == "session_start"
-
-      if (time_since_last < 0.5 && !is_initial_data_load) {
-        log_debug(paste("Skipping autodetect - recent duplicate (", round(time_since_last, 2), "s ago)"), .context = "UNIFIED_AUTODETECT")
-        return(invisible(NULL))
+  # SMART GUARD: Only block if genuinely in progress AND not a legitimate restart
+  if (current_in_progress) {
+    # Allow manual triggers to override (for user-initiated actions)
+    if (trigger_type == "manual") {
+      log_debug("Allowing manual trigger despite in_progress state", .context = "UNIFIED_AUTODETECT")
+    }
+    # Allow different trigger types to proceed (prevents session_started -> data_loaded deadlock)
+    else if (trigger_type != last_trigger) {
+      log_debug(paste("Allowing", trigger_type, "trigger (different from", last_trigger, ")"), .context = "UNIFIED_AUTODETECT")
+    }
+    # Block only true duplicates: same trigger type very recently
+    else {
+      last_run_time <- shiny::isolate(app_state$columns$auto_detect$last_run)
+      if (!is.null(last_run_time)) {
+        time_since_last <- as.numeric(difftime(Sys.time(), last_run_time, units = "secs"))
+        # Block if very recent (< 1 second = likely duplicate)
+        if (time_since_last < 1.0) {
+          log_debug(paste("Skipping duplicate autodetect -", trigger_type, "too recent (", round(time_since_last, 3), "sec)"), .context = "UNIFIED_AUTODETECT")
+          return(invisible(NULL))
+        }
       }
-
-      # Allow legitimate data_loaded -> file_upload sequence
-      if (is_initial_data_load) {
-        log_debug("Allowing autodetect - initial data load after session start", .context = "UNIFIED_AUTODETECT")
-      }
+      log_debug("Allowing autodetect despite in_progress - sufficient time passed", .context = "UNIFIED_AUTODETECT")
     }
   }
+
+  # Smart guard complete - proceed with autodetect execution
 
   # Set guard flag
   shiny::isolate(app_state$columns$auto_detect$in_progress <- TRUE)

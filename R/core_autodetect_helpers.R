@@ -453,11 +453,13 @@ score_by_data_characteristics <- function(col_data, role = NULL, type = NULL) {
     }
   } else if (role == "n_column") {
     # N columns might be more stable
-    # FASE 4: Fix CV division-by-zero bug
-    mean_val <- mean(clean_data)
-    if (mean_val > 0) {  # Prevent division by zero
-      cv <- sd(clean_data) / mean_val
-      if (cv < 0.5) {  # Lower coefficient of variation
+    # FASE 4: Fix CV division-by-zero and NA handling bug
+    mean_val <- mean(clean_data, na.rm = TRUE)
+    sd_val <- sd(clean_data, na.rm = TRUE)
+
+    if (!is.na(mean_val) && !is.na(sd_val) && mean_val > 0) {  # Prevent division by zero and NA
+      cv <- sd_val / mean_val
+      if (!is.na(cv) && cv < 0.5) {  # Lower coefficient of variation (also check CV is not NA)
         score <- score + 0.2
       }
     }
