@@ -50,6 +50,7 @@ Suggests:
     knitr,
     rmarkdown,
     writexl (>= 1.4.0),
+    microbenchmark (>= 1.4.0),
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 RemoteType: local

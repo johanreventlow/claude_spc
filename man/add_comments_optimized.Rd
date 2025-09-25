@@ -4,17 +4,17 @@
 \alias{add_comments_optimized}
 \title{Add Comments Optimized}
 \usage{
-add_comments_optimized(plot, data, kommentar_column, config)
+add_comments_optimized(plot, data, kommentar_column, qic_data)
 }
 \arguments{
 \item{plot}{ggplot object}
 
-\item{data}{Data frame}
+\item{data}{Original data frame}
 
 \item{kommentar_column}{Column name for comments}
 
-\item{config}{Plot configuration}
+\item{qic_data}{QIC processed data with transformed coordinates}
 }
 \description{
-Add comments to plot with optimization
+Add comments to plot with optimization - matches extract_comment_data approach
 }

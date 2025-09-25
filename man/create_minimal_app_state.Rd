@@ -8,4 +8,6 @@ create_minimal_app_state()
 }
 \description{
 Creates a minimal app_state structure for standalone usage of detect_columns_with_cache
+NOTE: This is for testing/standalone usage only - production code should use
+the centralized app_state from create_app_state()
 }

@@ -361,7 +361,28 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
 
   log_debug(qic_args, "QIC")
 
-  qic_data <- do.call(qicharts2::qic, qic_args)
+  # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
+  if (exists("benchmark_spc_operation") && requireNamespace("microbenchmark", quietly = TRUE)) {
+    # Determine data size category for benchmarking
+    data_size <- nrow(qic_args$data)
+    size_category <- if (data_size < 50) "small" else if (data_size < 500) "medium" else "large"
+
+    # Benchmark with fewer iterations for expensive operations
+    benchmark_iterations <- if (data_size < 100) 3 else if (data_size < 1000) 2 else 1
+
+    benchmark_result <- benchmark_spc_operation(
+      expr = do.call(qicharts2::qic, qic_args),
+      times = benchmark_iterations,
+      operation_name = paste0("qic_", chart_type, "_", size_category, "_", data_size, "_rows"),
+      log_results = TRUE
+    )
+
+    # Execute actual QIC call (benchmark already ran it, but we need the result)
+    qic_data <- do.call(qicharts2::qic, qic_args)
+  } else {
+    # Fallback: Execute without benchmarking
+    qic_data <- do.call(qicharts2::qic, qic_args)
+  }
 
   if (is.null(display_scaler)) {
     has_denominator <- !is.null(config$n_col) && config$n_col %in% names(qic_args$data)

@@ -133,20 +133,46 @@ autodetect_engine <- function(data = NULL,
     )
   }
 
-  # 3. SCENARIO ROUTING - if no cache hit, perform fresh analysis
+  # 3. SCENARIO ROUTING - if no cache hit, perform fresh analysis with benchmarking
   if (!use_cached) {
     if (is.null(data) || nrow(data) == 0) {
-      # Session start / name-only scenario
+      # Session start / name-only scenario - benchmark name-based detection
       col_names <- if (is.null(data)) character(0) else names(data)
-      results <- detect_columns_name_based(col_names, app_state)
+
+      if (exists("benchmark_spc_operation") && length(col_names) > 0) {
+        benchmark_result <- benchmark_spc_operation(
+          expr = detect_columns_name_based(col_names, app_state),
+          times = 10,  # Lightweight - 10 iterations
+          operation_name = paste0("autodetect_name_based_", length(col_names), "_cols"),
+          log_results = TRUE
+        )
+        # Extract the actual results from benchmark wrapper
+        results <- eval(parse(text = "detect_columns_name_based(col_names, app_state)"))
+      } else {
+        results <- detect_columns_name_based(col_names, app_state)
+      }
     } else {
-      # Full data analysis scenario
+      # Full data analysis scenario - benchmark full analysis
       log_debug_kv(
         column_names = paste(names(data), collapse = ", "),
         cache_status = "computing_fresh",
         .context = "UNIFIED_AUTODETECT"
       )
-      results <- detect_columns_full_analysis(data, app_state)
+
+      data_size_category <- if (nrow(data) < 100) "small" else if (nrow(data) < 1000) "medium" else "large"
+
+      if (exists("benchmark_spc_operation")) {
+        benchmark_result <- benchmark_spc_operation(
+          expr = detect_columns_full_analysis(data, app_state),
+          times = if (nrow(data) < 1000) 5 else 3,  # Fewer iterations for large datasets
+          operation_name = paste0("autodetect_full_analysis_", data_size_category, "_", nrow(data), "_rows"),
+          log_results = TRUE
+        )
+        # Extract actual results
+        results <- detect_columns_full_analysis(data, app_state)
+      } else {
+        results <- detect_columns_full_analysis(data, app_state)
+      }
     }
   }
 
