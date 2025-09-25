@@ -47,11 +47,12 @@ autodetect_engine <- function(data = NULL,
   )
 
   # 0. GUARD CONDITIONS - Prevent duplicate processing
-  current_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
-  if (current_in_progress) {
-    log_debug("Skipping autodetect - already in progress", .context = "UNIFIED_AUTODETECT")
-    return(invisible(NULL))
-  }
+  # TEMP DISABLED: This guard is causing deadlock, needs debugging
+  # current_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
+  # if (current_in_progress) {
+  #   log_debug("Skipping autodetect - already in progress", .context = "UNIFIED_AUTODETECT")
+  #   return(invisible(NULL))
+  # }
 
   # SELECTIVE: Only prevent true duplicates - same trigger with identical data
   last_trigger <- shiny::isolate(app_state$columns$auto_detect$last_trigger_type) %||% ""
