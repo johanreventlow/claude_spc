@@ -276,10 +276,18 @@ prepare_batch_ui_updates <- function(autodetect_results) {
 #' @param session Shiny session
 #'
 setup_optimized_event_listeners <- function(app_state, emit, session) {
-  # log_debug("Setting up optimized event listeners", "PERFORMANCE_OPT")
+  # WARNING: This function creates duplicate observers to setup_event_listeners()
+  # Only use when you want to REPLACE the standard event system, not supplement it
+  log_warn("WARNING: setup_optimized_event_listeners creates duplicate pipeline execution!", "PERFORMANCE_OPT")
+  log_warn("Only use this if you've disabled setup_event_listeners() first", "PERFORMANCE_OPT")
 
   # Create optimized pipeline
   data_pipeline <- create_optimized_data_pipeline(app_state, emit)
+
+  # DUPLICATE PREVENTION: Check if standard listeners are already active
+  if (exists("standard_listeners_active", envir = app_state) && app_state$standard_listeners_active) {
+    stop("Cannot setup optimized listeners while standard listeners are active. This would cause duplicate execution.")
+  }
 
   # Single consolidated observer for data changes
   shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = get_priority("STATE_MANAGEMENT"), {

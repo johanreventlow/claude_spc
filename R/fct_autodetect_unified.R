@@ -54,6 +54,8 @@ autodetect_engine <- function(data = NULL,
   # FROZEN STATE GUARD: Respect frozen_until_next_trigger (except for manual overrides)
   if (frozen_state && trigger_type == last_trigger && trigger_type != "manual") {
     log_debug(paste("Skipping autodetect - frozen state active for", trigger_type), .context = "UNIFIED_AUTODETECT")
+    # FIXED: Reset in_progress state even when returning early
+    shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
     return(invisible(NULL))
   }
 
@@ -75,6 +77,8 @@ autodetect_engine <- function(data = NULL,
         # Block if very recent (< 1 second = likely duplicate)
         if (time_since_last < 1.0) {
           log_debug(paste("Skipping duplicate autodetect -", trigger_type, "too recent (", round(time_since_last, 3), "sec)"), .context = "UNIFIED_AUTODETECT")
+          # FIXED: Reset in_progress state even when returning early
+          shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
           return(invisible(NULL))
         }
       }
@@ -84,12 +88,14 @@ autodetect_engine <- function(data = NULL,
 
   # Smart guard complete - proceed with autodetect execution
 
-  # Set guard flag
+  # Set guard flag - moved AFTER all guard checks to prevent state leaks
   shiny::isolate(app_state$columns$auto_detect$in_progress <- TRUE)
   shiny::isolate(app_state$columns$auto_detect$last_trigger_type <- trigger_type)
+  # ROBUST EXIT HANDLER: Always reset state, even on early returns or errors
   on.exit({
     shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
     shiny::isolate(app_state$columns$auto_detect$last_run <- Sys.time())
+    log_debug("Autodetect engine cleanup completed", "UNIFIED_AUTODETECT")
   }, add = TRUE)
 
   # 1. TRIGGER VALIDATION - smart unfreezing when data is available

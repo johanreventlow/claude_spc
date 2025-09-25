@@ -29,6 +29,8 @@ NULL
 #'
 setup_event_listeners <- function(app_state, emit, input, output, session, ui_service = NULL) {
   # Setting up unified event listeners
+  # Mark that standard listeners are active to prevent duplicate optimized listeners
+  app_state$standard_listeners_active <- TRUE
 
   # DATA LIFECYCLE EVENTS
   shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
@@ -147,10 +149,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # TEST MODE EVENTS
   shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+    # FIXED: Avoid double autodetect execution
+    # test_mode_ready should not trigger autodetect - data_loaded already did that
+    # Test mode setup is complete, UI can proceed with navigation
+    log_debug("Test mode ready - autodetect already triggered by data_loaded event", "TEST_MODE")
 
-    # In test mode, immediately start auto-detection
-    if (!is.null(app_state$data$current_data)) {
-      emit$auto_detection_started()
+    # Only trigger UI synchronization, not autodetect
+    if (!is.null(app_state$data$current_data) && app_state$columns$auto_detect$completed) {
+      emit$ui_sync_needed()
     }
   })
 
