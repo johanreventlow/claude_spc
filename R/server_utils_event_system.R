@@ -62,7 +62,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     safe_operation(
       "Auto-detection processing",
       code = {
-        # TEMP: Disable guards to test basic flow
         # Set auto-detection in progress
         app_state$columns$auto_detect$in_progress <- TRUE
 
@@ -149,13 +148,18 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # TEST MODE EVENTS
   shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-    # FIXED: Avoid double autodetect execution
-    # test_mode_ready should not trigger autodetect - data_loaded already did that
-    # Test mode setup is complete, UI can proceed with navigation
-    log_debug("Test mode ready - autodetect already triggered by data_loaded event", "TEST_MODE")
+    # FIXED: In test mode, data_loaded event is ignored due to timing (sent before observers setup)
+    # Handle autodetect trigger for test scenarios
 
-    # Only trigger UI synchronization, not autodetect
-    if (!is.null(app_state$data$current_data) && app_state$columns$auto_detect$completed) {
+    # Check if autodetect has not run yet but data is available
+    autodetect_completed <- app_state$columns$auto_detect$completed %||% FALSE
+    data_available <- !is.null(app_state$data$current_data)
+
+    if (data_available && !autodetect_completed) {
+      # Trigger autodetect if data_loaded was missed due to timing
+      emit$auto_detection_started()
+    } else if (autodetect_completed) {
+      # Autodetect already completed, trigger UI sync
       emit$ui_sync_needed()
     }
   })
@@ -163,7 +167,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # SESSION LIFECYCLE EVENTS
   shiny::observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
 
-    # TEMP: Simplified session start logic for testing
+    # Session start logic
     if (is.null(app_state$data$current_data) || nrow(app_state$data$current_data) == 0) {
       # FASE 3: Session start trigger for name-only detection
       autodetect_engine(

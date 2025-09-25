@@ -79,17 +79,16 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       app_state$visualization$module_data_cache <- NULL
     }
 
-    # OPTIMIZED: Single canonical event listener to prevent cascade invalidations
-    # Instead of listening to 5 events that trigger in sequence, only listen to the final event
+    # BALANCED: Listen to key events but with longer debounce to prevent cascades
+    # We need to listen to multiple events but use debouncing to prevent rapid succession
     module_data_reactive <- shiny::debounce(
       shiny::reactive({
-        # SINGLE CANONICAL EVENT: Only listen to navigation_changed as the final event
-        # This prevents cascade regeneration since navigation is updated last in the chain:
-        # data_loaded → auto_detection_completed → ui_sync_completed → navigation_changed
-        app_state$events$navigation_changed
+        # Key events that should trigger plot updates:
+        app_state$events$navigation_changed  # Final event in chain (primary)
+        app_state$events$data_changed        # Manual data changes (user-initiated)
+        app_state$events$auto_detection_completed  # After autodetect completes
 
-        # Manual data changes still need direct listening (user-initiated)
-        app_state$events$data_changed
+        # Note: data_loaded not included as it triggers autodetect → navigation cascade
 
         # GUARD: Skip if data processing is in progress
         if (shiny::isolate(app_state$data$updating_table) %||% FALSE) {
