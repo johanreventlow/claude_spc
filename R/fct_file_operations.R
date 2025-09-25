@@ -92,11 +92,8 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
 
     if (!safe_path) {
       log_error(
-        component = "[SECURITY]",
-        message = "Path traversal attempt detected",
-        details = list(attempted_path = file_path, safe_dirs = safe_dirs),
-        session = session,
-        show_user = FALSE
+        message = paste("Path traversal attempt detected:", file_path),
+        component = "[SECURITY]"
       )
       stop("Sikkerhedsfejl: Ugyldig fil sti")
     }
