@@ -113,7 +113,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         log_debug(paste("module_data_reactive called (debounced), returning:", data_info), "VISUALIZATION")
         return(result)
       }),
-      millis = 400  # Balanced: reduced from 500ms for better UI responsiveness
+      millis = 800  # Increased to prevent cascade invalidations within 300ms event chains
     )
 
     # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy
@@ -281,38 +281,63 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
       log_debug(paste("spc_plot: data from cache:", data_info), "VISUALIZATION")
 
-      # Generate cache key based on data and config
-      # Enhanced cache key to better detect actual changes
-      current_cache_key <- digest::digest(list(
+      # LAYERED CACHE STRATEGY: Split cache key into core and optional components
+      # Core components (plot structure): data + config + chart type
+      core_components <- list(
         data_hash = if (!is.null(data)) digest::digest(data) else NULL,
         data_nrow = if (!is.null(data)) nrow(data) else 0,
         data_ncol = if (!is.null(data)) ncol(data) else 0,
         config = config,
+        skift = skift_config_reactive(),  # Affects plot structure
+        frys = frys_config_reactive()     # Affects plot structure
+      )
+
+      # Optional components (cosmetic): target lines, titles, units
+      optional_components <- list(
         target = target_value_reactive(),
         centerline = centerline_value_reactive(),
-        skift = skift_config_reactive(),
-        frys = frys_config_reactive(),
         chart_title = if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL,
         y_axis_unit = if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL
-      ))
+      )
 
-      # DEBUG: Reduce cache logging verbosity
-      # log_debug(paste("Cache key generated:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
+      # Generate composite cache key
+      core_cache_key <- digest::digest(core_components)
+      optional_cache_key <- digest::digest(optional_components)
+      current_cache_key <- paste(core_cache_key, optional_cache_key, sep = "_")
 
-      # Check if we can use cached plot
-      cached_key <- app_state$visualization$plot_cache_key
-      if (!is.null(app_state$visualization$plot_cache) && !is.null(cached_key) &&
-          cached_key == current_cache_key) {
-        # DEBUG: Keep minimal cache logging for troubleshooting
-        # log_debug(paste("CACHE HIT - using cached plot and results, key:", substr(current_cache_key, 1, 8), "..."), "VISUALIZATION")
-        return(app_state$visualization$plot_cache)
-      } else {
-        # log_debug(paste("CACHE MISS - will generate new plot, key:", substr(current_cache_key, 1, 8),
-        #               "vs cached:", if(is.null(cached_key)) "NULL" else substr(cached_key, 1, 8)), "VISUALIZATION")
+      # DEBUG: Cache key debugging for performance optimization
+      if (exists("PERFORMANCE_DEBUG_CACHE") && PERFORMANCE_DEBUG_CACHE) {
+        log_debug(paste("Cache components:",
+                       "target =", deparse(optional_components$target),
+                       "centerline =", deparse(optional_components$centerline),
+                       "data_hash =", substr(core_components$data_hash %||% "NULL", 1, 8)),
+                 "VISUALIZATION")
       }
 
-      # Cache miss - generating new plot
-      log_debug("Cache miss - starting new plot generation", "VISUALIZATION")
+      # SMART CACHE CHECKING: Check core vs full cache
+      cached_key <- app_state$visualization$plot_cache_key
+
+      # Full cache hit - perfect match
+      if (!is.null(app_state$visualization$plot_cache) && !is.null(cached_key) &&
+          cached_key == current_cache_key) {
+        log_debug("CACHE HIT: Full match - using cached plot", "VISUALIZATION")
+        return(app_state$visualization$plot_cache)
+      }
+
+      # Partial cache hit - core components match, can potentially reuse with modifications
+      cached_core_key <- if (!is.null(cached_key)) strsplit(cached_key, "_")[[1]][1] else NULL
+      if (!is.null(app_state$visualization$plot_cache) && !is.null(cached_core_key) &&
+          cached_core_key == core_cache_key) {
+        log_debug("CACHE HIT: Core match - reusing base plot structure", "VISUALIZATION")
+        # For now, still regenerate - but this is where we could add plot modification logic
+        # return(app_state$visualization$plot_cache)  # Enable when plot modification is implemented
+      }
+
+      # Cache miss - need full regeneration
+      log_debug(paste("CACHE MISS: Regenerating plot",
+                     "current:", substr(current_cache_key, 1, 16),
+                     "cached:", if(is.null(cached_key)) "NULL" else substr(cached_key, 1, 16)),
+               "VISUALIZATION")
 
       # Clean state management - preserve existing results during computation
       # Unified state assignment using helper functions

@@ -125,7 +125,7 @@ setup_visualization <- function(input, output, session, app_state) {
     data_reactive = NULL,  # Module uses its own event-driven data access
     column_config_reactive = column_config,
     chart_type_reactive = chart_type_reactive,
-    target_value_reactive = shiny::reactive({
+    target_value_reactive = shiny::debounce(shiny::reactive({
       if (is.null(input$target_value) || input$target_value == "") {
         return(NULL)
       }
@@ -153,8 +153,8 @@ setup_visualization <- function(input, output, session, app_state) {
         y_sample = y_sample,
         chart_type = chart_type  # This determines internal_unit automatically
       ))
-    }),
-    centerline_value_reactive = shiny::reactive({
+    }), millis = 800),  # Debounce input changes to prevent excessive plot regeneration
+    centerline_value_reactive = shiny::debounce(shiny::reactive({
       if (is.null(input$centerline_value) || input$centerline_value == "") {
         return(NULL)
       }
@@ -182,7 +182,7 @@ setup_visualization <- function(input, output, session, app_state) {
         y_sample = y_sample,
         chart_type = chart_type  # This determines internal_unit automatically
       ))
-    }),
+    }), millis = 800),  # Debounce input changes to prevent excessive plot regeneration
     skift_config_reactive = shiny::reactive({
       # Bestem om vi skal vise faser baseret på Skift kolonne valg og data
       data <- app_state$data$current_data
