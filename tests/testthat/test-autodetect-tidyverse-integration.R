@@ -34,23 +34,23 @@ test_that("autodetect_engine with tidyverse column detection", {
     expect_true(is.list(result))
 
     # Verify hierarchical state structure was updated
-    expect_true(!is.null(app_state$columns$mappings$x_column))
-    expect_true(!is.null(app_state$columns$mappings$y_column))
-    expect_true(!is.null(app_state$columns$auto_detect$results))
-    expect_true(app_state$columns$auto_detect$completed)
+    expect_true(!is.null(shiny::isolate(app_state$columns$mappings$x_column)))
+    expect_true(!is.null(shiny::isolate(app_state$columns$mappings$y_column)))
+    expect_true(!is.null(shiny::isolate(app_state$columns$auto_detect$results)))
+    expect_true(shiny::isolate(app_state$columns$auto_detect$completed))
 
     # Test that date column was detected (either Dato or Uge_Tekst)
-    detected_x <- app_state$columns$mappings$x_column
+    detected_x <- shiny::isolate(app_state$columns$mappings$x_column)
     expect_true(detected_x %in% c("Dato", "Uge_Tekst"))
 
     # Test that numeric columns were detected
-    expect_equal(app_state$columns$mappings$y_column, "Tæller")
-    expect_equal(app_state$columns$mappings$n_column, "Nævner")
+    expect_equal(shiny::isolate(app_state$columns$mappings$y_column), "Tæller")
+    expect_equal(shiny::isolate(app_state$columns$mappings$n_column), "Nævner")
 
     # Test special columns
-    expect_equal(app_state$columns$mappings$skift_column, "Skift")
-    expect_equal(app_state$columns$mappings$frys_column, "Frys")
-    expect_equal(app_state$columns$mappings$kommentar_column, "Kommentar")
+    expect_equal(shiny::isolate(app_state$columns$mappings$skift_column), "Skift")
+    expect_equal(shiny::isolate(app_state$columns$mappings$frys_column), "Frys")
+    expect_equal(shiny::isolate(app_state$columns$mappings$kommentar_column), "Kommentar")
   } else {
     skip("autodetect_engine or create_app_state not available")
   }
@@ -159,17 +159,17 @@ test_that("update_all_column_mappings with hierarchical state", {
     )
 
     # Verify hierarchical structure was updated correctly
-    expect_equal(app_state$columns$mappings$x_column, "Dato")
-    expect_equal(app_state$columns$mappings$y_column, "Tæller")
-    expect_equal(app_state$columns$mappings$n_column, "Nævner")
-    expect_equal(app_state$columns$mappings$skift_column, "Skift")
-    expect_equal(app_state$columns$mappings$frys_column, "Frys")
-    expect_equal(app_state$columns$mappings$kommentar_column, "Kommentar")
+    expect_equal(shiny::isolate(app_state$columns$mappings$x_column), "Dato")
+    expect_equal(shiny::isolate(app_state$columns$mappings$y_column), "Tæller")
+    expect_equal(shiny::isolate(app_state$columns$mappings$n_column), "Nævner")
+    expect_equal(shiny::isolate(app_state$columns$mappings$skift_column), "Skift")
+    expect_equal(shiny::isolate(app_state$columns$mappings$frys_column), "Frys")
+    expect_equal(shiny::isolate(app_state$columns$mappings$kommentar_column), "Kommentar")
 
     # Verify auto_detect state
-    expect_true(app_state$columns$auto_detect$completed)
-    expect_false(app_state$columns$auto_detect$in_progress)
-    expect_equal(app_state$columns$auto_detect$results, mock_results)
+    expect_true(shiny::isolate(app_state$columns$auto_detect$completed))
+    expect_false(shiny::isolate(app_state$columns$auto_detect$in_progress))
+    expect_equal(shiny::isolate(app_state$columns$auto_detect$results), mock_results)
 
     # Test legacy compatibility (return value)
     expect_true(is.list(updated_columns))
@@ -203,7 +203,7 @@ test_that("frozen state management in autodetect engine", {
     )
 
     expect_true(!is.null(result1))
-    expect_true(app_state$columns$auto_detect$frozen_until_next_trigger)
+    expect_true(shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger))
 
     # Second run with same trigger should be blocked
     result2 <- autodetect_engine(

@@ -565,9 +565,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
   cache_key <- paste0("x_validation_", safe_x_col_id, "_", substr(data_structure_hash, 1, 12), "_", x_content_hash)
 
-  x_validation <- create_cached_reactive({
-    validate_x_column_format(data, config$x_col, "observation")
-  }, cache_key, cache_timeout = PERFORMANCE_THRESHOLDS$cache_timeout_default)()
+  # Use direct caching instead of reactive caching in non-reactive context
+  x_validation <- get_cached_result(cache_key)
+  if (is.null(x_validation)) {
+    x_validation <- validate_x_column_format(data, config$x_col, "observation")
+    cache_result(cache_key, x_validation, timeout_seconds = PERFORMANCE_THRESHOLDS$cache_timeout_default)
+  } else {
+    x_validation <- x_validation$value
+  }
   x_data <- x_validation$x_data
 
   # Define x_unit_label for axis labeling
