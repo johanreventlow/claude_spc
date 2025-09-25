@@ -86,6 +86,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         app_state$events$data_loaded
         app_state$events$data_changed
         app_state$events$navigation_changed
+        app_state$events$auto_detection_completed  # MISSING: trigger after column detection
+        app_state$events$ui_sync_completed         # MISSING: trigger after UI updates
 
         # GUARD: Skip if data processing is in progress
         if (shiny::isolate(app_state$data$updating_table) %||% FALSE) {
