@@ -93,10 +93,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           return(shiny::isolate(app_state$visualization$module_cached_data))
         }
 
-        # GUARD: Skip if autodetect is in progress (prevents conflicts)
-        if (shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE) {
-          log_debug("module_data_reactive: skipping - autodetect in progress", "VISUALIZATION")
-          return(shiny::isolate(app_state$visualization$module_cached_data))
+        # RELAXED GUARD: Allow plot updates during autodetect, only cache if no data
+        autodetect_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
+        if (autodetect_in_progress) {
+          log_debug("module_data_reactive: autodetect in progress - allowing plot updates", "VISUALIZATION")
+          # Don't block, continue to allow UI updates
         }
 
         # Get fresh data every time any of these events fire
@@ -110,7 +111,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         log_debug(paste("module_data_reactive called (debounced), returning:", data_info), "VISUALIZATION")
         return(result)
       }),
-      millis = 500  # Increased to 500ms for better event batching
+      millis = 400  # Balanced: reduced from 500ms for better UI responsiveness
     )
 
     # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy

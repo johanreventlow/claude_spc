@@ -53,16 +53,28 @@ autodetect_engine <- function(data = NULL,
     return(invisible(NULL))
   }
 
-  # Check if we recently completed the same operation
+  # SELECTIVE: Only prevent true duplicates - same trigger with identical data
   last_trigger <- shiny::isolate(app_state$columns$auto_detect$last_trigger_type) %||% ""
   if (trigger_type == last_trigger && trigger_type != "manual") {
     current_time <- Sys.time()
     last_run_time <- shiny::isolate(app_state$columns$auto_detect$last_run)
+
+    # Only block if very recent AND data hasn't changed
     if (!is.null(last_run_time)) {
       time_since_last <- as.numeric(difftime(current_time, last_run_time, units = "secs"))
-      if (time_since_last < 2) { # Prevent duplicate runs within 2 seconds
-        log_debug(paste("Skipping autodetect - same trigger type ran", round(time_since_last, 2), "seconds ago"), .context = "UNIFIED_AUTODETECT")
+
+      # Allow if enough time passed OR if this is first data load after session start
+      data_available <- !is.null(data) && nrow(data) > 0
+      is_initial_data_load <- trigger_type == "file_upload" && last_trigger == "session_start"
+
+      if (time_since_last < 0.5 && !is_initial_data_load) {
+        log_debug(paste("Skipping autodetect - recent duplicate (", round(time_since_last, 2), "s ago)"), .context = "UNIFIED_AUTODETECT")
         return(invisible(NULL))
+      }
+
+      # Allow legitimate data_loaded -> file_upload sequence
+      if (is_initial_data_load) {
+        log_debug("Allowing autodetect - initial data load after session start", .context = "UNIFIED_AUTODETECT")
       }
     }
   }
