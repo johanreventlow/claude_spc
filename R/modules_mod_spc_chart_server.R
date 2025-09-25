@@ -86,6 +86,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         # Key events that should trigger plot updates:
         app_state$events$navigation_changed  # Final event in chain (primary)
         app_state$events$data_changed        # Manual data changes (user-initiated)
+
         app_state$events$auto_detection_completed  # After autodetect completes
 
         # Note: data_loaded not included as it triggers autodetect → navigation cascade
@@ -114,7 +115,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         log_debug(paste("module_data_reactive called (debounced), returning:", data_info), "VISUALIZATION")
         return(result)
       }),
-      millis = 800  # Increased to prevent cascade invalidations within 300ms event chains
+      millis = 1200  # Increased from 800ms to catch both startup events in same batch  # Increased to prevent cascade invalidations within 300ms event chains
     )
 
     # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy
@@ -247,6 +248,24 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Plot Generering ---------------------------------------------------------
 
     # POSIT CACHE: No manual cache initialization needed with bindCache()
+
+    # CONSOLIDATED CACHE KEY: Batch all config changes to prevent multiple plot generations
+    plot_config_consolidated <- shiny::debounce(
+      shiny::reactive({
+        list(
+          data_sig = if (!is.null(module_data_reactive())) digest::digest(module_data_reactive()) else NULL,
+          chart_type = if (!is.null(chart_config())) chart_config()$chart_type else NULL,
+          skift = skift_config_reactive(),
+          frys = frys_config_reactive(),
+          target = target_value_reactive(),
+          centerline = centerline_value_reactive(),
+          title = if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL,
+          unit = if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL,
+          kommentar = if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
+        )
+      }),
+      millis = 200  # Short debounce to batch rapid UI changes
+    )
 
     ## Hoved SPC Plot Reactive
     # Hovedfunktion for SPC plot generering med Posit bindCache() integration
@@ -411,19 +430,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       )
     }) %>%
       # OFFICIAL POSIT SHINY CACHE: Automatic, efficient, and maintainable caching
-      bindCache(
-        # Core plot structure components - changes trigger full regeneration
-        module_data_reactive(),
-        chart_config(),
-        skift_config_reactive(),
-        frys_config_reactive(),
-        # Cosmetic components - changes also trigger regeneration for simplicity
-        target_value_reactive(),
-        centerline_value_reactive(),
-        if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL,
-        if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL,
-        if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
-      )
+      # CONSOLIDATED APPROACH: Single cache key to prevent multiple regenerations from UI batch updates
+      bindCache(plot_config_consolidated())
 
     # UI Output Funktioner ----------------------------------------------------
 
