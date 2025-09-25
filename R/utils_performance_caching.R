@@ -189,7 +189,7 @@ cache_auto_detection_results <- function(data, app_state, force_refresh = FALSE)
   cache_result(cache_key, results, timeout_seconds = 600)
 
   log_info(
-    message = "Auto-detection completed and cached",
+    "Auto-detection completed and cached",
     .context = "AUTO_DETECT_CACHE"
   )
   log_debug_kv(
