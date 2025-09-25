@@ -245,26 +245,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # Plot Generering ---------------------------------------------------------
 
-    # Plot caching infrastructure
-    # Use centralized app_state for plot caching
-    # Initialize plot cache in app_state if not already present
-    # Use isolate() to safely check reactive values outside reactive context
-    current_plot_cache <- isolate(app_state$visualization$plot_cache)
-    if (is.null(current_plot_cache)) {
-      app_state$visualization$plot_cache <- NULL
-    }
-    current_plot_cache_key <- isolate(app_state$visualization$plot_cache_key)
-    if (is.null(current_plot_cache_key)) {
-      app_state$visualization$plot_cache_key <- NULL
-    }
+    # POSIT CACHE: No manual cache initialization needed with bindCache()
 
     ## Hoved SPC Plot Reactive
-    # Hovedfunktion for SPC plot generering med caching
+    # Hovedfunktion for SPC plot generering med Posit bindCache() integration
     # Håndterer data validering, plot oprettelse og Anhøj rules analyse
     spc_plot <- shiny::reactive({
-      # DEBUG: Remove detailed timing after fix verification
-      # current_time <- Sys.time()
-      # log_debug(paste("spc_plot reactive triggered at", format(current_time, "%H:%M:%S.%OS3")), "VISUALIZATION")
+      # POSIT SHINY CACHE: Using official bindCache() pattern for clean, maintainable caching
+      log_debug("spc_plot: Starting plot generation with bindCache()", "VISUALIZATION")
 
       # FIXED: Safe chart_config validation without hanging shiny::req()
       config <- chart_config()
@@ -274,70 +262,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
 
       data <- module_data_reactive()
-      data_info <- if (!is.null(data)) {
-        paste("rows:", nrow(data), "cols:", ncol(data))
-      } else {
-        "NULL"
+      if (is.null(data)) {
+        log_debug("spc_plot: data is NULL", "VISUALIZATION")
+        return(NULL)
       }
-      log_debug(paste("spc_plot: data from cache:", data_info), "VISUALIZATION")
+      log_debug(paste("spc_plot: Processing data - rows:", nrow(data), "cols:", ncol(data)), "VISUALIZATION")
 
-      # LAYERED CACHE STRATEGY: Split cache key into core and optional components
-      # Core components (plot structure): data + config + chart type
-      core_components <- list(
-        data_hash = if (!is.null(data)) digest::digest(data) else NULL,
-        data_nrow = if (!is.null(data)) nrow(data) else 0,
-        data_ncol = if (!is.null(data)) ncol(data) else 0,
-        config = config,
-        skift = skift_config_reactive(),  # Affects plot structure
-        frys = frys_config_reactive()     # Affects plot structure
-      )
-
-      # Optional components (cosmetic): target lines, titles, units
-      optional_components <- list(
-        target = target_value_reactive(),
-        centerline = centerline_value_reactive(),
-        chart_title = if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL,
-        y_axis_unit = if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL
-      )
-
-      # Generate composite cache key
-      core_cache_key <- digest::digest(core_components)
-      optional_cache_key <- digest::digest(optional_components)
-      current_cache_key <- paste(core_cache_key, optional_cache_key, sep = "_")
-
-      # DEBUG: Cache key debugging for performance optimization
-      if (exists("PERFORMANCE_DEBUG_CACHE") && PERFORMANCE_DEBUG_CACHE) {
-        log_debug(paste("Cache components:",
-                       "target =", deparse(optional_components$target),
-                       "centerline =", deparse(optional_components$centerline),
-                       "data_hash =", substr(core_components$data_hash %||% "NULL", 1, 8)),
-                 "VISUALIZATION")
-      }
-
-      # SMART CACHE CHECKING: Check core vs full cache
-      cached_key <- app_state$visualization$plot_cache_key
-
-      # Full cache hit - perfect match
-      if (!is.null(app_state$visualization$plot_cache) && !is.null(cached_key) &&
-          cached_key == current_cache_key) {
-        log_debug("CACHE HIT: Full match - using cached plot", "VISUALIZATION")
-        return(app_state$visualization$plot_cache)
-      }
-
-      # Partial cache hit - core components match, can potentially reuse with modifications
-      cached_core_key <- if (!is.null(cached_key)) strsplit(cached_key, "_")[[1]][1] else NULL
-      if (!is.null(app_state$visualization$plot_cache) && !is.null(cached_core_key) &&
-          cached_core_key == core_cache_key) {
-        log_debug("CACHE HIT: Core match - reusing base plot structure", "VISUALIZATION")
-        # For now, still regenerate - but this is where we could add plot modification logic
-        # return(app_state$visualization$plot_cache)  # Enable when plot modification is implemented
-      }
-
-      # Cache miss - need full regeneration
-      log_debug(paste("CACHE MISS: Regenerating plot",
-                     "current:", substr(current_cache_key, 1, 16),
-                     "cached:", if(is.null(cached_key)) "NULL" else substr(cached_key, 1, 16)),
-               "VISUALIZATION")
+      # POSIT CACHE: All caching logic handled automatically by bindCache()
 
       # Clean state management - preserve existing results during computation
       # Unified state assignment using helper functions
@@ -462,9 +393,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             set_plot_state("anhoej_results", NULL)
           }
 
-          # Cache the plot with current key
-          app_state$visualization$plot_cache <- plot
-          app_state$visualization$plot_cache_key <- current_cache_key
+          # POSIT CACHE: No manual cache management needed with bindCache()
 
           return(plot)
         },
@@ -473,15 +402,27 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           set_plot_state("plot_ready", FALSE)
           set_plot_state("anhoej_results", NULL)
 
-          # Invalidate cache on error
-          app_state$visualization$plot_cache <- NULL
-          app_state$visualization$plot_cache_key <- NULL
+          # POSIT CACHE: Cache invalidation handled automatically by bindCache()
 
           return(NULL)
         },
         error_type = "processing"
       )
-    })
+    }) %>%
+      # OFFICIAL POSIT SHINY CACHE: Automatic, efficient, and maintainable caching
+      bindCache(
+        # Core plot structure components - changes trigger full regeneration
+        module_data_reactive(),
+        chart_config(),
+        skift_config_reactive(),
+        frys_config_reactive(),
+        # Cosmetic components - changes also trigger regeneration for simplicity
+        target_value_reactive(),
+        centerline_value_reactive(),
+        if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL,
+        if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL,
+        if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
+      )
 
     # UI Output Funktioner ----------------------------------------------------
 
