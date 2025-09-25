@@ -88,7 +88,9 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
 
     # Verificer at filen befinder sig i et sikkert directory (tempdir eller upload area)
     safe_dirs <- c(tempdir(), dirname(tempfile()))
-    safe_path <- any(vapply(safe_dirs, function(dir) startsWith(file_path, dir), logical(1)))
+    # Normaliser både fil-sti og safe directories for at håndtere macOS symlinks korrekt
+    normalized_safe_dirs <- vapply(safe_dirs, function(dir) normalizePath(dir, mustWork = FALSE), character(1))
+    safe_path <- any(vapply(normalized_safe_dirs, function(dir) startsWith(file_path, dir), logical(1)))
 
     if (!safe_path) {
       log_error(
