@@ -221,7 +221,7 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
     qic_args$target <- target_value
   }
   if (!is.null(centerline_value)) {
-    qic_args$center <- centerline_value
+    qic_args$cl <- centerline_value
   }
 
   # Add additional arguments
