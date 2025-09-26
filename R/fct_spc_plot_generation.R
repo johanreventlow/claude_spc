@@ -374,11 +374,12 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
       expr = do.call(qicharts2::qic, qic_args),
       times = benchmark_iterations,
       operation_name = paste0("qic_", chart_type, "_", size_category, "_", data_size, "_rows"),
-      log_results = TRUE
+      log_results = TRUE,
+      capture_result = TRUE
     )
 
-    # Execute actual QIC call (benchmark already ran it, but we need the result)
-    qic_data <- do.call(qicharts2::qic, qic_args)
+    # Use result from benchmark to eliminate redundant QIC call
+    qic_data <- benchmark_result$captured_result
   } else {
     # Fallback: Execute without benchmarking
     qic_data <- do.call(qicharts2::qic, qic_args)

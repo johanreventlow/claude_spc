@@ -15,6 +15,7 @@
 #' @param operation_name Descriptive name for the operation
 #' @param log_results Whether to log results (default: TRUE)
 #' @param return_full_results Return full microbenchmark object (default: FALSE)
+#' @param capture_result Capture and return the result of the last expression evaluation (default: FALSE)
 #'
 #' @return List with summary statistics or full microbenchmark results
 #' @export
@@ -33,7 +34,8 @@
 #' ), operation_name = "implementation_comparison")
 #' }
 benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown_operation",
-                                   log_results = TRUE, return_full_results = FALSE) {
+                                   log_results = TRUE, return_full_results = FALSE,
+                                   capture_result = FALSE) {
 
   # Check if microbenchmark is available
   if (!requireNamespace("microbenchmark", quietly = TRUE)) {
@@ -48,11 +50,17 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
       result <- eval(expr)
       execution_time <- as.numeric(Sys.time() - start_time)
 
-      return(list(
+      result_data <- list(
         mean_time = execution_time,
         operation = operation_name,
         fallback = TRUE
-      ))
+      )
+
+      if (capture_result) {
+        result_data$captured_result <- result
+      }
+
+      return(result_data)
     }
   }
 
@@ -89,6 +97,11 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
       results$summary_table <- summary_stats
     }
 
+    # Capture result if requested
+    if (capture_result) {
+      results$captured_result <- eval(expr)
+    }
+
     # Log results if requested
     if (log_results) {
       log_performance_results(results)
@@ -104,12 +117,18 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
     result <- eval(expr)
     execution_time <- as.numeric(Sys.time() - start_time) * 1000  # Convert to ms
 
-    return(list(
+    error_result <- list(
       operation = operation_name,
       mean_ms = execution_time,
       error = e$message,
       fallback = TRUE
-    ))
+    )
+
+    if (capture_result) {
+      error_result$captured_result <- result
+    }
+
+    return(error_result)
   })
 }
 
