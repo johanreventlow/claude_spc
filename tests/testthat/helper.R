@@ -106,9 +106,11 @@ use_pkgload_setup <- function() {
 # Lightweight fallback - load only essential functions without full global.R
 source_essential_functions <- function() {
   essential_files <- c(
-    "R/app_state_management.R",
     "R/state_management.R",
-    "R/utils_safe_operation.R"
+    "R/utils_safe_operation.R",
+    "R/server_performance_helpers.R",  # For appears_numeric, appears_date
+    "R/core_autodetect_helpers.R",      # For auto-detection functions
+    "R/fct_autodetect_unified.R"        # For unified autodetect functions
   )
 
   for (file_path in essential_files) {
@@ -187,15 +189,13 @@ create_test_app_state <- function() {
   # Minimal event struktur til unit tests uden fuld Shiny state
   state$events <- new.env(parent = emptyenv())
 
-  state$autodetect <- new.env(parent = emptyenv())
-  state$autodetect$frozen_until_next_trigger <- FALSE
-  state$autodetect$last_run <- NULL
 
   state$columns <- new.env(parent = emptyenv())
   state$columns$mappings <- new.env(parent = emptyenv())
   state$columns$mappings$x_column <- NULL
   state$columns$mappings$y_column <- NULL
   state$columns$mappings$n_column <- NULL
+  state$columns$mappings$cl_column <- NULL
   state$columns$mappings$skift_column <- NULL
   state$columns$mappings$frys_column <- NULL
   state$columns$mappings$kommentar_column <- NULL
@@ -204,6 +204,12 @@ create_test_app_state <- function() {
   state$columns$auto_detect$in_progress <- FALSE
   state$columns$auto_detect$completed <- FALSE
   state$columns$auto_detect$results <- NULL
+  state$columns$auto_detect$frozen_until_next_trigger <- FALSE
+  state$columns$auto_detect$last_run <- list(
+    trigger = NULL,
+    data_rows = NULL,
+    data_cols = NULL
+  )
 
   state$data <- new.env(parent = emptyenv())
   state$data$current_data <- NULL
