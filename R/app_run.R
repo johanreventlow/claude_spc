@@ -84,18 +84,27 @@ run_app <- function(port = NULL,
     enable_test_mode <- interactive() || Sys.getenv("GOLEM_CONFIG_ACTIVE", "production") == "development"
   }
 
+  enable_test_mode <- isTRUE(enable_test_mode)
+  options(spc.test_mode = enable_test_mode)
+
+  if (exists("get_claudespc_environment", mode = "function")) {
+    claudespc_env <- get_claudespc_environment()
+    claudespc_env$TEST_MODE_AUTO_LOAD <- enable_test_mode
+    claudespc_env$TEST_MODE_FILE_PATH <- if (enable_test_mode) {
+      "inst/extdata/spc_exampledata.csv"
+    } else {
+      NULL
+    }
+  }
+
   if (enable_test_mode) {
     # Enable test mode with automatic data loading
     Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
     Sys.setenv(GOLEM_CONFIG_ACTIVE = "development")
     Sys.setenv(TEST_MODE_FILE_PATH = "inst/extdata/spc_exampledata.csv")
-
-    # Update package configuration to ensure it takes effect
-    if (exists("get_claudespc_environment", mode = "function")) {
-      claudespc_env <- get_claudespc_environment()
-      claudespc_env$TEST_MODE_AUTO_LOAD <- TRUE
-      claudespc_env$TEST_MODE_FILE_PATH <- "inst/extdata/spc_exampledata.csv"
-    }
+  } else {
+    Sys.setenv(TEST_MODE_AUTO_LOAD = "FALSE")
+    Sys.unsetenv("TEST_MODE_FILE_PATH")
   }
 
   # Create the Shiny app using golem pattern

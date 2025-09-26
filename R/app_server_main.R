@@ -205,6 +205,7 @@ main_app_server <- function(input, output, session) {
     claudespc_env <- get_claudespc_environment()
     app_state$test_mode$debounce_delay <- claudespc_env$TEST_MODE_STARTUP_DEBOUNCE_MS %||% 500
     app_state$test_mode$lazy_plot_generation <- claudespc_env$TEST_MODE_LAZY_PLOT_GENERATION %||% TRUE
+    app_state$test_mode$autoload_completed <- FALSE
 
     # Phase 4: Track memory usage during test mode setup
     if (exists("track_memory_usage")) {
@@ -220,82 +221,106 @@ main_app_server <- function(input, output, session) {
       )
     )
 
-    # Start workflow tracer for auto-load process
-    autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, session$token)
     test_file_path <- get_test_mode_file_path()
 
-    if (!is.null(test_file_path) && file.exists(test_file_path)) {
-      autoload_tracer$step("file_validation_complete")
+    session$onFlushed(function() {
+      if (isTRUE(app_state$test_mode$autoload_completed)) {
+        log_debug(
+          component = "[TEST_MODE_STARTUP]",
+          message = "Skipping duplicate test data autoload",
+          details = list(session_id = session$token)
+        )
+        return(invisible(NULL))
+      }
 
-      safe_operation(
-        "Test mode auto-load data",
-        code = {
-          autoload_tracer$step("data_loading_started")
-          # Bestem hvilken loader der skal bruges baseret på fil-extension
-          file_extension <- tools::file_ext(test_file_path)
+      app_state$test_mode$autoload_completed <- TRUE
 
-          if (file_extension %in% c("xlsx", "xls")) {
-            # Load Excel file
-            test_data <- readxl::read_excel(
-              test_file_path,
-              sheet = 1, # Læs første sheet
-              .name_repair = "minimal"
+      # Start workflow tracer for auto-load process
+      autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, session$token)
+
+      if (!is.null(test_file_path) && file.exists(test_file_path)) {
+        autoload_tracer$step("file_validation_complete")
+
+        safe_operation(
+          "Test mode auto-load data",
+          code = {
+            autoload_tracer$step("data_loading_started")
+            log_debug(
+              component = "[TEST_MODE_STARTUP]",
+              message = "Starting test data autoload after UI flush",
+              details = list(session_id = session$token, file = test_file_path)
             )
-          } else {
-            # Load CSV file using readr::read_csv2 (same as working file upload)
-            test_data <- readr::read_csv2(
-              test_file_path,
-              locale = readr::locale(
-                decimal_mark = ",",
-                grouping_mark = ".",
-                encoding = DEFAULT_ENCODING
-              ),
-              show_col_types = FALSE
-            )
-          }
 
-          # Ensure standard columns are present
-          test_data <- ensure_standard_columns(test_data)
-          autoload_tracer$step("data_processing_complete")
+            # Bestem hvilken loader der skal bruges baseret på fil-extension
+            file_extension <- tools::file_ext(test_file_path)
 
-          # Set reactive values using dual-state sync
-          app_state$data$original_data <- test_data
-          # Unified state: Set data using sync helper for compatibility
-          set_current_data(app_state, test_data)
+            if (file_extension %in% c("xlsx", "xls")) {
+              # Load Excel file
+              test_data <- readxl::read_excel(
+                test_file_path,
+                sheet = 1, # Læs første sheet
+                .name_repair = "minimal"
+              )
+            } else {
+              # Load CSV file using readr::read_csv2 (same as working file upload)
+              test_data <- readr::read_csv2(
+                test_file_path,
+                locale = readr::locale(
+                  decimal_mark = ",",
+                  grouping_mark = ".",
+                  encoding = DEFAULT_ENCODING
+                ),
+                show_col_types = FALSE
+              )
+            }
 
-          # Emit event to trigger downstream effects
-          emit$data_loaded()
-          # Set session flags
-          app_state$session$file_uploaded <- TRUE
-          app_state$session$user_started_session <- TRUE
-          # Reset auto-detection state
-          shiny::isolate(app_state$columns$auto_detect$completed <- FALSE)
-          # Legacy assignments removed - managed by unified state
-          app_state$ui$hide_anhoej_rules <- FALSE
+            # Ensure standard columns are present
+            test_data <- ensure_standard_columns(test_data)
+            autoload_tracer$step("data_processing_complete")
 
-          autoload_tracer$step("state_synchronization_complete")
+            # Set reactive values using dual-state sync
+            app_state$data$original_data <- test_data
+            # Unified state: Set data using sync helper for compatibility
+            set_current_data(app_state, test_data)
 
-          # Take state snapshot after auto-load
-          debug_state_snapshot("after_test_data_autoload", app_state, session_id = session$token)
+            # Emit event to trigger downstream effects
+            emit$data_loaded()
+            # Set session flags
+            app_state$session$file_uploaded <- TRUE
+            app_state$session$user_started_session <- TRUE
+            # Reset auto-detection state
+            shiny::isolate(app_state$columns$auto_detect$completed <- FALSE)
+            # Legacy assignments removed - managed by unified state
+            app_state$ui$hide_anhoej_rules <- FALSE
 
-          # NOTE: Flag sættes efter setup_column_management() for at undgå race condition
+            autoload_tracer$step("state_synchronization_complete")
 
-          # Debug output
-          log_info(paste("Auto-indlæst fil:", test_file_path), "TEST_MODE")
-          log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), "TEST_MODE")
-          log_info(paste("Kolonner:", paste(names(test_data), collapse = ", ")), "TEST_MODE")
+            # Take state snapshot after auto-load
+            debug_state_snapshot("after_test_data_autoload", app_state, session_id = session$token)
 
-          autoload_tracer$complete("test_data_autoload_complete")
-        },
-        fallback = function(e) {
-          log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), "TEST_MODE")
-        },
-        error_type = "processing"
-      )
-    } else {
-      log_warn(paste("Fil ikke fundet:", test_file_path), "TEST_MODE")
-    }
+            # NOTE: Flag sættes efter setup_column_management() for at undgå race condition
+
+            # Debug output
+            log_info(paste("Auto-indlæst fil:", test_file_path), "TEST_MODE")
+            log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), "TEST_MODE")
+            log_info(paste("Kolonner:", paste(names(test_data), collapse = ", \")), "TEST_MODE")
+
+            autoload_tracer$step("test_data_autoload_complete")
+          },
+          fallback = function(e) {
+            log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), "TEST_MODE")
+          },
+          error_type = "processing"
+        )
+      } else {
+        log_warn(paste("Fil ikke fundet:", test_file_path), "TEST_MODE")
+      }
+
+      invisible(NULL)
+    }, once = TRUE)
   }
+
+
 
   # Observer Management ------------------------------------------------------
   # Initialiser observer manager til tracking af alle observers

@@ -247,137 +247,109 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
     # Plot Generering ---------------------------------------------------------
 
-    # POSIT CACHE: No manual cache initialization needed with bindCache()
-
-    # CONSOLIDATED CACHE KEY: Batch all config changes to prevent multiple plot generations
-    plot_config_consolidated <- shiny::debounce(
-      shiny::reactive({
-        list(
-          data_sig = if (!is.null(module_data_reactive())) digest::digest(module_data_reactive()) else NULL,
-          chart_type = if (!is.null(chart_config())) chart_config()$chart_type else NULL,
-          skift = skift_config_reactive(),
-          frys = frys_config_reactive(),
-          target = target_value_reactive(),
-          centerline = centerline_value_reactive(),
-          title = if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL,
-          unit = if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else NULL,
-          kommentar = if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
-        )
-      }),
-      millis = 200  # Short debounce to batch rapid UI changes
-    )
-
-    ## Hoved SPC Plot Reactive
-    # Hovedfunktion for SPC plot generering med Posit bindCache() integration
-    # Håndterer data validering, plot oprettelse og Anhøj rules analyse
-    spc_plot <- shiny::reactive({
-      # POSIT SHINY CACHE: Using official bindCache() pattern for clean, maintainable caching
-      log_debug("spc_plot: Starting plot generation with bindCache()", "VISUALIZATION")
-
-      # FIXED: Safe chart_config validation without hanging shiny::req()
-      config <- chart_config()
-      if (is.null(config)) {
-        log_debug("spc_plot: config is NULL", "VISUALIZATION")
-        return(NULL)
-      }
-
+    data_ready <- shiny::reactive({
       data <- module_data_reactive()
-      if (is.null(data)) {
-        log_debug("spc_plot: data is NULL", "VISUALIZATION")
-        return(NULL)
-      }
-      log_debug(paste("spc_plot: Processing data - rows:", nrow(data), "cols:", ncol(data)), "VISUALIZATION")
+      shiny::req(shiny::isTruthy(data))
+      shiny::req(nrow(data) > 0)
+      data
+    })
 
-      # RACE CONDITION PREVENTION: Circuit breaker to prevent overlapping generations
-      plot_generation_in_progress <- get_plot_state("plot_generation_in_progress") %||% FALSE
-      if (plot_generation_in_progress) {
-        log_debug("spc_plot: Circuit breaker activated - plot generation already in progress", "VISUALIZATION")
+    spc_inputs <- shiny::reactive({
+      data <- data_ready()
+      config <- chart_config()
+      shiny::req(config)
 
-        # SAFE FALLBACK: Only return cached plot if it's valid, otherwise allow this generation
-        cached_plot <- get_plot_state("plot_object")
-        cached_plot_ready <- get_plot_state("plot_ready") %||% FALSE
-
-        if (!is.null(cached_plot) && cached_plot_ready) {
-          log_debug("spc_plot: Returning valid cached plot from circuit breaker", "VISUALIZATION")
-          return(cached_plot)
-        } else {
-          log_debug("spc_plot: No valid cached plot available - allowing generation to proceed", "VISUALIZATION")
-          # Reset the flag since we're proceeding with generation
-          set_plot_state("plot_generation_in_progress", FALSE)
-        }
+      skift_config <- skift_config_reactive()
+      if (is.null(skift_config) || !is.list(skift_config)) {
+        skift_config <- list(show_phases = FALSE, skift_column = NULL)
       }
 
-      # POSIT CACHE: All caching logic handled automatically by bindCache()
+      frys_column <- frys_config_reactive()
+      title_value <- if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL
+      unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
+      kommentar_value <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
 
-      # Clean state management - preserve existing results during computation
-      # Unified state assignment using helper functions
+      list(
+        data = data,
+        data_hash = digest::digest(data, algo = "xxhash64"),
+        config = config,
+        chart_type = config$chart_type %||% "run",
+        target_value = target_value_reactive(),
+        centerline_value = centerline_value_reactive(),
+        skift_config = skift_config,
+        skift_hash = digest::digest(skift_config, algo = "xxhash64"),
+        frys_column = frys_column,
+        frys_hash = digest::digest(frys_column, algo = "xxhash64"),
+        title = title_value,
+        y_axis_unit = unit_value,
+        kommentar_column = kommentar_value
+      )
+    })
+
+    spc_results <- shiny::reactive({
+      inputs <- spc_inputs()
+
+      cache_key <- digest::digest(
+        list(
+          inputs$data_hash,
+          inputs$chart_type,
+          inputs$target_value,
+          inputs$centerline_value,
+          inputs$skift_hash,
+          inputs$frys_hash,
+          inputs$title,
+          inputs$y_axis_unit,
+          inputs$kommentar_column
+        ),
+        algo = "xxhash64"
+      )
+
+      log_debug(
+        sprintf(
+          "qic_startup_call chart=%s rows=%d",
+          inputs$chart_type,
+          nrow(inputs$data)
+        ),
+        .context = "SPC_PIPELINE"
+      )
+
       set_plot_state("plot_ready", FALSE)
       set_plot_state("plot_warnings", character(0))
       set_plot_state("is_computing", TRUE)
       set_plot_state("plot_generation_in_progress", TRUE)
-      # FIX: Don't clear anhoej_results until new computation is complete
 
-      # Starting plot generation
+      on.exit({
+        set_plot_state("is_computing", FALSE)
+        set_plot_state("plot_generation_in_progress", FALSE)
+      }, add = TRUE)
 
-      on.exit(
-        {
-          # Unified state assignment using helper function
-          set_plot_state("is_computing", FALSE)
-          set_plot_state("plot_generation_in_progress", FALSE)
-        },
-        add = TRUE
-      )
-
-      # Get chart type from config (already validated)
-      chart_type <- config$chart_type
-
-      # Valider data
-      validation <- validateDataForChart(data, config, chart_type)
+      validation <- validateDataForChart(inputs$data, inputs$config, inputs$chart_type)
 
       if (!validation$valid) {
         set_plot_state("plot_warnings", validation$warnings)
         set_plot_state("plot_ready", FALSE)
         set_plot_state("anhoej_results", NULL)
-        return(NULL)
+        set_plot_state("plot_object", NULL)
+        return(list(plot = NULL, qic_data = NULL, cache_key = cache_key))
       }
 
       set_plot_state("plot_warnings", character(0))
 
-      # Generer plot
-      safe_operation(
+      computation <- safe_operation(
         "Generate SPC plot",
         code = {
-          # Hent fase konfiguration
-          skift_config <- skift_config_reactive()
-          # Ensure skift_config is valid
-          if (is.null(skift_config)) {
-            skift_config <- list(show_phases = FALSE, skift_column = NULL)
-          }
-
-          # Hent freeze konfiguration
-          frys_column <- frys_config_reactive()
-
-          # Get axis units with fallbacks
-          x_unit <- "observation"
-          y_unit <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
-
-          # Get kommentar column
-          kommentar_col <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
-
-          # Parameters validated before plot generation
-
           spc_result <- generateSPCPlot(
-            data = data,
-            config = config,
-            chart_type = chart_type,
-            target_value = target_value_reactive(),
-            centerline_value = centerline_value_reactive(),
-            show_phases = skift_config$show_phases,
-            skift_column = skift_config$skift_column,
-            frys_column = frys_column,
+            data = inputs$data,
+            config = inputs$config,
+            chart_type = inputs$chart_type,
+            target_value = inputs$target_value,
+            centerline_value = inputs$centerline_value,
+            show_phases = inputs$skift_config$show_phases %||% FALSE,
+            skift_column = inputs$skift_config$skift_column,
+            frys_column = inputs$frys_column,
             chart_title_reactive = chart_title_reactive,
-            y_axis_unit = y_unit,
-            kommentar_column = kommentar_col
+            y_axis_unit = inputs$y_axis_unit,
+            kommentar_column = inputs$kommentar_column
           )
 
           plot <- applyHospitalTheme(spc_result$plot)
@@ -386,15 +358,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           set_plot_state("plot_object", plot)
           set_plot_state("plot_ready", TRUE)
 
-          # Udtræk ALLE qic() resultater for ALLE chart typer - vigtig for konsistent beregning
           if (!is.null(qic_data)) {
-            # Udtræk ALLE tilgængelige metrics fra qic() - lad value boxes bestemme visning
             qic_results <- list(
-              # Standard SPC beregninger (altid tilgængelig fra qic)
               any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
               out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
-
-              # Anhøj rules (meningsfulde for alle chart typer)
               runs_signal = if ("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE,
               crossings_signal = if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
                 n_cross <- safe_max(qic_data$n.crossings)
@@ -407,53 +374,90 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               longest_run_max = if ("longest.run.max" %in% names(qic_data)) safe_max(qic_data$longest.run.max) else NA_real_,
               n_crossings = if ("n.crossings" %in% names(qic_data)) safe_max(qic_data$n.crossings) else NA_real_,
               n_crossings_min = if ("n.crossings.min" %in% names(qic_data)) safe_max(qic_data$n.crossings.min) else NA_real_,
-
-              # Chart-type specifik besked
-              message = if (chart_type == "run") {
+              message = if (inputs$chart_type == "run") {
                 if (any(qic_data$sigma.signal, na.rm = TRUE)) "Særlig årsag detekteret" else "Ingen særlige årsager fundet"
               } else {
                 if (any(qic_data$sigma.signal, na.rm = TRUE)) "Punkter uden for kontrol detekteret" else "Alle punkter inden for kontrol"
               }
             )
 
-            # Only update anhoej_results if we got valid non-NA values (NA-beskyttelse)
             if (!is.na(qic_results$longest_run) || !is.na(qic_results$n_crossings)) {
-              log_debug(paste("Setting anhoej_results with valid values:",
-                             "longest_run=", qic_results$longest_run,
-                             "n_crossings=", qic_results$n_crossings), "VISUALIZATION")
+              log_debug(
+                sprintf(
+                  "Updating anhoej metrics longest_run=%s n_crossings=%s",
+                  qic_results$longest_run,
+                  qic_results$n_crossings
+                ),
+                .context = "VISUALIZATION"
+              )
               set_plot_state("anhoej_results", qic_results)
             } else {
-              log_warn(paste("Skipping anhoej_results update - all NA values:",
-                             "longest_run=", qic_results$longest_run,
-                             "n_crossings=", qic_results$n_crossings,
-                             "- preserving existing results"), "VISUALIZATION")
-              # Don't overwrite existing valid results with NA values - this prevents "Beregner..." issue
+              log_warn(
+                paste(
+                  "Skipping anhoej_results update - all NA values:",
+                  "longest_run=", qic_results$longest_run,
+                  "n_crossings=", qic_results$n_crossings,
+                  "- preserving existing results"
+                ),
+                "VISUALIZATION"
+              )
             }
           } else {
             log_info("Setting anhoej_results to NULL - no qic_data available", "VISUALIZATION")
             set_plot_state("anhoej_results", NULL)
           }
 
-          # POSIT CACHE: No manual cache management needed with bindCache()
-
-          return(plot)
+          list(plot = plot, qic_data = qic_data)
         },
         fallback = function(e) {
           set_plot_state("plot_warnings", c("Graf-generering fejlede:", e$message))
           set_plot_state("plot_ready", FALSE)
           set_plot_state("anhoej_results", NULL)
-          set_plot_state("plot_generation_in_progress", FALSE)  # Reset circuit breaker on error
-
-          # POSIT CACHE: Cache invalidation handled automatically by bindCache()
-
-          return(NULL)
+          set_plot_state("plot_object", NULL)
+          list(plot = NULL, qic_data = NULL)
         },
         error_type = "processing"
       )
+
+      list(
+        plot = computation$plot,
+        qic_data = computation$qic_data,
+        cache_key = cache_key
+      )
     }) %>%
-      # OFFICIAL POSIT SHINY CACHE: Automatic, efficient, and maintainable caching
-      # CONSOLIDATED APPROACH: Single cache key to prevent multiple regenerations from UI batch updates
-      bindCache(plot_config_consolidated())
+      bindCache({
+        inputs <- spc_inputs()
+        list(
+          "spc_results",
+          inputs$data_hash,
+          inputs$chart_type,
+          inputs$target_value,
+          inputs$centerline_value,
+          inputs$skift_hash,
+          inputs$frys_hash,
+          inputs$title,
+          inputs$y_axis_unit,
+          inputs$kommentar_column
+        )
+      })
+
+    spc_plot <- shiny::reactive({
+      result <- spc_results()
+      if (is.null(result$plot)) {
+        return(NULL)
+      }
+
+      log_debug(
+        sprintf("ggplot_startup_call cache_key=%s", result$cache_key),
+        .context = "SPC_PIPELINE"
+      )
+
+      result$plot
+    }) %>%
+      bindCache({
+        result <- spc_results()
+        list("spc_plot", result$cache_key %||% "empty")
+      })
 
     # UI Output Funktioner ----------------------------------------------------
 
@@ -463,17 +467,24 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Separat renderPlot for det faktiske SPC plot
     # PRODUCTION VERSION with fixes applied
     output$spc_plot_actual <- shiny::renderPlot({
+      data <- module_data_reactive()
 
-      # Use the fixed spc_plot() reactive which handles NULL chart_config gracefully
+      if (is.null(data) || nrow(data) == 0) {
+        graphics::plot.new()
+        graphics::text(0.5, 0.5, "Ingen data endnu", cex = 1.3, col = "#6c757d")
+        return(invisible(NULL))
+      }
+
       plot_result <- spc_plot()
 
-      if (!is.null(plot_result)) {
-        print(plot_result)
-        return(plot_result)
-      } else {
-        # Return NULL for now - UI will show loading state
-        return(NULL)
+      if (is.null(plot_result)) {
+        graphics::plot.new()
+        graphics::text(0.5, 0.5, "Beregner...", cex = 1.1, col = "#6c757d")
+        return(invisible(NULL))
       }
+
+      print(plot_result)
+      invisible(plot_result)
     })
 
     # Status og Information ---------------------------------------------------
