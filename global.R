@@ -114,7 +114,7 @@ for (file in source_files) {
   }
 }
 
-message("✓ claudespc package loaded")
+message("✓ SPCify package loaded")
 
 # STARTUP CACHE FOR STATIC ARTIFACTS --------------------------------
 # Load cached static data if available, cache new data for next startup

@@ -95,7 +95,7 @@ autodetect_engine <- function(data = NULL,
   on.exit({
     shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
     shiny::isolate(app_state$columns$auto_detect$last_run <- Sys.time())
-    log_debug("Autodetect engine cleanup completed", "UNIFIED_AUTODETECT")
+    log_debug("Autodetect engine cleanup completed", .context = "UNIFIED_AUTODETECT")
   }, add = TRUE)
 
   # 1. TRIGGER VALIDATION - smart unfreezing when data is available

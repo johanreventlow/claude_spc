@@ -74,13 +74,13 @@ lazy_load_module <- function(module_name, force_reload = FALSE) {
 
   # Check if already loaded and not forcing reload
   if (!force_reload && module_config$loaded) {
-    log_debug(paste("Module", module_name, "already loaded"), "LAZY_LOADING")
+    log_debug(paste("Module", module_name, "already loaded"), .context = "LAZY_LOADING")
     return(TRUE)
   }
 
   # Check loading condition
   if (!module_config$condition()) {
-    log_debug(paste("Module", module_name, "condition not met, skipping"), "LAZY_LOADING")
+    log_debug(paste("Module", module_name, "condition not met, skipping"), .context = "LAZY_LOADING")
     return(FALSE)
   }
 
@@ -115,7 +115,7 @@ lazy_load_module <- function(module_name, force_reload = FALSE) {
 #' @return List of successfully loaded modules
 #' @export
 lazy_load_modules <- function(force_all = FALSE) {
-  log_info("Starting lazy module loading", "LAZY_LOADING")
+  log_info("Starting lazy module loading", .context = "LAZY_LOADING")
 
   loaded_modules <- character(0)
 
@@ -129,7 +129,7 @@ lazy_load_modules <- function(force_all = FALSE) {
         loaded_modules <- c(loaded_modules, module_name)
       }
     } else {
-      log_debug(paste("Skipping module", module_name, "- condition not met"), "LAZY_LOADING")
+      log_debug(paste("Skipping module", module_name, "- condition not met"), .context = "LAZY_LOADING")
     }
   }
 

@@ -524,7 +524,7 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
   shiny::observeEvent(input$start_new_session, {
 
     if (is.null(app_state)) {
-      log_error("app_state is NULL - navigation will not work properly", "WELCOME_PAGE")
+      log_error("app_state is NULL - navigation will not work properly", .context = "WELCOME_PAGE")
       return()
     }
 
@@ -645,7 +645,7 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
         app_state = app_state
       )
     } else {
-      log_warn("Demo data file not found at:", test_file_path, "DEMO_DATA")
+      log_warn("Demo data file not found at:", test_file_path, .context = "DEMO_DATA")
       shiny::showNotification(
         "Eksempel data ikke tilgængelig. Prøv at uploade dine egne data.",
         type = "warning",

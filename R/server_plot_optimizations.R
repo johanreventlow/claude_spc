@@ -20,7 +20,7 @@
 #'
 generateSPCPlot_optimized <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
 
-  log_debug("Starting optimized SPC plot generation", "PLOT_OPTIMIZATION")
+  log_debug("Starting optimized SPC plot generation", .context = "PLOT_OPTIMIZATION")
 
   # Create cache key from all parameters
   cache_key <- create_plot_cache_key(data, config, chart_type, target_value, centerline_value, show_phases, skift_column, frys_column, chart_title_reactive, y_axis_unit, kommentar_column)
@@ -28,22 +28,22 @@ generateSPCPlot_optimized <- function(data, config, chart_type, target_value = N
   # Check cache first
   cached_plot <- get_plot_cache(cache_key)
   if (!is.null(cached_plot)) {
-    log_debug("Returning cached plot", "PLOT_OPTIMIZATION")
+    log_debug("Returning cached plot", .context = "PLOT_OPTIMIZATION")
     return(cached_plot)
   }
 
-  log_debug("Generating fresh plot with optimizations", "PLOT_OPTIMIZATION")
+  log_debug("Generating fresh plot with optimizations", .context = "PLOT_OPTIMIZATION")
 
   # Optimized preprocessing with caching
   preprocessing_cache_key <- paste0("preprocessing_", digest::digest(list(data, config)))
 
   preprocessed_data <- get_plot_cache(preprocessing_cache_key)
   if (is.null(preprocessed_data)) {
-    log_debug("Performing fresh data preprocessing", "PLOT_OPTIMIZATION")
+    log_debug("Performing fresh data preprocessing", .context = "PLOT_OPTIMIZATION")
     preprocessed_data <- preprocess_spc_data_optimized(data, config)
     set_plot_cache(preprocessing_cache_key, preprocessed_data, timeout_minutes = 30)
   } else {
-    log_debug("Using cached preprocessing data", "PLOT_OPTIMIZATION")
+    log_debug("Using cached preprocessing data", .context = "PLOT_OPTIMIZATION")
   }
 
   # Optimized plot data preparation
@@ -51,11 +51,11 @@ generateSPCPlot_optimized <- function(data, config, chart_type, target_value = N
 
   plot_data <- get_plot_cache(plot_data_cache_key)
   if (is.null(plot_data)) {
-    log_debug("Preparing fresh plot data", "PLOT_OPTIMIZATION")
+    log_debug("Preparing fresh plot data", .context = "PLOT_OPTIMIZATION")
     plot_data <- prepare_qic_data_optimized(preprocessed_data, chart_type, target_value, centerline_value, show_phases, skift_column, frys_column)
     set_plot_cache(plot_data_cache_key, plot_data, timeout_minutes = 60)
   } else {
-    log_debug("Using cached plot data", "PLOT_OPTIMIZATION")
+    log_debug("Using cached plot data", .context = "PLOT_OPTIMIZATION")
   }
 
   # Fast plot building
@@ -64,7 +64,7 @@ generateSPCPlot_optimized <- function(data, config, chart_type, target_value = N
   # Cache the final plot
   set_plot_cache(cache_key, plot_object, timeout_minutes = 15)
 
-  log_debug("Optimized SPC plot generation completed", "PLOT_OPTIMIZATION")
+  log_debug("Optimized SPC plot generation completed", .context = "PLOT_OPTIMIZATION")
   return(plot_object)
 }
 
@@ -76,7 +76,7 @@ generateSPCPlot_optimized <- function(data, config, chart_type, target_value = N
 #' @param config Plot configuration
 #'
 preprocess_spc_data_optimized <- function(data, config) {
-  log_debug("Starting optimized data preprocessing", "PLOT_OPTIMIZATION")
+  log_debug("Starting optimized data preprocessing", .context = "PLOT_OPTIMIZATION")
 
   # Batch validation and cleaning operations
   result <- safe_operation(
@@ -104,7 +104,7 @@ preprocess_spc_data_optimized <- function(data, config) {
     fallback = list(data = data, config = config, preprocessing_metadata = NULL)
   )
 
-  log_debug("Optimized data preprocessing completed", "PLOT_OPTIMIZATION")
+  log_debug("Optimized data preprocessing completed", .context = "PLOT_OPTIMIZATION")
   return(result)
 }
 

@@ -82,7 +82,7 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session
       }
     },
     fallback = function(e) {
-      log_debug(paste("Cache key validation failed:", e$message, "- using emergency fallback"), "PERFORMANCE")
+      log_debug(paste("Cache key validation failed:", e$message, "- using emergency fallback"), .context = "PERFORMANCE")
       paste0("error_key_", as.integer(Sys.time()), "_", sample(1000:9999, 1))
     },
     error_type = "processing"
@@ -108,7 +108,7 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session
     # Use session$userData for session-local cache
     if (is.null(session$userData$performance_cache)) {
       session$userData$performance_cache <- new.env()
-      log_debug("Created session-local performance cache", "PERFORMANCE")
+      log_debug("Created session-local performance cache", .context = "PERFORMANCE")
     }
     session$userData$performance_cache
   } else {
@@ -150,7 +150,7 @@ create_cached_reactive <- function(expr, cache_key, cache_timeout = 300, session
         }
 
         # Cache miss or expired - evaluate expression with robust error handling
-        log_debug(paste("Cache miss for", safe_cache_key, "- computing..."), "PERFORMANCE")
+        log_debug(paste("Cache miss for", safe_cache_key, "- computing..."), .context = "PERFORMANCE")
         start_time <- Sys.time()
 
         # FAILSAFE: Expression evaluation with comprehensive error handling
@@ -377,7 +377,7 @@ clear_performance_cache <- function(cache_pattern = NULL, session = NULL) {
     if (is.null(cache_pattern)) {
       # Clear all caches
       rm(list = ls(cache_env), envir = cache_env)
-      log_debug("Cleared all performance caches", "PERFORMANCE")
+      log_debug("Cleared all performance caches", .context = "PERFORMANCE")
     } else {
       # Clear caches matching pattern
       cache_keys <- ls(cache_env)
@@ -388,7 +388,7 @@ clear_performance_cache <- function(cache_pattern = NULL, session = NULL) {
       }
     }
   } else {
-    log_debug("No performance cache found to clear", "PERFORMANCE")
+    log_debug("No performance cache found to clear", .context = "PERFORMANCE")
   }
 }
 

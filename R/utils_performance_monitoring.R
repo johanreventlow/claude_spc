@@ -17,7 +17,7 @@ reset_qic_counters <- function() {
   if (exists("actual_qic_call_counter", envir = .GlobalEnv)) {
     rm("actual_qic_call_counter", envir = .GlobalEnv)
   }
-  log_debug("QIC performance counters reset", "PERFORMANCE_MONITOR")
+  log_debug("QIC performance counters reset", .context = "PERFORMANCE_MONITOR")
 }
 
 #' Get current QIC call counts
@@ -59,7 +59,7 @@ get_qic_call_counts <- function() {
 #' @return List with startup metrics
 #' @export
 monitor_startup_performance <- function(timeout_seconds = 30) {
-  log_info("Starting app startup performance monitoring", "PERFORMANCE_MONITOR")
+  log_info("Starting app startup performance monitoring", .context = "PERFORMANCE_MONITOR")
 
   # Reset counters
   reset_qic_counters()
@@ -120,7 +120,7 @@ init_startup_metrics <- function() {
   .startup_metrics$memory_snapshots <- list()
   .startup_metrics$initial_memory_mb <- round(as.numeric(object.size(search())) / 1024^2, 2)
 
-  log_debug("Enhanced startup metrics initialized", "PERFORMANCE_MONITORING")
+  log_debug("Enhanced startup metrics initialized", .context = "PERFORMANCE_MONITORING")
 }
 
 #' Track memory usage at specific points

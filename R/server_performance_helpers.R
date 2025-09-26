@@ -401,5 +401,5 @@ clear_performance_caches <- function() {
   # Run garbage collection
   gc(verbose = FALSE)
 
-  # log_debug("Performance caches cleared", "PERFORMANCE")
+  # log_debug("Performance caches cleared", .context = "PERFORMANCE")
 }

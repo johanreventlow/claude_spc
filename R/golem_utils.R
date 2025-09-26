@@ -279,7 +279,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
   # Input validation
   if (is.null(prefix) || length(prefix) == 0 || prefix == "" || is.na(prefix)) {
     if (exists("log_warn")) {
-      log_warn("Invalid prefix provided to add_resource_path", "RESOURCE_PATHS")
+      log_warn("Invalid prefix provided to add_resource_path", .context = "RESOURCE_PATHS")
     } else {
       warning("Invalid prefix provided to add_resource_path")
     }
@@ -288,7 +288,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
   if (is.null(path) || length(path) == 0 || path == "" || is.na(path)) {
     if (exists("log_warn")) {
-      log_warn("Invalid path provided to add_resource_path", "RESOURCE_PATHS")
+      log_warn("Invalid path provided to add_resource_path", .context = "RESOURCE_PATHS")
     } else {
       warning("Invalid path provided to add_resource_path")
     }
@@ -316,7 +316,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
       if (is.null(www_path)) {
         if (exists("log_debug")) {
-          log_debug("No www directory found in development mode", "RESOURCE_PATHS")
+          log_debug("No www directory found in development mode", .context = "RESOURCE_PATHS")
         }
         return(invisible(FALSE))
       }

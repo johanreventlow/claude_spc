@@ -22,7 +22,7 @@ main_app_server <- function(input, output, session) {
   session_debugger <- debug_session_lifecycle(session$token, session)
   session_debugger$event("server_initialization")
 
-  log_debug(paste("Server starting - Session ID:", session$token), "APP_SERVER")
+  log_debug(paste("Server starting - Session ID:", session$token), .context = "APP_SERVER")
 
   debug_log("SPC App server initialization started", "SESSION_LIFECYCLE",
             level = "INFO", session_id = session$token)
@@ -35,11 +35,11 @@ main_app_server <- function(input, output, session) {
 
   # EVENT SYSTEM: Initialize reactive event bus
   emit <- create_emit_api(app_state)
-  log_debug("Event system initialized", "APP_SERVER")
+  log_debug("Event system initialized", .context = "APP_SERVER")
 
   # UI SERVICE: Initialize centralized UI update service
   ui_service <- create_ui_update_service(session, app_state)
-  log_debug("UI update service initialized", "APP_SERVER")
+  log_debug("UI update service initialized", .context = "APP_SERVER")
 
 
   # SHINYLOGS: Setup advanced web-based logging (if enabled)
@@ -75,7 +75,7 @@ main_app_server <- function(input, output, session) {
       }
     },
     fallback = function(e) {
-      log_error(paste("ERROR initializing event_listeners_setup flag:", e$message), "APP_SERVER")
+      log_error(paste("ERROR initializing event_listeners_setup flag:", e$message), .context = "APP_SERVER")
     },
     error_type = "processing"
   )
@@ -87,7 +87,7 @@ main_app_server <- function(input, output, session) {
       app_state$infrastructure$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
     },
     fallback = function(e) {
-      log_error(paste("ERROR in setup_event_listeners:", e$message), "APP_SERVER")
+      log_error(paste("ERROR in setup_event_listeners:", e$message), .context = "APP_SERVER")
       print(paste("Full error details:", e))
     },
     error_type = "processing"
@@ -103,13 +103,13 @@ main_app_server <- function(input, output, session) {
   }, once = TRUE, priority = OBSERVER_PRIORITIES$LOW, ignoreInit = FALSE)
 
   # FASE 5: Memory management setup
-  log_debug("Line 150 executed - about to setup memory management", "DEBUG")
-  log_debug("Setting up memory management...", "APP_SERVER")
+  log_debug("Line 150 executed - about to setup memory management", .context = "DEBUG")
+  log_debug("Setting up memory management...", .context = "APP_SERVER")
   setup_session_cleanup(session, app_state)
-  log_debug("Memory management configured", "APP_SERVER")
+  log_debug("Memory management configured", .context = "APP_SERVER")
 
   # FASE 4: AUTOMATIC BACKGROUND CLEANUP - Schedule periodic system maintenance
-  log_debug("Setting up automatic background cleanup scheduling...", "APP_SERVER")
+  log_debug("Setting up automatic background cleanup scheduling...", .context = "APP_SERVER")
 
   # Schedule regular comprehensive cleanup every 5 minutes
   if (requireNamespace("later", quietly = TRUE)) {
@@ -121,16 +121,16 @@ main_app_server <- function(input, output, session) {
         # Check if session is still active before continuing
         session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
         if (session_check) {
-          log_debug("Stopping periodic cleanup - session ended", "BACKGROUND_CLEANUP")
+          log_debug("Stopping periodic cleanup - session ended", .context = "BACKGROUND_CLEANUP")
           return()
         }
 
-        log_debug("Running scheduled comprehensive system cleanup", "BACKGROUND_CLEANUP")
+        log_debug("Running scheduled comprehensive system cleanup", .context = "BACKGROUND_CLEANUP")
         safe_operation(
           "Scheduled system cleanup",
           code = {
             comprehensive_system_cleanup(app_state)
-            log_debug("Scheduled cleanup completed successfully", "BACKGROUND_CLEANUP")
+            log_debug("Scheduled cleanup completed successfully", .context = "BACKGROUND_CLEANUP")
           },
           fallback = NULL,
           session = session,
@@ -151,9 +151,9 @@ main_app_server <- function(input, output, session) {
       })
     }, delay = cleanup_interval_minutes * 60)  # Initial delay
 
-    log_debug(paste("Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), "APP_SERVER")
+    log_debug(paste("Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), .context = "APP_SERVER")
   } else {
-    log_warn("later package not available - background cleanup disabled", "APP_SERVER")
+    log_warn("later package not available - background cleanup disabled", .context = "APP_SERVER")
   }
 
   # FASE 4: PERFORMANCE MONITORING INTEGRATION - Schedule periodic reporting
@@ -172,11 +172,11 @@ main_app_server <- function(input, output, session) {
           "Performance report generation",
           code = {
             report <- get_performance_report(app_state)
-            log_debug(report$formatted_text, "PERFORMANCE_MONITOR")
+            log_debug(report$formatted_text, .context = "PERFORMANCE_MONITOR")
 
             # Check if system needs attention
             if (report$health_status == "WARNING") {
-              log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
+              log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), .context = "PERFORMANCE_MONITOR")
             }
           },
           fallback = NULL,
@@ -198,7 +198,7 @@ main_app_server <- function(input, output, session) {
       })
     }, delay = report_interval_minutes * 60)  # Initial delay
 
-    log_debug(paste("Performance monitoring scheduled every", report_interval_minutes, "minutes"), "APP_SERVER")
+    log_debug(paste("Performance monitoring scheduled every", report_interval_minutes, "minutes"), .context = "APP_SERVER")
   }
 
   # Test Tilstand ------------------------------------------------------------
@@ -312,19 +312,19 @@ main_app_server <- function(input, output, session) {
             # NOTE: Flag sættes efter setup_column_management() for at undgå race condition
 
             # Debug output
-            log_info(paste("Auto-indlæst fil:", test_file_path), "TEST_MODE")
-            log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), "TEST_MODE")
-            log_info(paste("Kolonner:", paste(names(test_data), collapse = ", ")), "TEST_MODE")
+            log_info(paste("Auto-indlæst fil:", test_file_path), .context = "TEST_MODE")
+            log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), .context = "TEST_MODE")
+            log_info(paste("Kolonner:", paste(names(test_data), collapse = ", ")), .context = "TEST_MODE")
 
             autoload_tracer$step("test_data_autoload_complete")
           },
           fallback = function(e) {
-            log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), "TEST_MODE")
+            log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), .context = "TEST_MODE")
           },
           error_type = "processing"
         )
       } else {
-        log_warn(paste("Fil ikke fundet:", test_file_path), "TEST_MODE")
+        log_warn(paste("Fil ikke fundet:", test_file_path), .context = "TEST_MODE")
       }
 
       invisible(NULL)
@@ -423,7 +423,7 @@ main_app_server <- function(input, output, session) {
         }
       },
       fallback = function(e) {
-        log_error(paste("Session cleanup: Could not clear loop protection flags:", e$message), "SESSION_CLEANUP")
+        log_error(paste("Session cleanup: Could not clear loop protection flags:", e$message), .context = "SESSION_CLEANUP")
       },
       error_type = "processing"
     )
@@ -433,7 +433,7 @@ main_app_server <- function(input, output, session) {
     session_lifecycle_result <- session_debugger$complete()
 
     # Log session statistics
-    log_info(paste("Session ended - Observer count:", obs_manager$count()), "APP_SERVER")
+    log_info(paste("Session ended - Observer count:", obs_manager$count()), .context = "APP_SERVER")
     debug_log("Session ended successfully", "SESSION_LIFECYCLE", level = "INFO",
               context = list(
                 session_duration = round(session_lifecycle_result$total_duration, 3),

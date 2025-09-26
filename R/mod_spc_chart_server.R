@@ -14,11 +14,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Helper function: Safe max that handles empty vectors and preserves actual values
     safe_max <- function(x, na.rm = TRUE) {
       if (length(x) == 0) {
-        log_debug("safe_max: empty vector", "VISUALIZATION")
+        log_debug("safe_max: empty vector", .context = "VISUALIZATION")
         return(NA_real_)
       }
       if (all(is.na(x))) {
-        log_debug("safe_max: all NA values", "VISUALIZATION")
+        log_debug("safe_max: all NA values", .context = "VISUALIZATION")
         return(NA_real_)
       }
       result <- max(x, na.rm = na.rm)
@@ -93,14 +93,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
         # GUARD: Skip if data processing is in progress
         if (shiny::isolate(app_state$data$updating_table) %||% FALSE) {
-          log_debug("module_data_reactive: skipping - data update in progress", "VISUALIZATION")
+          log_debug("module_data_reactive: skipping - data update in progress", .context = "VISUALIZATION")
           return(shiny::isolate(app_state$visualization$module_cached_data))
         }
 
         # RELAXED GUARD: Allow plot updates during autodetect, only cache if no data
         autodetect_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
         if (autodetect_in_progress) {
-          log_debug("module_data_reactive: autodetect in progress - allowing plot updates", "VISUALIZATION")
+          log_debug("module_data_reactive: autodetect in progress - allowing plot updates", .context = "VISUALIZATION")
           # Don't block, continue to allow UI updates
         }
 
@@ -135,7 +135,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       # Level 3: Guard condition - prevent concurrent operations (Overlap Prevention)
       if (shiny::isolate(app_state$visualization$cache_updating)) {
-        log_debug("Skipping visualization cache update - already in progress", "VISUALIZATION")
+        log_debug("Skipping visualization cache update - already in progress", .context = "VISUALIZATION")
         return()
       }
 
@@ -403,7 +403,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               )
             }
           } else {
-            log_info("Setting anhoej_results to NULL - no qic_data available", "VISUALIZATION")
+            log_info("Setting anhoej_results to NULL - no qic_data available", .context = "VISUALIZATION")
             set_plot_state("anhoej_results", NULL)
           }
 

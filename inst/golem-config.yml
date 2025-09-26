@@ -6,7 +6,7 @@
 # Used when no environment is specified or as base for other environments
 
 default:
-  golem_name: claudeSPC
+  golem_name: SPCify
   golem_version: 1.0.0
   app_prod: false
 
@@ -81,7 +81,7 @@ default:
 # Optimized for developer productivity and debugging
 
 development:
-  golem_name: claudeSPC
+  golem_name: SPCify
   golem_version: 1.0.0
   app_prod: false
 
@@ -155,7 +155,7 @@ development:
 # Optimized for security, stability and performance
 
 production:
-  golem_name: claudeSPC
+  golem_name: SPCify
   golem_version: 1.0.0
   app_prod: true
 
@@ -223,7 +223,7 @@ production:
 # Optimized for controlled test conditions and reproducibility
 
 testing:
-  golem_name: claudeSPC
+  golem_name: SPCify
   golem_version: 1.0.0
   app_prod: false
 

@@ -12,7 +12,7 @@ setup_session_cleanup <- function(session, app_state = NULL, observers = NULL) {
 
   # Register cleanup på session end
   session$onSessionEnded(function() {
-    log_info("Starting session cleanup", "MEMORY_MGMT")
+    log_info("Starting session cleanup", .context = "MEMORY_MGMT")
 
     # Clear performance caches
     clear_performance_cache()
@@ -32,7 +32,7 @@ setup_session_cleanup <- function(session, app_state = NULL, observers = NULL) {
     # Force garbage collection
     gc(verbose = FALSE)
 
-    log_info("Session cleanup completed", "MEMORY_MGMT")
+    log_info("Session cleanup completed", .context = "MEMORY_MGMT")
   })
 }
 
@@ -48,7 +48,7 @@ setup_session_cleanup <- function(session, app_state = NULL, observers = NULL) {
 cleanup_reactive_values <- function(values) {
   if (is.null(values) || length(values) == 0) return()
 
-  log_debug("Cleaning reactive values", "MEMORY_MGMT")
+  log_debug("Cleaning reactive values", .context = "MEMORY_MGMT")
 
   # Clear data objects (graceful failure during session shutdown)
   safe_nullify <- function(value_name) {
@@ -88,7 +88,7 @@ cleanup_reactive_values <- function(values) {
       fallback = function(e) {
         # During session shutdown, reactive context errors are expected
         if (grepl("reactive context", e$message, ignore.case = TRUE)) {
-          log_debug(paste("Skipping", value_name, "- no reactive context (session shutdown)"), "MEMORY_MGMT")
+          log_debug(paste("Skipping", value_name, "- no reactive context (session shutdown)"), .context = "MEMORY_MGMT")
         } else {
           log_warn(paste("Failed to clear", value_name, ":", e$message), "MEMORY_MGMT")
         }
@@ -117,7 +117,7 @@ cleanup_reactive_values <- function(values) {
     safe_nullify(obj)
   }
 
-  log_debug("Reactive values cleaned", "MEMORY_MGMT")
+  log_debug("Reactive values cleaned", .context = "MEMORY_MGMT")
 }
 
 #' Clean up centralized app state
@@ -132,7 +132,7 @@ cleanup_reactive_values <- function(values) {
 cleanup_app_state <- function(app_state, emit = NULL) {
   if (is.null(app_state)) return()
 
-  log_debug("Cleaning centralized app state", "MEMORY_MGMT")
+  log_debug("Cleaning centralized app state", .context = "MEMORY_MGMT")
 
   # Reset data management
   if (!is.null(app_state$data)) {
@@ -172,7 +172,7 @@ cleanup_app_state <- function(app_state, emit = NULL) {
     )
   }
 
-  log_debug("Centralized app state cleaned", "MEMORY_MGMT")
+  log_debug("Centralized app state cleaned", .context = "MEMORY_MGMT")
 }
 
 #' Clean up observers
@@ -187,7 +187,7 @@ cleanup_app_state <- function(app_state, emit = NULL) {
 cleanup_observers <- function(observers) {
   if (is.null(observers)) return()
 
-  log_debug("Destroying observers", "MEMORY_MGMT")
+  log_debug("Destroying observers", .context = "MEMORY_MGMT")
 
   destroy_observer <- function(obs) {
     safe_operation(
@@ -214,7 +214,7 @@ cleanup_observers <- function(observers) {
     destroy_observer(observers)
   }
 
-  log_debug("Observers destroyed", "MEMORY_MGMT")
+  log_debug("Observers destroyed", .context = "MEMORY_MGMT")
 }
 
 #' Monitor memory usage during operation
@@ -293,7 +293,7 @@ start_memory_monitoring <- function(operation_name = "unknown", warn_threshold =
 #' @export
 cleanup_temp_files <- function(temp_dir = tempdir(), pattern = NULL, max_age_hours = 24) {
   if (!dir.exists(temp_dir)) {
-    log_debug("Temp directory does not exist", "MEMORY_MGMT")
+    log_debug("Temp directory does not exist", .context = "MEMORY_MGMT")
     return()
   }
 
@@ -346,9 +346,9 @@ cleanup_temp_files <- function(temp_dir = tempdir(), pattern = NULL, max_age_hou
       )
     }
 
-    log_info(paste("Deleted", deleted_count, "old temp files"), "MEMORY_MGMT")
+    log_info(paste("Deleted", deleted_count, "old temp files"), .context = "MEMORY_MGMT")
   } else {
-    log_debug("No old temp files found", "MEMORY_MGMT")
+    log_debug("No old temp files found", .context = "MEMORY_MGMT")
   }
 }
 
@@ -364,7 +364,7 @@ cleanup_temp_files <- function(temp_dir = tempdir(), pattern = NULL, max_age_hou
 #' @family memory_management
 #' @export
 reset_app_to_clean_state <- function(app_state, session = NULL, emit = NULL) {
-  log_info("Resetting app to clean state", "MEMORY_MGMT")
+  log_info("Resetting app to clean state", .context = "MEMORY_MGMT")
 
   # Monitor memory during reset
   memory_monitor <- start_memory_monitoring("app_reset")

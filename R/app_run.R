@@ -1,6 +1,153 @@
 # run_app.R
 # Main app launcher following Golem conventions
 
+#' Configure application environment and test mode
+#'
+#' @description
+#' Centralized configuration of application environment and test mode settings.
+#' Uses golem config as single source of truth instead of scattered environment variable setting.
+#'
+#' @param enable_test_mode Boolean or NULL for auto-detection
+#' @param golem_options List of additional golem options
+#' @noRd
+configure_app_environment <- function(enable_test_mode = NULL, golem_options = list()) {
+  # Auto-detect test mode if not specified
+  if (is.null(enable_test_mode)) {
+    current_config <- Sys.getenv("GOLEM_CONFIG_ACTIVE", "production")
+    enable_test_mode <- interactive() || current_config == "development"
+  }
+
+  enable_test_mode <- isTRUE(enable_test_mode)
+
+  # Set appropriate golem configuration profile
+  config_profile <- if (enable_test_mode) "development" else "production"
+
+  # Set GOLEM_CONFIG_ACTIVE as single source of configuration
+  Sys.setenv(GOLEM_CONFIG_ACTIVE = config_profile)
+
+  # Store in options for app-level access
+  options(spc.test_mode = enable_test_mode)
+
+  # Configure package environment if available
+  if (exists("get_claudespc_environment", mode = "function")) {
+    claudespc_env <- get_claudespc_environment()
+    claudespc_env$TEST_MODE_AUTO_LOAD <- enable_test_mode
+    claudespc_env$TEST_MODE_FILE_PATH <- if (enable_test_mode) {
+      "inst/extdata/spc_exampledata.csv"
+    } else {
+      NULL
+    }
+  }
+
+  # Apply configuration via golem config instead of direct env vars
+  if (enable_test_mode) {
+    # Use golem config values for test mode
+    tryCatch({
+      if (exists("golem::get_golem_config", mode = "function")) {
+        test_config <- golem::get_golem_config("testing", config = config_profile)
+        if (!is.null(test_config$auto_load_test_data)) {
+          Sys.setenv(TEST_MODE_AUTO_LOAD = ifelse(test_config$auto_load_test_data, "TRUE", "FALSE"))
+        }
+        if (!is.null(test_config$test_data_file)) {
+          Sys.setenv(TEST_MODE_FILE_PATH = test_config$test_data_file)
+        }
+      } else {
+        # Fallback to direct settings if golem config not available
+        Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
+        Sys.setenv(TEST_MODE_FILE_PATH = "inst/extdata/spc_exampledata.csv")
+      }
+    }, error = function(e) {
+      # Fallback configuration
+      Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
+      Sys.setenv(TEST_MODE_FILE_PATH = "inst/extdata/spc_exampledata.csv")
+    })
+  } else {
+    Sys.setenv(TEST_MODE_AUTO_LOAD = "FALSE")
+    Sys.unsetenv("TEST_MODE_FILE_PATH")
+  }
+
+  log_debug_kv(
+    config_profile = config_profile,
+    test_mode = enable_test_mode,
+    .context = "APP_CONFIG"
+  )
+
+  invisible(list(
+    config_profile = config_profile,
+    test_mode = enable_test_mode
+  ))
+}
+
+#' Initialize startup performance optimizations
+#'
+#' @description
+#' Initialize startup cache and lazy loading systems at run_app() level.
+#' This ensures performance optimizations work in production regardless of loading mode.
+#'
+#' @noRd
+initialize_startup_performance_optimizations <- function() {
+  safe_operation(
+    operation_name = "Initialize startup performance optimizations",
+    code = {
+      # Initialize startup cache system if available
+      if (exists("load_cached_startup_data", mode = "function") &&
+          exists("cache_startup_data", mode = "function")) {
+
+        # Load cached static data if available
+        cached_data <- load_cached_startup_data()
+        if (length(cached_data) > 0) {
+          log_debug_kv(
+            key = "startup_cache_loaded",
+            value = paste(names(cached_data), collapse = ", "),
+            .context = "STARTUP_OPTIMIZATION"
+          )
+
+          # Apply cached data to global variables for backward compatibility
+          if ("hospital_branding" %in% names(cached_data) && exists("get_claudespc_environment", mode = "function")) {
+            claudespc_env <- get_claudespc_environment()
+            claudespc_env$HOSPITAL_COLORS <- cached_data$hospital_branding$colors
+            claudespc_env$HOSPITAL_NAME <- cached_data$hospital_branding$name
+          }
+          if ("observer_priorities" %in% names(cached_data)) {
+            if (exists("get_claudespc_environment", mode = "function")) {
+              claudespc_env <- get_claudespc_environment()
+              claudespc_env$OBSERVER_PRIORITIES <- cached_data$observer_priorities
+            }
+          }
+        }
+
+        # Cache current data for next startup (async, non-blocking)
+        cache_startup_data()
+      }
+
+      # Initialize lazy loading system if available
+      if (exists("lazy_load_modules", mode = "function")) {
+        loaded_modules <- lazy_load_modules()
+        if (length(loaded_modules) > 0) {
+          log_debug_kv(
+            key = "lazy_loaded_modules",
+            value = paste(loaded_modules, collapse = ", "),
+            .context = "STARTUP_OPTIMIZATION"
+          )
+        }
+      }
+
+      return(TRUE)
+    },
+    fallback = function(e) {
+      # Non-critical failure - log but don't block app startup
+      log_debug_kv(
+        key = "startup_optimization_failed",
+        value = e$message,
+        .context = "STARTUP_OPTIMIZATION"
+      )
+      return(FALSE)
+    }
+  )
+
+  invisible()
+}
+
 #' Run the SPC Shiny Application
 #'
 #' @param port Port number for the application (default: NULL for auto-assignment)
@@ -49,6 +196,9 @@ run_app <- function(port = NULL,
                     log_level = NULL,
                     ...) {
 
+  # Initialize startup performance optimizations early
+  initialize_startup_performance_optimizations()
+
   # Configure logging level
   if (!is.null(log_level)) {
     # Validate and set log level
@@ -61,51 +211,25 @@ run_app <- function(port = NULL,
     } else {
       log_warn(sprintf("Invalid log level '%s'. Valid options: %s",
                      log_level, paste(valid_levels, collapse = ", ")), "LOG_CONFIG")
-      log_info("Using default log level", "LOG_CONFIG")
+      log_info("Using default log level", .context = "LOG_CONFIG")
     }
   } else {
     # Auto-detect log level based on context
     if (interactive() || Sys.getenv("GOLEM_CONFIG_ACTIVE", "production") == "development") {
       if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
         Sys.setenv(SPC_LOG_LEVEL = "INFO")
-        log_info("Auto-detected development environment - using INFO level", "LOG_CONFIG")
+        log_info("Auto-detected development environment - using INFO level", .context = "LOG_CONFIG")
       }
     } else {
       if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
         Sys.setenv(SPC_LOG_LEVEL = "WARN")
-        log_info("Auto-detected production environment - using WARN level", "LOG_CONFIG")
+        log_info("Auto-detected production environment - using WARN level", .context = "LOG_CONFIG")
       }
     }
   }
 
-  # Configure test mode based on context
-  if (is.null(enable_test_mode)) {
-    # Auto-detect: enable test mode in development environments
-    enable_test_mode <- interactive() || Sys.getenv("GOLEM_CONFIG_ACTIVE", "production") == "development"
-  }
-
-  enable_test_mode <- isTRUE(enable_test_mode)
-  options(spc.test_mode = enable_test_mode)
-
-  if (exists("get_claudespc_environment", mode = "function")) {
-    claudespc_env <- get_claudespc_environment()
-    claudespc_env$TEST_MODE_AUTO_LOAD <- enable_test_mode
-    claudespc_env$TEST_MODE_FILE_PATH <- if (enable_test_mode) {
-      "inst/extdata/spc_exampledata.csv"
-    } else {
-      NULL
-    }
-  }
-
-  if (enable_test_mode) {
-    # Enable test mode with automatic data loading
-    Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
-    Sys.setenv(GOLEM_CONFIG_ACTIVE = "development")
-    Sys.setenv(TEST_MODE_FILE_PATH = "inst/extdata/spc_exampledata.csv")
-  } else {
-    Sys.setenv(TEST_MODE_AUTO_LOAD = "FALSE")
-    Sys.unsetenv("TEST_MODE_FILE_PATH")
-  }
+  # Configure application environment and test mode using unified configuration
+  configure_app_environment(enable_test_mode, options)
 
   # Create the Shiny app using golem pattern
   # Load golem function directly to avoid package conflicts

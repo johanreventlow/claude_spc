@@ -38,7 +38,7 @@ get_hospital_branding_config <- function() {
       branding_config$generated_at <- Sys.time()
       branding_config$version <- "1.0.0"
 
-      log_debug("Generated hospital branding cache data", "CACHE_GENERATOR")
+      log_debug("Generated hospital branding cache data", .context = "CACHE_GENERATOR")
       return(branding_config)
     },
     fallback = function(e) {
@@ -84,7 +84,7 @@ get_observer_priorities_config <- function() {
       priorities$generated_at <- Sys.time()
       priorities$version <- "1.0.0"
 
-      log_debug("Generated observer priorities cache data", "CACHE_GENERATOR")
+      log_debug("Generated observer priorities cache data", .context = "CACHE_GENERATOR")
       return(priorities)
     },
     fallback = function(e) {
@@ -154,7 +154,7 @@ get_chart_types_config <- function() {
       chart_types$generated_at <- Sys.time()
       chart_types$version <- "1.0.0"
 
-      log_debug("Generated chart types cache data", "CACHE_GENERATOR")
+      log_debug("Generated chart types cache data", .context = "CACHE_GENERATOR")
       return(chart_types)
     },
     fallback = function(e) {
@@ -204,7 +204,7 @@ get_system_config_snapshot <- function() {
       config$generated_at <- Sys.time()
       config$version <- "1.0.0"
 
-      log_debug("Generated system config cache data", "CACHE_GENERATOR")
+      log_debug("Generated system config cache data", .context = "CACHE_GENERATOR")
       return(config)
     },
     fallback = function(e) {

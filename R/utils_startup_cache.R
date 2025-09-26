@@ -140,7 +140,7 @@ cleanup_old_cache <- function() {
       }
 
       if (removed_count > 0) {
-        log_info(paste("Cache cleanup complete:", removed_count, "files removed"), "STARTUP_CACHE")
+        log_info(paste("Cache cleanup complete:", removed_count, "files removed"), .context = "STARTUP_CACHE")
       }
     },
     fallback = function(e) {
@@ -157,14 +157,14 @@ cleanup_old_cache <- function() {
 #' @export
 cache_startup_data <- function() {
   if (!init_startup_cache()) {
-    log_warn("Cannot cache startup data - cache initialization failed", "STARTUP_CACHE")
+    log_warn("Cannot cache startup data - cache initialization failed", .context = "STARTUP_CACHE")
     return(character(0))
   }
 
   cached_artifacts <- character(0)
   cache_dir <- STARTUP_CACHE_CONFIG$cache_dir
 
-  log_info("Starting startup data caching", "STARTUP_CACHE")
+  log_info("Starting startup data caching", .context = "STARTUP_CACHE")
 
   for (artifact_name in names(STARTUP_CACHE_CONFIG$artifacts)) {
     artifact_config <- STARTUP_CACHE_CONFIG$artifacts[[artifact_name]]
@@ -229,7 +229,7 @@ load_cached_startup_data <- function() {
   cache_dir <- STARTUP_CACHE_CONFIG$cache_dir
 
   if (!dir.exists(cache_dir)) {
-    log_debug("No startup cache directory found", "STARTUP_CACHE")
+    log_debug("No startup cache directory found", .context = "STARTUP_CACHE")
     return(list())
   }
 

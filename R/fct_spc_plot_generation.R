@@ -17,7 +17,7 @@ extract_comment_data <- function(data, kommentar_column, qic_data) {
   # STABLE ROW MAPPING: Use row-id to correctly map comments to qic_data points
   # This prevents comment drift when qicharts2 reorders/filters rows
   if (!".original_row_id" %in% names(qic_data)) {
-    log_warn("Missing .original_row_id in qic_data - falling back to positional mapping", "PLOT_COMMENT")
+    log_warn("Missing .original_row_id in qic_data - falling back to positional mapping", .context = "PLOT_COMMENT")
     # Fallback til gamle positionsbaserede mapping
     comments_raw <- data[[kommentar_column]]
     comment_data <- data.frame(
@@ -267,7 +267,7 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
         x_col_for_qic <- x_col_name
 
       } else {
-        log_debug("Length mismatch - using observation sequence as fallback", "DATA_PROCESS")
+        log_debug("Length mismatch - using observation sequence as fallback", .context = "DATA_PROCESS")
         # Fallback til observation sekvens
         if (!("obs_sequence" %in% names(data))) {
           data$obs_sequence <- 1:nrow(data)
@@ -355,11 +355,11 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
 execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL) {
   # Call qic() with prepared arguments
   if (getOption("debug.mode", FALSE)) {
-    log_debug("qic_args structure:", "QIC_CALL")
-    log_debug(qic_args, "QIC_CALL")
+    log_debug("qic_args structure:", .context = "QIC_CALL")
+    log_debug(qic_args, .context = "QIC_CALL")
   }
 
-  log_debug(qic_args, "QIC")
+  log_debug(qic_args, .context = "QIC")
 
   # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
   if (exists("benchmark_spc_operation") && requireNamespace("microbenchmark", quietly = TRUE)) {
@@ -527,7 +527,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   }
 
   log_debug(paste("generateSPCPlot CALL #", call_number, "at", format(current_time, "%H:%M:%S.%OS3"),
-                  "| chart_type:", chart_type, "| data:", nrow(data), "rows"), "SPC_CALC_DEBUG")
+                  "| chart_type:", chart_type, "| data:", nrow(data), "rows"), .context = "SPC_CALC_DEBUG")
 
   # Input validation and configuration sanitization
   validate_spc_inputs(data, config)
@@ -743,7 +743,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         if (inherits(qic_data$x, c("POSIXct", "POSIXt"))) {
           # Håndter intelligent formatering separat
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", "X_AXIS_FORMAT")
+            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
@@ -751,7 +751,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               breaks = scales::breaks_pretty(n = format_config$n_breaks)
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", "X_AXIS_FORMAT")
+            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
@@ -775,14 +775,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         } else if (inherits(qic_data$x, "Date")) {
           # Date objekter - tilsvarende intelligent håndtering
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects", "X_AXIS_FORMAT")
+            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_date(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               breaks = scales::date_breaks(format_config$breaks)
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects", "X_AXIS_FORMAT")
+            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_date(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
