@@ -303,7 +303,7 @@ main_app_server <- function(input, output, session) {
             # Debug output
             log_info(paste("Auto-indlæst fil:", test_file_path), "TEST_MODE")
             log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), "TEST_MODE")
-            log_info(paste("Kolonner:", paste(names(test_data), collapse = ", \")), "TEST_MODE")
+            log_info(paste("Kolonner:", paste(names(test_data), collapse = ", ")), "TEST_MODE")
 
             autoload_tracer$step("test_data_autoload_complete")
           },
