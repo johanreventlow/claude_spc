@@ -102,14 +102,18 @@ get_log_level <- function() {
     paste(capture.output(utils::str(x, max.level = 1, vec.len = 10, give.attr = FALSE)),
           collapse = " ")
   }, error = function(e) {
-    "<FORMAT_ERROR>"
+    paste0("<FORMAT_ERROR: ", conditionMessage(e), ">")
   })
 }
 
 # intern hjælper (ikke-eksporteret)
 .safe_collapse <- function(args_list) {
-  parts <- purrr::map(args_list, .safe_format)
-  paste(unlist(parts, use.names = FALSE), collapse = " ")
+  tryCatch({
+    parts <- purrr::map(args_list, .safe_format)
+    paste(unlist(parts, use.names = FALSE), collapse = " ")
+  }, error = function(e) {
+    paste0("<COLLAPSE_ERROR: ", conditionMessage(e), ">")
+  })
 }
 
 # intern hjælper (ikke-eksporteret)
@@ -180,8 +184,13 @@ log_debug <- function(..., .context = NULL) {
       cat(sprintf("[%s] DEBUG: [%s] %s\n", .timestamp(), component, msg))
     }
   }, error = function(e) {
-    # Fejlsikker fallback – må ALDRIG vælte Shiny-renderers
-    try(cat("[LOGGING_ERROR] Could not format debug message\n"), silent = TRUE)
+    # Forbedret fejlsikker fallback med debugging information
+    try({
+      args_count <- length(list(...))
+      context_val <- if (is.null(.context)) "NULL" else as.character(.context)
+      cat(sprintf("[LOGGING_ERROR] Could not format debug message - args_count=%d context=%s error=%s\n",
+                  args_count, context_val, conditionMessage(e)))
+    }, silent = TRUE)
   })
   
   invisible(NULL)
