@@ -2,7 +2,7 @@
 # Run this to measure how many times QIC calculations occur during app startup
 
 # Load required functions
-source("global.R")
+source("../../global.R")
 
 # Function to test startup performance
 test_startup_performance <- function() {
@@ -17,7 +17,7 @@ test_startup_performance <- function() {
 
   # Start app in background with debug logging
   app_process <- callr::r_bg(function() {
-    source("global.R")
+    source("../../global.R")
     # Enable debug logging
     Sys.setenv(LOG_LEVEL = "DEBUG")
     run_app(log_level = "DEBUG", port = 4040, launch.browser = FALSE)

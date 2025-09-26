@@ -163,9 +163,9 @@ cache_auto_detection_results <- function(data, app_state, force_refresh = FALSE)
     cached_result <- get_cached_result(cache_key)
     if (!is.null(cached_result)) {
       log_debug(
-        component = "[AUTO_DETECT_CACHE]",
-        message = "Auto-detection cache hit",
-        details = list(cache_key = cache_key, data_dims = dim(data))
+        "Auto-detection cache hit",
+        list(cache_key = cache_key, data_dims = dim(data)),
+        .context = "AUTO_DETECT_CACHE"
       )
       return(cached_result$value)
     }
@@ -173,9 +173,9 @@ cache_auto_detection_results <- function(data, app_state, force_refresh = FALSE)
 
   # Cache miss or forced refresh - perform auto-detection
   log_debug(
-    component = "[AUTO_DETECT_CACHE]",
-    message = "Auto-detection cache miss - running analysis",
-    details = list(cache_key = cache_key, force_refresh = force_refresh)
+    "Auto-detection cache miss - running analysis",
+    list(cache_key = cache_key, force_refresh = force_refresh),
+    .context = "AUTO_DETECT_CACHE"
   )
 
   start_time <- Sys.time()

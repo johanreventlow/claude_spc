@@ -150,7 +150,7 @@ track_memory_usage <- function(context = "unknown") {
   .startup_metrics$memory_snapshots[[length(.startup_metrics$memory_snapshots) + 1]] <- memory_info
 
   log_debug(paste("Memory tracked:", context, "-", current_memory_mb, "MB"),
-           "PERFORMANCE_MONITORING")
+           .context = "PERFORMANCE_MONITORING")
 }
 
 #' Track QIC function call with context

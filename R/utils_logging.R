@@ -181,7 +181,7 @@ log_debug <- function(..., .context = NULL) {
     }
   }, error = function(e) {
     # Fejlsikker fallback – må ALDRIG vælte Shiny-renderers
-    try(message("[LOGGING_ERROR] Could not format debug message"), silent = TRUE)
+    try(cat("[LOGGING_ERROR] Could not format debug message\n"), silent = TRUE)
   })
   
   invisible(NULL)
