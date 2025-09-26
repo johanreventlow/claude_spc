@@ -201,6 +201,10 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # TEST MODE EVENTS
   shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+    # Phase 3: Set startup phase and enable race condition prevention
+    app_state$test_mode$race_prevention_active <- TRUE
+    emit$test_mode_startup_phase_changed("data_ready")
+
     # FIXED: In test mode, data_loaded event is ignored due to timing (sent before observers setup)
     # Handle autodetect trigger for test scenarios
 
@@ -209,12 +213,65 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     data_available <- !is.null(app_state$data$current_data)
 
     if (data_available && !autodetect_completed) {
-      # Trigger autodetect if data_loaded was missed due to timing
-      emit$auto_detection_started()
+      # Phase 3: Use debounced reactive pattern (following established architecture)
+      debounce_delay <- app_state$test_mode$debounce_delay %||% 500
+
+      # Create debounced reactive for test mode autodetect trigger
+      debounced_test_mode_trigger <- shiny::debounce(
+        shiny::reactive({
+          if (app_state$test_mode$race_prevention_active) {
+            emit$test_mode_debounced_autodetect()
+          }
+        }),
+        millis = debounce_delay
+      )
+
+      # Trigger the debounced reactive immediately to start the delay
+      debounced_test_mode_trigger()
+
     } else if (autodetect_completed) {
       # Autodetect already completed, trigger UI sync
       emit$ui_sync_needed()
     }
+  })
+
+  # Phase 3: Test mode startup phase management
+  shiny::observeEvent(app_state$events$test_mode_startup_phase_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
+    current_phase <- app_state$test_mode$startup_phase
+
+    log_debug(
+      component = "[TEST_MODE_STARTUP]",
+      message = paste("Startup phase changed to:", current_phase),
+      details = list(phase = current_phase)
+    )
+
+    # Handle phase transitions
+    if (current_phase == "ui_ready") {
+      emit$test_mode_startup_phase_changed("complete")
+    } else if (current_phase == "complete") {
+      # Disable race prevention when startup is complete
+      app_state$test_mode$race_prevention_active <- FALSE
+      log_info(
+        component = "[TEST_MODE_STARTUP]",
+        message = "Test mode startup completed - race prevention disabled"
+      )
+    }
+  })
+
+  # Phase 3: Debounced auto-detection for test mode
+  shiny::observeEvent(app_state$events$test_mode_debounced_autodetect, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+    # Only proceed if race prevention is still active
+    if (!app_state$test_mode$race_prevention_active) {
+      log_debug(
+        component = "[TEST_MODE_STARTUP]",
+        message = "Debounced autodetect skipped - race prevention disabled"
+      )
+      return()
+    }
+
+    # Trigger autodetect
+    emit$auto_detection_started()
+    emit$test_mode_startup_phase_changed("ui_ready")
   })
 
   # SESSION LIFECYCLE EVENTS

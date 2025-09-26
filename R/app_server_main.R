@@ -201,6 +201,20 @@ main_app_server <- function(input, output, session) {
             session_id = session$token)
 
   if (test_mode_auto_load) {
+    # Phase 3: Initialize test mode optimization settings
+    claudespc_env <- get_claudespc_environment()
+    app_state$test_mode$debounce_delay <- claudespc_env$TEST_MODE_STARTUP_DEBOUNCE_MS %||% 500
+    app_state$test_mode$lazy_plot_generation <- claudespc_env$TEST_MODE_LAZY_PLOT_GENERATION %||% TRUE
+
+    log_debug(
+      component = "[TEST_MODE_STARTUP]",
+      message = "Test mode optimization configured",
+      details = list(
+        debounce_delay = app_state$test_mode$debounce_delay,
+        lazy_plot_generation = app_state$test_mode$lazy_plot_generation
+      )
+    )
+
     # Start workflow tracer for auto-load process
     autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, session$token)
     test_file_path <- get_test_mode_file_path()

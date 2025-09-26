@@ -130,6 +130,12 @@ development:
     mock_external_services: false
     validate_test_data: true
 
+    # Phase 3: Test mode optimization settings for development
+    startup_debounce_ms: 800      # Longer debounce for development inspection
+    lazy_plot_generation: true
+    auto_detection_delay_ms: 400  # Slightly longer delay for debugging
+    race_condition_prevention: true
+
   # UI and UX (enhanced for development)
   ui:
     enable_hot_reload: false      # Not implemented yet
@@ -265,6 +271,12 @@ testing:
     enable_test_endpoints: true
     mock_external_services: true   # Isolated testing
     validate_test_data: true
+
+    # Phase 3: Test mode optimization settings
+    startup_debounce_ms: 500
+    lazy_plot_generation: true
+    auto_detection_delay_ms: 250
+    race_condition_prevention: true
 
   # UI and UX (minimal for testing)
   ui:

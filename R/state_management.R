@@ -86,6 +86,10 @@ create_app_state <- function() {
     manual_autodetect_button = 0L,
     test_mode_ready = 0L,
 
+    # Phase 3: Test mode startup events
+    test_mode_startup_phase_changed = 0L,
+    test_mode_debounced_autodetect = 0L,
+
     # FEJL- OG GENOPRETTELSESHÅNDTERING (CONSOLIDATED) -------------------
     error_occurred = 0L,        # Consolidated: all error types with context
     recovery_completed = 0L,     # Remains: recovery tracking
@@ -179,12 +183,19 @@ create_app_state <- function() {
     has_data_status = "false"
   )
 
-  # Test Mode Management
+  # Test Mode Management with Startup Optimization
   app_state$test_mode <- shiny::reactiveValues(
     enabled = FALSE,
     auto_load = FALSE,
     file_path = NULL,
-    data_loaded = FALSE
+    data_loaded = FALSE,
+
+    # Phase 3: Startup optimization for test mode
+    startup_phase = "initializing",  # initializing -> data_ready -> ui_ready -> complete
+    lazy_plot_generation = TRUE,
+    startup_events_queued = list(),
+    debounce_delay = 500,  # ms delay for auto-detection
+    race_prevention_active = FALSE
   )
 
   # UI State - Convert to reactiveValues for consistency
@@ -441,6 +452,22 @@ create_emit_api <- function(app_state) {
     test_mode_ready = function() {
       shiny::isolate({
         app_state$events$test_mode_ready <- app_state$events$test_mode_ready + 1L
+      })
+    },
+
+    # Phase 3: Test mode startup events
+    test_mode_startup_phase_changed = function(phase = NULL) {
+      shiny::isolate({
+        if (!is.null(phase)) {
+          app_state$test_mode$startup_phase <- phase
+        }
+        app_state$events$test_mode_startup_phase_changed <- app_state$events$test_mode_startup_phase_changed + 1L
+      })
+    },
+
+    test_mode_debounced_autodetect = function() {
+      shiny::isolate({
+        app_state$events$test_mode_debounced_autodetect <- app_state$events$test_mode_debounced_autodetect + 1L
       })
     },
 

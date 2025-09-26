@@ -166,7 +166,15 @@ setup_performance_optimizations <- function(config) {
 
   if (!is.null(config$testing)) {
     claudespc_env$TEST_MODE_AUTO_LOAD <- config$testing$auto_load_enabled %||% FALSE
+
+    # Phase 3: Test mode optimization settings
+    claudespc_env$TEST_MODE_STARTUP_DEBOUNCE_MS <- config$testing$startup_debounce_ms %||% 500
+    claudespc_env$TEST_MODE_LAZY_PLOT_GENERATION <- config$testing$lazy_plot_generation %||% TRUE
+    claudespc_env$TEST_MODE_AUTO_DETECTION_DELAY_MS <- config$testing$auto_detection_delay_ms %||% 250
+    claudespc_env$TEST_MODE_RACE_CONDITION_PREVENTION <- config$testing$race_condition_prevention %||% TRUE
+
     optimizations$testing_config_set <- TRUE
+    optimizations$test_mode_optimization_set <- TRUE
   }
 
   if (!is.null(config$development)) {

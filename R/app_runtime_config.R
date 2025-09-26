@@ -172,6 +172,20 @@ setup_testing_config <- function(override_options = list()) {
     excel_data = "R/data/SPC_test_data_forskellige.xlsx"
   )
 
+  # Phase 3: Test mode optimization settings
+  testing_golem_config <- tryCatch({
+    golem_config <- golem::get_current_config()
+    golem_config$testing %||% list()
+  }, error = function(e) {
+    # Fallback if golem config is not available
+    list()
+  })
+
+  testing_config$startup_debounce_ms <- testing_golem_config$startup_debounce_ms %||% 500
+  testing_config$lazy_plot_generation <- testing_golem_config$lazy_plot_generation %||% TRUE
+  testing_config$auto_detection_delay_ms <- testing_golem_config$auto_detection_delay_ms %||% 250
+  testing_config$race_condition_prevention <- testing_golem_config$race_condition_prevention %||% TRUE
+
   return(testing_config)
 }
 
