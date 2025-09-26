@@ -195,7 +195,10 @@ create_app_state <- function() {
     lazy_plot_generation = TRUE,
     startup_events_queued = list(),
     debounce_delay = 500,  # ms delay for auto-detection
-    race_prevention_active = FALSE
+    race_prevention_active = FALSE,
+
+    # PR #12: Prevent duplicate autoloads
+    autoload_completed = FALSE
   )
 
   # UI State - Convert to reactiveValues for consistency

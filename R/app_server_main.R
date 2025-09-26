@@ -224,7 +224,7 @@ main_app_server <- function(input, output, session) {
     test_file_path <- get_test_mode_file_path()
 
     session$onFlushed(function() {
-      if (isTRUE(app_state$test_mode$autoload_completed)) {
+      if (isTRUE(shiny::isolate(app_state$test_mode$autoload_completed))) {
         log_debug(
           component = "[TEST_MODE_STARTUP]",
           message = "Skipping duplicate test data autoload",
@@ -233,7 +233,7 @@ main_app_server <- function(input, output, session) {
         return(invisible(NULL))
       }
 
-      app_state$test_mode$autoload_completed <- TRUE
+      shiny::isolate(app_state$test_mode$autoload_completed <- TRUE)
 
       # Start workflow tracer for auto-load process
       autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, session$token)
