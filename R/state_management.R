@@ -73,10 +73,9 @@ create_app_state <- function() {
     auto_detection_started = 0L,
     auto_detection_completed = 0L,
 
-    # UI SYNKRONISERING ----------------------------------------------------
-    ui_sync_needed = 0L,
-    ui_sync_completed = 0L,
-    ui_update_needed = 0L,
+    # UI SYNKRONISERING (CONSOLIDATED) -------------------------------------
+    ui_sync_requested = 0L,  # Consolidates: ui_sync_needed + ui_update_needed + form_update_needed
+    ui_sync_completed = 0L,  # Remains: completion tracking
     column_choices_changed = 0L,
     navigation_changed = 0L,
 
@@ -354,16 +353,23 @@ create_emit_api <- function(app_state) {
     },
 
 
-    # UI synchronization events
-    ui_sync_needed = function() {
+    # UI synchronization events (CONSOLIDATED)
+    ui_sync_requested = function() {
       shiny::isolate({
-        app_state$events$ui_sync_needed <- app_state$events$ui_sync_needed + 1L
+        app_state$events$ui_sync_requested <- app_state$events$ui_sync_requested + 1L
       })
     },
 
     ui_sync_completed = function() {
       shiny::isolate({
         app_state$events$ui_sync_completed <- app_state$events$ui_sync_completed + 1L
+      })
+    },
+
+    # Legacy UI event compatibility (map to consolidated events)
+    ui_sync_needed = function() {
+      shiny::isolate({
+        app_state$events$ui_sync_requested <- app_state$events$ui_sync_requested + 1L
       })
     },
 
@@ -430,10 +436,10 @@ create_emit_api <- function(app_state) {
       })
     },
 
-    # UI update events
+    # Legacy UI event compatibility (map to consolidated events)
     ui_update_needed = function() {
       shiny::isolate({
-        app_state$events$ui_update_needed <- app_state$events$ui_update_needed + 1L
+        app_state$events$ui_sync_requested <- app_state$events$ui_sync_requested + 1L
       })
     },
 

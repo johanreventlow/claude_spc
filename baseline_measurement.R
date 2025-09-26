@@ -27,9 +27,9 @@ track_event("columns_detected", "baseline_test")
 track_qic_call("startup_visualization", list(chart_type = "p", phase = "initial_load"))
 track_generateSPCPlot_call("startup_plot", list(chart_type = "p", context = "baseline"))
 
-# Simulate UI synchronization
+# Simulate UI synchronization (CONSOLIDATED)
 set_startup_phase("ui_sync")
-track_event("ui_sync_needed", "baseline_test")
+track_event("ui_sync_requested", "baseline_test")  # Consolidated event
 track_event("ui_sync_completed", "baseline_test")
 
 # Final phase

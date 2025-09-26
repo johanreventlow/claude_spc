@@ -108,8 +108,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
   })
 
-  # UI SYNCHRONIZATION EVENTS
-  shiny::observeEvent(app_state$events$ui_sync_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
+  # UI SYNCHRONIZATION EVENTS (CONSOLIDATED)
+  shiny::observeEvent(app_state$events$ui_sync_requested, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
 
     # Add extra debugging
 
@@ -118,6 +118,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       code = {
         # Perform UI synchronization
         sync_ui_with_columns_unified(app_state, input, output, session, ui_service)
+
+        # CONSOLIDATED: Handle general UI updates (from ui_update_needed)
+        if (!is.null(ui_service) && !is.null(app_state$data$current_data)) {
+          ui_service$update_column_choices()
+        }
       },
       fallback = NULL,
       session = session,
@@ -309,17 +314,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
   })
 
-  # General UI update needed event listener
-  shiny::observeEvent(app_state$events$ui_update_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
-
-    # This could trigger multiple UI updates
-    if (!is.null(ui_service)) {
-      # Update column choices if data is available
-      if (!is.null(app_state$data$current_data)) {
-        ui_service$update_column_choices()
-      }
-    }
-  })
+  # NOTE: ui_update_needed functionality consolidated into ui_sync_requested observer above
 
   # INPUT CHANGE OBSERVERS ===================================================
   # Keep app_state$columns aligned with UI selections when user manually changes dropdowns
