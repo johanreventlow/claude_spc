@@ -71,10 +71,13 @@ if (use_source_loading) {
       Sys.setenv(SPC_LOG_LEVEL = "INFO")
     }
 
-    # Early exit for package loading
-    invisible(return())
+    # Package loading completed successfully - no source loading needed
+    # Jump to final configuration section
   }
 }
+
+# Only execute source loading if use_source_loading is TRUE
+if (use_source_loading) {
 
 # Load core functions via sourcing in dependency order
 source_files <- c(
@@ -236,10 +239,16 @@ if (!nzchar(Sys.getenv("SPC_LOG_LEVEL", ""))) {
   Sys.setenv(SPC_LOG_LEVEL = "INFO")
 }
 
-# PACKAGE INITIALIZATION COMPLETE --------------------------------
+# SOURCE LOADING INITIALIZATION COMPLETE --------------------------------
 message("✓ Global configuration loaded successfully")
 if (exists("HOSPITAL_NAME")) {
   message(paste("✓ Hospital branding loaded:", HOSPITAL_NAME))
 } else {
   message("⚠ Hospital branding not available - check package installation")
 }
+
+} # End of source loading conditional block
+
+# FINAL CONFIGURATION --------------------------------
+# This section runs regardless of loading method (package or source)
+# Log level is already set above in both branches, so no additional configuration needed
