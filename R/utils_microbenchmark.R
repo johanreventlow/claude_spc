@@ -217,7 +217,12 @@ benchmark_autodetect_comprehensive <- function(data_list = NULL,
 
   results_list <- list()
 
-  log_info("Starting comprehensive autodetect benchmarking")
+  log_debug_kv(
+    message = "Starting comprehensive autodetect benchmarking",
+    data_sets = length(data_list),
+    trigger_types = length(trigger_types),
+    .context = "PERFORMANCE_BENCHMARK"
+  )
 
   for (data_name in names(data_list)) {
     for (trigger_type in trigger_types) {
@@ -328,7 +333,12 @@ benchmark_qic_generation <- function(data_list = NULL,
 
   results_list <- list()
 
-  log_info("Starting QIC plot generation benchmarking")
+  log_debug_kv(
+    message = "Starting QIC plot generation benchmarking",
+    data_sets = length(data_list),
+    chart_types = length(c("run", "p", "c")),
+    .context = "PERFORMANCE_BENCHMARK"
+  )
 
   for (data_name in names(data_list)) {
     for (chart_type in chart_types) {

@@ -416,7 +416,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     app_state$errors$last_recovery_time <- Sys.time()
 
     # Log successful recovery
-    log_info("Error recovery completed", .context = "ERROR_SYSTEM")
+    log_info("Error recovery completed", component = "ERROR_SYSTEM")
     log_debug_kv(
       recovery_time = as.character(Sys.time()),
       session_id = if(!is.null(session)) session$token else "no session",

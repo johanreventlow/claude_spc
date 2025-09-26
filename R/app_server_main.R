@@ -7,7 +7,13 @@
 #'
 #' @export
 main_app_server <- function(input, output, session) {
-  log_info("SPC App server initialization started", "APP_SERVER")
+  # Log server initialization with session details
+  log_debug_kv(
+    message = "SPC App server initialization started",
+    session_id = session$token,
+    client_data = if (exists("clientData", envir = session)) length(session$clientData) else 0,
+    .context = "APP_SERVER"
+  )
 
   # Initialize advanced debug system
   initialize_advanced_debug(enable_history = TRUE, max_history_entries = 1000)
@@ -49,7 +55,12 @@ main_app_server <- function(input, output, session) {
       app_name = "SPC_Analysis_Tool"
     )
     # integrate_shinylogs_with_logging(session)  # Disabled - causes conflicts
-    log_info("shinylogs advanced logging activated", "APP_SERVER")
+    log_debug_kv(
+      message = "shinylogs advanced logging activated",
+      log_directory = "logs/",
+      session_id = session$token,
+      .context = "APP_SERVER"
+    )
   }
 
   # EVENT SYSTEM: Set up reactive event listeners AFTER shinylogs setup
