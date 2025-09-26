@@ -47,6 +47,10 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
       return(measure_reactive_performance(expr, operation_name))
     } else {
       start_time <- Sys.time()
+      # SECURITY: Add input validation before eval() in benchmarking context
+      if (!is.expression(expr) && !is.call(expr) && !is.function(expr)) {
+        stop("Invalid expression type for benchmarking. Only expressions, calls, or functions allowed.")
+      }
       result <- eval(expr)
       execution_time <- as.numeric(Sys.time() - start_time)
 
@@ -99,6 +103,10 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
 
     # Capture result if requested
     if (capture_result) {
+      # SECURITY: Add input validation before eval() in benchmarking context
+      if (!is.expression(expr) && !is.call(expr) && !is.function(expr)) {
+        stop("Invalid expression type for benchmarking. Only expressions, calls, or functions allowed.")
+      }
       results$captured_result <- eval(expr)
     }
 
@@ -114,6 +122,10 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
 
     # Fallback to basic timing
     start_time <- Sys.time()
+    # SECURITY: Add input validation before eval() in benchmarking context
+    if (!is.expression(expr) && !is.call(expr) && !is.function(expr)) {
+      stop("Invalid expression type for benchmarking. Only expressions, calls, or functions allowed.")
+    }
     result <- eval(expr)
     execution_time <- as.numeric(Sys.time() - start_time) * 1000  # Convert to ms
 

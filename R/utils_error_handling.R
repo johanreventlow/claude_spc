@@ -49,11 +49,11 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
         log_error(error_msg, paste0("ERROR_HANDLING_", toupper(error_type)))
       }, error = function(log_err) {
         # Fallback to basic R messaging if logging fails
-        cat("[ERROR]", format(Sys.time(), "%H:%M:%S"), ":", error_msg, "\n")
+        cat(sprintf("[%s] ERROR: [%s] %s\n", format(Sys.time(), "%H:%M:%S"), "ERROR_HANDLING", error_msg))
       })
     } else {
-      # Basic fallback logging without dependencies
-      cat("[ERROR]", format(Sys.time(), "%H:%M:%S"), ":", error_msg, "\n")
+      # Basic fallback logging without dependencies - consistent format with main logging
+      cat(sprintf("[%s] ERROR: [%s] %s\n", format(Sys.time(), "%H:%M:%S"), "ERROR_HANDLING", error_msg))
     }
 
     # User notification if session provided and requested

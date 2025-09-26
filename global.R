@@ -17,8 +17,27 @@ if (use_source_loading) {
 
   # Use package-based loading (standard production approach)
   if (!"SPCify" %in% loadedNamespaces()) {
-    # Try to load the package, fallback to source loading if it fails
+    # Try to load the package with connection management, fallback to source loading if it fails
     tryCatch({
+      # SECURITY: Clean up connections before package loading to prevent exhaustion
+      # Close any unused connections to prevent "all 128 connections are in use" error
+      tryCatch({
+        open_connections <- showConnections(all = TRUE)
+        if (nrow(open_connections) > 100) {  # Threshold to prevent issues
+          warning("High number of open connections detected, attempting cleanup")
+          # Close connections that can be safely closed
+          for (i in seq_len(nrow(open_connections))) {
+            conn_info <- open_connections[i, ]
+            if (conn_info$class %in% c("file", "textConnection")) {
+              tryCatch(close(getConnection(as.numeric(rownames(conn_info)))), error = function(e) NULL)
+            }
+          }
+        }
+      }, error = function(e) {
+        # Connection cleanup failed, continue but warn
+        message("Warning: Could not clean up connections: ", e$message)
+      })
+
       suppressPackageStartupMessages({
         pkgload::load_all(".", quiet = TRUE)
       })

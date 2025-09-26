@@ -188,7 +188,8 @@ cache_startup_data <- function() {
       cached <- safe_operation(
         operation_name = paste("Cache artifact:", artifact_name),
         code = {
-          if (exists(deparse(substitute(artifact_config$generator)), mode = "function")) {
+          # Fix: Check if generator is a function directly instead of deparse/substitute
+          if (is.function(artifact_config$generator)) {
             data <- artifact_config$generator()
             saveRDS(data, cache_file)
             log_debug(paste("Cached artifact:", artifact_name, "to", basename(cache_file)), "STARTUP_CACHE")

@@ -152,8 +152,8 @@ autodetect_engine <- function(data = NULL,
           operation_name = paste0("autodetect_name_based_", length(col_names), "_cols"),
           log_results = TRUE
         )
-        # Extract the actual results from benchmark wrapper
-        results <- eval(parse(text = "detect_columns_name_based(col_names, app_state)"))
+        # Fix: Direct function call instead of eval(parse()) - eliminates code injection risk
+        results <- detect_columns_name_based(col_names, app_state)
       } else {
         results <- detect_columns_name_based(col_names, app_state)
       }
