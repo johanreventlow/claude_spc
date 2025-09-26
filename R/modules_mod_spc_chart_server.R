@@ -288,6 +288,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
       log_debug(paste("spc_plot: Processing data - rows:", nrow(data), "cols:", ncol(data)), "VISUALIZATION")
 
+      # RACE CONDITION PREVENTION: Circuit breaker to prevent overlapping generations
+      plot_generation_in_progress <- get_plot_state("plot_generation_in_progress") %||% FALSE
+      if (plot_generation_in_progress) {
+        log_debug("spc_plot: Circuit breaker activated - plot generation already in progress", "VISUALIZATION")
+
+        # SAFE FALLBACK: Only return cached plot if it's valid, otherwise allow this generation
+        cached_plot <- get_plot_state("plot_object")
+        cached_plot_ready <- get_plot_state("plot_ready") %||% FALSE
+
+        if (!is.null(cached_plot) && cached_plot_ready) {
+          log_debug("spc_plot: Returning valid cached plot from circuit breaker", "VISUALIZATION")
+          return(cached_plot)
+        } else {
+          log_debug("spc_plot: No valid cached plot available - allowing generation to proceed", "VISUALIZATION")
+          # Reset the flag since we're proceeding with generation
+          set_plot_state("plot_generation_in_progress", FALSE)
+        }
+      }
+
       # POSIT CACHE: All caching logic handled automatically by bindCache()
 
       # Clean state management - preserve existing results during computation
@@ -295,6 +314,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       set_plot_state("plot_ready", FALSE)
       set_plot_state("plot_warnings", character(0))
       set_plot_state("is_computing", TRUE)
+      set_plot_state("plot_generation_in_progress", TRUE)
       # FIX: Don't clear anhoej_results until new computation is complete
 
       # Starting plot generation
@@ -303,6 +323,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         {
           # Unified state assignment using helper function
           set_plot_state("is_computing", FALSE)
+          set_plot_state("plot_generation_in_progress", FALSE)
         },
         add = TRUE
       )
@@ -421,6 +442,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           set_plot_state("plot_warnings", c("Graf-generering fejlede:", e$message))
           set_plot_state("plot_ready", FALSE)
           set_plot_state("anhoej_results", NULL)
+          set_plot_state("plot_generation_in_progress", FALSE)  # Reset circuit breaker on error
 
           # POSIT CACHE: Cache invalidation handled automatically by bindCache()
 

@@ -242,6 +242,7 @@ create_app_state <- function() {
 
     # Race condition prevention guards
     cache_updating = FALSE,
+    plot_generation_in_progress = FALSE,  # Circuit breaker for overlapping plot generations
     # plot_cache_key removed - using Posit bindCache() instead
 
     # Configuration caching (migrated from reactiveVal)

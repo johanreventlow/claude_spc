@@ -53,12 +53,14 @@ create_ui_update_service <- function(session, app_state) {
       # AUTO-READ FROM APP_STATE: When no selections provided, read current values from app_state
       selected <- list()
       for (col in columns) {
-        # Priority: input[[col]] > app_state$columns[[col]] > ""
+        # Priority: session$input[[col]] > app_state$columns[[col]] > ""
         current_val <- safe_operation(
           paste("Read column value for", col),
           code = {
-            if (!is.null(input[[col]]) && input[[col]] != "") {
-              input[[col]]
+            # Use session$input instead of bare input for proper scope
+            session_input_val <- session$input[[col]]
+            if (!is.null(session_input_val) && session_input_val != "") {
+              session_input_val
             } else if (!is.null(shiny::isolate(app_state$columns[[col]]))) {
               shiny::isolate(app_state$columns[[col]])
             } else {
