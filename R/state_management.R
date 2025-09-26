@@ -65,9 +65,10 @@ create_app_state <- function() {
   # REACTIVE EVENT BUS: Central event system for all triggers
   # STREAMLINED EVENT-BUS: Reduced noise, consolidated events
   app_state$events <- shiny::reactiveValues(
-    # DATA-LIVSCYKLUS ------------------------------------------------------
-    data_loaded = 0L,                  # Triggeres når ny data er indlæst eller uploadet
-    data_changed = 0L,                 # Triggeres ved eksplicit dataændringer
+    # DATA-LIVSCYKLUS (CONSOLIDATED - FASE 2.2) ---------------------------
+    data_updated = 0L,                 # CONSOLIDATED: Replaces data_loaded + data_changed
+    data_loaded = 0L,                  # LEGACY COMPATIBILITY: Mapped to data_updated
+    data_changed = 0L,                 # LEGACY COMPATIBILITY: Mapped to data_updated
 
     # KOLONNEDETEKTION -----------------------------------------------------
     auto_detection_started = 0L,
@@ -85,12 +86,9 @@ create_app_state <- function() {
     manual_autodetect_button = 0L,
     test_mode_ready = 0L,
 
-    # FEJL- OG GENOPRETTELSESHÅNDTERING -----------------------------------
-    error_occurred = 0L,
-    validation_error = 0L,
-    processing_error = 0L,
-    network_error = 0L,
-    recovery_completed = 0L,
+    # FEJL- OG GENOPRETTELSESHÅNDTERING (CONSOLIDATED) -------------------
+    error_occurred = 0L,        # Consolidated: all error types with context
+    recovery_completed = 0L,     # Remains: recovery tracking
 
     # FORM- OG STATEHÅNDTERING --------------------------------------------
     form_reset_needed = 0L,
@@ -326,16 +324,56 @@ get_current_data <- function(app_state) {
 #' @export
 create_emit_api <- function(app_state) {
   list(
-    # Data lifecycle events
+    # Data lifecycle events (CONSOLIDATED - FASE 2.2)
+    data_updated = function(context = "general") {
+      shiny::isolate({
+        app_state$events$data_updated <- app_state$events$data_updated + 1L
+
+        # Store data update context for optimization
+        if (!exists("last_data_update_context", envir = app_state)) {
+          app_state$last_data_update_context <- list()
+        }
+        app_state$last_data_update_context <- list(
+          context = context,
+          timestamp = Sys.time()
+        )
+      })
+    },
+
+    # Legacy compatibility functions (map to consolidated event)
     data_loaded = function() {
       shiny::isolate({
+        # Fire consolidated event
+        app_state$events$data_updated <- app_state$events$data_updated + 1L
+        # Also fire legacy event for backward compatibility
         app_state$events$data_loaded <- app_state$events$data_loaded + 1L
+
+        # Store context
+        if (!exists("last_data_update_context", envir = app_state)) {
+          app_state$last_data_update_context <- list()
+        }
+        app_state$last_data_update_context <- list(
+          context = "legacy_data_loaded",
+          timestamp = Sys.time()
+        )
       })
     },
 
     data_changed = function() {
       shiny::isolate({
+        # Fire consolidated event
+        app_state$events$data_updated <- app_state$events$data_updated + 1L
+        # Also fire legacy event for backward compatibility
         app_state$events$data_changed <- app_state$events$data_changed + 1L
+
+        # Store context
+        if (!exists("last_data_update_context", envir = app_state)) {
+          app_state$last_data_update_context <- list()
+        }
+        app_state$last_data_update_context <- list(
+          context = "legacy_data_changed",
+          timestamp = Sys.time()
+        )
       })
     },
 
@@ -405,28 +443,56 @@ create_emit_api <- function(app_state) {
       })
     },
 
-    # Error handling events
-    error_occurred = function() {
+    # Error handling events (CONSOLIDATED)
+    error_occurred = function(error_type = "general", context = NULL, details = NULL) {
       shiny::isolate({
         app_state$events$error_occurred <- app_state$events$error_occurred + 1L
+
+        # Store error context for debugging
+        if (!exists("last_error_context", envir = app_state)) {
+          app_state$last_error_context <- list()
+        }
+
+        app_state$last_error_context <- list(
+          type = error_type,
+          context = context,
+          details = details,
+          timestamp = Sys.time()
+        )
       })
     },
 
+    # Legacy error event compatibility (map to consolidated events)
     validation_error = function() {
       shiny::isolate({
-        app_state$events$validation_error <- app_state$events$validation_error + 1L
+        app_state$events$error_occurred <- app_state$events$error_occurred + 1L
+        app_state$last_error_context <- list(
+          type = "validation",
+          context = "legacy_validation_error",
+          timestamp = Sys.time()
+        )
       })
     },
 
     processing_error = function() {
       shiny::isolate({
-        app_state$events$processing_error <- app_state$events$processing_error + 1L
+        app_state$events$error_occurred <- app_state$events$error_occurred + 1L
+        app_state$last_error_context <- list(
+          type = "processing",
+          context = "legacy_processing_error",
+          timestamp = Sys.time()
+        )
       })
     },
 
     network_error = function() {
       shiny::isolate({
-        app_state$events$network_error <- app_state$events$network_error + 1L
+        app_state$events$error_occurred <- app_state$events$error_occurred + 1L
+        app_state$last_error_context <- list(
+          type = "network",
+          context = "legacy_network_error",
+          timestamp = Sys.time()
+        )
       })
     },
 

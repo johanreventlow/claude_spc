@@ -32,26 +32,74 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # Mark that standard listeners are active to prevent duplicate optimized listeners
   app_state$standard_listeners_active <- TRUE
 
-  # DATA LIFECYCLE EVENTS
-  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
-    # Data loaded event handler
+  # DATA LIFECYCLE EVENTS (CONSOLIDATED - FASE 2.2) ========================
 
-    # FASE 3: Unfreeze autodetect system when new data is loaded
+  # Consolidated data update handler - handles both data loading and changes
+  shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
+    # Get data update context for intelligent handling
+    update_context <- app_state$last_data_update_context
+
+    # UNIFIED DATA UPDATE LOGIC - combines previous data_loaded + data_changed handlers
+
+    # FASE 3: Unfreeze autodetect system when data is updated
     app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
-    # Autodetect system unfrozen
 
-    # Trigger auto-detection after data is loaded
-    if (!is.null(app_state$data$current_data)) {
-      # Triggering auto-detection
-      emit$auto_detection_started()
+    # Context-aware processing based on update type
+    if (!is.null(update_context)) {
+      context <- update_context$context %||% "general"
+
+      if (context == "legacy_data_loaded" || grepl("load|upload|new", context, ignore.case = TRUE)) {
+        # Data loading path - trigger auto-detection
+        if (!is.null(app_state$data$current_data)) {
+          emit$auto_detection_started()
+        }
+
+      } else if (context == "legacy_data_changed" || grepl("change|edit|modify", context, ignore.case = TRUE)) {
+        # Data change path - update column choices
+        safe_operation(
+          "Update column choices on data change",
+          code = {
+            update_column_choices_unified(app_state, input, output, session, ui_service)
+          }
+        )
+
+      } else {
+        # General data update - do both operations but in optimized order
+        if (!is.null(app_state$data$current_data)) {
+          emit$auto_detection_started()
+        }
+        safe_operation(
+          "Update column choices on data update",
+          code = {
+            update_column_choices_unified(app_state, input, output, session, ui_service)
+          }
+        )
+      }
+    } else {
+      # Fallback to full processing if no context available
+      if (!is.null(app_state$data$current_data)) {
+        emit$auto_detection_started()
+      }
+      safe_operation(
+        "Update column choices on data update (fallback)",
+        code = {
+          update_column_choices_unified(app_state, input, output, session, ui_service)
+        }
+      )
     }
   })
 
-  shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
-    # Data changed event handler
+  # Legacy compatibility observers (for backward compatibility during transition)
+  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
+    # Legacy data_loaded observer - mostly handled by data_updated now
+    # Only used for specific legacy edge cases that haven't been migrated yet
+    log_debug("Legacy data_loaded event fired - consider migrating to data_updated", "EVENT_SYSTEM")
+  })
 
-    # Update column choices when data changes
-    update_column_choices_unified(app_state, input, output, session, ui_service)
+  shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
+    # Legacy data_changed observer - mostly handled by data_updated now
+    # Only used for specific legacy edge cases that haven't been migrated yet
+    log_debug("Legacy data_changed event fired - consider migrating to data_updated", "EVENT_SYSTEM")
   })
 
   # AUTO-DETECTION EVENTS
@@ -211,16 +259,31 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   })
 
-  # ERROR HANDLING EVENTS ===================================================
+  # ERROR HANDLING EVENTS (CONSOLIDATED - FASE 2.1) ========================
 
-  # General error event listener
+  # Unified error event listener - handles all error types with context-aware logic
   shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$highest, {
+    # Get consolidated error context (new system)
+    error_context <- app_state$last_error_context
+
+    # Fallback to legacy error info if needed (backward compatibility)
     error_info <- app_state$errors$last_error
 
+    # Centralized error logging with enhanced context
+    log_error("Consolidated error event triggered", "ERROR_SYSTEM")
 
-    # Centralized error logging with context
-    log_error("Error event triggered", "ERROR_SYSTEM")
-    if (!is.null(error_info)) {
+    # Log error details from new context system
+    if (!is.null(error_context)) {
+      log_debug_kv(
+        error_type = error_context$type %||% "unknown",
+        error_context = error_context$context %||% "no context",
+        error_details = if(!is.null(error_context$details)) paste(names(error_context$details), collapse = ", ") else "none",
+        timestamp = as.character(error_context$timestamp %||% Sys.time()),
+        session_id = if(!is.null(session)) session$token else "no session",
+        .context = "ERROR_SYSTEM"
+      )
+    } else if (!is.null(error_info)) {
+      # Fallback to legacy error info
       log_debug_kv(
         error_type = error_info$type %||% "unknown",
         error_message = error_info$message %||% "no message",
@@ -229,46 +292,49 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       )
     }
 
-    # Emit recovery attempts if appropriate
-    if (!is.null(error_info) && !is.null(emit)) {
-      if (error_info$type %in% c("processing", "validation")) {
+    # Context-aware error handling logic
+    if (!is.null(error_context) && !is.null(emit)) {
+      error_type <- error_context$type %||% "general"
+
+      # Type-specific error handling
+      if (error_type == "processing") {
         # For processing errors, increment recovery attempts
         app_state$errors$recovery_attempts <- app_state$errors$recovery_attempts + 1L
+
+        # Check if it's data processing related
+        if (!is.null(error_context$context) && grepl("data|processing|convert|qic", error_context$context, ignore.case = TRUE)) {
+          log_debug("Processing error detected - may need data validation", "ERROR_SYSTEM")
+        }
+
+      } else if (error_type == "validation") {
+        # For validation errors, clear problematic state and increment recovery attempts
+        app_state$errors$recovery_attempts <- app_state$errors$recovery_attempts + 1L
+        log_debug("Validation error detected - clearing validation state", "ERROR_SYSTEM")
+
+      } else if (error_type == "network") {
+        # For network/file errors, log context for retry logic
+        if (!is.null(error_context$context) && grepl("file|upload|download|io", error_context$context, ignore.case = TRUE)) {
+          log_debug("Network/File I/O error detected", "ERROR_SYSTEM")
+        }
+
+      } else if (error_type == "ui") {
+        # For UI errors, may need UI sync
+        log_debug("UI error detected - may need UI synchronization", "ERROR_SYSTEM")
+
+      } else {
+        # General error handling
+        log_debug(paste("General error of type:", error_type), "ERROR_SYSTEM")
       }
     }
-  })
 
-  # Processing error event listener
-  shiny::observeEvent(app_state$events$processing_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
-    error_info <- app_state$errors$last_error
-
-
-    # For processing errors, we might want to trigger data validation
-    if (!is.null(error_info) && !is.null(emit)) {
-      if (grepl("data|processing|convert", error_info$message, ignore.case = TRUE)) {
-        # Could emit validation_needed event if we had one
-      }
-    }
-  })
-
-  # Validation error event listener
-  shiny::observeEvent(app_state$events$validation_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$high, {
-    error_info <- app_state$errors$last_error
-
-
-    # For validation errors, clear problematic state
-    if (!is.null(error_info) && !is.null(app_state)) {
-      # Reset validation-related state if needed
-    }
-  })
-
-  # Network error event listener
-  shiny::observeEvent(app_state$events$network_error, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$medium, {
-    error_info <- app_state$errors$last_error
-
-
-    # For network errors (file I/O), we might want to retry or suggest file check
-    if (!is.null(error_info) && !is.null(emit)) {
+    # Store error in history
+    if (!is.null(app_state$errors)) {
+      app_state$errors$error_count <- app_state$errors$error_count + 1L
+      app_state$errors$last_error <- list(
+        type = if(!is.null(error_context)) error_context$type else (if(!is.null(error_info)) error_info$type else "unknown"),
+        context = if(!is.null(error_context)) error_context$context else "consolidated_handler",
+        timestamp = Sys.time()
+      )
     }
   })
 

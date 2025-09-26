@@ -15,8 +15,9 @@ cat("Enhanced performance monitoring initialized\n")
 # Simulate typical startup sequence
 set_startup_phase("initialization")
 
-# Simulate data loading
-track_event("data_loaded", "baseline_test")
+# Simulate data loading (FASE 2.2: using consolidated event)
+track_event("data_updated", "baseline_test")  # Consolidated data event
+track_event("data_loaded", "baseline_test")   # Legacy compatibility test
 
 # Simulate auto-detection
 set_startup_phase("auto_detection")
@@ -31,6 +32,10 @@ track_generateSPCPlot_call("startup_plot", list(chart_type = "p", context = "bas
 set_startup_phase("ui_sync")
 track_event("ui_sync_requested", "baseline_test")  # Consolidated event
 track_event("ui_sync_completed", "baseline_test")
+
+# Test consolidated error events (FASE 2.1)
+set_startup_phase("error_testing")
+track_event("error_occurred", "baseline_test")  # Test consolidated error event
 
 # Final phase
 set_startup_phase("ready")
