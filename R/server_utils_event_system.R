@@ -201,6 +201,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # TEST MODE EVENTS
   shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+    # Phase 4: Track test mode startup event
+    if (exists("track_event")) {
+      track_event("test_mode_ready", "startup_sequence")
+    }
+
     # Phase 3: Set startup phase and enable race condition prevention
     app_state$test_mode$race_prevention_active <- TRUE
     emit$test_mode_startup_phase_changed("data_ready")
@@ -238,6 +243,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # Phase 3: Test mode startup phase management
   shiny::observeEvent(app_state$events$test_mode_startup_phase_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
     current_phase <- app_state$test_mode$startup_phase
+
+    # Phase 4: Track startup phase transitions
+    if (exists("track_event")) {
+      track_event("test_mode_startup_phase_changed", paste("phase:", current_phase))
+    }
 
     log_debug(
       component = "[TEST_MODE_STARTUP]",

@@ -206,6 +206,11 @@ main_app_server <- function(input, output, session) {
     app_state$test_mode$debounce_delay <- claudespc_env$TEST_MODE_STARTUP_DEBOUNCE_MS %||% 500
     app_state$test_mode$lazy_plot_generation <- claudespc_env$TEST_MODE_LAZY_PLOT_GENERATION %||% TRUE
 
+    # Phase 4: Track memory usage during test mode setup
+    if (exists("track_memory_usage")) {
+      track_memory_usage("test_mode_setup")
+    }
+
     log_debug(
       component = "[TEST_MODE_STARTUP]",
       message = "Test mode optimization configured",

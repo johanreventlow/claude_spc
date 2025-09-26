@@ -116,7 +116,41 @@ init_startup_metrics <- function() {
   .startup_metrics$event_sequence <- list()
   .startup_metrics$startup_phase <- "initializing"
 
+  # Phase 4: Add memory usage tracking
+  .startup_metrics$memory_snapshots <- list()
+  .startup_metrics$initial_memory_mb <- round(as.numeric(object.size(search())) / 1024^2, 2)
+
   log_debug("Enhanced startup metrics initialized", "PERFORMANCE_MONITORING")
+}
+
+#' Track memory usage at specific points
+#'
+#' @param context Character. Context where memory is being tracked
+#' @export
+track_memory_usage <- function(context = "unknown") {
+  if (!exists("start_time", envir = .startup_metrics)) {
+    init_startup_metrics()
+  }
+
+  # Get current memory usage
+  current_memory_mb <- round(as.numeric(object.size(search())) / 1024^2, 2)
+
+  memory_info <- list(
+    context = context,
+    timestamp = Sys.time(),
+    memory_mb = current_memory_mb,
+    memory_diff_mb = current_memory_mb - .startup_metrics$initial_memory_mb,
+    time_since_start = as.numeric(difftime(Sys.time(), .startup_metrics$start_time, units = "secs"))
+  )
+
+  if (!exists("memory_snapshots", envir = .startup_metrics)) {
+    .startup_metrics$memory_snapshots <- list()
+  }
+
+  .startup_metrics$memory_snapshots[[length(.startup_metrics$memory_snapshots) + 1]] <- memory_info
+
+  log_debug(paste("Memory tracked:", context, "-", current_memory_mb, "MB"),
+           "PERFORMANCE_MONITORING")
 }
 
 #' Track QIC function call with context
@@ -296,6 +330,15 @@ print_enhanced_startup_summary <- function() {
   cat("FUNCTION CALLS:\n")
   cat("  QIC calls:", metrics$qic_calls, "\n")
   cat("  generateSPCPlot calls:", metrics$generateSPCPlot_calls, "\n\n")
+
+  # Phase 4: Memory usage summary
+  if (!is.null(.startup_metrics$memory_snapshots) && length(.startup_metrics$memory_snapshots) > 0) {
+    cat("MEMORY USAGE:\n")
+    cat("  Initial memory:", .startup_metrics$initial_memory_mb, "MB\n")
+    latest_memory <- .startup_metrics$memory_snapshots[[length(.startup_metrics$memory_snapshots)]]
+    cat("  Current memory:", latest_memory$memory_mb, "MB\n")
+    cat("  Memory increase:", latest_memory$memory_diff_mb, "MB\n\n")
+  }
 
   cat("EVENTS FIRED:\n")
   if (length(metrics$events_fired) > 0) {

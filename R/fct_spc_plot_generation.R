@@ -514,6 +514,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   current_time <- Sys.time()
   call_number <- get("qic_call_counter", envir = .GlobalEnv)
 
+  # Phase 4: Integrate with enhanced startup metrics
+  if (exists("track_generateSPCPlot_call")) {
+    track_generateSPCPlot_call(
+      context = "plot_generation",
+      details = list(
+        chart_type = chart_type,
+        data_rows = nrow(data),
+        call_number = call_number
+      )
+    )
+  }
+
   log_debug(paste("generateSPCPlot CALL #", call_number, "at", format(current_time, "%H:%M:%S.%OS3"),
                   "| chart_type:", chart_type, "| data:", nrow(data), "rows"), "SPC_CALC_DEBUG")
 
