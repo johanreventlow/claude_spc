@@ -69,7 +69,14 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
       })
     }
 
-    return(fallback)
+    # Handle fallback execution based on type
+    if (is.function(fallback)) {
+      # Call fallback function with error parameter
+      return(fallback(e))
+    } else {
+      # Return fallback value directly
+      return(fallback)
+    }
   })
 }
 

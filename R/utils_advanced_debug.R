@@ -645,7 +645,4 @@ initialize_advanced_debug <- function(enable_history = TRUE, max_history_entries
   }
 }
 
-# NULL-safe operator for backward compatibility
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
-}
+# NULL-safe operator is defined in utils_logging.R

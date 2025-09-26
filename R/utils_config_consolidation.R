@@ -476,5 +476,4 @@ init_global_config_registry <- function() {
   invisible(.spc_config_registry)
 }
 
-# Null coalescing operator for internal use
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || identical(a, "")) b else a
+# Null coalescing operator defined in utils_logging.R

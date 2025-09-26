@@ -407,5 +407,4 @@ create_chart_validator <- function() {
   )
 }
 
-# Null coalescing operator for internal use
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || identical(a, "")) b else a
+# Null coalescing operator is defined in utils_logging.R

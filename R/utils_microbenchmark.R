@@ -424,7 +424,7 @@ benchmark_qic_generation <- function(data_list = NULL,
 analyze_performance_comparison <- function(baseline_results, current_results, regression_threshold = 1.2) {
 
   if (!is.data.frame(baseline_results) || !is.data.frame(current_results)) {
-    log_warn("Performance comparison requires data frame inputs")
+    log_warn("Performance comparison requires data frame inputs", "MICROBENCHMARK")
     return(NULL)
   }
 
@@ -432,7 +432,7 @@ analyze_performance_comparison <- function(baseline_results, current_results, re
   common_ops <- intersect(baseline_results$operation, current_results$operation)
 
   if (length(common_ops) == 0) {
-    log_warn("No common operations found for performance comparison")
+    log_warn("No common operations found for performance comparison", "MICROBENCHMARK")
     return(list(message = "No common operations"))
   }
 
@@ -533,7 +533,7 @@ export_benchmark_results <- function(results, filename = NULL, include_metadata 
         )
       }))
     } else {
-      log_error("Cannot convert benchmark results to data frame")
+      log_error("Cannot convert benchmark results to data frame", "MICROBENCHMARK")
       return(NULL)
     }
   } else {

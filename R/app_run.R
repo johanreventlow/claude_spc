@@ -57,23 +57,23 @@ run_app <- function(port = NULL,
 
     if (log_level %in% valid_levels) {
       Sys.setenv(SPC_LOG_LEVEL = log_level)
-      cat(sprintf("[LOG_CONFIG] Log level set to %s for this session\n", log_level))
+      log_info(sprintf("Log level set to %s for this session", log_level), "LOG_CONFIG")
     } else {
-      warning(sprintf("Invalid log level '%s'. Valid options: %s",
-                     log_level, paste(valid_levels, collapse = ", ")))
-      cat("[LOG_CONFIG] Using default log level\n")
+      log_warn(sprintf("Invalid log level '%s'. Valid options: %s",
+                     log_level, paste(valid_levels, collapse = ", ")), "LOG_CONFIG")
+      log_info("Using default log level", "LOG_CONFIG")
     }
   } else {
     # Auto-detect log level based on context
     if (interactive() || Sys.getenv("GOLEM_CONFIG_ACTIVE", "production") == "development") {
       if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
         Sys.setenv(SPC_LOG_LEVEL = "INFO")
-        cat("[LOG_CONFIG] Auto-detected development environment - using INFO level\n")
+        log_info("Auto-detected development environment - using INFO level", "LOG_CONFIG")
       }
     } else {
       if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
         Sys.setenv(SPC_LOG_LEVEL = "WARN")
-        cat("[LOG_CONFIG] Auto-detected production environment - using WARN level\n")
+        log_info("Auto-detected production environment - using WARN level", "LOG_CONFIG")
       }
     }
   }

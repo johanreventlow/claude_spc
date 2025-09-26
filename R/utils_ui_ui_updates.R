@@ -132,7 +132,7 @@ create_ui_update_service <- function(session, app_state) {
           }
         },
         fallback = function(e) {
-          log_error("Error updating form fields:", e$message, "UI_SERVICE")
+          log_error(paste("Error updating form fields:", e$message), "UI_SERVICE")
         },
         error_type = "processing"
       )
@@ -167,7 +167,7 @@ create_ui_update_service <- function(session, app_state) {
           # Form fields reset
         },
         fallback = function(e) {
-          log_error("Error resetting form fields:", e$message, "UI_SERVICE")
+          log_error(paste("Error resetting form fields:", e$message), "UI_SERVICE")
         },
         error_type = "processing"
       )
@@ -194,7 +194,7 @@ create_ui_update_service <- function(session, app_state) {
         }
       },
       fallback = function(e) {
-        log_error("Error toggling element", element_id, ":", e$message, "UI_SERVICE")
+        log_error(paste("Error toggling element", element_id, ":", e$message), "UI_SERVICE")
       },
       error_type = "processing"
     )
@@ -262,7 +262,7 @@ create_ui_update_service <- function(session, app_state) {
 
       },
       fallback = function(e) {
-        log_error("Error during form validation:", e$message, "UI_SERVICE")
+        log_error(paste("Error during form validation:", e$message), "UI_SERVICE")
         validation_results$valid <- FALSE
         validation_results$errors[["general"]] <- "Validationsfejl"
       },
@@ -315,7 +315,7 @@ create_ui_update_service <- function(session, app_state) {
         # UI operation completed
       },
       fallback = function(e) {
-        log_error("Error showing user feedback:", e$message, "UI_SERVICE")
+        log_error(paste("Error showing user feedback:", e$message), "UI_SERVICE")
       },
       error_type = "processing"
     )
@@ -381,7 +381,7 @@ create_ui_update_service <- function(session, app_state) {
 
       },
       fallback = function(e) {
-        log_error("Error in conditional UI updates:", e$message, "UI_SERVICE")
+        log_error(paste("Error in conditional UI updates:", e$message), "UI_SERVICE")
       },
       error_type = "processing"
     )
