@@ -110,8 +110,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     safe_operation(
       "Auto-detection processing",
       code = {
-        # Set auto-detection in progress
-        app_state$columns$auto_detect$in_progress <- TRUE
+        # NOTE: in_progress state is managed by autodetect_engine itself to prevent conflicts
 
         if (!is.null(app_state$data$current_data)) {
           # Use unified autodetect engine - data available, so full analysis
@@ -132,7 +131,10 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         }
       },
       fallback = {
-        app_state$columns$auto_detect$in_progress <- FALSE
+        # Only reset in_progress if autodetect_engine didn't handle it
+        if (shiny::isolate(app_state$columns$auto_detect$in_progress)) {
+          app_state$columns$auto_detect$in_progress <- FALSE
+        }
       },
       session = NULL,
       error_type = "processing",

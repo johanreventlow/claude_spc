@@ -185,8 +185,8 @@ cache_auto_detection_results <- function(data, app_state, force_refresh = FALSE)
 
   computation_time <- as.numeric(Sys.time() - start_time)
 
-  # Cache results for 10 minutes (auto-detection is expensive)
-  cache_result(cache_key, results, timeout_seconds = 600)
+  # Cache results for 30 minutes (auto-detection is expensive, longer cache reduces duplicates)
+  cache_result(cache_key, results, timeout_seconds = 1800)
 
   log_info(
     "Auto-detection completed and cached",

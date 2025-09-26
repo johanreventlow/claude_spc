@@ -74,8 +74,8 @@ autodetect_engine <- function(data = NULL,
       last_run_time <- shiny::isolate(app_state$columns$auto_detect$last_run)
       if (!is.null(last_run_time)) {
         time_since_last <- as.numeric(difftime(Sys.time(), last_run_time, units = "secs"))
-        # Block if very recent (< 1 second = likely duplicate)
-        if (time_since_last < 1.0) {
+        # Block if very recent (< 2 seconds = likely duplicate)
+        if (time_since_last < 2.0) {
           log_debug(paste("Skipping duplicate autodetect -", trigger_type, "too recent (", round(time_since_last, 3), "sec)"), .context = "UNIFIED_AUTODETECT")
           # FIXED: Reset in_progress state even when returning early
           shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
