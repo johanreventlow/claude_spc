@@ -70,7 +70,7 @@ test_that("Logging API understøtter component/message/details pattern", {
   expect_no_error({
     log_warn(
       message = "Test warning med details",
-      component = "[TEST_COMPONENT]",
+      .context = "[TEST_COMPONENT]",
       details = list(test_key = "test_value", numeric_val = 42)
     )
   }, info = "log_warn skal acceptere component, message og details parametre")
@@ -79,7 +79,7 @@ test_that("Logging API understøtter component/message/details pattern", {
   expect_no_error({
     log_info(
       message = "Test info med details",
-      component = "[TEST_COMPONENT]",
+      .context = "[TEST_COMPONENT]",
       details = list(status = "success", count = 10)
     )
   }, info = "log_info skal acceptere component, message og details parametre")
@@ -88,7 +88,7 @@ test_that("Logging API understøtter component/message/details pattern", {
   expect_no_error({
     log_error(
       message = "Test error med details",
-      component = "[TEST_COMPONENT]",
+      .context = "[TEST_COMPONENT]",
       details = list(error_code = 500, operation = "test_operation")
     )
   }, info = "log_error skal acceptere component, message og details parametre")
@@ -162,7 +162,7 @@ test_that("Logging API formaterer details korrekt", {
   expect_no_error({
     log_info(
       message = "Test med komplekse details",
-      component = "[TEST_FORMAT]",
+      .context = "[TEST_FORMAT]",
       details = test_details
     )
   }, info = "Komplekse details skal formateres uden fejl")
@@ -171,7 +171,7 @@ test_that("Logging API formaterer details korrekt", {
   expect_no_error({
     log_warn(
       message = "Test med tomme details",
-      component = "[TEST_FORMAT]",
+      .context = "[TEST_FORMAT]",
       details = list()
     )
   }, info = "Tomme details skal håndteres gracefully")
@@ -180,7 +180,7 @@ test_that("Logging API formaterer details korrekt", {
   expect_no_error({
     log_error(
       message = "Test uden details",
-      component = "[TEST_FORMAT]",
+      .context = "[TEST_FORMAT]",
       details = NULL
     )
   }, info = "NULL details skal være tilladt")

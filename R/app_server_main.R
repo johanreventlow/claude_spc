@@ -238,23 +238,21 @@ main_app_server <- function(input, output, session) {
       track_memory_usage("test_mode_setup")
     }
 
-    log_debug(
-      component = "[TEST_MODE_STARTUP]",
+    log_debug_kv(
       message = "Test mode optimization configured",
-      details = list(
-        debounce_delay = shiny::isolate(app_state$test_mode$debounce_delay),
-        lazy_plot_generation = shiny::isolate(app_state$test_mode$lazy_plot_generation)
-      )
+      debounce_delay = shiny::isolate(app_state$test_mode$debounce_delay),
+      lazy_plot_generation = shiny::isolate(app_state$test_mode$lazy_plot_generation),
+      .context = "[TEST_MODE_STARTUP]"
     )
 
     test_file_path <- get_test_mode_file_path()
 
     session$onFlushed(function() {
       if (isTRUE(shiny::isolate(app_state$test_mode$autoload_completed))) {
-        log_debug(
-          component = "[TEST_MODE_STARTUP]",
+        log_debug_kv(
           message = "Skipping duplicate test data autoload",
-          details = list(session_id = hashed_token)
+          session_id = hashed_token,
+          .context = "[TEST_MODE_STARTUP]"
         )
         return(invisible(NULL))
       }
@@ -271,10 +269,11 @@ main_app_server <- function(input, output, session) {
           "Test mode auto-load data",
           code = {
             autoload_tracer$step("data_loading_started")
-            log_debug(
-              component = "[TEST_MODE_STARTUP]",
+            log_debug_kv(
               message = "Starting test data autoload after UI flush",
-              details = list(session_id = hashed_token, file = test_file_path)
+              session_id = hashed_token,
+              file = test_file_path,
+              .context = "[TEST_MODE_STARTUP]"
             )
 
             # Bestem hvilken loader der skal bruges baseret på fil-extension

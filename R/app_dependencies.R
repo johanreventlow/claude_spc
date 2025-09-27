@@ -119,21 +119,7 @@ load_feature_packages <- function(config) {
       required = TRUE
     ),
 
-    openxlsx = list(
-      package = "openxlsx",
-      min_version = "4.2.0",
-      reason = "Excel export - write.xlsx function",
-      required = TRUE
-    ),
-
-
     # Data Analysis
-    zoo = list(
-      package = "zoo",
-      min_version = "1.8.0",
-      reason = "Time series analysis - rollmean, na.fill",
-      required = TRUE
-    ),
 
     scales = list(
       package = "scales",
@@ -261,7 +247,7 @@ safe_load_package <- function(package_name, min_version = NULL, reason = "", req
     }
 
     # Load the package
-    library(package_name, character.only = TRUE)
+    library(package_name, character.only = TRUE) # nolint
 
     # Get version information
     result$version <- as.character(packageVersion(package_name))

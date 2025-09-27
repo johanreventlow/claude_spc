@@ -223,10 +223,10 @@ get_cached_result <- function(cache_key) {
   # Check if expired
   if (Sys.time() > cached_entry$expires_at) {
     rm(list = cache_key, envir = .performance_cache)
-    log_debug(
-      component = "[PERFORMANCE_CACHE]",
+    log_debug_kv(
       message = "Cache entry expired and removed",
-      details = list(cache_key = cache_key)
+      cache_key = cache_key,
+      .context = "[PERFORMANCE_CACHE]"
     )
     return(NULL)
   }
@@ -297,13 +297,11 @@ manage_cache_size <- function(max_entries) {
 
     rm(list = keys_to_remove, envir = .performance_cache)
 
-    log_debug(
-      component = "[PERFORMANCE_CACHE]",
+    log_debug_kv(
       message = "Cache size managed - removed old entries",
-      details = list(
-        removed_count = entries_to_remove,
-        remaining_entries = length(cache_keys) - entries_to_remove
-      )
+      removed_count = entries_to_remove,
+      remaining_entries = length(cache_keys) - entries_to_remove,
+      .context = "[PERFORMANCE_CACHE]"
     )
   }
 }
@@ -330,13 +328,11 @@ clear_performance_cache <- function(pattern = NULL) {
   if (length(cache_keys) > 0) {
     rm(list = cache_keys, envir = .performance_cache)
 
-    log_debug(
-      component = "[PERFORMANCE_CACHE]",
+    log_debug_kv(
       message = "Performance cache cleared",
-      details = list(
-        pattern = pattern %||% "all",
-        cleared_count = length(cache_keys)
-      )
+      pattern = pattern %||% "all",
+      cleared_count = length(cache_keys),
+      .context = "[PERFORMANCE_CACHE]"
     )
   }
 }

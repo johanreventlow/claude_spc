@@ -49,8 +49,8 @@ sanitize_user_input <- function(input_value,
   if (nchar(input_str) > max_length) {
     input_str <- substr(input_str, 1, max_length)
     log_warn(
-      component = "[INPUT_SANITIZATION]",
       message = "Input truncated due to length limit",
+      .context = "[INPUT_SANITIZATION]",
       details = list(
         original_length = nchar(as.character(input_value)),
         max_length = max_length
@@ -124,8 +124,8 @@ validate_file_extension <- function(file_ext, allowed_extensions = c("csv", "xls
   # Length check - undgå very long extensions
   if (nchar(clean_ext) > 10) {
     log_warn(
-      component = "[FILE_VALIDATION]",
       message = "Suspicious file extension length detected",
+      .context = "[FILE_VALIDATION]",
       details = list(extension = file_ext, length = nchar(clean_ext))
     )
     return(FALSE)
@@ -136,8 +136,8 @@ validate_file_extension <- function(file_ext, allowed_extensions = c("csv", "xls
 
   if (!is_valid) {
     log_warn(
-      component = "[FILE_VALIDATION]",
       message = "Invalid file extension rejected",
+      .context = "[FILE_VALIDATION]",
       details = list(
         attempted_extension = file_ext,
         allowed_extensions = allowed_extensions

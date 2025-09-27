@@ -29,7 +29,7 @@ OBSERVER_PRIORITIES <- list(
   LOW = 750,                  # Maps to UI_SYNC
   LOWEST = 200,               # Maps to CLEANUP
 
-  # Legacy aliases (deprecated)
+  # Legacy aliases (deprecated but supported for backward compatibility)
   highest = 2000,             # Use HIGH instead
   high = 1500,                # Use AUTO_DETECT instead
   medium = 1000,              # Use MEDIUM instead

@@ -256,10 +256,10 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       track_event("test_mode_startup_phase_changed", paste("phase:", current_phase))
     }
 
-    log_debug(
-      component = "[TEST_MODE_STARTUP]",
+    log_debug_kv(
       message = paste("Startup phase changed to:", current_phase),
-      details = list(phase = current_phase)
+      phase = current_phase,
+      .context = "[TEST_MODE_STARTUP]"
     )
 
     # Handle phase transitions
@@ -269,8 +269,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       # Disable race prevention when startup is complete
       app_state$test_mode$race_prevention_active <- FALSE
       log_info(
-        component = "[TEST_MODE_STARTUP]",
-        message = "Test mode startup completed - race prevention disabled"
+        message = "Test mode startup completed - race prevention disabled",
+        .context = "[TEST_MODE_STARTUP]"
       )
     }
   })
@@ -279,10 +279,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   shiny::observeEvent(app_state$events$test_mode_debounced_autodetect, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Only proceed if race prevention is still active
     if (!app_state$test_mode$race_prevention_active) {
-      log_debug(
-        component = "[TEST_MODE_STARTUP]",
-        message = "Debounced autodetect skipped - race prevention disabled"
-      )
+      log_debug("Debounced autodetect skipped - race prevention disabled", .context = "[TEST_MODE_STARTUP]")
       return()
     }
 
