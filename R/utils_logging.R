@@ -204,16 +204,30 @@ log_debug <- function(..., .context = NULL) {
 #' @param message Besked der skal logges
 #' @param component Valgfri komponent-tag (f.eks. `"FILE_UPLOAD"`) - legacy parameter
 #' @param .context Valgfri kontekst-tag (f.eks. `"FILE_UPLOAD"`) - preferred parameter
+#' @param details Valgfri liste med struktureret data der skal logges sammen med beskeden
 #'
 #' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
 #' log_info("Fil uploaded succesfuldt", .context = "FILE_UPLOAD")
-log_info <- function(message, component = NULL, .context = NULL) {
+#' log_info(message = "Data processeret", component = "[DATA_PROCESSING]", details = list(rows = 100))
+log_info <- function(message = NULL, component = NULL, .context = NULL, details = NULL) {
   # Support both component and .context for consistency with log_debug
   context <- .context %||% component
-  log_msg(message, "INFO", context)
+
+  # If details are provided, format them as structured data
+  if (!is.null(details)) {
+    details_formatted <- tryCatch({
+      details_str <- paste(names(details), unlist(details, use.names = FALSE), sep = "=", collapse = ", ")
+      paste0(message, " [", details_str, "]")
+    }, error = function(e) {
+      paste0(message, " [details_format_error]")
+    })
+    log_msg(details_formatted, "INFO", context)
+  } else {
+    log_msg(message, "INFO", context)
+  }
 }
 
 #' Log warning-besked
@@ -224,16 +238,30 @@ log_info <- function(message, component = NULL, .context = NULL) {
 #' @param message Besked der skal logges
 #' @param component Valgfri komponent-tag (f.eks. `"DATA_VALIDATION"`) - legacy parameter
 #' @param .context Valgfri kontekst-tag (f.eks. `"DATA_VALIDATION"`) - preferred parameter
+#' @param details Valgfri liste med struktureret data der skal logges sammen med beskeden
 #'
 #' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
 #' log_warn("Manglende data i kolonne", .context = "DATA_VALIDATION")
-log_warn <- function(message, component = NULL, .context = NULL) {
+#' log_warn(message = "Input sanitized", component = "[INPUT_SANITIZATION]", details = list(original_length = 100))
+log_warn <- function(message = NULL, component = NULL, .context = NULL, details = NULL) {
   # Support both component and .context for consistency with log_debug
   context <- .context %||% component
-  log_msg(message, "WARN", context)
+
+  # If details are provided, format them as structured data
+  if (!is.null(details)) {
+    details_formatted <- tryCatch({
+      details_str <- paste(names(details), unlist(details, use.names = FALSE), sep = "=", collapse = ", ")
+      paste0(message, " [", details_str, "]")
+    }, error = function(e) {
+      paste0(message, " [details_format_error]")
+    })
+    log_msg(details_formatted, "WARN", context)
+  } else {
+    log_msg(message, "WARN", context)
+  }
 }
 
 #' Log error-besked
@@ -245,20 +273,34 @@ log_warn <- function(message, component = NULL, .context = NULL) {
 #' @param message Besked eller condition der skal logges
 #' @param component Valgfri komponent-tag (f.eks. `"ERROR_HANDLING"`) - legacy parameter
 #' @param .context Valgfri kontekst-tag (f.eks. `"ERROR_HANDLING"`) - preferred parameter
+#' @param details Valgfri liste med struktureret data der skal logges sammen med beskeden
 #'
 #' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
 #' log_error("Kunne ikke læse fil", .context = "FILE_UPLOAD")
+#' log_error(message = "File validation failed", component = "[FILE_VALIDATION]", details = list(filename = "test.txt"))
 #' \dontrun{
 #'   tryCatch(stop("Boom"), error = function(e) log_error(e, .context = "PIPELINE"))
 #' }
-log_error <- function(message, component = NULL, .context = NULL) {
+log_error <- function(message = NULL, component = NULL, .context = NULL, details = NULL) {
   # Support both component and .context for consistency with log_debug
   context <- .context %||% component
   msg <- if (inherits(message, "condition")) conditionMessage(message) else message
-  log_msg(msg, "ERROR", context)
+
+  # If details are provided, format them as structured data
+  if (!is.null(details)) {
+    details_formatted <- tryCatch({
+      details_str <- paste(names(details), unlist(details, use.names = FALSE), sep = "=", collapse = ", ")
+      paste0(msg, " [", details_str, "]")
+    }, error = function(e) {
+      paste0(msg, " [details_format_error]")
+    })
+    log_msg(details_formatted, "ERROR", context)
+  } else {
+    log_msg(msg, "ERROR", context)
+  }
 }
 
 #' Log afgrænsede debug-blokke (start/stop)

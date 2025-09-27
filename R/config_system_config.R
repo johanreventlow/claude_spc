@@ -53,26 +53,7 @@ DECIMAL_SEPARATORS <- list(
 
 # OBSERVER PRIORITIES ===========================================================
 
-#' Shiny observer prioriteter for kontrolleret execution orden
-#' Enhanced with wider gaps to prevent race conditions
-#' @export
-OBSERVER_PRIORITIES <- list(
-  # Generic priorities (for compatibility)
-  highest = 2000,    # Critical state management
-  high = 1500,       # Data processing
-  medium = 1000,     # Auto-detection
-  low = 500,         # UI sync and updates
-  lowest = 100,      # Cleanup operations
-
-  # Specific named priorities used in event system
-  STATE_MANAGEMENT = 1800,   # Data loading and state changes
-  DATA_PROCESSING = 1500,    # Data transformation and processing
-  AUTO_DETECT = 1200,        # Auto-detection operations
-  UI_SYNC = 800,             # UI synchronization
-  STATUS_UPDATES = 600,      # Status and navigation updates
-  CLEANUP = 200,             # Cleanup operations
-  MEDIUM = 1000              # Used in new input observers
-)
+# OBSERVER_PRIORITIES moved to R/config_observer_priorities.R to avoid duplication
 
 # LOGGING CONSTANTS =============================================================
 

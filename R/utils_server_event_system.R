@@ -413,7 +413,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Recovery completed event listener
-  shiny::observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  shiny::observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
     error_info <- app_state$errors$last_error
 
 
@@ -435,7 +435,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # Event still emitted for tracking, but UI sync handled via ui_sync_needed
 
   # Form reset needed event listener
-  shiny::observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  shiny::observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
 
     if (!is.null(ui_service)) {
       ui_service$reset_form_fields()
@@ -444,7 +444,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Form restore needed event listener
-  shiny::observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$low, {
+  shiny::observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
 
     # For form restore, we need metadata from app_state
     # This could be triggered by session restore events
@@ -516,7 +516,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
   # This observer tracks timing metrics for optimization without emitting events
   if (!is.null(app_state$ui)) {
-    shiny::observeEvent(app_state$ui$last_programmatic_update, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$lowest, {
+    shiny::observeEvent(app_state$ui$last_programmatic_update, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOWEST, {
       current_time <- Sys.time()
       last_update <- shiny::isolate(app_state$ui$last_programmatic_update)
 

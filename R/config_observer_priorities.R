@@ -21,7 +21,20 @@ OBSERVER_PRIORITIES <- list(
 
   # Meget lav prioritet - cleanup og logging
   CLEANUP = 200,              # Cleanup operations
-  LOGGING = 100               # Monitoring and logging
+  LOGGING = 100,              # Monitoring and logging
+
+  # Compatibility aliases for legacy code
+  HIGH = 2000,                # Maps to STATE_MANAGEMENT
+  MEDIUM = 1250,              # Maps to DATA_PROCESSING
+  LOW = 750,                  # Maps to UI_SYNC
+  LOWEST = 200,               # Maps to CLEANUP
+
+  # Legacy aliases (deprecated)
+  highest = 2000,             # Use HIGH instead
+  high = 1500,                # Use AUTO_DETECT instead
+  medium = 1000,              # Use MEDIUM instead
+  low = 500,                  # Use LOW instead
+  lowest = 100                # Use LOWEST instead
 )
 
 ## Observer Priority Helpers -----

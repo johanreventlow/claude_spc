@@ -30,7 +30,7 @@ NULL
 #' @export
 sanitize_user_input <- function(input_value,
                                max_length = 255,
-                               allowed_chars = "[A-Za-z0-9_æøåÆØÅ .-]",
+                               allowed_chars = "A-Za-z0-9_æøåÆØÅ .-",
                                html_escape = TRUE) {
 
   # Håndter NULL og missing values
@@ -92,7 +92,7 @@ sanitize_column_name <- function(column_name) {
   sanitize_user_input(
     input_value = column_name,
     max_length = 100,  # Kortere for kolonne navne
-    allowed_chars = "[A-Za-z0-9_æøåÆØÅ .-]",  # Tillad danske karakterer og common patterns
+    allowed_chars = "A-Za-z0-9_æøåÆØÅ .-",  # Tillad danske karakterer og common patterns
     html_escape = TRUE
   )
 }
