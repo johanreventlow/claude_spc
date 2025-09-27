@@ -1,5 +1,16 @@
-# app_server.R  
+# app_server.R
 # Main server function following Golem conventions
+
+#' Hash session token for secure logging
+#' @param token Session token to hash
+#' @return First 8 characters of SHA256 hash for logging identification
+hash_session_token <- function(token) {
+  if (is.null(token) || !is.character(token)) {
+    return("unknown")
+  }
+  # Use first 8 chars of SHA256 hash for secure but identifiable logging
+  substr(digest::sha1(token), 1, 8)
+}
 
 #' Main Server Function
 #'
@@ -7,10 +18,14 @@
 #'
 #' @export
 main_app_server <- function(input, output, session) {
-  # Log server initialization with session details
+  # Get session token and hash it for secure logging
+  session_token <- session$token %||% paste0("session_", Sys.time(), "_", sample(1000:9999, 1))
+  hashed_token <- hash_session_token(session_token)
+
+  # Log server initialization with session details (using hashed token for security)
   log_debug_kv(
     message = "SPC App server initialization started",
-    session_id = session$token,
+    session_id = hashed_token,
     client_data = if (exists("clientData", envir = session)) length(session$clientData) else 0,
     .context = "APP_SERVER"
   )
@@ -18,14 +33,14 @@ main_app_server <- function(input, output, session) {
   # Initialize advanced debug system
   initialize_advanced_debug(enable_history = TRUE, max_history_entries = 1000)
 
-  # Start session lifecycle debugging
-  session_debugger <- debug_session_lifecycle(session$token, session)
+  # Start session lifecycle debugging (using hashed token)
+  session_debugger <- debug_session_lifecycle(hashed_token, session)
   session_debugger$event("server_initialization")
 
-  log_debug(paste("Server starting - Session ID:", session$token), "APP_SERVER")
+  log_debug(paste("Server starting - Session ID:", hashed_token), .context = "APP_SERVER")
 
   debug_log("SPC App server initialization started", "SESSION_LIFECYCLE",
-            level = "INFO", session_id = session$token)
+            level = "INFO", session_id = hashed_token)
 
   # Server components now loaded globally in global.R for better performance
 
@@ -35,11 +50,11 @@ main_app_server <- function(input, output, session) {
 
   # EVENT SYSTEM: Initialize reactive event bus
   emit <- create_emit_api(app_state)
-  log_debug("Event system initialized", "APP_SERVER")
+  log_debug("Event system initialized", .context = "APP_SERVER")
 
   # UI SERVICE: Initialize centralized UI update service
   ui_service <- create_ui_update_service(session, app_state)
-  log_debug("UI update service initialized", "APP_SERVER")
+  log_debug("UI update service initialized", .context = "APP_SERVER")
 
 
   # SHINYLOGS: Setup advanced web-based logging (if enabled)
@@ -58,7 +73,7 @@ main_app_server <- function(input, output, session) {
     log_debug_kv(
       message = "shinylogs advanced logging activated",
       log_directory = "logs/",
-      session_id = session$token,
+      session_id = hashed_token,
       .context = "APP_SERVER"
     )
   }
@@ -75,7 +90,7 @@ main_app_server <- function(input, output, session) {
       }
     },
     fallback = function(e) {
-      log_error(paste("ERROR initializing event_listeners_setup flag:", e$message), "APP_SERVER")
+      log_error(paste("ERROR initializing event_listeners_setup flag:", e$message), .context = "APP_SERVER")
     },
     error_type = "processing"
   )
@@ -87,8 +102,8 @@ main_app_server <- function(input, output, session) {
       app_state$infrastructure$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
     },
     fallback = function(e) {
-      log_error(paste("ERROR in setup_event_listeners:", e$message), "APP_SERVER")
-      print(paste("Full error details:", e))
+      log_error(paste("ERROR in setup_event_listeners:", e$message), .context = "APP_SERVER")
+      log_error(paste("Full error details:", e$message), .context = "APP_SERVER")
     },
     error_type = "processing"
   )
@@ -98,18 +113,18 @@ main_app_server <- function(input, output, session) {
   # Take initial state snapshot - delay to avoid reactive context issues
   shiny::observeEvent(shiny::reactive(TRUE), {
     shiny::isolate({
-      initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = session$token)
+      initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = hashed_token)
     })
   }, once = TRUE, priority = OBSERVER_PRIORITIES$LOW, ignoreInit = FALSE)
 
   # FASE 5: Memory management setup
-  log_debug("Line 150 executed - about to setup memory management", "DEBUG")
-  log_debug("Setting up memory management...", "APP_SERVER")
+  log_debug("Line 150 executed - about to setup memory management", .context = "DEBUG")
+  log_debug("Setting up memory management...", .context = "APP_SERVER")
   setup_session_cleanup(session, app_state)
-  log_debug("Memory management configured", "APP_SERVER")
+  log_debug("Memory management configured", .context = "APP_SERVER")
 
   # FASE 4: AUTOMATIC BACKGROUND CLEANUP - Schedule periodic system maintenance
-  log_debug("Setting up automatic background cleanup scheduling...", "APP_SERVER")
+  log_debug("Setting up automatic background cleanup scheduling...", .context = "APP_SERVER")
 
   # Schedule regular comprehensive cleanup every 5 minutes
   if (requireNamespace("later", quietly = TRUE)) {
@@ -121,16 +136,16 @@ main_app_server <- function(input, output, session) {
         # Check if session is still active before continuing
         session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
         if (session_check) {
-          log_debug("Stopping periodic cleanup - session ended", "BACKGROUND_CLEANUP")
+          log_debug("Stopping periodic cleanup - session ended", .context = "BACKGROUND_CLEANUP")
           return()
         }
 
-        log_debug("Running scheduled comprehensive system cleanup", "BACKGROUND_CLEANUP")
+        log_debug("Running scheduled comprehensive system cleanup", .context = "BACKGROUND_CLEANUP")
         safe_operation(
           "Scheduled system cleanup",
           code = {
             comprehensive_system_cleanup(app_state)
-            log_debug("Scheduled cleanup completed successfully", "BACKGROUND_CLEANUP")
+            log_debug("Scheduled cleanup completed successfully", .context = "BACKGROUND_CLEANUP")
           },
           fallback = NULL,
           session = session,
@@ -151,9 +166,9 @@ main_app_server <- function(input, output, session) {
       })
     }, delay = cleanup_interval_minutes * 60)  # Initial delay
 
-    log_debug(paste("Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), "APP_SERVER")
+    log_debug(paste("Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), .context = "APP_SERVER")
   } else {
-    log_warn("later package not available - background cleanup disabled", "APP_SERVER")
+    log_warn("later package not available - background cleanup disabled", .context = "APP_SERVER")
   }
 
   # FASE 4: PERFORMANCE MONITORING INTEGRATION - Schedule periodic reporting
@@ -172,11 +187,11 @@ main_app_server <- function(input, output, session) {
           "Performance report generation",
           code = {
             report <- get_performance_report(app_state)
-            log_debug(report$formatted_text, "PERFORMANCE_MONITOR")
+            log_debug(report$formatted_text, .context = "PERFORMANCE_MONITOR")
 
             # Check if system needs attention
             if (report$health_status == "WARNING") {
-              log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), "PERFORMANCE_MONITOR")
+              log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), .context = "PERFORMANCE_MONITOR")
             }
           },
           fallback = NULL,
@@ -198,7 +213,7 @@ main_app_server <- function(input, output, session) {
       })
     }, delay = report_interval_minutes * 60)  # Initial delay
 
-    log_debug(paste("Performance monitoring scheduled every", report_interval_minutes, "minutes"), "APP_SERVER")
+    log_debug(paste("Performance monitoring scheduled every", report_interval_minutes, "minutes"), .context = "APP_SERVER")
   }
 
   # Test Tilstand ------------------------------------------------------------
@@ -209,7 +224,7 @@ main_app_server <- function(input, output, session) {
             context = list(
               TEST_MODE_AUTO_LOAD = test_mode_auto_load
             ),
-            session_id = session$token)
+            session_id = hashed_token)
 
   if (test_mode_auto_load) {
     # Phase 3: Initialize test mode optimization settings
@@ -227,8 +242,8 @@ main_app_server <- function(input, output, session) {
       component = "[TEST_MODE_STARTUP]",
       message = "Test mode optimization configured",
       details = list(
-        debounce_delay = app_state$test_mode$debounce_delay,
-        lazy_plot_generation = app_state$test_mode$lazy_plot_generation
+        debounce_delay = shiny::isolate(app_state$test_mode$debounce_delay),
+        lazy_plot_generation = shiny::isolate(app_state$test_mode$lazy_plot_generation)
       )
     )
 
@@ -239,7 +254,7 @@ main_app_server <- function(input, output, session) {
         log_debug(
           component = "[TEST_MODE_STARTUP]",
           message = "Skipping duplicate test data autoload",
-          details = list(session_id = session$token)
+          details = list(session_id = hashed_token)
         )
         return(invisible(NULL))
       }
@@ -247,7 +262,7 @@ main_app_server <- function(input, output, session) {
       shiny::isolate(app_state$test_mode$autoload_completed <- TRUE)
 
       # Start workflow tracer for auto-load process
-      autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, session$token)
+      autoload_tracer <- debug_workflow_tracer("test_mode_auto_load", app_state, hashed_token)
 
       if (!is.null(test_file_path) && file.exists(test_file_path)) {
         autoload_tracer$step("file_validation_complete")
@@ -259,7 +274,7 @@ main_app_server <- function(input, output, session) {
             log_debug(
               component = "[TEST_MODE_STARTUP]",
               message = "Starting test data autoload after UI flush",
-              details = list(session_id = session$token, file = test_file_path)
+              details = list(session_id = hashed_token, file = test_file_path)
             )
 
             # Bestem hvilken loader der skal bruges baseret på fil-extension
@@ -295,7 +310,7 @@ main_app_server <- function(input, output, session) {
             set_current_data(app_state, test_data)
 
             # Emit event to trigger downstream effects
-            emit$data_loaded()
+            emit$data_updated("test_data_loaded")
             # Set session flags
             app_state$session$file_uploaded <- TRUE
             app_state$session$user_started_session <- TRUE
@@ -307,24 +322,24 @@ main_app_server <- function(input, output, session) {
             autoload_tracer$step("state_synchronization_complete")
 
             # Take state snapshot after auto-load
-            debug_state_snapshot("after_test_data_autoload", app_state, session_id = session$token)
+            debug_state_snapshot("after_test_data_autoload", app_state, session_id = hashed_token)
 
             # NOTE: Flag sættes efter setup_column_management() for at undgå race condition
 
             # Debug output
-            log_info(paste("Auto-indlæst fil:", test_file_path), "TEST_MODE")
-            log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), "TEST_MODE")
-            log_info(paste("Kolonner:", paste(names(test_data), collapse = ", ")), "TEST_MODE")
+            log_info(paste("Auto-indlæst fil:", test_file_path), .context = "TEST_MODE")
+            log_info(paste("Data dimensioner:", nrow(test_data), "x", ncol(test_data)), .context = "TEST_MODE")
+            log_info(paste("Kolonner:", paste(names(test_data), collapse = ", ")), .context = "TEST_MODE")
 
             autoload_tracer$step("test_data_autoload_complete")
           },
           fallback = function(e) {
-            log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), "TEST_MODE")
+            log_error(paste("Fejl ved indlæsning af", test_file_path, ":", e$message), .context = "TEST_MODE")
           },
           error_type = "processing"
         )
       } else {
-        log_warn(paste("Fil ikke fundet:", test_file_path), "TEST_MODE")
+        log_warn(paste("Fil ikke fundet:", test_file_path), .context = "TEST_MODE")
       }
 
       invisible(NULL)
@@ -367,7 +382,7 @@ main_app_server <- function(input, output, session) {
   # setup_download_handlers(input, output, session, app_state, visualization)
 
   session_debugger$event("server_setup_complete")
-  debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
+  debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = hashed_token)
 
   # FASE 3: Emit session_started event for name-only detection
   shiny::observeEvent(shiny::reactive(TRUE), {
@@ -399,7 +414,7 @@ main_app_server <- function(input, output, session) {
   # Additional cleanup når session lukker
   session$onSessionEnded(function() {
     session_debugger$event("session_cleanup_started")
-    debug_log("Session cleanup initiated", "SESSION_LIFECYCLE", level = "INFO", session_id = session$token)
+    debug_log("Session cleanup initiated", "SESSION_LIFECYCLE", level = "INFO", session_id = hashed_token)
 
     # Stop background tasks immediately
     if (!is.null(app_state$infrastructure)) {
@@ -423,7 +438,7 @@ main_app_server <- function(input, output, session) {
         }
       },
       fallback = function(e) {
-        log_error(paste("Session cleanup: Could not clear loop protection flags:", e$message), "SESSION_CLEANUP")
+        log_error(paste("Session cleanup: Could not clear loop protection flags:", e$message), .context = "SESSION_CLEANUP")
       },
       error_type = "processing"
     )
@@ -433,12 +448,12 @@ main_app_server <- function(input, output, session) {
     session_lifecycle_result <- session_debugger$complete()
 
     # Log session statistics
-    log_info(paste("Session ended - Observer count:", obs_manager$count()), "APP_SERVER")
+    log_info(paste("Session ended - Observer count:", obs_manager$count()), .context = "APP_SERVER")
     debug_log("Session ended successfully", "SESSION_LIFECYCLE", level = "INFO",
               context = list(
                 session_duration = round(session_lifecycle_result$total_duration, 3),
                 events_tracked = length(session_lifecycle_result$events)
               ),
-              session_id = session$token)
+              session_id = hashed_token)
   })
 }

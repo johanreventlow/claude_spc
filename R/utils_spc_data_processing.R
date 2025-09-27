@@ -54,7 +54,7 @@ process_chart_title <- function(chart_title_reactive, config) {
         tryCatch({
           title_text <- chart_title_reactive()
         }, error = function(e) {
-          log_warn("Could not get reactive title, using fallback", "TITLE_PROCESSING")
+          log_warn("Could not get reactive title, using fallback", .context = "TITLE_PROCESSING")
           title_text <- paste("SPC Chart -", config$y_col %||% "Data")
         })
       } else if (is.character(chart_title_reactive) && length(chart_title_reactive) > 0) {
@@ -326,5 +326,4 @@ extract_x_axis_data <- function(data, x_col) {
   )
 }
 
-# Null coalescing operator for internal use
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || identical(a, "")) b else a
+# Null coalescing operator is defined in utils_logging.R

@@ -4,6 +4,62 @@
 # This module provides comprehensive benchmarking capabilities using
 # the microbenchmark package for statistical analysis of performance.
 
+#' Safely evaluate expressions in benchmark context
+#' @description
+#' Secure wrapper for eval() that validates input and provides controlled execution
+#' @param expr Expression, call, or function to evaluate
+#' @param operation_name Name of the operation for logging
+#' @return Result of expression evaluation
+#' @noRd
+safe_eval_benchmark <- function(expr, operation_name = "unknown") {
+  # Enhanced input validation
+  if (is.null(expr)) {
+    log_error(paste("NULL expression in benchmark:", operation_name), "[SECURITY]")
+    stop("NULL expression not allowed in benchmarks")
+  }
+
+  # Type validation - only allow safe expression types
+  valid_types <- c("expression", "call", "function", "symbol", "language")
+  expr_type <- typeof(expr)
+
+  if (!expr_type %in% valid_types) {
+    log_error("Invalid expression type in benchmark", .context = "[SECURITY]")
+    log_debug_kv(
+      operation = operation_name,
+      type = expr_type,
+      class = paste(class(expr), collapse = ", "),
+      .context = "[SECURITY]"
+    )
+    stop(paste("Invalid expression type for benchmarking:", expr_type))
+  }
+
+  # For functions, validate environment
+  if (is.function(expr)) {
+    expr_env <- environment(expr)
+    if (!identical(expr_env, globalenv()) &&
+        !identical(expr_env, baseenv()) &&
+        !identical(expr_env, .GlobalEnv)) {
+      log_warn("Non-standard environment in benchmark function", .context = "[SECURITY]")
+      log_debug_kv(
+        operation = operation_name,
+        .context = "[SECURITY]"
+      )
+    }
+  }
+
+  # Safe execution with error handling
+  tryCatch({
+    eval(expr)
+  }, error = function(e) {
+    log_error(paste("Benchmark execution failed:", e$message), .context = "[BENCHMARK]")
+    log_debug_kv(
+      operation = operation_name,
+      .context = "[BENCHMARK]"
+    )
+    stop("Benchmark execution failed safely")
+  })
+}
+
 #' Microbenchmark Wrapper for SPC App Functions
 #'
 #' Provides statistical benchmarking with integrated logging and reporting.
@@ -47,7 +103,8 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
       return(measure_reactive_performance(expr, operation_name))
     } else {
       start_time <- Sys.time()
-      result <- eval(expr)
+      # SECURITY: Use safe evaluation wrapper
+      result <- safe_eval_benchmark(expr, operation_name)
       execution_time <- as.numeric(Sys.time() - start_time)
 
       result_data <- list(
@@ -99,7 +156,8 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
 
     # Capture result if requested
     if (capture_result) {
-      results$captured_result <- eval(expr)
+      # SECURITY: Use safe evaluation wrapper
+      results$captured_result <- safe_eval_benchmark(expr, operation_name)
     }
 
     # Log results if requested
@@ -114,7 +172,8 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
 
     # Fallback to basic timing
     start_time <- Sys.time()
-    result <- eval(expr)
+    # SECURITY: Use safe evaluation wrapper
+    result <- safe_eval_benchmark(expr, operation_name)
     execution_time <- as.numeric(Sys.time() - start_time) * 1000  # Convert to ms
 
     error_result <- list(
@@ -424,7 +483,7 @@ benchmark_qic_generation <- function(data_list = NULL,
 analyze_performance_comparison <- function(baseline_results, current_results, regression_threshold = 1.2) {
 
   if (!is.data.frame(baseline_results) || !is.data.frame(current_results)) {
-    log_warn("Performance comparison requires data frame inputs")
+    log_warn("Performance comparison requires data frame inputs", .context = "MICROBENCHMARK")
     return(NULL)
   }
 
@@ -432,7 +491,7 @@ analyze_performance_comparison <- function(baseline_results, current_results, re
   common_ops <- intersect(baseline_results$operation, current_results$operation)
 
   if (length(common_ops) == 0) {
-    log_warn("No common operations found for performance comparison")
+    log_warn("No common operations found for performance comparison", .context = "MICROBENCHMARK")
     return(list(message = "No common operations"))
   }
 
@@ -533,7 +592,7 @@ export_benchmark_results <- function(results, filename = NULL, include_metadata 
         )
       }))
     } else {
-      log_error("Cannot convert benchmark results to data frame")
+      log_error("Cannot convert benchmark results to data frame", .context = "MICROBENCHMARK")
       return(NULL)
     }
   } else {

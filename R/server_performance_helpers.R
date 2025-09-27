@@ -280,7 +280,7 @@ add_comments_optimized <- function(plot, data, kommentar_column, qic_data) {
   }
 
   # Get hospital colors for consistent styling
-  HOSPITAL_COLORS <- get_hospital_colors()
+  hospital_colors <- get_hospital_colors()
 
   # Add comments with ggrepel for better positioning
   if (requireNamespace("ggrepel", quietly = TRUE)) {
@@ -288,12 +288,12 @@ add_comments_optimized <- function(plot, data, kommentar_column, qic_data) {
       data = comment_data,
       ggplot2::aes(x = x, y = y, label = comment),
       size = 3,
-      color = HOSPITAL_COLORS$darkgrey,
+      color = hospital_colors$darkgrey,
       bg.color = "white",
       bg.r = 0.1,
       box.padding = 0.5,
       point.padding = 0.5,
-      segment.color = HOSPITAL_COLORS$mediumgrey,
+      segment.color = hospital_colors$mediumgrey,
       segment.size = 0.3,
       nudge_x = .15,
       nudge_y = .5,
@@ -308,7 +308,7 @@ add_comments_optimized <- function(plot, data, kommentar_column, qic_data) {
       data = comment_data,
       ggplot2::aes(x = x, y = y, label = comment),
       size = 3,
-      color = HOSPITAL_COLORS$darkgrey,
+      color = hospital_colors$darkgrey,
       vjust = -0.5
     )
   }
@@ -401,5 +401,5 @@ clear_performance_caches <- function() {
   # Run garbage collection
   gc(verbose = FALSE)
 
-  # log_debug("Performance caches cleared", "PERFORMANCE")
+  # log_debug("Performance caches cleared", .context = "PERFORMANCE")
 }

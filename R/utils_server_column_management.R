@@ -264,7 +264,7 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
 
   # Emit event to trigger downstream effects
   if (!is.null(emit)) {
-    emit$data_changed()
+    emit$data_updated("column_changed")
   }
 
   shiny::removeModal()
@@ -325,7 +325,7 @@ handle_add_column <- function(input, session, app_state = NULL, emit = NULL) {
 
   # Emit event to trigger downstream effects
   if (!is.null(emit)) {
-    emit$data_changed()
+    emit$data_updated("column_changed")
   }
 
   shiny::removeModal()
@@ -478,7 +478,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
           set_current_data(app_state, new_df)
 
           # Emit event to trigger downstream effects
-          emit$data_changed()
+          emit$data_updated("column_changed")
 
           shiny::showNotification("Tabel opdateret", type = "message", duration = 2)
         },
@@ -510,7 +510,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     set_current_data(app_state, rbind(current_data, new_row))
 
     # Emit event to trigger downstream effects
-    emit$data_changed()
+    emit$data_updated("column_changed")
 
     shiny::showNotification("Ny række tilføjet", type = "message")
 

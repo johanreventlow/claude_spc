@@ -42,7 +42,8 @@ Imports:
     graphics,
     stats,
     data.table,
-    golem (>= 0.4.0)
+    golem (>= 0.4.0),
+    excelR
 Suggests:
     testthat (>= 3.0.0),
     shinytest2,

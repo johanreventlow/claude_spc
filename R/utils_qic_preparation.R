@@ -258,8 +258,8 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
     }, fallback = NULL)
   }
 
-  # Call qicharts2::qic() with prepared inputs
-  do.call(qicharts2::qic, qic_args)
+  # Call qicharts2::qic() with prepared inputs and debug logging
+  log_qic_call_wrapper(qic_args, "create_qic_plot_safe", qic_call_number)
 }
 
 # VALIDATION HELPERS ==========================================================

@@ -387,23 +387,29 @@ should_enable_shinylogs <- function() {
   return(toupper(enable_flag) %in% c("TRUE", "1", "YES", "ON"))
 }
 
-# CONSOLE OUTPUT ===========================================================
+#' Initialize shinylogs logging announcement
+#'
+#' @description
+#' Displays shinylogs status information during application initialization.
+#' This function should be called explicitly during server startup, not at parse-time.
+#'
+#' @export
+initialize_shinylogs_announcement <- function() {
+  if (should_enable_shinylogs()) {
+    log_debug("=====================================", .context = "SHINYLOGS")
+    log_debug("🌟 SHINYLOGS ADVANCED LOGGING ACTIVE", .context = "SHINYLOGS")
+    log_debug("=====================================", .context = "SHINYLOGS")
+    log_debug("• Real-time web-based log viewer", .context = "SHINYLOGS")
+    log_debug("• Performance monitoring", .context = "SHINYLOGS")
+    log_debug("• Session management statistics", .context = "SHINYLOGS")
+    log_debug("• Export capabilities", .context = "SHINYLOGS")
+    log_debug("", .context = "SHINYLOGS")
+    log_debug("Access logs dashboard at: /logs (when implemented in UI)", .context = "SHINYLOGS")
+    log_debug("Control via: ENABLE_SHINYLOGS environment variable", .context = "SHINYLOGS")
+    log_debug("=====================================", .context = "SHINYLOGS")
+  } else {
+    log_debug("Shinylogs advanced logging disabled", .context = "SHINYLOGS")
+  }
 
-if (should_enable_shinylogs()) {
-  # Use basic cat since log_info may not be loaded yet
-  # Will be replaced by proper logging when system is initialized
-
-  log_debug("=====================================", "SHINYLOGS")
-  log_debug("🌟 SHINYLOGS ADVANCED LOGGING ACTIVE", "SHINYLOGS")
-  log_debug("=====================================", "SHINYLOGS")
-  log_debug("• Real-time web-based log viewer", "SHINYLOGS")
-  log_debug("• Performance monitoring", "SHINYLOGS")
-  log_debug("• Session management statistics", "SHINYLOGS")
-  log_debug("• Export capabilities", "SHINYLOGS")
-  log_debug("", "SHINYLOGS")
-  log_debug("Access logs dashboard at: /logs (when implemented in UI)", "SHINYLOGS")
-  log_debug("Control via: ENABLE_SHINYLOGS environment variable", "SHINYLOGS")
-  log_debug("=====================================", "SHINYLOGS")
-} else {
-  # shinylogs disabled - no output needed
+  invisible(NULL)
 }

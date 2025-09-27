@@ -277,5 +277,4 @@ create_info_panel <- function(content, type = "info", dismissible = FALSE, icon 
   )
 }
 
-# Helper function til null coalescing
-`%||%` <- function(x, y) if (is.null(x)) y else x
+# Null coalescing operator is defined in utils_logging.R

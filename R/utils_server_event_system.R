@@ -28,6 +28,11 @@ NULL
 #' and appropriate priorities to ensure correct execution order.
 #'
 setup_event_listeners <- function(app_state, emit, input, output, session, ui_service = NULL) {
+  # DUPLICATE PREVENTION: Check if optimized listeners are already active
+  if (exists("optimized_listeners_active", envir = app_state) && app_state$optimized_listeners_active) {
+    stop("Cannot setup standard listeners while optimized listeners are active. This would cause duplicate execution.")
+  }
+
   # Setting up unified event listeners
   # Mark that standard listeners are active to prevent duplicate optimized listeners
   app_state$standard_listeners_active <- TRUE
@@ -93,13 +98,13 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
     # Legacy data_loaded observer - mostly handled by data_updated now
     # Only used for specific legacy edge cases that haven't been migrated yet
-    log_debug("Legacy data_loaded event fired - consider migrating to data_updated", "EVENT_SYSTEM")
+    log_debug("Legacy data_loaded event fired - consider migrating to data_updated", .context = "EVENT_SYSTEM")
   })
 
   shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
     # Legacy data_changed observer - mostly handled by data_updated now
     # Only used for specific legacy edge cases that haven't been migrated yet
-    log_debug("Legacy data_changed event fired - consider migrating to data_updated", "EVENT_SYSTEM")
+    log_debug("Legacy data_changed event fired - consider migrating to data_updated", .context = "EVENT_SYSTEM")
   })
 
   # AUTO-DETECTION EVENTS
@@ -331,7 +336,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # ERROR HANDLING EVENTS (CONSOLIDATED - FASE 2.1) ========================
 
   # Unified error event listener - handles all error types with context-aware logic
-  shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$highest, {
+  shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
     # Get consolidated error context (new system)
     error_context <- app_state$last_error_context
 
@@ -339,7 +344,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     error_info <- app_state$errors$last_error
 
     # Centralized error logging with enhanced context
-    log_error("Consolidated error event triggered", "ERROR_SYSTEM")
+    log_error("Consolidated error event triggered", .context = "ERROR_SYSTEM")
 
     # Log error details from new context system
     if (!is.null(error_context)) {
@@ -372,23 +377,23 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
         # Check if it's data processing related
         if (!is.null(error_context$context) && grepl("data|processing|convert|qic", error_context$context, ignore.case = TRUE)) {
-          log_debug("Processing error detected - may need data validation", "ERROR_SYSTEM")
+          log_debug("Processing error detected - may need data validation", .context = "ERROR_SYSTEM")
         }
 
       } else if (error_type == "validation") {
         # For validation errors, clear problematic state and increment recovery attempts
         app_state$errors$recovery_attempts <- app_state$errors$recovery_attempts + 1L
-        log_debug("Validation error detected - clearing validation state", "ERROR_SYSTEM")
+        log_debug("Validation error detected - clearing validation state", .context = "ERROR_SYSTEM")
 
       } else if (error_type == "network") {
         # For network/file errors, log context for retry logic
         if (!is.null(error_context$context) && grepl("file|upload|download|io", error_context$context, ignore.case = TRUE)) {
-          log_debug("Network/File I/O error detected", "ERROR_SYSTEM")
+          log_debug("Network/File I/O error detected", .context = "ERROR_SYSTEM")
         }
 
       } else if (error_type == "ui") {
         # For UI errors, may need UI sync
-        log_debug("UI error detected - may need UI synchronization", "ERROR_SYSTEM")
+        log_debug("UI error detected - may need UI synchronization", .context = "ERROR_SYSTEM")
 
       } else {
         # General error handling
@@ -416,7 +421,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     app_state$errors$last_recovery_time <- Sys.time()
 
     # Log successful recovery
-    log_info("Error recovery completed", component = "ERROR_SYSTEM")
+    log_info("Error recovery completed", .context = "ERROR_SYSTEM")
     log_debug_kv(
       recovery_time = as.character(Sys.time()),
       session_id = if(!is.null(session)) session$token else "no session",

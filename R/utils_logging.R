@@ -202,15 +202,18 @@ log_debug <- function(..., .context = NULL) {
 #' Convenience-funktion til logging af INFO-beskeder.
 #'
 #' @param message Besked der skal logges
-#' @param component Valgfri komponent-tag (f.eks. `"FILE_UPLOAD"`)
+#' @param component Valgfri komponent-tag (f.eks. `"FILE_UPLOAD"`) - legacy parameter
+#' @param .context Valgfri kontekst-tag (f.eks. `"FILE_UPLOAD"`) - preferred parameter
 #'
 #' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
-#' log_info("Fil uploaded succesfuldt", "FILE_UPLOAD")
-log_info <- function(message, component = NULL) {
-  log_msg(message, "INFO", component)
+#' log_info("Fil uploaded succesfuldt", .context = "FILE_UPLOAD")
+log_info <- function(message, component = NULL, .context = NULL) {
+  # Support both component and .context for consistency with log_debug
+  context <- .context %||% component
+  log_msg(message, "INFO", context)
 }
 
 #' Log warning-besked
@@ -219,15 +222,18 @@ log_info <- function(message, component = NULL) {
 #' Convenience-funktion til logging af WARN-beskeder.
 #'
 #' @param message Besked der skal logges
-#' @param component Valgfri komponent-tag (f.eks. `"DATA_VALIDATION"`)
+#' @param component Valgfri komponent-tag (f.eks. `"DATA_VALIDATION"`) - legacy parameter
+#' @param .context Valgfri kontekst-tag (f.eks. `"DATA_VALIDATION"`) - preferred parameter
 #'
 #' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
-#' log_warn("Manglende data i kolonne", "DATA_VALIDATION")
-log_warn <- function(message, component = NULL) {
-  log_msg(message, "WARN", component)
+#' log_warn("Manglende data i kolonne", .context = "DATA_VALIDATION")
+log_warn <- function(message, component = NULL, .context = NULL) {
+  # Support both component and .context for consistency with log_debug
+  context <- .context %||% component
+  log_msg(message, "WARN", context)
 }
 
 #' Log error-besked
@@ -237,19 +243,22 @@ log_warn <- function(message, component = NULL) {
 #' `condition` direkte (beskeden udtrækkes med `conditionMessage()`).
 #'
 #' @param message Besked eller condition der skal logges
-#' @param component Valgfri komponent-tag (f.eks. `"ERROR_HANDLING"`)
+#' @param component Valgfri komponent-tag (f.eks. `"ERROR_HANDLING"`) - legacy parameter
+#' @param .context Valgfri kontekst-tag (f.eks. `"ERROR_HANDLING"`) - preferred parameter
 #'
 #' @return `invisible(NULL)`.
 #' @export
 #'
 #' @examples
-#' log_error("Kunne ikke læse fil", "FILE_UPLOAD")
+#' log_error("Kunne ikke læse fil", .context = "FILE_UPLOAD")
 #' \dontrun{
-#'   tryCatch(stop("Boom"), error = function(e) log_error(e, "PIPELINE"))
+#'   tryCatch(stop("Boom"), error = function(e) log_error(e, .context = "PIPELINE"))
 #' }
-log_error <- function(message, component = NULL) {
+log_error <- function(message, component = NULL, .context = NULL) {
+  # Support both component and .context for consistency with log_debug
+  context <- .context %||% component
   msg <- if (inherits(message, "condition")) conditionMessage(message) else message
-  log_msg(msg, "ERROR", component)
+  log_msg(msg, "ERROR", context)
 }
 
 #' Log afgrænsede debug-blokke (start/stop)

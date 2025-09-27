@@ -1,12 +1,12 @@
 # utils_chart_module_helpers.R
-# Ekstraherede helper utilities fra modules_mod_spc_chart_server.R
+# Ekstraherede helper utilities fra mod_spc_chart_server.R
 # Forbedrer modularity og separation of concerns
 
 #' Chart Module State Manager
 #'
 #' @description
 #' Factory for managing chart module state with consistent patterns.
-#' Ekstraeret fra modules_mod_spc_chart_server.R for bedre testability.
+#' Ekstraeret fra mod_spc_chart_server.R for bedre testability.
 #'
 #' @param app_state Application state object
 #' @return List med state management funktioner
@@ -20,7 +20,19 @@ create_chart_state_manager <- function(app_state) {
       plot_ready = FALSE,
       is_computing = FALSE,
       plot_warnings = character(0),
-      anhoej_results = NULL,
+      anhoej_results = list(
+        # Initialize with default values instead of NULL to prevent "Beregner..." stuck state
+        longest_run = NA_real_,
+        longest_run_max = NA_real_,
+        n_crossings = NA_real_,
+        n_crossings_min = NA_real_,
+        out_of_control_count = 0L,
+        runs_signal = FALSE,
+        crossings_signal = FALSE,
+        any_signal = FALSE,
+        message = "Afventer data",
+        has_valid_data = FALSE
+      ),
       module_cached_data = NULL
     )
   }
@@ -65,7 +77,19 @@ create_chart_state_manager <- function(app_state) {
           app_state$visualization$plot_ready <- FALSE
           app_state$visualization$is_computing <- FALSE
           app_state$visualization$plot_warnings <- character(0)
-          app_state$visualization$anhoej_results <- NULL
+          app_state$visualization$anhoej_results <- list(
+            # Reset to default values instead of NULL
+            longest_run = NA_real_,
+            longest_run_max = NA_real_,
+            n_crossings = NA_real_,
+            n_crossings_min = NA_real_,
+            out_of_control_count = 0L,
+            runs_signal = FALSE,
+            crossings_signal = FALSE,
+            any_signal = FALSE,
+            message = "Afventer data",
+            has_valid_data = FALSE
+          )
         },
         fallback = NULL,
         error_type = "state_reset"
@@ -94,7 +118,7 @@ create_chart_state_manager <- function(app_state) {
 #'
 #' @description
 #' Helper for managing module-level data with caching and reactive safety.
-#' Ekstraeret fra modules_mod_spc_chart_server.R for bedre separation.
+#' Ekstraeret fra mod_spc_chart_server.R for bedre separation.
 #'
 #' @param app_state Application state object
 #' @return List med data management funktioner
@@ -187,7 +211,7 @@ create_module_data_manager <- function(app_state) {
 #'
 #' @description
 #' Processer SPC beregninger og ekstraherer relevante metrics.
-#' Ekstraeret fra modules_mod_spc_chart_server.R for bedre testability.
+#' Ekstraeret fra mod_spc_chart_server.R for bedre testability.
 #'
 #' @export
 create_spc_results_processor <- function() {
@@ -349,7 +373,7 @@ create_spc_results_processor <- function() {
 #'
 #' @description
 #' Validering af chart data og konfiguration før plot generation.
-#' Ekstraeret fra modules_mod_spc_chart_server.R for genbrug.
+#' Ekstraeret fra mod_spc_chart_server.R for genbrug.
 #'
 #' @export
 create_chart_validator <- function() {
@@ -407,5 +431,4 @@ create_chart_validator <- function() {
   )
 }
 
-# Null coalescing operator for internal use
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || identical(a, "")) b else a
+# Null coalescing operator is defined in utils_logging.R

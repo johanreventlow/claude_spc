@@ -1,10 +1,10 @@
 #' Package initialization and loading
 #'
-#' This file handles package initialization when claudespc is loaded.
+#' This file handles package initialization when SPCify is loaded.
 #' It replaces the global.R source() chain with proper package loading.
 #'
 #' @param libname Library name (not used)
-#' @param pkgname Package name (should be "claudespc")
+#' @param pkgname Package name (should be "SPCify")
 #'
 #' @importFrom utils packageVersion
 #' @noRd
@@ -13,7 +13,7 @@
 # This prevents pollution of .GlobalEnv
 .claudespc_env <- NULL
 
-#' Get or create the claudespc package environment
+#' Get or create the SPCify package environment
 #'
 #' @description
 #' Returns the package-level environment used for storing configuration
@@ -101,6 +101,9 @@ get_test_mode_file_path <- function() {
   # Load runtime configuration using the full implementation
   setup_package_runtime_config()
 
+  # NOTE: Startup performance optimizations (cache, lazy loading) moved to run_app()
+  # to ensure they work consistently in both package and source loading modes
+
   # Set up resource paths for static files
   setup_resource_paths()
 
@@ -139,6 +142,12 @@ initialize_logging_system <- function() {
   if (!nzchar(Sys.getenv("SPC_LOG_LEVEL", ""))) {
     Sys.setenv(SPC_LOG_LEVEL = "INFO")
   }
+
+  # Initialize shinylogs announcement (moved from parse-time execution)
+  if (exists("initialize_shinylogs_announcement", mode = "function")) {
+    initialize_shinylogs_announcement()
+  }
+
   # Logging functions (log_debug, log_info, etc.) handle their own
   # availability checks and fallbacks, so no additional setup needed
 }
@@ -168,6 +177,7 @@ setup_package_runtime_config <- function() {
 
   invisible()
 }
+
 
 #' Set up resource paths for static files
 #'

@@ -17,7 +17,7 @@ extract_comment_data <- function(data, kommentar_column, qic_data) {
   # STABLE ROW MAPPING: Use row-id to correctly map comments to qic_data points
   # This prevents comment drift when qicharts2 reorders/filters rows
   if (!".original_row_id" %in% names(qic_data)) {
-    log_warn("Missing .original_row_id in qic_data - falling back to positional mapping", "PLOT_COMMENT")
+    log_warn("Missing .original_row_id in qic_data - falling back to positional mapping", .context = "PLOT_COMMENT")
     # Fallback til gamle positionsbaserede mapping
     comments_raw <- data[[kommentar_column]]
     comment_data <- data.frame(
@@ -267,7 +267,7 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
         x_col_for_qic <- x_col_name
 
       } else {
-        log_debug("Length mismatch - using observation sequence as fallback", "DATA_PROCESS")
+        log_debug("Length mismatch - using observation sequence as fallback", .context = "DATA_PROCESS")
         # Fallback til observation sekvens
         if (!("obs_sequence" %in% names(data))) {
           data$obs_sequence <- 1:nrow(data)
@@ -292,6 +292,16 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
   }
 
   # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
+
+  # FIX: For run charts with denominator, use prepared y-data and remove n to prevent NA run rules
+  if (exists("chart_type", envir = parent.frame()) &&
+      identical(get("chart_type", envir = parent.frame()), "run") &&
+      !is.null(n_col_name) &&
+      ".y_run_prepared" %in% names(data)) {
+    y_col_name <- ".y_run_prepared"
+    n_col_name <- NULL  # Remove n parameter for run charts to prevent NA run rules
+    log_debug("Using prepared y-data for run chart, removed n parameter", .context = "QIC")
+  }
 
   return(list(
     data = data,
@@ -326,12 +336,12 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
   if (!is.null(n_col_name)) qic_args$n <- as.name(n_col_name)
 
   # Add freeze for baseline - can be used together with part
-  if (!is.null(freeze_position)) {
+  if (!is.null(freeze_position) && !is.na(freeze_position)) {
     qic_args$freeze <- freeze_position
   }
 
   # Add part for phase splits - can be used together with freeze
-  if (!is.null(part_positions)) {
+  if (!is.null(part_positions) && !all(is.na(part_positions))) {
     qic_args$part <- part_positions
   }
 
@@ -355,14 +365,25 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
 execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL) {
   # Call qic() with prepared arguments
   if (getOption("debug.mode", FALSE)) {
-    log_debug("qic_args structure:", "QIC_CALL")
-    log_debug(qic_args, "QIC_CALL")
+    log_debug("qic_args structure:", .context = "QIC_CALL")
+    log_debug(qic_args, .context = "QIC_CALL")
   }
 
-  log_debug(qic_args, "QIC")
+  log_debug(qic_args, .context = "QIC")
+
+  # Get call number for debugging correlation
+  call_number <- if (exists("qic_call_counter", envir = .GlobalEnv)) {
+    get("qic_call_counter", envir = .GlobalEnv)
+  } else {
+    NULL
+  }
 
   # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
-  if (exists("benchmark_spc_operation") && requireNamespace("microbenchmark", quietly = TRUE)) {
+  # Feature flag check - disable benchmarking in production by default
+  benchmark_enabled <- isTRUE(getOption("spc.benchmark_enabled", FALSE)) ||
+                      isTRUE(tryCatch(golem::get_golem_options("benchmark_enabled"), error = function(e) FALSE))
+
+  if (benchmark_enabled && exists("benchmark_spc_operation") && requireNamespace("microbenchmark", quietly = TRUE)) {
     # Determine data size category for benchmarking
     data_size <- nrow(qic_args$data)
     size_category <- if (data_size < 50) "small" else if (data_size < 500) "medium" else "large"
@@ -371,7 +392,7 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
     benchmark_iterations <- if (data_size < 100) 3 else if (data_size < 1000) 2 else 1
 
     benchmark_result <- benchmark_spc_operation(
-      expr = do.call(qicharts2::qic, qic_args),
+      expr = log_qic_call_wrapper(qic_args, "execute_qic_call_benchmark", call_number),
       times = benchmark_iterations,
       operation_name = paste0("qic_", chart_type, "_", size_category, "_", data_size, "_rows"),
       log_results = TRUE,
@@ -381,8 +402,8 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
     # Use result from benchmark to eliminate redundant QIC call
     qic_data <- benchmark_result$captured_result
   } else {
-    # Fallback: Execute without benchmarking
-    qic_data <- do.call(qicharts2::qic, qic_args)
+    # Fallback: Execute without benchmarking with debug logging
+    qic_data <- log_qic_call_wrapper(qic_args, "execute_qic_call_fallback", call_number)
   }
 
   if (is.null(display_scaler)) {
@@ -441,7 +462,7 @@ convert_target_for_display <- function(target_value, qic_data) {
 # Tilføjer target lines, phase separations og comment annotations
 add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
   # Get hospital colors using the proper package function
-  HOSPITAL_COLORS <- get_hospital_colors()
+  hospital_colors <- get_hospital_colors()
 
   # Add phase separation lines if parts exist
   if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
@@ -454,7 +475,7 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
           p +
             ggplot2::geom_vline(
               xintercept = qic_data$x[change_point + 1],
-              color = HOSPITAL_COLORS$warning,
+              color = hospital_colors$warning,
               linetype = "dotted", linewidth = 1, alpha = 0.7
             )
         }, .init = plot)
@@ -469,7 +490,7 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
     plot <- plot +
       ggplot2::geom_hline(
         yintercept = display_target_value,
-        color = HOSPITAL_COLORS$darkgrey, linetype = "42", linewidth = 1.2,
+        color = hospital_colors$darkgrey, linetype = "42", linewidth = 1.2,
         alpha = 0.8
       )
   }
@@ -481,12 +502,12 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
         data = comment_data,
         ggplot2::aes(x = x, y = y, label = comment),
         size = 3,
-        color = HOSPITAL_COLORS$darkgrey
+        color = hospital_colors$darkgrey
         # bg.color = "white",
         # bg.r = 0.1,
         # box.padding = 0.5,
         # point.padding = 0.5,
-        # segment.color = HOSPITAL_COLORS$mediumgrey,
+        # segment.color = hospital_colors$mediumgrey,
         # segment.size = 0.3,
         # nudge_x = .15,
         # nudge_y = .5,
@@ -503,7 +524,7 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
   # Generate SPC plot with specified parameters
   # Get hospital colors using the proper package function
-  HOSPITAL_COLORS <- get_hospital_colors()
+  hospital_colors <- get_hospital_colors()
 
   # PERFORMANCE MONITORING: Track QIC calculation calls
   if (!exists("qic_call_counter", envir = .GlobalEnv)) {
@@ -527,7 +548,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   }
 
   log_debug(paste("generateSPCPlot CALL #", call_number, "at", format(current_time, "%H:%M:%S.%OS3"),
-                  "| chart_type:", chart_type, "| data:", nrow(data), "rows"), "SPC_CALC_DEBUG")
+                  "| chart_type:", chart_type, "| data:", nrow(data), "rows"), .context = "SPC_CALC_DEBUG")
 
   # Input validation and configuration sanitization
   validate_spc_inputs(data, config)
@@ -554,6 +575,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   n_data <- data_result$n_data
   ylab_text <- data_result$ylab_text
   y_unit_label <- data_result$y_unit_label
+
+  # FIX: For run charts with denominator, inject prepared y-data to prevent NA run rules
+  if (identical(chart_type, "run") && !is.null(n_data)) {
+    # Create prepared y column for stable QIC run calculations
+    data[[".y_run_prepared"]] <- y_data
+    log_debug("Injected prepared y-data for run chart with denominator", .context = "QIC")
+  }
 
   has_denominator <- !is.null(n_data)
   display_scaler <- create_qic_display_scaler(chart_type, has_denominator)
@@ -692,12 +720,12 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         code = {
           plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y))
 
-          plot <- plot + ggplot2::geom_line(color = HOSPITAL_COLORS$lightgrey, linewidth = 1)
+          plot <- plot + ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1)
 
-          plot <- plot + ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$mediumgrey)
+          plot <- plot + ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey)
 
           plot <- plot + ggplot2::geom_line(ggplot2::aes(y = cl),
-            color = HOSPITAL_COLORS$hospitalblue,
+            color = hospital_colors$hospitalblue,
             linetype = "solid", linewidth = 1
           )
 
@@ -718,7 +746,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
         plot <- plot +
           ggplot2::geom_line(ggplot2::aes(y = ucl),
-            color = HOSPITAL_COLORS$danger,
+            color = hospital_colors$danger,
             linetype = "dashed", linewidth = 0.8
           )
       }
@@ -726,7 +754,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
         plot <- plot +
           ggplot2::geom_line(ggplot2::aes(y = lcl),
-            color = HOSPITAL_COLORS$danger,
+            color = hospital_colors$danger,
             linetype = "dashed", linewidth = 0.8
           )
       }
@@ -743,7 +771,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         if (inherits(qic_data$x, c("POSIXct", "POSIXt"))) {
           # Håndter intelligent formatering separat
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", "X_AXIS_FORMAT")
+            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
@@ -751,7 +779,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               breaks = scales::breaks_pretty(n = format_config$n_breaks)
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", "X_AXIS_FORMAT")
+            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
@@ -775,14 +803,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         } else if (inherits(qic_data$x, "Date")) {
           # Date objekter - tilsvarende intelligent håndtering
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects", "X_AXIS_FORMAT")
+            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_date(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               breaks = scales::date_breaks(format_config$breaks)
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects", "X_AXIS_FORMAT")
+            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_date(
               name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
@@ -820,11 +848,11 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       plot_data <- data.frame(x = call_args$x, y = call_args$y)
 
       plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = x, y = y)) +
-        ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$primary) +
-        ggplot2::geom_line(color = HOSPITAL_COLORS$primary, alpha = 0.7) +
+        ggplot2::geom_point(size = 2, color = hospital_colors$primary) +
+        ggplot2::geom_line(color = hospital_colors$primary, alpha = 0.7) +
         ggplot2::geom_hline(
           yintercept = median(call_args$y, na.rm = TRUE),
-          color = HOSPITAL_COLORS$secondary, linetype = "dashed"
+          color = hospital_colors$secondary, linetype = "dashed"
         ) +
         ggplot2::labs(title = call_args$title, x = "", y = "") +
         ggplot2::theme_minimal()
@@ -857,7 +885,7 @@ applyHospitalTheme <- function(plot) {
   }
 
   # Get hospital colors using the proper package function
-  HOSPITAL_COLORS <- get_hospital_colors()
+  hospital_colors <- get_hospital_colors()
 
   safe_operation(
     "Apply hospital theme to plot",
@@ -880,19 +908,19 @@ applyHospitalTheme <- function(plot) {
       themed_plot <- plot +
         ggplot2::theme_minimal() +
         ggplot2::theme(
-          plot.title = ggplot2::element_text(color = HOSPITAL_COLORS$primary, size = 14, face = "bold"),
-          plot.subtitle = ggplot2::element_text(color = HOSPITAL_COLORS$secondary, size = 12),
-          axis.title = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 11),
-          axis.text = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 10),
-          legend.title = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 11),
-          legend.text = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 10),
-          panel.grid.major = ggplot2::element_line(color = HOSPITAL_COLORS$light),
-          panel.grid.minor = ggplot2::element_line(color = HOSPITAL_COLORS$light),
-          strip.text = ggplot2::element_text(color = HOSPITAL_COLORS$primary, face = "bold")
+          plot.title = ggplot2::element_text(color = hospital_colors$primary, size = 14, face = "bold"),
+          plot.subtitle = ggplot2::element_text(color = hospital_colors$secondary, size = 12),
+          axis.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
+          axis.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
+          legend.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
+          legend.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
+          panel.grid.major = ggplot2::element_line(color = hospital_colors$light),
+          panel.grid.minor = ggplot2::element_line(color = hospital_colors$light),
+          strip.text = ggplot2::element_text(color = hospital_colors$primary, face = "bold")
         ) +
         ggplot2::labs(caption = footer_text) +
         ggplot2::theme(
-          plot.caption = ggplot2::element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
+          plot.caption = ggplot2::element_text(size = 8, color = hospital_colors$secondary, hjust = 0)
         )
 
       return(themed_plot)

@@ -2,6 +2,19 @@
 # Golem-inspired utility functions for robust Shiny app management
 # Fase 3.4: Proper golem patterns implementation with YAML configuration support
 
+#' Null-coalescing operator
+#'
+#' @description
+#' Returns the left-hand side if it's not NULL, otherwise returns the right-hand side
+#'
+#' @param lhs Left-hand side value
+#' @param rhs Right-hand side value (fallback)
+#' @return lhs if not NULL, otherwise rhs
+#' @export
+`%||%` <- function(lhs, rhs) {
+  if (!is.null(lhs)) lhs else rhs
+}
+
 #' Set Application Options (Golem-style)
 #'
 #' @description
@@ -279,7 +292,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
   # Input validation
   if (is.null(prefix) || length(prefix) == 0 || prefix == "" || is.na(prefix)) {
     if (exists("log_warn")) {
-      log_warn("Invalid prefix provided to add_resource_path", "RESOURCE_PATHS")
+      log_warn("Invalid prefix provided to add_resource_path", .context = "RESOURCE_PATHS")
     } else {
       warning("Invalid prefix provided to add_resource_path")
     }
@@ -288,7 +301,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
   if (is.null(path) || length(path) == 0 || path == "" || is.na(path)) {
     if (exists("log_warn")) {
-      log_warn("Invalid path provided to add_resource_path", "RESOURCE_PATHS")
+      log_warn("Invalid path provided to add_resource_path", .context = "RESOURCE_PATHS")
     } else {
       warning("Invalid path provided to add_resource_path")
     }
@@ -316,7 +329,7 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
       if (is.null(www_path)) {
         if (exists("log_debug")) {
-          log_debug("No www directory found in development mode", "RESOURCE_PATHS")
+          log_debug("No www directory found in development mode", .context = "RESOURCE_PATHS")
         }
         return(invisible(FALSE))
       }
@@ -375,62 +388,9 @@ favicon <- function(path = "www/favicon.ico") {
   }
 }
 
-# YAML CONFIGURATION SUPPORT =================================================
-
-#' Load Golem Configuration from YAML
-#'
-#' @description
-#' Load application configuration fra inst/golem-config.yml following
-#' standard golem patterns. Provides objektiv sammenligning med golem best practices.
-#'
-#' @param env Environment name (development, production, testing, default)
-#' @param config_path Path to golem-config.yml file
-#' @return List with configuration for specified environment
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' # Load development configuration
-#' dev_config <- get_golem_config("development")
-#'
-#' # Load production configuration
-#' prod_config <- get_golem_config("production")
-#'
-#' # Load from custom path
-#' config <- get_golem_config("development", "custom/path/config.yml")
-#' }
-get_golem_config <- function(env = NULL, config_path = "inst/golem-config.yml") {
-  log_debug(paste("Loading golem configuration for environment:", env %||% "auto-detect"), .context = "GOLEM_CONFIG")
-
-  # Auto-detect environment if not specified
-  if (is.null(env)) {
-    env <- detect_golem_environment()
-  }
-
-  # Check if config file exists
-  if (!file.exists(config_path)) {
-    log_debug(paste("Golem config file not found:", config_path), .context = "GOLEM_CONFIG")
-    return(get_fallback_golem_config(env))
-  }
-
-  # Load YAML configuration
-  tryCatch({
-    config_data <- yaml::read_yaml(config_path)
-
-    # Get configuration for specific environment
-    if (env %in% names(config_data)) {
-      env_config <- config_data[[env]]
-      log_debug(paste("Golem configuration loaded for environment:", env), .context = "GOLEM_CONFIG")
-      return(env_config)
-    } else {
-      log_debug(paste("Environment", env, "not found in config, using default"), .context = "GOLEM_CONFIG")
-      return(config_data[["default"]] %||% get_fallback_golem_config(env))
-    }
-  }, error = function(e) {
-    log_error(paste("Failed to load golem config:", e$message), "GOLEM_CONFIG")
-    return(get_fallback_golem_config(env))
-  })
-}
+# CONFIGURATION SUPPORT ======================================================
+# Note: Golem configuration is handled via config::get() in app_config.R
+# This avoids duplicate YAML readers and ensures consistent config loading
 
 #' Detect Golem Environment
 #'
@@ -439,7 +399,23 @@ get_golem_config <- function(env = NULL, config_path = "inst/golem-config.yml") 
 #'
 #' @return String indicating environment (development, production, testing, default)
 detect_golem_environment <- function() {
-  # Check R_CONFIG_ACTIVE first (standard practice)
+  # Check GOLEM_CONFIG_ACTIVE first (primary environment variable)
+  golem_config <- Sys.getenv("GOLEM_CONFIG_ACTIVE", "")
+  if (golem_config != "") {
+    mapped_env <- switch(golem_config,
+      "development" = "development",
+      "dev" = "development",
+      "production" = "production",
+      "prod" = "production",
+      "testing" = "testing",
+      "test" = "testing",
+      "default"  # Fallback
+    )
+    log_debug(paste("Environment detected from GOLEM_CONFIG_ACTIVE:", mapped_env), .context = "GOLEM_ENV")
+    return(mapped_env)
+  }
+
+  # Map R_CONFIG_ACTIVE to GOLEM_CONFIG_ACTIVE for backward compatibility
   r_config <- Sys.getenv("R_CONFIG_ACTIVE", "")
   if (r_config != "") {
     mapped_env <- switch(r_config,
@@ -451,7 +427,9 @@ detect_golem_environment <- function() {
       "test" = "testing",
       "default"  # Fallback
     )
-    log_debug(paste("Environment detected from R_CONFIG_ACTIVE:", mapped_env), .context = "GOLEM_ENV")
+    # Set GOLEM_CONFIG_ACTIVE based on R_CONFIG_ACTIVE for consistency
+    Sys.setenv(GOLEM_CONFIG_ACTIVE = mapped_env)
+    log_debug(paste("Environment mapped from R_CONFIG_ACTIVE to GOLEM_CONFIG_ACTIVE:", mapped_env), .context = "GOLEM_ENV")
     return(mapped_env)
   }
 
@@ -580,7 +558,9 @@ apply_golem_config <- function(golem_config) {
 #' @export
 get_golem_config_summary <- function() {
   env <- detect_golem_environment()
-  config <- get_golem_config(env)
+
+  # Use fallback configuration since detailed config is handled via config::get()
+  config <- get_fallback_golem_config(env)
 
   if (is.null(config)) {
     return("Golem configuration not available")
@@ -605,11 +585,4 @@ get_golem_config_summary <- function() {
 #' Null-coalescing operator
 #'
 #' @description
-#' Return right-hand side if left-hand side is NULL
-#'
-#' @param x Left-hand side value
-#' @param y Right-hand side value (fallback)
-#' @return x if not NULL, otherwise y
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
-}
+# Null coalescing operator is defined in utils_logging.R

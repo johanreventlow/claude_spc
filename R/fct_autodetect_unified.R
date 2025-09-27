@@ -95,7 +95,7 @@ autodetect_engine <- function(data = NULL,
   on.exit({
     shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
     shiny::isolate(app_state$columns$auto_detect$last_run <- Sys.time())
-    log_debug("Autodetect engine cleanup completed", "UNIFIED_AUTODETECT")
+    log_debug("Autodetect engine cleanup completed", .context = "UNIFIED_AUTODETECT")
   }, add = TRUE)
 
   # 1. TRIGGER VALIDATION - smart unfreezing when data is available
@@ -152,8 +152,8 @@ autodetect_engine <- function(data = NULL,
           operation_name = paste0("autodetect_name_based_", length(col_names), "_cols"),
           log_results = TRUE
         )
-        # Extract the actual results from benchmark wrapper
-        results <- eval(parse(text = "detect_columns_name_based(col_names, app_state)"))
+        # Fix: Direct function call instead of eval(parse()) - eliminates code injection risk
+        results <- detect_columns_name_based(col_names, app_state)
       } else {
         results <- detect_columns_name_based(col_names, app_state)
       }

@@ -369,7 +369,7 @@ create_config_registry <- function() {
             rm(list = d, envir = .config_cache)
           }
         }
-        log_info("All configuration domains reloaded", "CONFIG_REGISTRY")
+        log_info("All configuration domains reloaded", .context = "CONFIG_REGISTRY")
       } else {
         if (exists(domain, envir = .config_loaded)) {
           rm(list = domain, envir = .config_loaded)
@@ -426,7 +426,7 @@ get_config <- function(path, default = NULL, type = "character", config_registry
     if (exists(".spc_config_registry", envir = .GlobalEnv)) {
       config_registry <- get(".spc_config_registry", envir = .GlobalEnv)
     } else {
-      log_warn("No global config registry found, creating temporary", "CONFIG_REGISTRY")
+      log_warn("No global config registry found, creating temporary", .context = "CONFIG_REGISTRY")
       config_registry <- create_config_registry()
     }
   }
@@ -472,9 +472,8 @@ init_global_config_registry <- function() {
   .spc_config_registry <- create_config_registry()
   assign(".spc_config_registry", .spc_config_registry, envir = .GlobalEnv)
 
-  log_info("Global configuration registry initialized", "CONFIG_REGISTRY")
+  log_info("Global configuration registry initialized", .context = "CONFIG_REGISTRY")
   invisible(.spc_config_registry)
 }
 
-# Null coalescing operator for internal use
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || identical(a, "")) b else a
+# Null coalescing operator defined in utils_logging.R

@@ -245,7 +245,19 @@ create_app_state <- function() {
   app_state$visualization <- shiny::reactiveValues(
     plot_ready = FALSE,
     plot_warnings = character(0),
-    anhoej_results = NULL,
+    anhoej_results = list(
+      # Initialize with default values instead of NULL to prevent "Beregner..." stuck state
+      longest_run = NA_real_,
+      longest_run_max = NA_real_,
+      n_crossings = NA_real_,
+      n_crossings_min = NA_real_,
+      out_of_control_count = 0L,
+      runs_signal = FALSE,
+      crossings_signal = FALSE,
+      any_signal = FALSE,
+      message = "Afventer data",
+      has_valid_data = FALSE  # Track if we ever had valid data
+    ),
     is_computing = FALSE,
     plot_object = NULL,
 

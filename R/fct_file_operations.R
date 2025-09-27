@@ -4,6 +4,126 @@
 # Dependencies ----------------------------------------------------------------
 # Bruger readxl og readr til fil-import
 
+#' Validate safe file path for uploads
+#' @description
+#' Enhanced path traversal protection for file uploads
+#' @param uploaded_path Path from file upload input
+#' @return Validated safe file path
+#' @noRd
+validate_safe_file_path <- function(uploaded_path) {
+  # Input validation
+  if (is.null(uploaded_path) || !is.character(uploaded_path) || length(uploaded_path) != 1) {
+    log_error(
+      component = "[SECURITY]",
+      message = "Invalid file path input",
+      details = list(
+        input_type = typeof(uploaded_path),
+        input_length = length(uploaded_path)
+      ),
+      show_user = FALSE
+    )
+    stop("Sikkerhedsfejl: Ugyldig fil input")
+  }
+
+  # Normalize path with enhanced error handling
+  file_path <- tryCatch({
+    normalizePath(uploaded_path, mustWork = TRUE)
+  }, error = function(e) {
+    log_error(
+      component = "[SECURITY]",
+      message = "Failed to normalize file path",
+      details = list(
+        attempted_path = uploaded_path,
+        error = e$message
+      ),
+      show_user = FALSE
+    )
+    stop("Sikkerhedsfejl: Kunne ikke validere fil sti")
+  })
+
+  # Define comprehensive allowed base paths
+  allowed_bases <- c(
+    normalizePath(tempdir(), mustWork = FALSE),
+    normalizePath(dirname(tempfile()), mustWork = FALSE),
+    # Shiny's default upload location
+    normalizePath(file.path(tempdir(), "shiny-uploads"), mustWork = FALSE)
+  )
+
+  # Add current working directory data folder if it exists
+  if (dir.exists("./data")) {
+    allowed_bases <- c(allowed_bases, normalizePath("./data", mustWork = FALSE))
+  }
+
+  # Validate path is within allowed directories with enhanced checking
+  safe_path <- any(vapply(allowed_bases, function(base) {
+    # Ensure base path ends with file separator for accurate comparison
+    base_with_sep <- paste0(base, .Platform$file.sep)
+    startsWith(file_path, base_with_sep) || identical(file_path, base)
+  }, logical(1)))
+
+  if (!safe_path) {
+    log_error(
+      component = "[SECURITY]",
+      message = "Path traversal attempt blocked",
+      details = list(
+        attempted_path = uploaded_path,
+        normalized_path = file_path,
+        allowed_bases = allowed_bases,
+        session_id = "REDACTED"  # Don't log actual session ID
+      ),
+      show_user = FALSE
+    )
+    stop("Sikkerhedsfejl: Ugyldig fil sti")
+  }
+
+  return(file_path)
+}
+
+#' Sanitize session metadata input
+#' @description
+#' Secure input sanitization for Excel session metadata
+#' @param input_value Raw input value from Excel
+#' @param field_type Type of field for specific validation
+#' @param max_length Maximum allowed length
+#' @return Sanitized input value
+#' @noRd
+sanitize_session_metadata <- function(input_value, field_type = "general", max_length = 255) {
+  # Basic input validation
+  if (is.null(input_value) || !is.character(input_value) || length(input_value) != 1) {
+    return("")
+  }
+
+  # Base sanitization using existing function if available
+  clean_value <- if (exists("sanitize_user_input", mode = "function")) {
+    sanitize_user_input(input_value, max_length = max_length, strict_mode = TRUE)
+  } else {
+    # Fallback basic sanitization
+    substr(trimws(as.character(input_value)), 1, max_length)
+  }
+
+  # Field-specific validation
+  if (field_type == "title") {
+    # Titles: Danish chars + basic punctuation
+    clean_value <- gsub("[^A-Za-z0-9æøåÆØÅ .,:-]", "", clean_value)
+  } else if (field_type == "description") {
+    # Descriptions: More permissive but no HTML/scripts
+    clean_value <- gsub("<[^>]+>", "", clean_value)  # Strip HTML tags
+    clean_value <- gsub("javascript:", "", clean_value, ignore.case = TRUE)
+    clean_value <- gsub("vbscript:", "", clean_value, ignore.case = TRUE)
+    clean_value <- gsub("data:", "", clean_value, ignore.case = TRUE)
+  } else if (field_type == "unit") {
+    # Units: Very restrictive
+    clean_value <- gsub("[^A-Za-z0-9æøåÆØÅ /%()-]", "", clean_value)
+  }
+
+  # Final safety check - remove any remaining dangerous patterns
+  clean_value <- gsub("[\r\n\t]", " ", clean_value)  # Replace newlines/tabs with spaces
+  clean_value <- gsub("\\s+", " ", clean_value)     # Collapse multiple spaces
+  clean_value <- trimws(clean_value)
+
+  return(clean_value)
+}
+
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
@@ -83,22 +203,8 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
       add = TRUE
     )
 
-    # Sikker path validation - forhindrer path traversal attacks
-    file_path <- normalizePath(input$data_file$datapath, mustWork = TRUE)
-
-    # Verificer at filen befinder sig i et sikkert directory (tempdir eller upload area)
-    safe_dirs <- c(tempdir(), dirname(tempfile()))
-    # Normaliser både fil-sti og safe directories for at håndtere macOS symlinks korrekt
-    normalized_safe_dirs <- vapply(safe_dirs, function(dir) normalizePath(dir, mustWork = FALSE), character(1))
-    safe_path <- any(vapply(normalized_safe_dirs, function(dir) startsWith(file_path, dir), logical(1)))
-
-    if (!safe_path) {
-      log_error(
-        message = paste("Path traversal attempt detected:", file_path),
-        component = "[SECURITY]"
-      )
-      stop("Sikkerhedsfejl: Ugyldig fil sti")
-    }
+    # Enhanced path traversal protection
+    file_path <- validate_safe_file_path(input$data_file$datapath)
 
     file_ext <- tools::file_ext(input$data_file$name)
 
@@ -169,8 +275,8 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     set_current_data(app_state, data_frame)
     app_state$data$original_data <- data_frame
 
-    # Emit data_loaded event to trigger unified event system
-    emit$data_loaded()
+    # Emit unified data_updated event (replaces legacy data_loaded)
+    emit$data_updated("file_loaded")
 
     # Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
@@ -208,8 +314,8 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     set_current_data(app_state, data_frame)
     app_state$data$original_data <- data_frame
 
-    # Emit data_loaded event to trigger unified event system
-    emit$data_loaded()
+    # Emit unified data_updated event (replaces legacy data_loaded)
+    emit$data_updated("file_loaded")
 
     # Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
@@ -359,7 +465,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
     warning("State assignment failed: current_data is NULL")
   }
 
-  # Emit data_loaded event to trigger unified event system
+  # Emit unified data_updated event (replaces legacy data_loaded)
   emit$data_loaded()
 
   # Unified state assignment - Set file uploaded flag
@@ -399,11 +505,12 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
 parse_session_metadata <- function(session_lines, data_cols) {
   metadata <- list()
 
-  # Parse titel
+  # Parse titel with sanitization
   title_line <- session_lines[grepl("^• Titel:", session_lines)]
   if (length(title_line) > 0) {
-    metadata$title <- gsub("^• Titel: ", "", title_line[1])
-    metadata$title <- gsub(" Ikke angivet$", "", metadata$title)
+    raw_title <- gsub("^• Titel: ", "", title_line[1])
+    raw_title <- gsub(" Ikke angivet$", "", raw_title)
+    metadata$title <- sanitize_session_metadata(raw_title, "title")
   }
 
   # Parse enhed
@@ -427,17 +534,17 @@ parse_session_metadata <- function(session_lines, data_cols) {
         metadata$unit_select <- standard_units[[unit_text]]
       } else {
         metadata$unit_type <- "custom"
-        metadata$unit_custom <- unit_text
+        metadata$unit_custom <- sanitize_session_metadata(unit_text, "unit")
       }
     }
   }
 
-  # Parse beskrivelse
+  # Parse beskrivelse with sanitization
   desc_line <- session_lines[grepl("^• Beskrivelse:", session_lines)]
   if (length(desc_line) > 0) {
     desc_text <- gsub("^• Beskrivelse: ", "", desc_line[1])
     if (desc_text != "Ikke angivet" && desc_text != "") {
-      metadata$description <- desc_text
+      metadata$description <- sanitize_session_metadata(desc_text, "description")
     }
   }
 

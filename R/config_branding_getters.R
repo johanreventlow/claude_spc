@@ -241,7 +241,4 @@ create_plot_footer <- function(afdeling = "", data_kilde = "", dato = Sys.Date()
   )
 }
 
-# Null-coalescing operator for safe fallbacks
-`%||%` <- function(lhs, rhs) {
-  if (is.null(lhs) || length(lhs) == 0) rhs else lhs
-}
+# Null-coalescing operator is defined in utils_logging.R

@@ -634,18 +634,15 @@ initialize_advanced_debug <- function(enable_history = TRUE, max_history_entries
   # REDUCED NOISE: Only show debug system banner if verbose debugging enabled
   debug_mode <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE") == "TRUE"
   if (debug_mode) {
-    log_info("ADVANCED DEBUG SYSTEM ACTIVE ===", "ADVANCED_DEBUG")
-    log_info("Available utilities:", "ADVANCED_DEBUG")
+    log_info("ADVANCED DEBUG SYSTEM ACTIVE ===", .context = "ADVANCED_DEBUG")
+    log_info("Available utilities:", .context = "ADVANCED_DEBUG")
     log_info("- debug_log()              Enhanced logging med categories", "ADVANCED_DEBUG")
     log_info("- debug_state_snapshot()   State inspection og comparison", "ADVANCED_DEBUG")
     log_info("- debug_performance_timer() High-precision operation timing", "ADVANCED_DEBUG")
     log_info("- debug_workflow_tracer()   End-to-end workflow tracking", "ADVANCED_DEBUG")
     log_info("- debug_session_lifecycle() Session creation → cleanup tracking", "ADVANCED_DEBUG")
-    log_info("=====================================", "ADVANCED_DEBUG")
+    log_info("=====================================", .context = "ADVANCED_DEBUG")
   }
 }
 
-# NULL-safe operator for backward compatibility
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
-}
+# NULL-safe operator is defined in utils_logging.R
