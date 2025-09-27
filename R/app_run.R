@@ -253,11 +253,11 @@ run_app <- function(port = NULL,
   # Initialize startup performance optimizations early
   initialize_startup_performance_optimizations()
 
-  # Configure logging level using YAML as single source of truth
-  configure_logging_from_yaml(log_level)
-
-  # Configure application environment and test mode using unified configuration
+  # Configure application environment and test mode FIRST to set GOLEM_CONFIG_ACTIVE
   configure_app_environment(enable_test_mode, options)
+
+  # Configure logging level using YAML as single source of truth (AFTER env config)
+  configure_logging_from_yaml(log_level)
 
   # Create the Shiny app using golem pattern
   # Load golem function directly to avoid package conflicts
