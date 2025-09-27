@@ -260,19 +260,19 @@ prepare_qic_data_optimized <- function(preprocessed_data, chart_type, target_val
 #' Fast plot building with cached components
 #'
 build_plot_optimized <- function(plot_data, config, chart_title_reactive, y_axis_unit, kommentar_column) {
-  # Generate plot using cached qic data
+  # Generate plot using cached qic data with debug logging
   qic_result <- safe_operation(
     "Generate QIC plot",
     code = {
       # Get the qic data (return.data = TRUE)
       qic_params_data <- plot_data
       qic_params_data$return.data <- TRUE
-      qic_data <- do.call(qicharts2::qic, qic_params_data)
+      qic_data <- log_qic_call_wrapper(qic_params_data, "build_plot_optimized_data")
 
       # Generate plot from qic data
       qic_params_plot <- plot_data
       qic_params_plot$return.data <- FALSE
-      qic_plot <- do.call(qicharts2::qic, qic_params_plot)
+      qic_plot <- log_qic_call_wrapper(qic_params_plot, "build_plot_optimized_plot")
 
       list(plot = qic_plot, data = qic_data)
     },

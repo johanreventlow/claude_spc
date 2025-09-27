@@ -371,6 +371,13 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
 
   log_debug(qic_args, .context = "QIC")
 
+  # Get call number for debugging correlation
+  call_number <- if (exists("qic_call_counter", envir = .GlobalEnv)) {
+    get("qic_call_counter", envir = .GlobalEnv)
+  } else {
+    NULL
+  }
+
   # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
   # Feature flag check - disable benchmarking in production by default
   benchmark_enabled <- isTRUE(getOption("spc.benchmark_enabled", FALSE)) ||
@@ -385,7 +392,7 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
     benchmark_iterations <- if (data_size < 100) 3 else if (data_size < 1000) 2 else 1
 
     benchmark_result <- benchmark_spc_operation(
-      expr = do.call(qicharts2::qic, qic_args),
+      expr = log_qic_call_wrapper(qic_args, "execute_qic_call_benchmark", call_number),
       times = benchmark_iterations,
       operation_name = paste0("qic_", chart_type, "_", size_category, "_", data_size, "_rows"),
       log_results = TRUE,
@@ -395,8 +402,8 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
     # Use result from benchmark to eliminate redundant QIC call
     qic_data <- benchmark_result$captured_result
   } else {
-    # Fallback: Execute without benchmarking
-    qic_data <- do.call(qicharts2::qic, qic_args)
+    # Fallback: Execute without benchmarking with debug logging
+    qic_data <- log_qic_call_wrapper(qic_args, "execute_qic_call_fallback", call_number)
   }
 
   if (is.null(display_scaler)) {
