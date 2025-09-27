@@ -293,6 +293,16 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
 
   # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
 
+  # FIX: For run charts with denominator, use prepared y-data and remove n to prevent NA run rules
+  if (exists("chart_type", envir = parent.frame()) &&
+      identical(get("chart_type", envir = parent.frame()), "run") &&
+      !is.null(n_col_name) &&
+      ".y_run_prepared" %in% names(data)) {
+    y_col_name <- ".y_run_prepared"
+    n_col_name <- NULL  # Remove n parameter for run charts to prevent NA run rules
+    log_debug("Using prepared y-data for run chart, removed n parameter", .context = "QIC")
+  }
+
   return(list(
     data = data,
     x_col_for_qic = x_col_for_qic,
@@ -558,6 +568,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   n_data <- data_result$n_data
   ylab_text <- data_result$ylab_text
   y_unit_label <- data_result$y_unit_label
+
+  # FIX: For run charts with denominator, inject prepared y-data to prevent NA run rules
+  if (identical(chart_type, "run") && !is.null(n_data)) {
+    # Create prepared y column for stable QIC run calculations
+    data[[".y_run_prepared"]] <- y_data
+    log_debug("Injected prepared y-data for run chart with denominator", .context = "QIC")
+  }
 
   has_denominator <- !is.null(n_data)
   display_scaler <- create_qic_display_scaler(chart_type, has_denominator)
