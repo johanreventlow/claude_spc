@@ -336,12 +336,12 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
   if (!is.null(n_col_name)) qic_args$n <- as.name(n_col_name)
 
   # Add freeze for baseline - can be used together with part
-  if (!is.null(freeze_position)) {
+  if (!is.null(freeze_position) && !is.na(freeze_position)) {
     qic_args$freeze <- freeze_position
   }
 
   # Add part for phase splits - can be used together with freeze
-  if (!is.null(part_positions)) {
+  if (!is.null(part_positions) && !all(is.na(part_positions))) {
     qic_args$part <- part_positions
   }
 

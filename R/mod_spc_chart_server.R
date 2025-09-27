@@ -328,7 +328,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       if (!validation$valid) {
         set_plot_state("plot_warnings", validation$warnings)
         set_plot_state("plot_ready", FALSE)
-        set_plot_state("anhoej_results", NULL)
+        set_plot_state("anhoej_results", list(
+          longest_run = NA_real_,
+          longest_run_max = NA_real_,
+          n_crossings = NA_real_,
+          n_crossings_min = NA_real_,
+          out_of_control_count = 0L,
+          runs_signal = FALSE,
+          crossings_signal = FALSE,
+          any_signal = FALSE,
+          message = "Validering fejlede - kontroller data",
+          has_valid_data = FALSE
+        ))
         set_plot_state("plot_object", NULL)
         return(list(plot = NULL, qic_data = NULL, cache_key = cache_key))
       }
@@ -381,7 +392,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               }
             )
 
+            # Better NA handling: only update if we have at least some valid data
+            # If this is the first run and all metrics are NA, set has_valid_data to false
+            current_anhoej <- get_plot_state("anhoej_results")
+
             if (!is.na(qic_results$longest_run) || !is.na(qic_results$n_crossings)) {
+              # We have valid data - update and mark as valid
+              qic_results$has_valid_data <- TRUE
               log_debug(
                 sprintf(
                   "Updating anhoej metrics longest_run=%s n_crossings=%s",
@@ -391,20 +408,45 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 .context = "VISUALIZATION"
               )
               set_plot_state("anhoej_results", qic_results)
-            } else {
-              log_warn(
+            } else if (current_anhoej$has_valid_data) {
+              # We had valid data before, preserve the last good values
+              log_info(
                 paste(
-                  "Skipping anhoej_results update - all NA values:",
+                  "Preserving last valid anhoej_results - current metrics are NA:",
                   "longest_run=", qic_results$longest_run,
-                  "n_crossings=", qic_results$n_crossings,
-                  "- preserving existing results"
+                  "n_crossings=", qic_results$n_crossings
                 ),
                 "VISUALIZATION"
               )
+            } else {
+              # First run with NA values - update with NA but mark as attempted
+              qic_results$has_valid_data <- FALSE
+              qic_results$message <- "Ingen run-metrics tilgængelige"
+              log_warn(
+                paste(
+                  "Initial anhoej_results with NA values:",
+                  "longest_run=", qic_results$longest_run,
+                  "n_crossings=", qic_results$n_crossings
+                ),
+                "VISUALIZATION"
+              )
+              set_plot_state("anhoej_results", qic_results)
             }
           } else {
-            log_info("Setting anhoej_results to NULL - no qic_data available", .context = "VISUALIZATION")
-            set_plot_state("anhoej_results", NULL)
+            # No qic_data - set to default state with informative message
+            log_info("No qic_data available - setting default anhoej_results", .context = "VISUALIZATION")
+            set_plot_state("anhoej_results", list(
+              longest_run = NA_real_,
+              longest_run_max = NA_real_,
+              n_crossings = NA_real_,
+              n_crossings_min = NA_real_,
+              out_of_control_count = 0L,
+              runs_signal = FALSE,
+              crossings_signal = FALSE,
+              any_signal = FALSE,
+              message = "Ingen data at analysere",
+              has_valid_data = FALSE
+            ))
           }
 
           list(plot = plot, qic_data = qic_data)
@@ -412,7 +454,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         fallback = function(e) {
           set_plot_state("plot_warnings", c("Graf-generering fejlede:", e$message))
           set_plot_state("plot_ready", FALSE)
-          set_plot_state("anhoej_results", NULL)
+          set_plot_state("anhoej_results", list(
+            longest_run = NA_real_,
+            longest_run_max = NA_real_,
+            n_crossings = NA_real_,
+            n_crossings_min = NA_real_,
+            out_of_control_count = 0L,
+            runs_signal = FALSE,
+            crossings_signal = FALSE,
+            any_signal = FALSE,
+            message = paste("Fejl:", e$message),
+            has_valid_data = FALSE
+          ))
           set_plot_state("plot_object", NULL)
           list(plot = NULL, qic_data = NULL)
         },
@@ -731,19 +784,24 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           },
           value = if (status_info$status == "ready") {
             if (!is.null(anhoej$longest_run) && !is.na(anhoej$longest_run)) {
-              # DEBUG: Minimal valuebox logging
-              # log_debug(paste("longest_run_box: showing values -", "longest_run=", anhoej$longest_run), "VISUALIZATION")
+              # Show actual values
               bslib::layout_column_wrap(
                 width = 1 / 2,
                 shiny::div(anhoej$longest_run_max),
                 shiny::div(anhoej$longest_run)
               )
+            } else if (!is.null(anhoej$has_valid_data) && !anhoej$has_valid_data) {
+              # Never had valid data - show informative message
+              shiny::span(
+                style = "font-size:1.5em; color: #666666;",
+                "Ingen metrics"
+              )
             } else {
-              # Only log if this still happens (should be rare now with NA protection)
-              log_warn(paste("longest_run_box showing 'Beregner...' -",
-                            "anhoej_exists=", !is.null(anhoej),
-                            "longest_run=", if(is.null(anhoej)) "NULL" else anhoej$longest_run), "VISUALIZATION")
-              "Beregner..."
+              # Temporary state while computing
+              shiny::span(
+                style = "font-size:1.5em; color: #999999;",
+                "Beregner..."
+              )
             }
           } else {
             shiny::span(
@@ -803,8 +861,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
                 shiny::div(anhoej$n_crossings_min),
                 shiny::div(anhoej$n_crossings)
               )
+            } else if (!is.null(anhoej$has_valid_data) && !anhoej$has_valid_data) {
+              # Never had valid data - show informative message
+              shiny::span(
+                style = "font-size:1.5em; color: #666666;",
+                "Ingen metrics"
+              )
             } else {
-              "Beregner..."
+              # Temporary state while computing
+              shiny::span(
+                style = "font-size:1.5em; color: #999999;",
+                "Beregner..."
+              )
             }
           } else {
             shiny::span(

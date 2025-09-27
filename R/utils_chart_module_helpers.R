@@ -20,7 +20,19 @@ create_chart_state_manager <- function(app_state) {
       plot_ready = FALSE,
       is_computing = FALSE,
       plot_warnings = character(0),
-      anhoej_results = NULL,
+      anhoej_results = list(
+        # Initialize with default values instead of NULL to prevent "Beregner..." stuck state
+        longest_run = NA_real_,
+        longest_run_max = NA_real_,
+        n_crossings = NA_real_,
+        n_crossings_min = NA_real_,
+        out_of_control_count = 0L,
+        runs_signal = FALSE,
+        crossings_signal = FALSE,
+        any_signal = FALSE,
+        message = "Afventer data",
+        has_valid_data = FALSE
+      ),
       module_cached_data = NULL
     )
   }
@@ -65,7 +77,19 @@ create_chart_state_manager <- function(app_state) {
           app_state$visualization$plot_ready <- FALSE
           app_state$visualization$is_computing <- FALSE
           app_state$visualization$plot_warnings <- character(0)
-          app_state$visualization$anhoej_results <- NULL
+          app_state$visualization$anhoej_results <- list(
+            # Reset to default values instead of NULL
+            longest_run = NA_real_,
+            longest_run_max = NA_real_,
+            n_crossings = NA_real_,
+            n_crossings_min = NA_real_,
+            out_of_control_count = 0L,
+            runs_signal = FALSE,
+            crossings_signal = FALSE,
+            any_signal = FALSE,
+            message = "Afventer data",
+            has_valid_data = FALSE
+          )
         },
         fallback = NULL,
         error_type = "state_reset"
