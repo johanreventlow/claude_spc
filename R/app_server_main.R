@@ -310,7 +310,7 @@ main_app_server <- function(input, output, session) {
             set_current_data(app_state, test_data)
 
             # Emit event to trigger downstream effects
-            emit$data_loaded()
+            emit$data_updated("test_data_loaded")
             # Set session flags
             app_state$session$file_uploaded <- TRUE
             app_state$session$user_started_session <- TRUE

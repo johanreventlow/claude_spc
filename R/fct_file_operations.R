@@ -275,8 +275,8 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     set_current_data(app_state, data_frame)
     app_state$data$original_data <- data_frame
 
-    # Emit data_loaded event to trigger unified event system
-    emit$data_loaded()
+    # Emit unified data_updated event (replaces legacy data_loaded)
+    emit$data_updated("file_loaded")
 
     # Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
@@ -314,8 +314,8 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     set_current_data(app_state, data_frame)
     app_state$data$original_data <- data_frame
 
-    # Emit data_loaded event to trigger unified event system
-    emit$data_loaded()
+    # Emit unified data_updated event (replaces legacy data_loaded)
+    emit$data_updated("file_loaded")
 
     # Unified state assignment only - Set file uploaded flag
     app_state$session$file_uploaded <- TRUE
@@ -465,7 +465,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
     warning("State assignment failed: current_data is NULL")
   }
 
-  # Emit data_loaded event to trigger unified event system
+  # Emit unified data_updated event (replaces legacy data_loaded)
   emit$data_loaded()
 
   # Unified state assignment - Set file uploaded flag

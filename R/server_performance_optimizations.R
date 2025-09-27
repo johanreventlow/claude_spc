@@ -292,9 +292,9 @@ setup_optimized_event_listeners <- function(app_state, emit, session) {
   # Mark that optimized listeners are active to prevent duplicate standard listeners
   app_state$optimized_listeners_active <- TRUE
 
-  # Single consolidated observer for data changes
-  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = get_priority("STATE_MANAGEMENT"), {
-  # log_debug("Optimized data_loaded handler triggered", .context = "PERFORMANCE_OPT")
+  # Single consolidated observer for data changes - migrated to data_updated
+  shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = get_priority("STATE_MANAGEMENT"), {
+  # log_debug("Optimized data_updated handler triggered", .context = "PERFORMANCE_OPT")
 
     # Process through optimized pipeline
     result <- data_pipeline()
