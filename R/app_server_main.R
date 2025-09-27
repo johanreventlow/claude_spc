@@ -242,8 +242,8 @@ main_app_server <- function(input, output, session) {
       component = "[TEST_MODE_STARTUP]",
       message = "Test mode optimization configured",
       details = list(
-        debounce_delay = app_state$test_mode$debounce_delay,
-        lazy_plot_generation = app_state$test_mode$lazy_plot_generation
+        debounce_delay = shiny::isolate(app_state$test_mode$debounce_delay),
+        lazy_plot_generation = shiny::isolate(app_state$test_mode$lazy_plot_generation)
       )
     )
 

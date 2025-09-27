@@ -364,7 +364,7 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
   # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
   # Feature flag check - disable benchmarking in production by default
   benchmark_enabled <- isTRUE(getOption("spc.benchmark_enabled", FALSE)) ||
-                      isTRUE(golem::get_golem_options("benchmark_enabled", default = FALSE))
+                      isTRUE(tryCatch(golem::get_golem_options("benchmark_enabled"), error = function(e) FALSE))
 
   if (benchmark_enabled && exists("benchmark_spc_operation") && requireNamespace("microbenchmark", quietly = TRUE)) {
     # Determine data size category for benchmarking
