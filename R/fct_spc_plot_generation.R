@@ -362,7 +362,11 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
   log_debug(qic_args, .context = "QIC")
 
   # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
-  if (exists("benchmark_spc_operation") && requireNamespace("microbenchmark", quietly = TRUE)) {
+  # Feature flag check - disable benchmarking in production by default
+  benchmark_enabled <- isTRUE(getOption("spc.benchmark_enabled", FALSE)) ||
+                      isTRUE(golem::get_golem_options("benchmark_enabled", default = FALSE))
+
+  if (benchmark_enabled && exists("benchmark_spc_operation") && requireNamespace("microbenchmark", quietly = TRUE)) {
     # Determine data size category for benchmarking
     data_size <- nrow(qic_args$data)
     size_category <- if (data_size < 50) "small" else if (data_size < 500) "medium" else "large"

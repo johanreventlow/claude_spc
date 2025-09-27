@@ -23,15 +23,12 @@ safe_eval_benchmark <- function(expr, operation_name = "unknown") {
   expr_type <- typeof(expr)
 
   if (!expr_type %in% valid_types) {
-    log_error(
-      component = "[SECURITY]",
-      message = "Invalid expression type in benchmark",
-      details = list(
-        operation = operation_name,
-        type = expr_type,
-        class = class(expr)
-      ),
-      show_user = FALSE
+    log_error("Invalid expression type in benchmark", .context = "[SECURITY]")
+    log_debug_kv(
+      operation = operation_name,
+      type = expr_type,
+      class = paste(class(expr), collapse = ", "),
+      .context = "[SECURITY]"
     )
     stop(paste("Invalid expression type for benchmarking:", expr_type))
   }
@@ -42,10 +39,10 @@ safe_eval_benchmark <- function(expr, operation_name = "unknown") {
     if (!identical(expr_env, globalenv()) &&
         !identical(expr_env, baseenv()) &&
         !identical(expr_env, .GlobalEnv)) {
-      log_warn(
-        component = "[SECURITY]",
-        message = "Non-standard environment in benchmark function",
-        details = list(operation = operation_name)
+      log_warn("Non-standard environment in benchmark function", .context = "[SECURITY]")
+      log_debug_kv(
+        operation = operation_name,
+        .context = "[SECURITY]"
       )
     }
   }
@@ -54,10 +51,10 @@ safe_eval_benchmark <- function(expr, operation_name = "unknown") {
   tryCatch({
     eval(expr)
   }, error = function(e) {
-    log_error(
-      component = "[BENCHMARK]",
-      message = paste("Benchmark execution failed:", e$message),
-      details = list(operation = operation_name)
+    log_error(paste("Benchmark execution failed:", e$message), .context = "[BENCHMARK]")
+    log_debug_kv(
+      operation = operation_name,
+      .context = "[BENCHMARK]"
     )
     stop("Benchmark execution failed safely")
   })
