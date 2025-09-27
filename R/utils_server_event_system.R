@@ -336,7 +336,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # ERROR HANDLING EVENTS (CONSOLIDATED - FASE 2.1) ========================
 
   # Unified error event listener - handles all error types with context-aware logic
-  shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$highest, {
+  shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
     # Get consolidated error context (new system)
     error_context <- app_state$last_error_context
 

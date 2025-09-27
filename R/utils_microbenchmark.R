@@ -4,6 +4,65 @@
 # This module provides comprehensive benchmarking capabilities using
 # the microbenchmark package for statistical analysis of performance.
 
+#' Safely evaluate expressions in benchmark context
+#' @description
+#' Secure wrapper for eval() that validates input and provides controlled execution
+#' @param expr Expression, call, or function to evaluate
+#' @param operation_name Name of the operation for logging
+#' @return Result of expression evaluation
+#' @noRd
+safe_eval_benchmark <- function(expr, operation_name = "unknown") {
+  # Enhanced input validation
+  if (is.null(expr)) {
+    log_error(paste("NULL expression in benchmark:", operation_name), "[SECURITY]")
+    stop("NULL expression not allowed in benchmarks")
+  }
+
+  # Type validation - only allow safe expression types
+  valid_types <- c("expression", "call", "function", "symbol", "language")
+  expr_type <- typeof(expr)
+
+  if (!expr_type %in% valid_types) {
+    log_error(
+      component = "[SECURITY]",
+      message = "Invalid expression type in benchmark",
+      details = list(
+        operation = operation_name,
+        type = expr_type,
+        class = class(expr)
+      ),
+      show_user = FALSE
+    )
+    stop(paste("Invalid expression type for benchmarking:", expr_type))
+  }
+
+  # For functions, validate environment
+  if (is.function(expr)) {
+    expr_env <- environment(expr)
+    if (!identical(expr_env, globalenv()) &&
+        !identical(expr_env, baseenv()) &&
+        !identical(expr_env, .GlobalEnv)) {
+      log_warn(
+        component = "[SECURITY]",
+        message = "Non-standard environment in benchmark function",
+        details = list(operation = operation_name)
+      )
+    }
+  }
+
+  # Safe execution with error handling
+  tryCatch({
+    eval(expr)
+  }, error = function(e) {
+    log_error(
+      component = "[BENCHMARK]",
+      message = paste("Benchmark execution failed:", e$message),
+      details = list(operation = operation_name)
+    )
+    stop("Benchmark execution failed safely")
+  })
+}
+
 #' Microbenchmark Wrapper for SPC App Functions
 #'
 #' Provides statistical benchmarking with integrated logging and reporting.
@@ -47,11 +106,8 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
       return(measure_reactive_performance(expr, operation_name))
     } else {
       start_time <- Sys.time()
-      # SECURITY: Add input validation before eval() in benchmarking context
-      if (!is.expression(expr) && !is.call(expr) && !is.function(expr)) {
-        stop("Invalid expression type for benchmarking. Only expressions, calls, or functions allowed.")
-      }
-      result <- eval(expr)
+      # SECURITY: Use safe evaluation wrapper
+      result <- safe_eval_benchmark(expr, operation_name)
       execution_time <- as.numeric(Sys.time() - start_time)
 
       result_data <- list(
@@ -103,11 +159,8 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
 
     # Capture result if requested
     if (capture_result) {
-      # SECURITY: Add input validation before eval() in benchmarking context
-      if (!is.expression(expr) && !is.call(expr) && !is.function(expr)) {
-        stop("Invalid expression type for benchmarking. Only expressions, calls, or functions allowed.")
-      }
-      results$captured_result <- eval(expr)
+      # SECURITY: Use safe evaluation wrapper
+      results$captured_result <- safe_eval_benchmark(expr, operation_name)
     }
 
     # Log results if requested
@@ -122,11 +175,8 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
 
     # Fallback to basic timing
     start_time <- Sys.time()
-    # SECURITY: Add input validation before eval() in benchmarking context
-    if (!is.expression(expr) && !is.call(expr) && !is.function(expr)) {
-      stop("Invalid expression type for benchmarking. Only expressions, calls, or functions allowed.")
-    }
-    result <- eval(expr)
+    # SECURITY: Use safe evaluation wrapper
+    result <- safe_eval_benchmark(expr, operation_name)
     execution_time <- as.numeric(Sys.time() - start_time) * 1000  # Convert to ms
 
     error_result <- list(

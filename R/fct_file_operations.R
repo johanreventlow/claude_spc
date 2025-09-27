@@ -4,6 +4,81 @@
 # Dependencies ----------------------------------------------------------------
 # Bruger readxl og readr til fil-import
 
+#' Validate safe file path for uploads
+#' @description
+#' Enhanced path traversal protection for file uploads
+#' @param uploaded_path Path from file upload input
+#' @return Validated safe file path
+#' @noRd
+validate_safe_file_path <- function(uploaded_path) {
+  # Input validation
+  if (is.null(uploaded_path) || !is.character(uploaded_path) || length(uploaded_path) != 1) {
+    log_error(
+      component = "[SECURITY]",
+      message = "Invalid file path input",
+      details = list(
+        input_type = typeof(uploaded_path),
+        input_length = length(uploaded_path)
+      ),
+      show_user = FALSE
+    )
+    stop("Sikkerhedsfejl: Ugyldig fil input")
+  }
+
+  # Normalize path with enhanced error handling
+  file_path <- tryCatch({
+    normalizePath(uploaded_path, mustWork = TRUE)
+  }, error = function(e) {
+    log_error(
+      component = "[SECURITY]",
+      message = "Failed to normalize file path",
+      details = list(
+        attempted_path = uploaded_path,
+        error = e$message
+      ),
+      show_user = FALSE
+    )
+    stop("Sikkerhedsfejl: Kunne ikke validere fil sti")
+  })
+
+  # Define comprehensive allowed base paths
+  allowed_bases <- c(
+    normalizePath(tempdir(), mustWork = FALSE),
+    normalizePath(dirname(tempfile()), mustWork = FALSE),
+    # Shiny's default upload location
+    normalizePath(file.path(tempdir(), "shiny-uploads"), mustWork = FALSE)
+  )
+
+  # Add current working directory data folder if it exists
+  if (dir.exists("./data")) {
+    allowed_bases <- c(allowed_bases, normalizePath("./data", mustWork = FALSE))
+  }
+
+  # Validate path is within allowed directories with enhanced checking
+  safe_path <- any(vapply(allowed_bases, function(base) {
+    # Ensure base path ends with file separator for accurate comparison
+    base_with_sep <- paste0(base, .Platform$file.sep)
+    startsWith(file_path, base_with_sep) || identical(file_path, base)
+  }, logical(1)))
+
+  if (!safe_path) {
+    log_error(
+      component = "[SECURITY]",
+      message = "Path traversal attempt blocked",
+      details = list(
+        attempted_path = uploaded_path,
+        normalized_path = file_path,
+        allowed_bases = allowed_bases,
+        session_id = "REDACTED"  # Don't log actual session ID
+      ),
+      show_user = FALSE
+    )
+    stop("Sikkerhedsfejl: Ugyldig fil sti")
+  }
+
+  return(file_path)
+}
+
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
@@ -83,22 +158,8 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
       add = TRUE
     )
 
-    # Sikker path validation - forhindrer path traversal attacks
-    file_path <- normalizePath(input$data_file$datapath, mustWork = TRUE)
-
-    # Verificer at filen befinder sig i et sikkert directory (tempdir eller upload area)
-    safe_dirs <- c(tempdir(), dirname(tempfile()))
-    # Normaliser både fil-sti og safe directories for at håndtere macOS symlinks korrekt
-    normalized_safe_dirs <- vapply(safe_dirs, function(dir) normalizePath(dir, mustWork = FALSE), character(1))
-    safe_path <- any(vapply(normalized_safe_dirs, function(dir) startsWith(file_path, dir), logical(1)))
-
-    if (!safe_path) {
-      log_error(
-        message = paste("Path traversal attempt detected:", file_path),
-        component = "[SECURITY]"
-      )
-      stop("Sikkerhedsfejl: Ugyldig fil sti")
-    }
+    # Enhanced path traversal protection
+    file_path <- validate_safe_file_path(input$data_file$datapath)
 
     file_ext <- tools::file_ext(input$data_file$name)
 
