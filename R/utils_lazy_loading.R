@@ -84,41 +84,49 @@ lazy_load_module <- function(module_name, force_reload = FALSE) {
     return(FALSE)
   }
 
-  # Load the module
+  # Load the module using appropriate method for environment
   safe_operation(
     operation_name = paste("Lazy load module:", module_name),
     code = {
-      if (file.exists(module_config$file)) {
-        source(module_config$file, local = FALSE)
-
-        # Safe assignment that handles locked bindings
-        tryCatch({
-          LAZY_LOADING_CONFIG$heavy_modules[[module_name]]$loaded <<- TRUE
-        }, error = function(e) {
-          if (grepl("locked binding", e$message)) {
-            log_debug(paste("Binding locked for", module_name, "- marking as loaded in cache only"), "LAZY_LOADING")
-          } else {
-            stop(e)
-          }
-        })
-
-        # Always record load time in cache environment (this should work even if config is locked)
-        tryCatch({
-          LAZY_LOADING_CONFIG$loaded_modules[[module_name]] <<- Sys.time()
-        }, error = function(e) {
-          if (grepl("locked binding", e$message)) {
-            log_debug(paste("Cannot record load time for", module_name, "- cache binding locked"), "LAZY_LOADING")
-          } else {
-            stop(e)
-          }
-        })
-
-        log_info(paste("Lazy loaded module:", module_name), "LAZY_LOADING")
-        return(TRUE)
+      # In production (package mode), functions are already loaded via namespace
+      if (!"SPCify" %in% loadedNamespaces() || getOption("spc.debug.source_loading", FALSE)) {
+        # Development mode: use source loading
+        if (file.exists(module_config$file)) {
+          source(module_config$file, local = FALSE)
+          log_debug(paste("Source-loaded module:", module_name), "LAZY_LOADING")
+        } else {
+          log_warn(paste("Module file not found:", module_config$file), "LAZY_LOADING")
+          return(FALSE)
+        }
       } else {
-        log_warn(paste("Module file not found:", module_config$file), "LAZY_LOADING")
-        return(FALSE)
+        # Production mode: verify functions are available via namespace
+        log_debug(paste("Module", module_name, "functions loaded via package namespace"), "LAZY_LOADING")
       }
+
+      # Safe assignment that handles locked bindings
+      tryCatch({
+        LAZY_LOADING_CONFIG$heavy_modules[[module_name]]$loaded <<- TRUE
+      }, error = function(e) {
+        if (grepl("locked binding", e$message)) {
+          log_debug(paste("Binding locked for", module_name, "- marking as loaded in cache only"), "LAZY_LOADING")
+        } else {
+          stop(e)
+        }
+      })
+
+      # Always record load time in cache environment (this should work even if config is locked)
+      tryCatch({
+        LAZY_LOADING_CONFIG$loaded_modules[[module_name]] <<- Sys.time()
+      }, error = function(e) {
+        if (grepl("locked binding", e$message)) {
+          log_debug(paste("Cannot record load time for", module_name, "- cache binding locked"), "LAZY_LOADING")
+        } else {
+          stop(e)
+        }
+      })
+
+      log_info(paste("Lazy loaded module:", module_name), "LAZY_LOADING")
+      return(TRUE)
     },
     fallback = function(e) {
       log_error(paste("Failed to lazy load module", module_name, ":", e$message), "LAZY_LOADING")

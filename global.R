@@ -1,4 +1,27 @@
-# SMART BOOT FLOW ================================================================
+# DEVELOPMENT & TEST HARNESS ====================================================
+#
+# ⚠️  IMPORTANT: This file is a DEVELOPMENT AND TEST HELPER ONLY
+#
+# Production runtime does NOT depend on global.R:
+# • Production uses: pkgload::load_all() → run_app()
+# • Functions loaded via package namespace
+# • Configuration via golem-config.yml
+#
+# global.R is ONLY used for:
+# • Interactive development (source loading)
+# • Test suites (controlled environment)
+# • Debugging and performance profiling
+#
+# To start the application in production:
+#   library(SPCify)  # or pkgload::load_all()
+#   run_app()
+#
+# To start in development mode:
+#   source('global.R')  # This file
+#
+# ==============================================================================
+
+# SMART BOOT FLOW FOR DEVELOPMENT/TESTING ====================================
 # Package-based loading by default, source-based only when explicitly requested
 
 # Check for development debug toggle
@@ -102,7 +125,8 @@ source_files <- c(
   "R/config_observer_priorities.R",
   "R/config_chart_types.R",
   "R/config_spc_config.R",
-  "R/app_config.R",
+  "R/app_ui.R",
+  "R/app_server.R",
   "R/app_runtime_config.R",
   "R/state_management.R",
 

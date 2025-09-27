@@ -441,7 +441,7 @@ convert_target_for_display <- function(target_value, qic_data) {
 # Tilføjer target lines, phase separations og comment annotations
 add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
   # Get hospital colors using the proper package function
-  HOSPITAL_COLORS <- get_hospital_colors()
+  hospital_colors <- get_hospital_colors()
 
   # Add phase separation lines if parts exist
   if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
@@ -454,7 +454,7 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
           p +
             ggplot2::geom_vline(
               xintercept = qic_data$x[change_point + 1],
-              color = HOSPITAL_COLORS$warning,
+              color = hospital_colors$warning,
               linetype = "dotted", linewidth = 1, alpha = 0.7
             )
         }, .init = plot)
@@ -469,7 +469,7 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
     plot <- plot +
       ggplot2::geom_hline(
         yintercept = display_target_value,
-        color = HOSPITAL_COLORS$darkgrey, linetype = "42", linewidth = 1.2,
+        color = hospital_colors$darkgrey, linetype = "42", linewidth = 1.2,
         alpha = 0.8
       )
   }
@@ -481,12 +481,12 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
         data = comment_data,
         ggplot2::aes(x = x, y = y, label = comment),
         size = 3,
-        color = HOSPITAL_COLORS$darkgrey
+        color = hospital_colors$darkgrey
         # bg.color = "white",
         # bg.r = 0.1,
         # box.padding = 0.5,
         # point.padding = 0.5,
-        # segment.color = HOSPITAL_COLORS$mediumgrey,
+        # segment.color = hospital_colors$mediumgrey,
         # segment.size = 0.3,
         # nudge_x = .15,
         # nudge_y = .5,
@@ -503,7 +503,7 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
 generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
   # Generate SPC plot with specified parameters
   # Get hospital colors using the proper package function
-  HOSPITAL_COLORS <- get_hospital_colors()
+  hospital_colors <- get_hospital_colors()
 
   # PERFORMANCE MONITORING: Track QIC calculation calls
   if (!exists("qic_call_counter", envir = .GlobalEnv)) {
@@ -692,12 +692,12 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         code = {
           plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y))
 
-          plot <- plot + ggplot2::geom_line(color = HOSPITAL_COLORS$lightgrey, linewidth = 1)
+          plot <- plot + ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1)
 
-          plot <- plot + ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$mediumgrey)
+          plot <- plot + ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey)
 
           plot <- plot + ggplot2::geom_line(ggplot2::aes(y = cl),
-            color = HOSPITAL_COLORS$hospitalblue,
+            color = hospital_colors$hospitalblue,
             linetype = "solid", linewidth = 1
           )
 
@@ -718,7 +718,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
         plot <- plot +
           ggplot2::geom_line(ggplot2::aes(y = ucl),
-            color = HOSPITAL_COLORS$danger,
+            color = hospital_colors$danger,
             linetype = "dashed", linewidth = 0.8
           )
       }
@@ -726,7 +726,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
         plot <- plot +
           ggplot2::geom_line(ggplot2::aes(y = lcl),
-            color = HOSPITAL_COLORS$danger,
+            color = hospital_colors$danger,
             linetype = "dashed", linewidth = 0.8
           )
       }
@@ -820,11 +820,11 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       plot_data <- data.frame(x = call_args$x, y = call_args$y)
 
       plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = x, y = y)) +
-        ggplot2::geom_point(size = 2, color = HOSPITAL_COLORS$primary) +
-        ggplot2::geom_line(color = HOSPITAL_COLORS$primary, alpha = 0.7) +
+        ggplot2::geom_point(size = 2, color = hospital_colors$primary) +
+        ggplot2::geom_line(color = hospital_colors$primary, alpha = 0.7) +
         ggplot2::geom_hline(
           yintercept = median(call_args$y, na.rm = TRUE),
-          color = HOSPITAL_COLORS$secondary, linetype = "dashed"
+          color = hospital_colors$secondary, linetype = "dashed"
         ) +
         ggplot2::labs(title = call_args$title, x = "", y = "") +
         ggplot2::theme_minimal()
@@ -857,7 +857,7 @@ applyHospitalTheme <- function(plot) {
   }
 
   # Get hospital colors using the proper package function
-  HOSPITAL_COLORS <- get_hospital_colors()
+  hospital_colors <- get_hospital_colors()
 
   safe_operation(
     "Apply hospital theme to plot",
@@ -880,19 +880,19 @@ applyHospitalTheme <- function(plot) {
       themed_plot <- plot +
         ggplot2::theme_minimal() +
         ggplot2::theme(
-          plot.title = ggplot2::element_text(color = HOSPITAL_COLORS$primary, size = 14, face = "bold"),
-          plot.subtitle = ggplot2::element_text(color = HOSPITAL_COLORS$secondary, size = 12),
-          axis.title = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 11),
-          axis.text = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 10),
-          legend.title = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 11),
-          legend.text = ggplot2::element_text(color = HOSPITAL_COLORS$dark, size = 10),
-          panel.grid.major = ggplot2::element_line(color = HOSPITAL_COLORS$light),
-          panel.grid.minor = ggplot2::element_line(color = HOSPITAL_COLORS$light),
-          strip.text = ggplot2::element_text(color = HOSPITAL_COLORS$primary, face = "bold")
+          plot.title = ggplot2::element_text(color = hospital_colors$primary, size = 14, face = "bold"),
+          plot.subtitle = ggplot2::element_text(color = hospital_colors$secondary, size = 12),
+          axis.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
+          axis.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
+          legend.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
+          legend.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
+          panel.grid.major = ggplot2::element_line(color = hospital_colors$light),
+          panel.grid.minor = ggplot2::element_line(color = hospital_colors$light),
+          strip.text = ggplot2::element_text(color = hospital_colors$primary, face = "bold")
         ) +
         ggplot2::labs(caption = footer_text) +
         ggplot2::theme(
-          plot.caption = ggplot2::element_text(size = 8, color = HOSPITAL_COLORS$secondary, hjust = 0)
+          plot.caption = ggplot2::element_text(size = 8, color = hospital_colors$secondary, hjust = 0)
         )
 
       return(themed_plot)

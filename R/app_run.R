@@ -1,6 +1,60 @@
 # run_app.R
 # Main app launcher following Golem conventions
 
+#' Configure logging level from YAML configuration
+#'
+#' @description
+#' Sets SPC_LOG_LEVEL from golem-config.yml as single source of truth.
+#' Respects explicit log_level parameter override.
+#'
+#' @param log_level Optional explicit log level override
+#' @noRd
+configure_logging_from_yaml <- function(log_level = NULL) {
+  # If explicit log_level provided, validate and use it
+  if (!is.null(log_level)) {
+    valid_levels <- c("DEBUG", "INFO", "WARN", "ERROR")
+    log_level <- toupper(trimws(log_level))
+
+    if (log_level %in% valid_levels) {
+      Sys.setenv(SPC_LOG_LEVEL = log_level)
+      message(sprintf("[LOG_CONFIG] Explicit log level set to %s", log_level))
+      return()
+    } else {
+      message(sprintf("[LOG_CONFIG] Invalid log level '%s'. Valid: %s",
+                     log_level, paste(valid_levels, collapse = ", ")))
+      # Continue to YAML-based config
+    }
+  }
+
+  # Get current environment config
+  current_config <- Sys.getenv("GOLEM_CONFIG_ACTIVE", "default")
+
+  # Read logging level from YAML
+  tryCatch({
+    if (exists("get_golem_config", mode = "function")) {
+      yaml_log_level <- get_golem_config("logging")$level
+
+      if (!is.null(yaml_log_level) && yaml_log_level != "") {
+        Sys.setenv(SPC_LOG_LEVEL = yaml_log_level)
+        message(sprintf("[LOG_CONFIG] Log level '%s' from YAML config '%s'",
+                       yaml_log_level, current_config))
+        return()
+      }
+    }
+  }, error = function(e) {
+    message(sprintf("[LOG_CONFIG] Could not read YAML config: %s", e$message))
+  })
+
+  # Fallback to environment-based defaults
+  default_level <- if (current_config %in% c("development", "testing")) "DEBUG" else "WARN"
+
+  if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
+    Sys.setenv(SPC_LOG_LEVEL = default_level)
+    message(sprintf("[LOG_CONFIG] Fallback log level '%s' for config '%s'",
+                   default_level, current_config))
+  }
+}
+
 #' Configure application environment and test mode
 #'
 #' @description
@@ -199,34 +253,8 @@ run_app <- function(port = NULL,
   # Initialize startup performance optimizations early
   initialize_startup_performance_optimizations()
 
-  # Configure logging level
-  if (!is.null(log_level)) {
-    # Validate and set log level
-    valid_levels <- c("DEBUG", "INFO", "WARN", "ERROR")
-    log_level <- toupper(trimws(log_level))
-
-    if (log_level %in% valid_levels) {
-      Sys.setenv(SPC_LOG_LEVEL = log_level)
-      log_info(sprintf("Log level set to %s for this session", log_level), "LOG_CONFIG")
-    } else {
-      log_warn(sprintf("Invalid log level '%s'. Valid options: %s",
-                     log_level, paste(valid_levels, collapse = ", ")), "LOG_CONFIG")
-      log_info("Using default log level", .context = "LOG_CONFIG")
-    }
-  } else {
-    # Auto-detect log level based on context
-    if (interactive() || Sys.getenv("GOLEM_CONFIG_ACTIVE", "production") == "development") {
-      if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
-        Sys.setenv(SPC_LOG_LEVEL = "INFO")
-        log_info("Auto-detected development environment - using INFO level", .context = "LOG_CONFIG")
-      }
-    } else {
-      if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
-        Sys.setenv(SPC_LOG_LEVEL = "WARN")
-        log_info("Auto-detected production environment - using WARN level", .context = "LOG_CONFIG")
-      }
-    }
-  }
+  # Configure logging level using YAML as single source of truth
+  configure_logging_from_yaml(log_level)
 
   # Configure application environment and test mode using unified configuration
   configure_app_environment(enable_test_mode, options)
