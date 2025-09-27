@@ -79,6 +79,51 @@ validate_safe_file_path <- function(uploaded_path) {
   return(file_path)
 }
 
+#' Sanitize session metadata input
+#' @description
+#' Secure input sanitization for Excel session metadata
+#' @param input_value Raw input value from Excel
+#' @param field_type Type of field for specific validation
+#' @param max_length Maximum allowed length
+#' @return Sanitized input value
+#' @noRd
+sanitize_session_metadata <- function(input_value, field_type = "general", max_length = 255) {
+  # Basic input validation
+  if (is.null(input_value) || !is.character(input_value) || length(input_value) != 1) {
+    return("")
+  }
+
+  # Base sanitization using existing function if available
+  clean_value <- if (exists("sanitize_user_input", mode = "function")) {
+    sanitize_user_input(input_value, max_length = max_length, strict_mode = TRUE)
+  } else {
+    # Fallback basic sanitization
+    substr(trimws(as.character(input_value)), 1, max_length)
+  }
+
+  # Field-specific validation
+  if (field_type == "title") {
+    # Titles: Danish chars + basic punctuation
+    clean_value <- gsub("[^A-Za-z0-9æøåÆØÅ .,:-]", "", clean_value)
+  } else if (field_type == "description") {
+    # Descriptions: More permissive but no HTML/scripts
+    clean_value <- gsub("<[^>]+>", "", clean_value)  # Strip HTML tags
+    clean_value <- gsub("javascript:", "", clean_value, ignore.case = TRUE)
+    clean_value <- gsub("vbscript:", "", clean_value, ignore.case = TRUE)
+    clean_value <- gsub("data:", "", clean_value, ignore.case = TRUE)
+  } else if (field_type == "unit") {
+    # Units: Very restrictive
+    clean_value <- gsub("[^A-Za-z0-9æøåÆØÅ /%()-]", "", clean_value)
+  }
+
+  # Final safety check - remove any remaining dangerous patterns
+  clean_value <- gsub("[\r\n\t]", " ", clean_value)  # Replace newlines/tabs with spaces
+  clean_value <- gsub("\\s+", " ", clean_value)     # Collapse multiple spaces
+  clean_value <- trimws(clean_value)
+
+  return(clean_value)
+}
+
 # UPLOAD HÅNDTERING ===========================================================
 
 ## Setup fil upload funktionalitet
@@ -460,11 +505,12 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
 parse_session_metadata <- function(session_lines, data_cols) {
   metadata <- list()
 
-  # Parse titel
+  # Parse titel with sanitization
   title_line <- session_lines[grepl("^• Titel:", session_lines)]
   if (length(title_line) > 0) {
-    metadata$title <- gsub("^• Titel: ", "", title_line[1])
-    metadata$title <- gsub(" Ikke angivet$", "", metadata$title)
+    raw_title <- gsub("^• Titel: ", "", title_line[1])
+    raw_title <- gsub(" Ikke angivet$", "", raw_title)
+    metadata$title <- sanitize_session_metadata(raw_title, "title")
   }
 
   # Parse enhed
@@ -488,17 +534,17 @@ parse_session_metadata <- function(session_lines, data_cols) {
         metadata$unit_select <- standard_units[[unit_text]]
       } else {
         metadata$unit_type <- "custom"
-        metadata$unit_custom <- unit_text
+        metadata$unit_custom <- sanitize_session_metadata(unit_text, "unit")
       }
     }
   }
 
-  # Parse beskrivelse
+  # Parse beskrivelse with sanitization
   desc_line <- session_lines[grepl("^• Beskrivelse:", session_lines)]
   if (length(desc_line) > 0) {
     desc_text <- gsub("^• Beskrivelse: ", "", desc_line[1])
     if (desc_text != "Ikke angivet" && desc_text != "") {
-      metadata$description <- desc_text
+      metadata$description <- sanitize_session_metadata(desc_text, "description")
     }
   }
 

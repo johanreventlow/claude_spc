@@ -1,12 +1,12 @@
 # utils_chart_module_helpers.R
-# Ekstraherede helper utilities fra modules_mod_spc_chart_server.R
+# Ekstraherede helper utilities fra mod_spc_chart_server.R
 # Forbedrer modularity og separation of concerns
 
 #' Chart Module State Manager
 #'
 #' @description
 #' Factory for managing chart module state with consistent patterns.
-#' Ekstraeret fra modules_mod_spc_chart_server.R for bedre testability.
+#' Ekstraeret fra mod_spc_chart_server.R for bedre testability.
 #'
 #' @param app_state Application state object
 #' @return List med state management funktioner
@@ -94,7 +94,7 @@ create_chart_state_manager <- function(app_state) {
 #'
 #' @description
 #' Helper for managing module-level data with caching and reactive safety.
-#' Ekstraeret fra modules_mod_spc_chart_server.R for bedre separation.
+#' Ekstraeret fra mod_spc_chart_server.R for bedre separation.
 #'
 #' @param app_state Application state object
 #' @return List med data management funktioner
@@ -187,7 +187,7 @@ create_module_data_manager <- function(app_state) {
 #'
 #' @description
 #' Processer SPC beregninger og ekstraherer relevante metrics.
-#' Ekstraeret fra modules_mod_spc_chart_server.R for bedre testability.
+#' Ekstraeret fra mod_spc_chart_server.R for bedre testability.
 #'
 #' @export
 create_spc_results_processor <- function() {
@@ -349,7 +349,7 @@ create_spc_results_processor <- function() {
 #'
 #' @description
 #' Validering af chart data og konfiguration før plot generation.
-#' Ekstraeret fra modules_mod_spc_chart_server.R for genbrug.
+#' Ekstraeret fra mod_spc_chart_server.R for genbrug.
 #'
 #' @export
 create_chart_validator <- function() {

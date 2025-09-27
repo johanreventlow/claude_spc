@@ -143,8 +143,8 @@ conditionally_source_helpers <- function() {
   if (any(functions_missing)) {
     additional_helper_files <- c(
       "R/utils_observer_management.R",
-      "R/server_utils_session_helpers.R",
-      "R/server_utils_server_management.R"
+      "R/utils_server_session_helpers.R",
+      "R/utils_server_server_management.R"
     )
 
     for (file_path in additional_helper_files) {
