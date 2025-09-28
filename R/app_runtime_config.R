@@ -174,8 +174,19 @@ setup_testing_config <- function(override_options = list()) {
 
   # Phase 3: Test mode optimization settings
   testing_golem_config <- tryCatch({
-    golem_config <- golem::get_current_config()
-    golem_config$testing %||% list()
+    # Skip golem config during package loading to avoid freeze
+    if (exists("SPCify") && "package:SPCify" %in% search()) {
+      # Use our custom get_golem_config when package is loaded
+      if (exists("get_golem_config", mode = "function")) {
+        golem_config <- get_golem_config("testing")
+        golem_config %||% list()
+      } else {
+        list()
+      }
+    } else {
+      # During package loading, skip golem config to avoid freeze
+      list()
+    }
   }, error = function(e) {
     # Fallback if golem config is not available
     list()

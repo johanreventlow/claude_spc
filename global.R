@@ -22,7 +22,9 @@
 # ==============================================================================
 
 # SMART BOOT FLOW FOR DEVELOPMENT/TESTING ====================================
-# Package-based loading by default, source-based only when explicitly requested
+# Default to source loading for development to avoid package loading freeze
+# To use package loading instead, run: options(spc.debug.source_loading = FALSE)
+options(spc.debug.source_loading = TRUE)
 
 # Check for development debug toggle
 use_source_loading <- getOption("spc.debug.source_loading", FALSE) ||

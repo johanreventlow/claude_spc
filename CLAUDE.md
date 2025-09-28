@@ -575,6 +575,40 @@ Fritekst med kontekst, testresultater og rationale.
 * `Tests: R -e "source('global.R'); testthat::test_dir('tests/testthat')"`
 * `Lintr: devtools::lint()`
 
+### 9.3 Branch Protection & Workflow
+
+✅ **Master Branch Protection** - Pre-commit hook blokerer direkte commits på master:
+
+**Sikker udvikling workflow:**
+```bash
+# 1. Opret feature branch
+git checkout master
+git pull origin master
+git checkout -b fix/feature-name
+
+# 2. Udvikl og commit på feature branch
+git add .
+git commit -m "fix: beskrivelse af ændring"
+
+# 3. Merge til master (KUN efter code review)
+git checkout master
+git merge fix/feature-name
+git branch -d fix/feature-name  # Clean up
+```
+
+**Emergency override** (kun i kritiske situationer):
+```bash
+# Bypass hook hvis absolut nødvendigt (frarådes!)
+git commit --no-verify -m "emergency: kritisk hotfix"
+```
+
+**Feature branch naming conventions:**
+* `fix/` - Bugfixes og små rettelser
+* `feat/` - Nye features
+* `refactor/` - Code refaktorering
+* `docs/` - Dokumentation opdateringer
+* `test/` - Test forbedringer
+
 ---
 
 ## 10) Advanced Patterns & Architecture

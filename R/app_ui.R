@@ -83,13 +83,23 @@ app_sys <- function(...) {
     path_components <- c(...)
     dev_path <- file.path("inst", path_components)
     if (file.exists(dev_path) || dir.exists(dev_path)) {
-      return(dev_path)
+      # Return absolute path only for config files to avoid loops
+      if (any(grepl("config", path_components))) {
+        return(normalizePath(dev_path))
+      } else {
+        return(dev_path)
+      }
     }
 
     # Try without inst/ prefix
     direct_path <- do.call(file.path, as.list(path_components))
     if (file.exists(direct_path) || dir.exists(direct_path)) {
-      return(direct_path)
+      # Return absolute path only for config files to avoid loops
+      if (any(grepl("config", path_components))) {
+        return(normalizePath(direct_path))
+      } else {
+        return(direct_path)
+      }
     }
 
     # Return empty string to maintain golem compatibility
@@ -114,10 +124,16 @@ get_golem_config <- function(
   ),
   use_parent = TRUE
 ) {
+  # Avoid app_sys during package loading to prevent freeze
+  config_file <- "inst/golem-config.yml"
+  if (!file.exists(config_file)) {
+    config_file <- app_sys("golem-config.yml")
+  }
+
   config::get(
     value = value,
     config = config,
-    file = app_sys("golem-config.yml"),
+    file = config_file,
     use_parent = use_parent
   )
 }
