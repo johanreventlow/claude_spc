@@ -60,13 +60,16 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         }
 
       } else if (context == "legacy_data_changed" || grepl("change|edit|modify", context, ignore.case = TRUE)) {
-        # Data change path - update column choices
+        # Data change path - update column choices AND trigger plot regeneration
         safe_operation(
           "Update column choices on data change",
           code = {
             update_column_choices_unified(app_state, input, output, session, ui_service)
           }
         )
+
+        # Trigger plot regeneration when data is edited in table
+        emit$navigation_changed()
 
       } else {
         # General data update - do both operations but in optimized order
