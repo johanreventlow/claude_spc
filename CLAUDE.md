@@ -28,6 +28,19 @@ R -e "source('global.R'); testthat::test_dir('tests/testthat')"
 grep "^test-.*\\.R$" tests/testthat -n
 R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refactoring.R')"
 
+# Package loading test (foretrukket)
+R -e "library(SPCify); testthat::test_dir('tests/testthat')"
+
+# Source loading test (debugging)
+R -e "options(spc.debug.source_loading=TRUE); source('global.R'); testthat::test_dir('tests/testthat')"
+
+# Performance benchmark
+R -e "microbenchmark::microbenchmark(
+  package = library(SPCify),
+  source = source('global.R'),
+  times = 5
+)"
+
 # Test-coverage verification
 # Tests skal bestå før og efter hver ændring
 ```
@@ -135,6 +148,12 @@ values$some_data <- data
 * **Explicit dependencies** – `req()` og `validate()` før logik
 * **Isolation når nødvendigt** – Brug `isolate()` med omtanke og kun i reaktiverede kontekster
 * **Error boundaries** – Wrap komplekse reactive udtryk i `safe_operation()`
+
+**File Loading Performance:**
+* **Package loading primary** – Brug `library(SPCify)` som default
+* **Source loading sekundært** – Kun til development debugging via option
+* **Golem infrastructure** – Udnyt golem's package management
+* **Lazy loading** – Load tunge komponenter on-demand hvor muligt
 
 ### 3.1.1 Race Condition Prevention (OBLIGATORISK)
 
@@ -325,6 +344,51 @@ config_value <- golem::get_golem_options("test_mode_auto_load", default = FALSE)
 * **Unicode safety** – Bevar æ/ø/å og andre locale-tegn uændret
 * **Backup før dataændringer** – Git commits eller manuelle kopier før manipulation
 
+### 5.6 Package Loading Strategy (Golem-Based)
+
+**Standard Production Loading** (Default):
+```r
+# global.R - Optimized package loading
+library(SPCify)  # ~50-100ms loading time
+```
+
+**Development Source Loading** (Kun til debugging):
+```r
+# Kun når explicit debugging er nødvendigt
+options(spc.debug.source_loading = TRUE)
+# Starter source-based loading (~400ms+)
+```
+
+**Performance Requirements:**
+- **Production startup**: <100ms via package loading
+- **Development debugging**: 400ms+ acceptable ved source loading
+- **Default behavior**: Package loading medmindre explicit source_loading option
+
+**Implementation Pattern:**
+```r
+# I global.R
+if (isTRUE(getOption("spc.debug.source_loading", FALSE))) {
+  # Source-based loading for development debugging
+  message("DEBUG: Using source-based loading")
+  # ... source loading logic ...
+} else {
+  # Standard package loading
+  message("Loading SPCify package...")
+  library(SPCify)
+}
+```
+
+**Miljø Konfiguration:**
+- **Development**: `options(spc.debug.source_loading = FALSE)` (test package loading)
+- **Debugging**: `options(spc.debug.source_loading = TRUE)` (source loading)
+- **Production**: Package loading (default)
+
+**Migration fra Source til Package Loading:**
+1. Verificer alle funktioner er exported i NAMESPACE
+2. Test package loading: `devtools::check()`
+3. Benchmark performance improvement
+4. Opdater development workflow til primært package-baseret
+
 ---
 
 
@@ -354,13 +418,48 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 * Bevar **dansk interface** og **danske kommentarer**
 * Reference commit `f05a97f` som stabil baseline
 
-### 6.2 Architecture Boundaries
+### 6.2 Architecture Boundaries (Golem-Compatible)
 
-* `/R/modules/` – Shiny-moduler (visualisering, status mv.)
-* `/R/server/` – Server-logik
-* `/R/ui/` – UI-komponenter
-* `/R/data/` – Eksempeldata og testfiler
-* `/tests/testthat/` – Test suites og fixtures
+**File Organization** følger golem's konventioner med flad struktur i `/R/`:
+
+* **Shiny Modules**: `mod_*.R` – Shiny modules (visualization, status etc.)
+  - `mod_spc_chart.R` – SPC chart module UI og server logic
+  - `mod_[feature].R` – Andre feature modules
+
+* **Utility Functions**: `utils_*.R` – Hjælpefunktioner organiseret efter domæne
+  - `utils_server_*.R` – Server-specifikke utilities
+  - `utils_ui_*.R` – UI-specifikke utilities
+  - `utils_performance_*.R` – Performance og caching
+  - `utils_logging.R` – Logging infrastructure
+
+* **Business Logic**: `fct_*.R` – Kerneforretningslogik
+  - `fct_autodetect_unified.R` – Auto-detection logik
+  - `fct_file_operations.R` – File upload/download operations
+  - `fct_visualization_*.R` – Chart generation logic
+
+* **App Infrastructure**: `app_*.R` – Core app komponenter
+  - `app_ui.R` – Main UI definition
+  - `app_server.R` – Main server logic
+  - `app_config.R` – App configuration
+  - `run_app.R` – App launcher
+
+* **Configuration**: `config_*.R` – Setup og konfiguration
+  - `config_hospital_branding.R` – Hospital-specific branding
+  - `config_observer_priorities.R` – Reactive priority management
+  - `config_spc_config.R` – SPC-specific configuration
+
+* **State Management**: `state_management.R` – Centralized app state
+
+* **Data & Tests**:
+  - `/R/data/` – Eksempeldata og testfiler
+  - `/tests/testthat/` – Test suites og fixtures
+
+**Naming Convention Rules:**
+- **Modules**: `mod_[feature_name].R` (ikke `modules_mod_*`)
+- **Server utils**: `utils_server_[domain].R` (ikke `server_utils_*`)
+- **UI utils**: `utils_ui_[domain].R` (ikke `ui_utils_*`)
+- **Functions**: `fct_[domain].R` for business logic
+- **Config**: `config_[area].R` for setup/configuration
 
 ### 6.3 Constraints & Forbidden Changes
 
@@ -385,6 +484,10 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 - [ ] **Dokumentation opdateret** – README, comments, ADRs
 - [ ] **Data integrity** – Ingen utilsigtede dataændringer
 - [ ] **`lintr`/`styler`** – Kør `devtools::lint()` og `styler::style_file()` hvis nødvendigt
+- [ ] **Package loading verificeret** – `library(SPCify)` fungerer korrekt
+- [ ] **Performance benchmark** – Startup time <100ms med package loading
+- [ ] **File naming conventions** – Følger golem `mod_*`, `utils_*`, `fct_*` patterns
+- [ ] **NAMESPACE opdateret** – `devtools::document()` kørt hvis nye exports
 
 ### 7.2 Code Review Criteria
 
@@ -466,6 +569,7 @@ Fritekst med kontekst, testresultater og rationale.
 * `docs` – Dokumentation
 * `chore` – Vedligehold
 * `perf` – Performanceforbedring
+* `arch` – Arkitektoniske ændringer (file reorganization, loading strategy)
 
 **Test-noter i commit body:**
 * `Tests: R -e "source('global.R'); testthat::test_dir('tests/testthat')"`
@@ -624,6 +728,38 @@ app_state$columns$x_column <- "Dato"                    # Brug i stedet: mapping
 ---
 
 ## 11) Final Reminders
+
+### 11.1 Legacy File Pattern Migration
+
+**Automatisk File Renaming** (til golem conventions):
+```bash
+# Server utilities
+mv R/server_utils_*.R R/utils_server_*[domain].R
+
+# UI utilities
+mv R/ui_utils_*.R R/utils_ui_*[domain].R
+
+# Modules
+mv R/modules_mod_*.R R/mod_*[feature].R
+
+# Verificer alle references opdateret
+grep -r "server_utils_" R/ tests/ --exclude-dir=.git
+```
+
+**Reference Update Pattern:**
+```r
+# Før: source("R/server_utils_event_system.R")
+# Efter: # Handled by package loading
+
+# Før: server_utils_session_helpers.R
+# Efter: utils_server_session.R
+```
+
+**Validation Steps:**
+1. Run `devtools::check()` efter file renaming
+2. Test package loading: `library(SPCify)`
+3. Verificer alle tests bestå
+4. Benchmark startup performance improvement
 
 ### Development Philosophy
 * **Quality over speed** – Klinisk software kræver robusthed

@@ -158,8 +158,8 @@ build_qic_call_arguments <- function(x_data, y_data, chart_type, title_text, yla
 
   # NOTE: x.period og x.format parametre bruges ikke længere da vi anvender return.data=TRUE
 
-  # Tilføj n for P/U charts
-  if (chart_type %in% c("p", "pp", "u", "up") && !is.null(n_data)) {
+  # Tilføj n når nævner er valgt af bruger (qic håndterer chart type validation)
+  if (!is.null(n_data)) {
     call_args$n <- n_data
   }
 
@@ -293,14 +293,13 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
 
   # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
 
-  # FIX: For run charts with denominator, use prepared y-data and remove n to prevent NA run rules
+  # FIX: For run charts with denominator, use prepared y-data but keep n parameter
   if (exists("chart_type", envir = parent.frame()) &&
       identical(get("chart_type", envir = parent.frame()), "run") &&
       !is.null(n_col_name) &&
       ".y_run_prepared" %in% names(data)) {
     y_col_name <- ".y_run_prepared"
-    n_col_name <- NULL  # Remove n parameter for run charts to prevent NA run rules
-    log_debug("Using prepared y-data for run chart, removed n parameter", .context = "QIC")
+    log_debug("Using prepared y-data for run chart, keeping n parameter for qic", .context = "QIC")
   }
 
   return(list(
