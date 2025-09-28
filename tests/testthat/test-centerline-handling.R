@@ -43,6 +43,7 @@ test_that("centerline anvendes korrekt for decimale datasæt", {
     chart_type = "i",
     freeze_position = NULL,
     part_positions = NULL,
+    target_value = target_value,
     centerline_value = centerline_value
   )
 
@@ -79,6 +80,7 @@ test_that("centerline anvendes korrekt for procentdatasæt med nævner", {
     chart_type = "run",
     freeze_position = NULL,
     part_positions = NULL,
+    target_value = target_value,
     centerline_value = centerline_value
   )
 

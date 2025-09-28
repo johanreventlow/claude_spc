@@ -85,6 +85,7 @@ test_that("build_qic_arguments adds stable row-id", {
     chart_type = "run",
     freeze_position = NULL,
     part_positions = NULL,
+    target_value = NULL,
     centerline_value = NULL
   )
 

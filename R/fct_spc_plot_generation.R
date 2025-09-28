@@ -307,7 +307,7 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
 ## Build QIC Arguments with NSE
 # Bygger qicharts2::qic() argumenter med non-standard evaluation
 build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
-                               chart_type, freeze_position, part_positions, centerline_value) {
+                               chart_type, freeze_position, part_positions, target_value = NULL, centerline_value = NULL) {
   # STABLE ROW ID: Add row identifier for comment mapping resilience
   # This prevents comment misalignment when qicharts2 reorders/filters rows
   data_with_row_id <- data
@@ -335,6 +335,18 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
   # Add part for phase splits - can be used together with freeze
   if (!is.null(part_positions) && !all(is.na(part_positions))) {
     qic_args$part <- part_positions
+  }
+
+  # Add target value if provided
+  if (!is.null(target_value) && is.numeric(target_value) && !is.na(target_value)) {
+    adjusted_target <- target_value
+
+    # RUN charts med nævner skal have target i decimal form til qicharts2
+    if (!is.null(n_col_name) && chart_type == "run" && adjusted_target > 1) {
+      adjusted_target <- adjusted_target / 100
+    }
+
+    qic_args$target <- adjusted_target
   }
 
   # Add centerline if provided
@@ -683,6 +695,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             chart_type = chart_type,
             freeze_position = freeze_position,
             part_positions = part_positions,
+            target_value = target_value,
             centerline_value = centerline_value
           )
 
