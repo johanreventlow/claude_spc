@@ -205,7 +205,7 @@ calculate_y_axis_data <- function(chart_type, y_data, n_data = NULL) {
       if (!is.null(n_data)) {
         # Charts with numerator/denominator
         if (chart_type == "run") {
-          return((y_data / n_data) * 100)
+          return(y_data)  # Let qic handle ratio calculation for run charts
         } else if (chart_type %in% c("p", "pp", "u", "up")) {
           return(y_data)  # Use raw numerator for proportion/rate charts
         } else {

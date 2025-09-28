@@ -293,14 +293,7 @@ prepare_qic_data_parameters <- function(data, config, x_validation) {
 
   # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
 
-  # FIX: For run charts with denominator, use prepared y-data but keep n parameter
-  if (exists("chart_type", envir = parent.frame()) &&
-      identical(get("chart_type", envir = parent.frame()), "run") &&
-      !is.null(n_col_name) &&
-      ".y_run_prepared" %in% names(data)) {
-    y_col_name <- ".y_run_prepared"
-    log_debug("Using prepared y-data for run chart, keeping n parameter for qic", .context = "QIC")
-  }
+  # Note: Use raw column names for all chart types - let qic handle calculations
 
   return(list(
     data = data,
@@ -575,12 +568,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   ylab_text <- data_result$ylab_text
   y_unit_label <- data_result$y_unit_label
 
-  # FIX: For run charts with denominator, inject prepared y-data to prevent NA run rules
-  if (identical(chart_type, "run") && !is.null(n_data)) {
-    # Create prepared y column for stable QIC run calculations
-    data[[".y_run_prepared"]] <- y_data
-    log_debug("Injected prepared y-data for run chart with denominator", .context = "QIC")
-  }
+  # Note: Let qic handle ratio calculations directly from raw y and n data
 
   has_denominator <- !is.null(n_data)
   display_scaler <- create_qic_display_scaler(chart_type, has_denominator)
