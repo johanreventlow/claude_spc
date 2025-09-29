@@ -72,10 +72,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         emit$navigation_changed()
 
       } else {
-        # General data update - do both operations but in optimized order
-        if (!is.null(app_state$data$current_data)) {
-          emit$auto_detection_started()
-        }
+        # General data update - NO autodetect (only update choices)
         safe_operation(
           "Update column choices on data update",
           code = {
@@ -84,10 +81,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         )
       }
     } else {
-      # Fallback to full processing if no context available
-      if (!is.null(app_state$data$current_data)) {
-        emit$auto_detection_started()
-      }
+      # Fallback: NO autodetect by default (only update choices)
       safe_operation(
         "Update column choices on data update (fallback)",
         code = {
