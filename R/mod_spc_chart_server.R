@@ -289,10 +289,18 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     spc_results <- shiny::reactive({
       inputs <- spc_inputs()
 
+      # Inkludér kolonnemapping i cache-key for at invalidere ved dropdownændringer
+      config_key <- paste0(
+        inputs$config$x_col %||% "NULL", "|",
+        inputs$config$y_col %||% "NULL", "|",
+        inputs$config$n_col %||% "NULL"
+      )
+
       cache_key <- digest::digest(
         list(
           inputs$data_hash,
           inputs$chart_type,
+          config_key,
           inputs$target_value,
           inputs$centerline_value,
           inputs$skift_hash,
@@ -467,6 +475,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           "spc_results",
           inputs$data_hash,
           inputs$chart_type,
+          paste0(inputs$config$x_col %||% "NULL", "|", inputs$config$y_col %||% "NULL", "|", inputs$config$n_col %||% "NULL"),
           inputs$target_value,
           inputs$centerline_value,
           inputs$skift_hash,
