@@ -135,6 +135,15 @@ create_app_state <- function() {
       frozen_until_next_trigger = FALSE
     ),
 
+    # Auto-detection trigger guard
+    detector = shiny::reactiveValues(
+      allowed = FALSE,
+      reason = NULL,
+      busy = FALSE,
+      user_has_mapped = FALSE,
+      last_trigger = NULL
+    ),
+
     # Column mappings sub-system
     mappings = shiny::reactiveValues(
       x_column = NULL,

@@ -49,17 +49,44 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     # FASE 3: Unfreeze autodetect system when data is updated
     app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
 
+    detector_state <- app_state$columns$detector
+
     # Context-aware processing based on update type
     if (!is.null(update_context)) {
       context <- update_context$context %||% "general"
 
       if (context == "legacy_data_loaded" || grepl("load|upload|new", context, ignore.case = TRUE)) {
-        # Data loading path - trigger auto-detection
-        if (!is.null(app_state$data$current_data)) {
-          emit$auto_detection_started()
-        }
+        shiny::isolate({
+          detector_state$allowed <- TRUE
+          detector_state$reason <- "upload"
+          detector_state$busy <- FALSE
+          detector_state$last_trigger <- NULL
+          detector_state$user_has_mapped <- FALSE
+        })
+
+        current_data <- shiny::isolate(app_state$data$current_data)
+        current_rows <- if (!is.null(current_data)) nrow(current_data) else 0L
+
+        log_info(
+          message = "detector:trigger=upload",
+          component = "[AUTO_DETECT]",
+          details = list(rows = current_rows, context = context)
+        )
+
+        emit$auto_detection_started()
 
       } else if (context == "legacy_data_changed" || grepl("change|edit|modify", context, ignore.case = TRUE)) {
+        shiny::isolate({
+          detector_state$allowed <- FALSE
+          detector_state$reason <- NULL
+        })
+
+        log_info(
+          message = "detector:skip=edit",
+          component = "[AUTO_DETECT]",
+          details = list(context = context)
+        )
+
         # Data change path - update column choices AND trigger plot regeneration
         safe_operation(
           "Update column choices on data change",
@@ -72,6 +99,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         emit$navigation_changed()
 
       } else {
+        shiny::isolate({
+          detector_state$allowed <- FALSE
+          detector_state$reason <- NULL
+        })
+
         # General data update - NO autodetect (only update choices)
         safe_operation(
           "Update column choices on data update",
@@ -81,6 +113,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         )
       }
     } else {
+      shiny::isolate({
+        detector_state$allowed <- FALSE
+        detector_state$reason <- NULL
+      })
+
       # Fallback: NO autodetect by default (only update choices)
       safe_operation(
         "Update column choices on data update (fallback)",
@@ -113,31 +150,91 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # AUTO-DETECTION EVENTS
   shiny::observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-    # Auto-detection started event handler
+    detector_state <- app_state$columns$detector
+
+    allowed <- shiny::isolate(detector_state$allowed)
+    reason <- shiny::isolate(detector_state$reason %||% "upload")
+    busy <- shiny::isolate(detector_state$busy)
+    user_has_mapped <- shiny::isolate(detector_state$user_has_mapped)
+
+    if (!isTRUE(allowed)) {
+      log_info(
+        message = "detector:skip=not_allowed",
+        component = "[AUTO_DETECT]",
+        details = list(reason = reason)
+      )
+      shiny::isolate({
+        detector_state$reason <- NULL
+      })
+      return()
+    }
+
+    if (isTRUE(busy)) {
+      log_warn(
+        message = "detector:skip=busy",
+        component = "[AUTO_DETECT]",
+        details = list(reason = reason)
+      )
+      return()
+    }
+
+    if (isTRUE(user_has_mapped) && !identical(reason, "manual")) {
+      log_info(
+        message = "detector:skip=user_mapping",
+        component = "[AUTO_DETECT]",
+        details = list(reason = reason)
+      )
+
+      shiny::isolate({
+        detector_state$allowed <- FALSE
+        detector_state$reason <- NULL
+        detector_state$last_trigger <- reason
+      })
+      return()
+    }
+
+    shiny::isolate({
+      detector_state$busy <- TRUE
+      detector_state$last_trigger <- reason
+      if (identical(reason, "manual")) {
+        detector_state$user_has_mapped <- FALSE
+      }
+    })
+
+    trigger_type <- switch(reason,
+      session = "session_start",
+      manual = "manual",
+      "file_upload"
+    )
+
+    current_data <- shiny::isolate(app_state$data$current_data)
+    data_for_engine <- if (trigger_type == "session_start") NULL else current_data
+    current_rows <- if (!is.null(data_for_engine)) nrow(data_for_engine) else 0L
+
+    log_info(
+      message = "detector:triggered",
+      component = "[AUTO_DETECT]",
+      details = list(trigger = reason, rows = current_rows)
+    )
+
+    on.exit({
+      shiny::isolate({
+        detector_state$busy <- FALSE
+        detector_state$allowed <- FALSE
+        detector_state$reason <- NULL
+      })
+    }, add = TRUE)
 
     # Perform auto-detection using unified engine
     safe_operation(
       "Auto-detection processing",
       code = {
-        # NOTE: in_progress state is managed by autodetect_engine itself to prevent conflicts
-
-        if (!is.null(app_state$data$current_data)) {
-          # Use unified autodetect engine - data available, so full analysis
-          autodetect_engine(
-            data = app_state$data$current_data,
-            trigger_type = "file_upload",  # This event is triggered by data uploads
-            app_state = app_state,
-            emit = emit
-          )
-        } else {
-          # No data available - session start scenario (name-only)
-          autodetect_engine(
-            data = NULL,
-            trigger_type = "session_start",
-            app_state = app_state,
-            emit = emit
-          )
-        }
+        autodetect_engine(
+          data = data_for_engine,
+          trigger_type = trigger_type,
+          app_state = app_state,
+          emit = emit
+        )
       },
       fallback = {
         # Only reset in_progress if autodetect_engine didn't handle it
@@ -327,6 +424,20 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
 
     # Trigger autodetect
+    shiny::isolate({
+      app_state$columns$detector$allowed <- TRUE
+      app_state$columns$detector$reason <- "upload"
+      app_state$columns$detector$busy <- FALSE
+      app_state$columns$detector$last_trigger <- NULL
+      app_state$columns$detector$user_has_mapped <- FALSE
+    })
+
+    log_info(
+      message = "detector:trigger=test_mode",
+      component = "[AUTO_DETECT]",
+      details = list(context = "test_mode")
+    )
+
     emit$auto_detection_started()
     emit$test_mode_startup_phase_changed("ui_ready")
   })
@@ -336,13 +447,20 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
     # Session start logic
     if (is.null(app_state$data$current_data) || nrow(app_state$data$current_data) == 0) {
-      # FASE 3: Session start trigger for name-only detection
-      autodetect_engine(
-        data = NULL,  # No data available at session start
-        trigger_type = "session_start",
-        app_state = app_state,
-        emit = emit
+      shiny::isolate({
+        app_state$columns$detector$allowed <- TRUE
+        app_state$columns$detector$reason <- "session"
+        app_state$columns$detector$busy <- FALSE
+        app_state$columns$detector$last_trigger <- NULL
+        app_state$columns$detector$user_has_mapped <- FALSE
+      })
+
+      log_info(
+        message = "detector:trigger=session",
+        component = "[AUTO_DETECT]"
       )
+
+      emit$auto_detection_started()
     } else {
       log_debug("Skipping session_started autodetect - data already available, will be handled by data_loaded event", .context = "AUTO_DETECT_EVENT")
     }
@@ -350,13 +468,19 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   shiny::observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
 
-    # FASE 3: Manual trigger always runs, bypassing frozen state
-    autodetect_engine(
-      data = app_state$data$current_data,
-      trigger_type = "manual",  # This bypasses frozen state check
-      app_state = app_state,
-      emit = emit
+    shiny::isolate({
+      app_state$columns$detector$allowed <- TRUE
+      app_state$columns$detector$reason <- "manual"
+      app_state$columns$detector$busy <- FALSE
+      app_state$columns$detector$last_trigger <- NULL
+    })
+
+    log_info(
+      message = "detector:trigger=manual",
+      component = "[AUTO_DETECT]"
     )
+
+    emit$auto_detection_started()
   })
 
   shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
@@ -370,6 +494,12 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     # FASE 3: Reset frozen state
     app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
     app_state$columns$auto_detect$last_run <- NULL
+
+    app_state$columns$detector$allowed <- FALSE
+    app_state$columns$detector$reason <- NULL
+    app_state$columns$detector$busy <- FALSE
+    app_state$columns$detector$user_has_mapped <- FALSE
+    app_state$columns$detector$last_trigger <- NULL
 
   })
 
@@ -544,6 +674,10 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
       # Update app_state to keep it synchronized with UI
       app_state$columns[[col]] <- new_value
+
+      if (!is.null(new_value) && nzchar(new_value)) {
+        app_state$columns$detector$user_has_mapped <- TRUE
+      }
 
       # Only emit events for user-driven changes (not programmatic updates)
       if (exists("column_choices_changed", envir = as.environment(emit))) {
