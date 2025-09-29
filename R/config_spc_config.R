@@ -44,11 +44,22 @@ Y_AXIS_UNITS_DA <- list(
   "Promille (‰)" = "permille",
   "Rate pr. 1000" = "rate_1000",
   "Rate pr. 100.000" = "rate_100000",
+  "Rate" = "rate",
+  "Tid" = "time",
   "Dage" = "days",
   "Timer" = "hours",
   "Gram" = "grams",
   "Kilogram" = "kg",
   "Kroner" = "dkk"
+)
+
+#' UI-typer for Y-akse (simpel valg)
+#' @export
+Y_AXIS_UI_TYPES_DA <- list(
+  "Tal" = "count",
+  "Procent (%)" = "percent",
+  "Rate" = "rate",
+  "Tid mellem hændelser" = "time"
 )
 
 # SPC VISUALIZATION CONSTANTS ===================================================

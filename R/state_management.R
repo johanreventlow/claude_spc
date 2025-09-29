@@ -230,7 +230,10 @@ create_app_state <- function() {
       max_pending_tokens = 100L,          # LIMIT: Maximum pending tokens
       token_cleanup_interval_sec = 300L,  # CLEANUP: Clean tokens every 5 minutes
       performance_reset_interval_sec = 3600L  # RESET: Reset metrics every hour
-    )
+    ),
+
+    # AUTODEFAULT FLAGS
+    y_axis_unit_autoset_done = FALSE
   )
 
   # NOTE: Autodetect state consolidated into app_state$columns$auto_detect

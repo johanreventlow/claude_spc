@@ -269,12 +269,12 @@ create_chart_settings_card <- function() {
           ),
 
 
-          # Y-axis unit selection
+          # Y-axis UI type (simpel datamodel)
           shiny::selectizeInput(
             "y_axis_unit",
             "Y-akse enhed:",
-            choices = Y_AXIS_UNITS_DA,
-            selected = "percent"
+            choices = Y_AXIS_UI_TYPES_DA,
+            selected = "count"
           )
         )
       )

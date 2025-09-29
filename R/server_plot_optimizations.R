@@ -332,10 +332,14 @@ get_y_axis_label_optimized <- function(y_axis_unit, y_column) {
   }
 
   # Generate label
-  label <- if (y_axis_unit == "count") {
+  label <- if (y_axis_unit %in% c("count")) {
     paste("Antal", y_column)
-  } else if (y_axis_unit == "percent") {
+  } else if (y_axis_unit %in% c("percent")) {
     paste("Procent", y_column)
+  } else if (y_axis_unit %in% c("rate")) {
+    paste("Rate", y_column)
+  } else if (y_axis_unit %in% c("time")) {
+    paste("Tid", y_column)
   } else {
     paste(y_column, "(", y_axis_unit, ")")
   }

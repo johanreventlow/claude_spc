@@ -110,6 +110,13 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     log_debug("Legacy data_changed event fired - consider migrating to data_updated", .context = "EVENT_SYSTEM")
   })
 
+  # Reset auto-default flag for Y-akse når data opdateres
+  shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOWEST, {
+    if (!is.null(app_state$ui)) {
+      app_state$ui$y_axis_unit_autoset_done <- FALSE
+    }
+  })
+
   # AUTO-DETECTION EVENTS
   shiny::observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Auto-detection started event handler
@@ -197,6 +204,45 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
     # Update timestamp
     app_state$columns$ui_sync$last_sync_time <- Sys.time()
+
+    # Auto-sæt Y-akse enhed efter run chart + N tilgængelighed (kun én gang pr. data load)
+    safe_operation(
+      "Auto-set y-axis unit after UI sync",
+      code = {
+        already_set <- isTRUE(shiny::isolate(app_state$ui$y_axis_unit_autoset_done))
+        if (!already_set) {
+          ct <- get_qic_chart_type(input$chart_type %||% "run")
+          # Brug app_state mappings (mere stabile end input under programmatisk sync)
+          columns_state <- shiny::isolate(app_state$columns)
+          n_val <- tryCatch(shiny::isolate(columns_state$n_column), error = function(...) NULL)
+          if (is.null(n_val)) {
+            n_val <- tryCatch(shiny::isolate(columns_state$mappings$n_column), error = function(...) NULL)
+          }
+          n_present <- !is.null(n_val) && nzchar(n_val)
+          if (identical(ct, "run")) {
+            default_unit <- decide_default_y_axis_ui_type(ct, n_present)
+            current_unit <- input$y_axis_unit %||% "count"
+            if (!identical(current_unit, default_unit)) {
+              safe_programmatic_ui_update(session, app_state, function() {
+                shiny::updateSelectizeInput(session, "y_axis_unit", selected = default_unit)
+              })
+            }
+            app_state$ui$y_axis_unit_autoset_done <- TRUE
+            log_debug_kv(
+              message = "Auto-set y-axis unit",
+              chart_type = ct,
+              n_present = n_present,
+              from = current_unit,
+              to = default_unit,
+              .context = "[Y_AXIS_UI]"
+            )
+          }
+        }
+      },
+      fallback = NULL,
+      session = session,
+      error_type = "processing"
+    )
 
     # Trigger navigation change to update plots
     emit$navigation_changed()
@@ -543,6 +589,50 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       error_type = "processing"
     )
   }, ignoreInit = FALSE, priority = OBSERVER_PRIORITIES$UI_SYNC)
+
+  # OBSERVER: Auto-vælg korttype baseret på Y-akse UI-type
+  shiny::observeEvent(input$y_axis_unit, {
+    safe_operation(
+      "Auto-select chart type from y-axis UI type",
+      code = {
+        # Consumér programmatic token hvis dette stammer fra updateSelectizeInput
+        pending_token <- app_state$ui$pending_programmatic_inputs[["y_axis_unit"]]
+        if (!is.null(pending_token) && identical(pending_token$value, input$y_axis_unit)) {
+          app_state$ui$pending_programmatic_inputs[["y_axis_unit"]] <- NULL
+          return(invisible(NULL))
+        }
+        ui_type <- input$y_axis_unit %||% "count"
+
+        # Find y-data og N-tilgængelighed
+        y_col <- shiny::isolate(app_state$columns$y_column)
+        data <- shiny::isolate(app_state$data$current_data)
+        n_points <- if (!is.null(data)) nrow(data) else NA_integer_
+        n_present <- !is.null(input$n_column) && nzchar(input$n_column)
+
+        y_vals <- if (!is.null(y_col) && !is.null(data) && y_col %in% names(data)) data[[y_col]] else NULL
+
+        internal_class <- determine_internal_class(ui_type, y_vals, n_present = n_present)
+        suggested <- suggest_chart_type(internal_class, n_present = n_present, n_points = n_points)
+        # Behold run chart som standard – ændr ikke diagramtype automatisk
+        log_debug_kv(
+          message = "Y-axis UI type changed; keeping current chart type",
+          ui_type = ui_type,
+          internal_class = internal_class,
+          suggested_chart = suggested,
+          current_chart = input$chart_type %||% "run",
+          .context = "[Y_AXIS_UI]"
+        )
+
+        # Ekstra: vis hjælp hvis PROCENT/RATE uden N
+        if (ui_type %in% c("percent", "rate") && !n_present) {
+          log_warn("N-kolonne kræves for valgt Y-akse-type", .context = "[Y_AXIS_UI]")
+        }
+      },
+      fallback = NULL,
+      session = session,
+      error_type = "processing"
+    )
+  }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC)
 
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
   # This observer tracks timing metrics for optimization without emitting events
