@@ -236,6 +236,9 @@ create_app_state <- function() {
     y_axis_unit_autoset_done = FALSE
   )
 
+  # UI Cache - Track last known user input selections to preserve intent during updates
+  app_state$ui_cache <- shiny::reactiveValues()
+
   # NOTE: Autodetect state consolidated into app_state$columns$auto_detect
   # This eliminates state duplication and maintenance burden
 

@@ -37,6 +37,28 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # Mark that standard listeners are active to prevent duplicate optimized listeners
   app_state$standard_listeners_active <- TRUE
 
+  resolve_column_update_reason <- function(context) {
+    if (is.null(context)) {
+      return("manual")
+    }
+
+    ctx <- tolower(context)
+
+    if (grepl("edit|change|modify|column", ctx, ignore.case = FALSE)) {
+      return("edit")
+    }
+
+    if (grepl("session", ctx, ignore.case = FALSE)) {
+      return("session")
+    }
+
+    if (grepl("load|upload|file|new", ctx, ignore.case = FALSE)) {
+      return("upload")
+    }
+
+    "manual"
+  }
+
   # DATA LIFECYCLE EVENTS (CONSOLIDATED - FASE 2.2) ========================
 
   # Consolidated data update handler - handles both data loading and changes
@@ -52,6 +74,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     # Context-aware processing based on update type
     if (!is.null(update_context)) {
       context <- update_context$context %||% "general"
+      column_update_reason <- resolve_column_update_reason(context)
 
       if (context == "legacy_data_loaded" || grepl("load|upload|new", context, ignore.case = TRUE)) {
         # Data loading path - trigger auto-detection
@@ -64,7 +87,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         safe_operation(
           "Update column choices on data change",
           code = {
-            update_column_choices_unified(app_state, input, output, session, ui_service)
+            update_column_choices_unified(app_state, input, output, session, ui_service, reason = column_update_reason)
           }
         )
 
@@ -76,7 +99,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         safe_operation(
           "Update column choices on data update",
           code = {
-            update_column_choices_unified(app_state, input, output, session, ui_service)
+            update_column_choices_unified(app_state, input, output, session, ui_service, reason = column_update_reason)
           }
         )
       }
@@ -85,7 +108,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       safe_operation(
         "Update column choices on data update (fallback)",
         code = {
-          update_column_choices_unified(app_state, input, output, session, ui_service)
+          update_column_choices_unified(app_state, input, output, session, ui_service, reason = "manual")
         }
       )
     }
@@ -501,6 +524,28 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   columns_to_observe <- c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
 
+  normalize_column_input <- function(value) {
+    if (is.null(value) || length(value) == 0) {
+      return("")
+    }
+
+    candidate <- value[[1]]
+    if (is.null(candidate) || (is.atomic(candidate) && length(candidate) == 0)) {
+      return("")
+    }
+
+    candidate_chr <- as.character(candidate)[1]
+    if (length(candidate_chr) == 0 || is.na(candidate_chr)) {
+      return("")
+    }
+
+    if (identical(candidate_chr, "")) {
+      return("")
+    }
+
+    candidate_chr
+  }
+
   for (col in columns_to_observe) {
     shiny::observeEvent(input[[col]], {
       input_received_time <- Sys.time()
@@ -531,7 +576,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       if (!is.null(pending_token) && pending_token$value == new_value) {
         # CONSUME TOKEN: This is a programmatic input, don't emit event
         app_state$ui$pending_programmatic_inputs[[col]] <- NULL
-        app_state$columns[[col]] <- new_value
+        app_state$columns[[col]] <- normalize_column_input(new_value)
 
         # PERFORMANCE METRICS: Track token consumption for monitoring
         shiny::isolate({
@@ -543,7 +588,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       }
 
       # Update app_state to keep it synchronized with UI
-      app_state$columns[[col]] <- new_value
+      normalized_value <- normalize_column_input(new_value)
+
+      app_state$columns[[col]] <- normalized_value
+
+      cache_key <- paste0(col, "_input")
+      if (!is.null(app_state$ui_cache)) {
+        app_state$ui_cache[[cache_key]] <- normalized_value
+      }
 
       # Only emit events for user-driven changes (not programmatic updates)
       if (exists("column_choices_changed", envir = as.environment(emit))) {
@@ -890,8 +942,9 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
 #' @param input Shiny input
 #' @param output Shiny output
 #' @param session Shiny session
+#' @param reason Character string describing why the update is happening
 #'
-update_column_choices_unified <- function(app_state, input, output, session, ui_service = NULL) {
+update_column_choices_unified <- function(app_state, input, output, session, ui_service = NULL, reason = "manual") {
   log_debug_block("COLUMN_CHOICES_UNIFIED", "Starting column choices update")
 
   # Check if we should skip during table operations
@@ -932,16 +985,79 @@ update_column_choices_unified <- function(app_state, input, output, session, ui_
     columns_to_update <- c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
     current_selections <- list()
 
-    for (col in columns_to_update) {
-      # Priority: input[[col]] > app_state$columns[[col]] > ""
-      current_val <- if (!is.null(input[[col]]) && input[[col]] != "") {
-        input[[col]]
-      } else if (!is.null(shiny::isolate(app_state$columns[[col]]))) {
-        shiny::isolate(app_state$columns[[col]])
-      } else {
-        ""
+    normalize_selection_value <- function(value) {
+      if (is.null(value)) {
+        return(NULL)
       }
-      current_selections[[col]] <- current_val
+
+      if (length(value) == 0) {
+        return("")
+      }
+
+      candidate <- value[[1]]
+      if (is.null(candidate)) {
+        return(NULL)
+      }
+
+      candidate_chr <- as.character(candidate)[1]
+
+      if (length(candidate_chr) == 0) {
+        return(NULL)
+      }
+
+      if (anyNA(candidate_chr)) {
+        return("")
+      }
+
+      if (identical(candidate_chr, "")) {
+        return("")
+      }
+
+      candidate_chr
+    }
+
+    for (col in columns_to_update) {
+      if (identical(reason, "edit")) {
+        tryCatch({
+          shiny::freezeReactiveValue(input, col)
+        }, error = function(...) NULL)
+      }
+
+      input_val <- tryCatch(input[[col]], error = function(...) NULL)
+      normalized_input <- normalize_selection_value(input_val)
+
+      cache_key <- paste0(col, "_input")
+      cache_val_raw <- tryCatch({
+        if (!is.null(app_state$ui_cache)) {
+          shiny::isolate(app_state$ui_cache[[cache_key]])
+        } else {
+          NULL
+        }
+      }, error = function(...) NULL)
+      cache_val <- normalize_selection_value(cache_val_raw)
+
+      state_val_raw <- tryCatch(shiny::isolate(app_state$columns[[col]]), error = function(...) NULL)
+      state_val <- normalize_selection_value(state_val_raw)
+
+      candidates <- if (identical(reason, "edit")) {
+        list(normalized_input, cache_val)
+      } else {
+        list(normalized_input, cache_val, state_val)
+      }
+
+      selected_val <- NULL
+      for (candidate in candidates) {
+        if (!is.null(candidate)) {
+          selected_val <- candidate
+          break
+        }
+      }
+
+      if (is.null(selected_val)) {
+        selected_val <- ""
+      }
+
+      current_selections[[col]] <- selected_val
     }
 
     # Update UI controls using centralized service

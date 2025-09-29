@@ -9,7 +9,8 @@ update_column_choices_unified(
   input,
   output,
   session,
-  ui_service = NULL
+  ui_service = NULL,
+  reason = "manual"
 )
 }
 \arguments{
@@ -20,6 +21,8 @@ update_column_choices_unified(
 \item{output}{Shiny output}
 
 \item{session}{Shiny session}
+
+\item{reason}{Character string describing why the update is happening}
 }
 \description{
 Unified version of column choice updates that handles
