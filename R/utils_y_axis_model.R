@@ -81,3 +81,17 @@ decide_default_y_axis_ui_type <- function(chart_type, n_present) {
   if (identical(ct, "run") && isTRUE(n_present)) return("percent")
   return("count")
 }
+
+#' Map diagramtype til Y-akse UI-type
+#'
+#' @param chart_type qicharts2-kode eller dansk label
+#' @return one of {"count","percent","rate","time"}
+#' @export
+chart_type_to_ui_type <- function(chart_type) {
+  ct <- get_qic_chart_type(chart_type)
+  if (ct %in% c("p", "pp")) return("percent")
+  if (ct %in% c("u", "up")) return("rate")
+  if (ct == "t") return("time")
+  # i, mr, c, g og fallback
+  return("count")
+}
