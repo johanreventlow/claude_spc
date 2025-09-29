@@ -304,6 +304,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         algo = "xxhash64"
       )
 
+      # Registrér om baseline/centerline er ændret (inkl. ryddet)
+      last_centerline <- shiny::isolate(app_state$visualization$last_centerline_value)
+      centerline_changed <- !identical(inputs$centerline_value, last_centerline)
+
       log_debug(
         sprintf(
           "qic_startup_call chart=%s rows=%d",
@@ -392,46 +396,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               }
             )
 
-            # Better NA handling: only update if we have at least some valid data
-            # If this is the first run and all metrics are NA, set has_valid_data to false
+            # NA-handling og bevar/opdater-politik centraliseret
             current_anhoej <- get_plot_state("anhoej_results")
+            updated_anhoej <- update_anhoej_results(current_anhoej, qic_results, centerline_changed)
 
-            if (!is.na(qic_results$longest_run) || !is.na(qic_results$n_crossings)) {
-              # We have valid data - update and mark as valid
-              qic_results$has_valid_data <- TRUE
+            # Log kun når vi reelt ændrer state (for at reducere støj)
+            if (!identical(updated_anhoej, current_anhoej)) {
               log_debug(
                 sprintf(
-                  "Updating anhoej metrics longest_run=%s n_crossings=%s",
-                  qic_results$longest_run,
-                  qic_results$n_crossings
+                  "Anhoej update (centerline_changed=%s): longest_run=%s n_crossings=%s",
+                  as.character(centerline_changed),
+                  as.character(updated_anhoej$longest_run),
+                  as.character(updated_anhoej$n_crossings)
                 ),
                 .context = "VISUALIZATION"
               )
-              set_plot_state("anhoej_results", qic_results)
-            } else if (current_anhoej$has_valid_data) {
-              # We had valid data before, preserve the last good values
-              log_info(
-                paste(
-                  "Preserving last valid anhoej_results - current metrics are NA:",
-                  "longest_run=", qic_results$longest_run,
-                  "n_crossings=", qic_results$n_crossings
-                ),
-                "VISUALIZATION"
-              )
-            } else {
-              # First run with NA values - update with NA but mark as attempted
-              qic_results$has_valid_data <- FALSE
-              qic_results$message <- "Ingen run-metrics tilgængelige"
-              log_warn(
-                paste(
-                  "Initial anhoej_results with NA values:",
-                  "longest_run=", qic_results$longest_run,
-                  "n_crossings=", qic_results$n_crossings
-                ),
-                "VISUALIZATION"
-              )
-              set_plot_state("anhoej_results", qic_results)
+              set_plot_state("anhoej_results", updated_anhoej)
             }
+            # Opdater sidste kendte centerline værdi EFTER vi har brugt den til changed-detektion
+            app_state$visualization$last_centerline_value <- inputs$centerline_value
           } else {
             # No qic_data - set to default state with informative message
             log_info("No qic_data available - setting default anhoej_results", .context = "VISUALIZATION")
@@ -511,6 +494,53 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         result <- spc_results()
         list("spc_plot", result$cache_key %||% "empty")
       })
+
+    # Sikr at anhoej_results også opdateres ved cache hits
+    shiny::observe({
+      result <- spc_results()
+      qic_data <- result$qic_data
+
+      if (is.null(qic_data)) {
+        return()
+      }
+
+      # Udled metrics fra qic_data (samme logik som i computation-blokken)
+      qic_results <- list(
+        any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
+        out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
+        runs_signal = if ("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE,
+        crossings_signal = if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
+          n_cross <- safe_max(qic_data$n.crossings)
+          n_cross_min <- safe_max(qic_data$n.crossings.min)
+          !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
+        } else {
+          FALSE
+        },
+        longest_run = if ("longest.run" %in% names(qic_data)) safe_max(qic_data$longest.run) else NA_real_,
+        longest_run_max = if ("longest.run.max" %in% names(qic_data)) safe_max(qic_data$longest.run.max) else NA_real_,
+        n_crossings = if ("n.crossings" %in% names(qic_data)) safe_max(qic_data$n.crossings) else NA_real_,
+        n_crossings_min = if ("n.crossings.min" %in% names(qic_data)) safe_max(qic_data$n.crossings.min) else NA_real_
+      )
+
+      current_anhoej <- get_plot_state("anhoej_results")
+
+      # Opdater altid når vi har gyldige metrics, ellers bevar hvis tidligere var gyldige
+      updated_anhoej <- update_anhoej_results(current_anhoej, qic_results, centerline_changed = FALSE)
+
+      if (!identical(updated_anhoej, current_anhoej)) {
+        log_debug(
+          sprintf(
+            "Anhoej refresh (cache-aware): longest_run=%s n_crossings=%s",
+            as.character(updated_anhoej$longest_run),
+            as.character(updated_anhoej$n_crossings)
+          ),
+          .context = "VISUALIZATION"
+        )
+        set_plot_state("anhoej_results", updated_anhoej)
+      }
+    })
+
+    # Fjernet separat observer for last_centerline_value (flyttet inline i spc_results)
 
     # UI Output Funktioner ----------------------------------------------------
 

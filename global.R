@@ -145,6 +145,7 @@ source_files <- c(
 
   # Shiny modules
   "R/mod_spc_chart_ui.R",
+  "R/utils_anhoej_results.R",
   "R/mod_spc_chart_server.R",
 
   # Server components
