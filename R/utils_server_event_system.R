@@ -679,6 +679,56 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     )
   }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC)
 
+  # OBSERVER: Når RUN chart og nævner ændres
+  shiny::observeEvent(input$n_column, {
+    safe_operation(
+      "Adjust y-axis when denominator changed in run chart",
+      code = {
+        # Ignorér programmatisk ændring af n_column
+        pending_token <- app_state$ui$pending_programmatic_inputs[["n_column"]]
+        if (!is.null(pending_token) && identical(pending_token$value, input$n_column)) {
+          app_state$ui$pending_programmatic_inputs[["n_column"]] <- NULL
+          return(invisible(NULL))
+        }
+
+        ct <- get_qic_chart_type(input$chart_type %||% "run")
+        if (identical(ct, "run")) {
+          n_present <- !is.null(input$n_column) && nzchar(input$n_column)
+          if (!n_present) {
+            current_ui <- input$y_axis_unit %||% "count"
+            if (!identical(current_ui, "count")) {
+              safe_programmatic_ui_update(session, app_state, function() {
+                shiny::updateSelectizeInput(session, "y_axis_unit", selected = "count")
+              })
+            }
+
+            log_debug_kv(
+              message = "Denominator cleared in run chart; set y-axis to count",
+              chart_type = ct,
+              .context = "[Y_AXIS_UI]"
+            )
+          } else {
+            # Nævner valgt i RUN chart → sæt Y-akse til percent som standard
+            current_ui <- input$y_axis_unit %||% "count"
+            if (!identical(current_ui, "percent")) {
+              safe_programmatic_ui_update(session, app_state, function() {
+                shiny::updateSelectizeInput(session, "y_axis_unit", selected = "percent")
+              })
+            }
+            log_debug_kv(
+              message = "Denominator selected in run chart; set y-axis to percent",
+              chart_type = ct,
+              .context = "[Y_AXIS_UI]"
+            )
+          }
+        }
+      },
+      fallback = NULL,
+      session = session,
+      error_type = "processing"
+    )
+  }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC)
+
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
   # This observer tracks timing metrics for optimization without emitting events
   if (!is.null(app_state$ui)) {
