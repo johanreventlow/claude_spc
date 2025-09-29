@@ -513,6 +513,33 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$MEDIUM)
   }
 
+  # OBSERVER: Toggle N (n_column) enabled state based on chart_type selection
+  shiny::observeEvent(input$chart_type, {
+    safe_operation(
+      "Toggle n_column enabled state by chart type",
+      code = {
+        ct <- input$chart_type %||% "run"
+        enabled <- chart_type_requires_denominator(ct)
+
+        if (enabled) {
+          shinyjs::enable("n_column")
+        } else {
+          shinyjs::disable("n_column")
+        }
+
+        log_debug_kv(
+          message = "Updated n_column enabled state",
+          chart_type = ct,
+          n_enabled = enabled,
+          .context = "[UI_SYNC]"
+        )
+      },
+      fallback = NULL,
+      session = session,
+      error_type = "processing"
+    )
+  }, ignoreInit = FALSE, priority = OBSERVER_PRIORITIES$UI_SYNC)
+
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
   # This observer tracks timing metrics for optimization without emitting events
   if (!is.null(app_state$ui)) {

@@ -241,10 +241,11 @@ process_standard_chart_data <- function(data, config, chart_type, y_axis_unit) {
 
 ## Prepare QIC Data Parameters
 # Forbereder data parametre til qicharts2 integration med NSE håndtering
-prepare_qic_data_parameters <- function(data, config, x_validation) {
+prepare_qic_data_parameters <- function(data, config, x_validation, chart_type) {
   x_col_name <- config$x_col # Auto-detected date column or NULL
   y_col_name <- config$y_col # Should be "Tæller"
-  n_col_name <- config$n_col # Should be "Nævner"
+  # Kun medtag nævner-kolonne for diagramtyper der kræver den
+  n_col_name <- if (chart_type_requires_denominator(chart_type)) config$n_col else NULL
 
   # Brug data fra x_validation i stedet for duplikeret logik
   log_debug(paste("UPDATE CONDITION DEBUG:\n- x_col_name is not NULL:", !is.null(x_col_name),
@@ -675,7 +676,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # qicharts2::qic(x = Dato, y = `Tæller`, n = `Nævner`, part = c(12), data = data, return.data = TRUE)
 
       # Prepare QIC data parameters with NSE handling
-      qic_params <- prepare_qic_data_parameters(data, config, x_validation)
+      qic_params <- prepare_qic_data_parameters(data, config, x_validation, chart_type)
       data <- qic_params$data
       x_col_for_qic <- qic_params$x_col_for_qic
       x_col_name <- qic_params$x_col_name

@@ -216,7 +216,7 @@ prepare_qic_data_optimized <- function(preprocessed_data, chart_type, target_val
   )
 
   # Add optional parameters only if needed
-  if (!is.null(config$n_col)) {
+  if (!is.null(config$n_col) && chart_type_requires_denominator(chart_type)) {
     qic_params$n <- as.name(config$n_col)
   }
 

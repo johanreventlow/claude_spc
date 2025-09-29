@@ -64,3 +64,21 @@ CHART_TYPE_DESCRIPTIONS <- list(
   "c" = "C-kort til tællinger af defekter eller hændelser",
   "g" = "G-kort til tid mellem sjældne hændelser"
 )
+
+#' Kræver diagramtype en nævner (n)?
+#'
+#' Hjælper der afgør om nævner-feltet (n_column) er relevant for den valgte
+#' diagramtype. Bruges til at styre UI (enable/disable) og til at undlade at
+#' sende `n` til qicharts2 for irrelevante typer.
+#'
+#' Acceptér både danske labels og engelske qicharts2-koder.
+#'
+#' @param chart_type Valgt diagramtype (dansk label eller engelsk kode)
+#' @return TRUE hvis nævner er relevant (skal være aktiv i UI), ellers FALSE
+chart_type_requires_denominator <- function(chart_type) {
+  # Normalisér til qicharts2-kode
+  ct <- get_qic_chart_type(chart_type)
+
+  # Nævner er relevant for run, p, pp, u, up
+  return(ct %in% c("run", "p", "pp", "u", "up"))
+}
