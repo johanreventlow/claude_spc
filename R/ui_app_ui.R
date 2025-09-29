@@ -308,11 +308,28 @@ create_chart_settings_card <- function() {
             class = "selectize-dropup",
             shiny::selectizeInput(
               "n_column",
-              shiny::span("Nævner (n):", shiny::icon("info-circle")),
+              shiny::span(
+                "Nævner (n):",
+                shiny::icon("info-circle"),
+                shiny::span(
+                  id = "n_column_ignore_tt",
+                  style = "display: none; margin-left: 6px; color: #6c757d;",
+                  shiny::icon("circle-info")
+                ) |>
+                  bslib::tooltip("Ignoreres for denne type")
+              ),
               choices = NULL,
               selected = NULL
             ) |>
-              bslib::tooltip("Valgfri: Nævner-kolonne til beregning af andele og rater")
+              bslib::tooltip("Run: valgfri nævner. P, P′, U, U′: kræver nævner. I, MR, C, G: nævner ignoreres.")
+          ),
+          # Hint vises når diagramtype ikke anvender nævner
+          shiny::div(
+            id = "n_column_hint",
+            class = "text-muted",
+            style = "display: none; font-size: 0.85rem; margin-top: 4px;",
+            shiny::icon("circle-info"),
+            shiny::HTML("&nbsp;Nævner ignoreres for den valgte diagramtype.")
           )
         ),
         shiny::div(

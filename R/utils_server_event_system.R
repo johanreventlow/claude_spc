@@ -523,8 +523,12 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
         if (enabled) {
           shinyjs::enable("n_column")
+          shinyjs::hide("n_column_hint")
+          shinyjs::hide("n_column_ignore_tt")
         } else {
           shinyjs::disable("n_column")
+          shinyjs::show("n_column_hint")
+          shinyjs::show("n_column_ignore_tt")
         }
 
         log_debug_kv(

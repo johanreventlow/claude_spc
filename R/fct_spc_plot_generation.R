@@ -566,7 +566,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   x_data <- extract_x_axis_data(data, config$x_col)
 
   # Process data based on chart type
-  if (!is.null(config$n_col) && config$n_col %in% names(data)) {
+  if (chart_type_requires_denominator(chart_type) && !is.null(config$n_col) && config$n_col %in% names(data)) {
     # Ratio charts (with numerator/denominator)
     data_result <- process_ratio_chart_data(data, config, chart_type, y_axis_unit)
   } else {
