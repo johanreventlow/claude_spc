@@ -26,7 +26,7 @@ test_that("centerline anvendes korrekt for decimale datasæt", {
   config <- list(x_col = "Dato", y_col = "Måling", n_col = NULL)
 
   x_validation <- validate_x_column_format(test_data, config$x_col, "observation")
-  prepared <- prepare_qic_data_parameters(test_data, config, x_validation)
+  prepared <- prepare_qic_data_parameters(test_data, config, x_validation, "i")
 
   input_value <- "80%"
   target_value <- parse_danish_target(input_value, test_data$Måling, "percent")
@@ -63,7 +63,7 @@ test_that("centerline anvendes korrekt for procentdatasæt med nævner", {
   config <- list(x_col = "Dato", y_col = "Antal succes", n_col = "Antal total")
 
   x_validation <- validate_x_column_format(test_data, config$x_col, "observation")
-  prepared <- prepare_qic_data_parameters(test_data, config, x_validation)
+  prepared <- prepare_qic_data_parameters(test_data, config, x_validation, "run")
 
   input_value <- "80%"
   target_value <- parse_danish_target(input_value, test_data$`Antal succes`, "percent")
