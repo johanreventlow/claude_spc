@@ -478,7 +478,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
           set_current_data(app_state, new_df)
 
           # Emit event to trigger downstream effects
-          emit$data_updated("column_changed")
+          emit$data_updated("table_cells_edited")
 
           shiny::showNotification("Tabel opdateret", type = "message", duration = 2)
         },

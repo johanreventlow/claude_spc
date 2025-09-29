@@ -1,4 +1,4 @@
-test_that("No autodetect on excelR table edits (column_changed)", {
+test_that("No autodetect on excelR table edits (table_cells_edited)", {
   skip_if_not_installed("shiny")
 
   create_server <- function() {
@@ -26,6 +26,7 @@ test_that("No autodetect on excelR table edits (column_changed)", {
 
     # Baseline: no autodetect started
     base_auto <- get_event("auto_detection_started")
+    base_nav <- get_event("navigation_changed")
 
     # Simulate data load context → should trigger autodetect
     emit$data_updated("file_loaded")
@@ -33,9 +34,12 @@ test_that("No autodetect on excelR table edits (column_changed)", {
     expect_equal(after_file, base_auto + 1L)
 
     # Simulate table edit context → should NOT trigger autodetect
-    emit$data_updated("column_changed")
+    emit$data_updated("table_cells_edited")
     after_edit <- get_event("auto_detection_started")
     expect_equal(after_edit, after_file)
+
+    after_nav <- get_event("navigation_changed")
+    expect_equal(after_nav, base_nav + 1L)
   })
 })
 
@@ -86,8 +90,8 @@ test_that("n_column stays cleared during table edit refresh", {
     # Mapping still holds historical value
     expect_equal(app_state$columns$mappings$n_column, "Nævner")
 
-    # Table edit triggers column choices refresh
-    emit$data_updated("column_changed")
+    # Table edit only triggers plot refresh (no dropdown refresh)
+    emit$data_updated("table_cells_edited")
     session$flushReact()
 
     expect_equal(session$input$n_column, "")

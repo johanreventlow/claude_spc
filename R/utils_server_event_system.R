@@ -76,13 +76,20 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       context <- update_context$context %||% "general"
       column_update_reason <- resolve_column_update_reason(context)
 
-      if (context == "legacy_data_loaded" || grepl("load|upload|new", context, ignore.case = TRUE)) {
+      is_table_cells_edit <- identical(context, "table_cells_edited")
+      is_load_context <- context == "legacy_data_loaded" || grepl("load|upload|new", context, ignore.case = TRUE)
+      is_change_context <- context == "legacy_data_changed" || grepl("change|edit|modify", context, ignore.case = TRUE)
+
+      if (is_load_context) {
         # Data loading path - trigger auto-detection
         if (!is.null(app_state$data$current_data)) {
           emit$auto_detection_started()
         }
 
-      } else if (context == "legacy_data_changed" || grepl("change|edit|modify", context, ignore.case = TRUE)) {
+      } else if (is_table_cells_edit) {
+        emit$navigation_changed()
+
+      } else if (is_change_context) {
         # Data change path - update column choices AND trigger plot regeneration
         safe_operation(
           "Update column choices on data change",
