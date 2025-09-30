@@ -25,5 +25,5 @@ Logical indicating plot readiness
 }
 \description{
 Factory for managing chart module state with consistent patterns.
-Ekstraeret fra modules_mod_spc_chart_server.R for bedre testability.
+Ekstraeret fra mod_spc_chart_server.R for bedre testability.
 }

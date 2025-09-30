@@ -37,5 +37,5 @@ List med plot object og QIC data
 }
 \description{
 Processer SPC beregninger og ekstraherer relevante metrics.
-Ekstraeret fra modules_mod_spc_chart_server.R for bedre testability.
+Ekstraeret fra mod_spc_chart_server.R for bedre testability.
 }

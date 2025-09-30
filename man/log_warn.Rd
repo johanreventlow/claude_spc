@@ -4,12 +4,16 @@
 \alias{log_warn}
 \title{Log warning-besked}
 \usage{
-log_warn(message, component = NULL)
+log_warn(message = NULL, component = NULL, .context = NULL, details = NULL)
 }
 \arguments{
 \item{message}{Besked der skal logges}
 
-\item{component}{Valgfri komponent-tag (f.eks. \code{"DATA_VALIDATION"})}
+\item{component}{Valgfri komponent-tag (f.eks. \code{"DATA_VALIDATION"}) - legacy parameter}
+
+\item{.context}{Valgfri kontekst-tag (f.eks. \code{"DATA_VALIDATION"}) - preferred parameter}
+
+\item{details}{Valgfri liste med struktureret data der skal logges sammen med beskeden}
 }
 \value{
 \code{invisible(NULL)}.
@@ -18,5 +22,6 @@ log_warn(message, component = NULL)
 Convenience-funktion til logging af WARN-beskeder.
 }
 \examples{
-log_warn("Manglende data i kolonne", "DATA_VALIDATION")
+log_warn("Manglende data i kolonne", .context = "DATA_VALIDATION")
+log_warn(message = "Input sanitized", component = "[INPUT_SANITIZATION]", details = list(original_length = 100))
 }

@@ -7,7 +7,7 @@
 sanitize_user_input(
   input_value,
   max_length = 255,
-  allowed_chars = "[A-Za-z0-9_æøåÆØÅ .-]",
+  allowed_chars = "A-Za-z0-9_æøåÆØÅ .-",
   html_escape = TRUE
 )
 }

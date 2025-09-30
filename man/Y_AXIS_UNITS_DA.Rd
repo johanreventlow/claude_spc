@@ -5,7 +5,7 @@
 \alias{Y_AXIS_UNITS_DA}
 \title{Y-aksen enheder for forskellige chart typer}
 \format{
-An object of class \code{list} of length 10.
+An object of class \code{list} of length 12.
 }
 \usage{
 Y_AXIS_UNITS_DA

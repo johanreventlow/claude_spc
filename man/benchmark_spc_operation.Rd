@@ -9,7 +9,8 @@ benchmark_spc_operation(
   times = 100,
   operation_name = "unknown_operation",
   log_results = TRUE,
-  return_full_results = FALSE
+  return_full_results = FALSE,
+  capture_result = FALSE
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ benchmark_spc_operation(
 \item{log_results}{Whether to log results (default: TRUE)}
 
 \item{return_full_results}{Return full microbenchmark object (default: FALSE)}
+
+\item{capture_result}{Capture and return the result of the last expression evaluation (default: FALSE)}
 }
 \value{
 List with summary statistics or full microbenchmark results

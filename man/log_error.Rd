@@ -4,12 +4,16 @@
 \alias{log_error}
 \title{Log error-besked}
 \usage{
-log_error(message, component = NULL)
+log_error(message = NULL, component = NULL, .context = NULL, details = NULL)
 }
 \arguments{
 \item{message}{Besked eller condition der skal logges}
 
-\item{component}{Valgfri komponent-tag (f.eks. \code{"ERROR_HANDLING"})}
+\item{component}{Valgfri komponent-tag (f.eks. \code{"ERROR_HANDLING"}) - legacy parameter}
+
+\item{.context}{Valgfri kontekst-tag (f.eks. \code{"ERROR_HANDLING"}) - preferred parameter}
+
+\item{details}{Valgfri liste med struktureret data der skal logges sammen med beskeden}
 }
 \value{
 \code{invisible(NULL)}.
@@ -19,8 +23,9 @@ Convenience-funktion til logging af ERROR-beskeder. Accepterer også en
 \code{condition} direkte (beskeden udtrækkes med \code{conditionMessage()}).
 }
 \examples{
-log_error("Kunne ikke læse fil", "FILE_UPLOAD")
+log_error("Kunne ikke læse fil", .context = "FILE_UPLOAD")
+log_error(message = "File validation failed", component = "[FILE_VALIDATION]", details = list(filename = "test.txt"))
 \dontrun{
-  tryCatch(stop("Boom"), error = function(e) log_error(e, "PIPELINE"))
+  tryCatch(stop("Boom"), error = function(e) log_error(e, .context = "PIPELINE"))
 }
 }

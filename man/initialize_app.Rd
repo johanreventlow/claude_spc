@@ -17,5 +17,5 @@ List containing initialization results
 \description{
 Package-based initialization function that replaces file sourcing with
 package namespace access. All functions are assumed to be loaded via
-package loading (library(claudespc)).
+package loading (library(SPCify)).
 }

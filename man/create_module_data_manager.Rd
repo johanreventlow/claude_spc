@@ -23,5 +23,5 @@ Clear cached data
 }
 \description{
 Helper for managing module-level data with caching and reactive safety.
-Ekstraeret fra modules_mod_spc_chart_server.R for bedre separation.
+Ekstraeret fra mod_spc_chart_server.R for bedre separation.
 }

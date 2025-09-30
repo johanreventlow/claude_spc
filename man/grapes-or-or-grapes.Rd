@@ -7,13 +7,13 @@
 a \%||\% b
 }
 \arguments{
-\item{x}{Left-hand side value}
+\item{lhs}{Left-hand side value}
 
-\item{y}{Right-hand side value (fallback)}
+\item{rhs}{Right-hand side value (fallback)}
 }
 \value{
-x if not NULL, otherwise y
+lhs if not NULL, otherwise rhs
 }
 \description{
-Return right-hand side if left-hand side is NULL
+Returns the left-hand side if it's not NULL, otherwise returns the right-hand side
 }

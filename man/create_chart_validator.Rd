@@ -18,5 +18,5 @@ List med validation status og warnings
 }
 \description{
 Validering af chart data og konfiguration før plot generation.
-Ekstraeret fra modules_mod_spc_chart_server.R for genbrug.
+Ekstraeret fra mod_spc_chart_server.R for genbrug.
 }

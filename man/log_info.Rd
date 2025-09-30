@@ -4,12 +4,16 @@
 \alias{log_info}
 \title{Log information-besked}
 \usage{
-log_info(message, component = NULL)
+log_info(message = NULL, component = NULL, .context = NULL, details = NULL)
 }
 \arguments{
 \item{message}{Besked der skal logges}
 
-\item{component}{Valgfri komponent-tag (f.eks. \code{"FILE_UPLOAD"})}
+\item{component}{Valgfri komponent-tag (f.eks. \code{"FILE_UPLOAD"}) - legacy parameter}
+
+\item{.context}{Valgfri kontekst-tag (f.eks. \code{"FILE_UPLOAD"}) - preferred parameter}
+
+\item{details}{Valgfri liste med struktureret data der skal logges sammen med beskeden}
 }
 \value{
 \code{invisible(NULL)}.
@@ -18,5 +22,6 @@ log_info(message, component = NULL)
 Convenience-funktion til logging af INFO-beskeder.
 }
 \examples{
-log_info("Fil uploaded succesfuldt", "FILE_UPLOAD")
+log_info("Fil uploaded succesfuldt", .context = "FILE_UPLOAD")
+log_info(message = "Data processeret", component = "[DATA_PROCESSING]", details = list(rows = 100))
 }
