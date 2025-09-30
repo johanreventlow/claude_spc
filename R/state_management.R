@@ -67,8 +67,7 @@ create_app_state <- function() {
   app_state$events <- shiny::reactiveValues(
     # DATA-LIVSCYKLUS (CONSOLIDATED - FASE 2.2) ---------------------------
     data_updated = 0L,                 # CONSOLIDATED: Replaces data_loaded + data_changed
-    data_loaded = 0L,                  # LEGACY COMPATIBILITY: Mapped to data_updated
-    data_changed = 0L,                 # LEGACY COMPATIBILITY: Mapped to data_updated
+    # SPRINT 4: Legacy event reactiveValues removed (observers deleted, emit functions map to data_updated)
 
     # KOLONNEDETEKTION -----------------------------------------------------
     auto_detection_started = 0L,
@@ -373,20 +372,18 @@ create_emit_api <- function(app_state) {
       })
     },
 
-    # Legacy compatibility functions (map to consolidated event)
+    # SPRINT 4: Legacy compatibility functions (kept for API stability, but now map to data_updated only)
     data_loaded = function() {
       shiny::isolate({
-        # Fire consolidated event
+        # Fire consolidated event only (legacy event firing removed)
         app_state$events$data_updated <- app_state$events$data_updated + 1L
-        # Also fire legacy event for backward compatibility
-        app_state$events$data_loaded <- app_state$events$data_loaded + 1L
 
         # Store context
         if (!exists("last_data_update_context", envir = app_state)) {
           app_state$last_data_update_context <- list()
         }
         app_state$last_data_update_context <- list(
-          context = "legacy_data_loaded",
+          context = "data_loaded",  # SPRINT 4: Removed "legacy_" prefix
           timestamp = Sys.time()
         )
       })
@@ -394,17 +391,15 @@ create_emit_api <- function(app_state) {
 
     data_changed = function() {
       shiny::isolate({
-        # Fire consolidated event
+        # Fire consolidated event only (legacy event firing removed)
         app_state$events$data_updated <- app_state$events$data_updated + 1L
-        # Also fire legacy event for backward compatibility
-        app_state$events$data_changed <- app_state$events$data_changed + 1L
 
         # Store context
         if (!exists("last_data_update_context", envir = app_state)) {
           app_state$last_data_update_context <- list()
         }
         app_state$last_data_update_context <- list(
-          context = "legacy_data_changed",
+          context = "data_changed",  # SPRINT 4: Removed "legacy_" prefix
           timestamp = Sys.time()
         )
       })

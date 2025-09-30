@@ -111,19 +111,26 @@ log_debug(
 
 ✅ **Unified Event Architecture (OBLIGATORISK for al ny udvikling):**
 ```r
-# ✅ Korrekt brug af event-bus
-emit$data_loaded()
-emit$columns_detected()
-emit$ui_sync_needed()
+# ✅ Korrekt brug af consolidated event-bus
+emit$data_updated(context = "upload")     # CONSOLIDATED: Replaces data_loaded + data_changed
+emit$auto_detection_completed()
+emit$ui_sync_requested()
 
-observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
-  handle_data_loaded()
+observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
+  # Handle all data lifecycle changes in one place
+  handle_data_update()
 })
 
 # ❌ Forkert: Ad-hoc reactiveVal triggers
 legacy_trigger <- reactiveVal(NULL)
 observeEvent(legacy_trigger(), { shiny::showNotification("Undgå dette mønster") })
 ```
+
+**Event Consolidation (Sprint 4):**
+* **`data_updated`** – CONSOLIDATED event replacing `data_loaded` + `data_changed`
+* **Legacy emit functions preserved** – `emit$data_loaded()` and `emit$data_changed()` now map to `data_updated`
+* **Context tracking** – All data updates store context for intelligent handling
+* **No legacy observers** – All code migrated to listen to `data_updated` only
 
 **Event-arkitektur:**
 * **Data change** → **Emit event** → **Centralized listener** → **State update** → **Cascade events**
@@ -163,13 +170,14 @@ values$some_data <- data
 ```r
 # Centraliserede event listeners med prioritering
 setup_event_listeners() {
-  observeEvent(app_state$events$data_loaded,
+  observeEvent(app_state$events$data_updated,  # SPRINT 4: Consolidated event
     ignoreInit = TRUE,
     priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
-    # Kritisk logik først
+    # Handles both data loading and changes in one place
+    # Context available via app_state$last_data_update_context
   })
 
-  observeEvent(app_state$events$data_changed,
+  observeEvent(app_state$events$auto_detection_completed,
     ignoreInit = TRUE,
     priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
     # Data behandling sekundært

@@ -91,8 +91,9 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       column_update_reason <- resolve_column_update_reason(context)
 
       is_table_cells_edit <- identical(context, "table_cells_edited")
-      is_load_context <- context == "legacy_data_loaded" || grepl("load|upload|new", context, ignore.case = TRUE)
-      is_change_context <- context == "legacy_data_changed" || grepl("change|edit|modify", context, ignore.case = TRUE)
+      # SPRINT 4: Legacy context checks removed - use pattern matching only
+      is_load_context <- grepl("load|upload|new", context, ignore.case = TRUE)
+      is_change_context <- grepl("change|edit|modify", context, ignore.case = TRUE)
 
       if (is_load_context) {
         # Data loading path - trigger auto-detection
@@ -137,18 +138,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
   })
 
-  # Legacy compatibility observers (for backward compatibility during transition)
-  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
-    # Legacy data_loaded observer - mostly handled by data_updated now
-    # Only used for specific legacy edge cases that haven't been migrated yet
-    log_debug("Legacy data_loaded event fired - consider migrating to data_updated", .context = "EVENT_SYSTEM")
-  })
-
-  shiny::observeEvent(app_state$events$data_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
-    # Legacy data_changed observer - mostly handled by data_updated now
-    # Only used for specific legacy edge cases that haven't been migrated yet
-    log_debug("Legacy data_changed event fired - consider migrating to data_updated", .context = "EVENT_SYSTEM")
-  })
+  # SPRINT 4: Legacy compatibility observers removed - all code migrated to data_updated
+  # Previously: data_loaded and data_changed observers only logged deprecation warnings
 
   # Reset auto-default flag for Y-akse når data opdateres
   shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOWEST, {
