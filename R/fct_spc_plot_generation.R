@@ -870,36 +870,41 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         # Only shows decimals if present (50K vs 50,5K)
         plot <- plot + ggplot2::scale_y_continuous(
           labels = function(x) {
-            # Apply scale cuts manually
-            if (abs(x) >= 1e9) {
-              scaled <- x / 1e9
-              if (scaled == round(scaled)) {
-                paste0(round(scaled), " mia.")
+            # Apply scale cuts manually using sapply for vectorization
+            sapply(x, function(val) {
+              # Handle NA values
+              if (is.na(val)) return(NA)
+
+              if (abs(val) >= 1e9) {
+                scaled <- val / 1e9
+                if (scaled == round(scaled)) {
+                  paste0(round(scaled), " mia.")
+                } else {
+                  paste0(format(scaled, decimal.mark = ",", nsmall = 1), " mia.")
+                }
+              } else if (abs(val) >= 1e6) {
+                scaled <- val / 1e6
+                if (scaled == round(scaled)) {
+                  paste0(round(scaled), "M")
+                } else {
+                  paste0(format(scaled, decimal.mark = ",", nsmall = 1), "M")
+                }
+              } else if (abs(val) >= 1e3) {
+                scaled <- val / 1e3
+                if (scaled == round(scaled)) {
+                  paste0(round(scaled), "K")
+                } else {
+                  paste0(format(scaled, decimal.mark = ",", nsmall = 1), "K")
+                }
               } else {
-                paste0(format(scaled, decimal.mark = ",", nsmall = 1), " mia.")
+                # No scaling - just format with thousand separator if needed
+                if (val == round(val)) {
+                  format(round(val), big.mark = ".", decimal.mark = ",")
+                } else {
+                  format(val, big.mark = ".", decimal.mark = ",", nsmall = 1)
+                }
               }
-            } else if (abs(x) >= 1e6) {
-              scaled <- x / 1e6
-              if (scaled == round(scaled)) {
-                paste0(round(scaled), "M")
-              } else {
-                paste0(format(scaled, decimal.mark = ",", nsmall = 1), "M")
-              }
-            } else if (abs(x) >= 1e3) {
-              scaled <- x / 1e3
-              if (scaled == round(scaled)) {
-                paste0(round(scaled), "K")
-              } else {
-                paste0(format(scaled, decimal.mark = ",", nsmall = 1), "K")
-              }
-            } else {
-              # No scaling - just format with thousand separator if needed
-              if (x == round(x)) {
-                format(round(x), big.mark = ".", decimal.mark = ",")
-              } else {
-                format(x, big.mark = ".", decimal.mark = ",", nsmall = 1)
-              }
-            }
+            })
           }
         )
       } else if (y_axis_unit == "rate") {
@@ -921,35 +926,50 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           # Less than 60 minutes -> show as minutes
           plot <- plot + ggplot2::scale_y_continuous(
             labels = function(x) {
-              if (x == round(x)) {
-                paste0(round(x), " min")
-              } else {
-                paste0(format(x, decimal.mark = ",", nsmall = 1), " min")
-              }
+              sapply(x, function(val) {
+                # Handle NA values
+                if (is.na(val)) return(NA)
+
+                if (val == round(val)) {
+                  paste0(round(val), " min")
+                } else {
+                  paste0(format(val, decimal.mark = ",", nsmall = 1), " min")
+                }
+              })
             }
           )
         } else if (max_minutes < 1440) {
           # Less than 24 hours (1440 min) -> show as hours
           plot <- plot + ggplot2::scale_y_continuous(
             labels = function(x) {
-              scaled <- x / 60
-              if (scaled == round(scaled)) {
-                paste0(round(scaled), " timer")
-              } else {
-                paste0(format(scaled, decimal.mark = ",", nsmall = 1), " timer")
-              }
+              sapply(x, function(val) {
+                # Handle NA values
+                if (is.na(val)) return(NA)
+
+                scaled <- val / 60
+                if (scaled == round(scaled)) {
+                  paste0(round(scaled), " timer")
+                } else {
+                  paste0(format(scaled, decimal.mark = ",", nsmall = 1), " timer")
+                }
+              })
             }
           )
         } else {
           # 24 hours or more -> show as days
           plot <- plot + ggplot2::scale_y_continuous(
             labels = function(x) {
-              scaled <- x / 1440
-              if (scaled == round(scaled)) {
-                paste0(round(scaled), " dage")
-              } else {
-                paste0(format(scaled, decimal.mark = ",", nsmall = 1), " dage")
-              }
+              sapply(x, function(val) {
+                # Handle NA values
+                if (is.na(val)) return(NA)
+
+                scaled <- val / 1440
+                if (scaled == round(scaled)) {
+                  paste0(round(scaled), " dage")
+                } else {
+                  paste0(format(val, decimal.mark = ",", nsmall = 1), " dage")
+                }
+              })
             }
           )
         }
