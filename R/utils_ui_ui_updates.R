@@ -92,6 +92,67 @@ create_ui_update_service <- function(session, app_state) {
     })
   }
 
+  # SPRINT 2: Update All Column Selectize Inputs
+  #
+  # Batch update all column dropdowns with same choices and optionally selected values.
+  # This centralizes the pattern seen 56 times across the codebase.
+  #
+  # @param choices Named vector of choices for all dropdowns
+  # @param selected Named list of selected values (e.g., list(x_column="Dato", y_column="Værdi"))
+  # @param columns Vector of input IDs to update (defaults to all SPC columns)
+  #
+  update_all_columns <- function(choices, selected = list(), columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")) {
+
+    safe_programmatic_ui_update(session, app_state, function() {
+      for (col in columns) {
+        selected_value <- if (col %in% names(selected)) selected[[col]] else ""
+        shiny::updateSelectizeInput(
+          session = session,
+          inputId = col,
+          choices = choices,
+          selected = selected_value
+        )
+      }
+    })
+  }
+
+  # SPRINT 2: Update All Columns With State Isolate
+  #
+  # Advanced variant that reads selected values from app_state with isolate()
+  # Used in event listeners where reactive isolation is needed
+  #
+  # @param choices Named vector of choices for all dropdowns
+  # @param columns_state reactiveValues containing column mappings (app_state$columns$mappings)
+  # @param log_context Optional logging context string
+  #
+  update_all_columns_from_state <- function(choices, columns_state, log_context = "UI_SYNC_UNIFIED") {
+    columns_map <- list(
+      x_column = "x_column",
+      y_column = "y_column",
+      n_column = "n_column",
+      skift_column = "skift_column",
+      frys_column = "frys_column",
+      kommentar_column = "kommentar_column"
+    )
+
+    safe_programmatic_ui_update(session, app_state, function() {
+      for (col_id in names(columns_map)) {
+        col_val <- shiny::isolate(columns_state[[col_id]])
+        if (!is.null(col_val)) {
+          shiny::updateSelectizeInput(
+            session = session,
+            inputId = col_id,
+            choices = choices,
+            selected = col_val
+          )
+          log_debug_kv_args <- list(.context = log_context)
+          log_debug_kv_args[[paste0("updated_", col_id, "_ui")]] <- col_val
+          do.call(log_debug_kv, log_debug_kv_args)
+        }
+      }
+    })
+  }
+
   # Update Form Fields
   #
   # Unified function for updating form field inputs from metadata.
@@ -390,6 +451,8 @@ create_ui_update_service <- function(session, app_state) {
   # Return enhanced service interface
   list(
     update_column_choices = update_column_choices,
+    update_all_columns = update_all_columns,  # SPRINT 2: Batch column update helper
+    update_all_columns_from_state = update_all_columns_from_state,  # SPRINT 2: State-driven update with isolate
     update_form_fields = update_form_fields,
     reset_form_fields = reset_form_fields,
     toggle_ui_element = toggle_ui_element,

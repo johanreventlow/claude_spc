@@ -247,14 +247,13 @@ restore_metadata <- function(session, metadata, ui_service = NULL) {
       if (!is.null(metadata$chart_type)) {
         shiny::updateSelectizeInput(session, "chart_type", selected = metadata$chart_type)
       }
-      if (!is.null(metadata$x_column)) {
-        shiny::updateSelectizeInput(session, "x_column", selected = metadata$x_column)
-      }
-      if (!is.null(metadata$y_column)) {
-        shiny::updateSelectizeInput(session, "y_column", selected = metadata$y_column)
-      }
-      if (!is.null(metadata$n_column)) {
-        shiny::updateSelectizeInput(session, "n_column", selected = metadata$n_column)
+      # SPRINT 2: Use ui_service for metadata column restoration
+      if (!is.null(metadata$x_column) || !is.null(metadata$y_column) || !is.null(metadata$n_column)) {
+        # Use existing update_form_fields which handles column selection
+        ui_service$update_form_fields(
+          metadata = metadata,
+          fields = c("x_column", "y_column", "n_column")
+        )
       }
       if (!is.null(metadata$target_value)) {
         shiny::updateTextInput(session, "target_value", value = metadata$target_value)
@@ -382,26 +381,23 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
       shiny::updateSelectizeInput(session, "y_axis_unit", selected = "count")
 
       # Opdater kolonnevalg med nye standardkolonner fra empty session data
+      # SPRINT 2: Use centralized update_all_columns helper
       if (!is.null(new_data) && ncol(new_data) > 0) {
         new_col_names <- names(new_data)
         col_choices <- setNames(new_col_names, new_col_names)
         col_choices <- c("Vælg kolonne" = "", col_choices)
 
-
-        shiny::updateSelectizeInput(session, "x_column", choices = col_choices, selected = "")
-        shiny::updateSelectizeInput(session, "y_column", choices = col_choices, selected = "")
-        shiny::updateSelectizeInput(session, "n_column", choices = col_choices, selected = "")
-        shiny::updateSelectizeInput(session, "skift_column", choices = col_choices, selected = "")
-        shiny::updateSelectizeInput(session, "frys_column", choices = col_choices, selected = "")
-        shiny::updateSelectizeInput(session, "kommentar_column", choices = col_choices, selected = "")
+        # Replaces 6 individual updateSelectizeInput calls
+        ui_service$update_all_columns(
+          choices = col_choices,
+          selected = list()  # Clear all selections
+        )
       } else {
-        # Fallback til tomme choices
-        shiny::updateSelectizeInput(session, "x_column", choices = c("Vælg kolonne" = ""), selected = "")
-        shiny::updateSelectizeInput(session, "y_column", choices = c("Vælg kolonne" = ""), selected = "")
-        shiny::updateSelectizeInput(session, "n_column", choices = c("Vælg kolonne" = ""), selected = "")
-        shiny::updateSelectizeInput(session, "skift_column", choices = c("Vælg kolonne" = ""), selected = "")
-        shiny::updateSelectizeInput(session, "frys_column", choices = c("Vælg kolonne" = ""), selected = "")
-        shiny::updateSelectizeInput(session, "kommentar_column", choices = c("Vælg kolonne" = ""), selected = "")
+        # Fallback til tomme choices - also uses centralized helper
+        ui_service$update_all_columns(
+          choices = c("Vælg kolonne" = ""),
+          selected = list()
+        )
       }
 
       shiny::updateTextInput(session, "target_value", value = "")
@@ -561,13 +557,8 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
     if (!is.null(ui_service)) {
       ui_service$update_column_choices(clear_selections = TRUE)
     } else {
-      # Fallback to direct updates - use updateSelectizeInput for consistency
-      shiny::updateSelectizeInput(session, "x_column", selected = "")
-      shiny::updateSelectizeInput(session, "y_column", selected = "")
-      shiny::updateSelectizeInput(session, "n_column", selected = "")
-      shiny::updateSelectizeInput(session, "skift_column", selected = "")
-      shiny::updateSelectizeInput(session, "frys_column", selected = "")
-      shiny::updateSelectizeInput(session, "kommentar_column", selected = "")
+      # SPRINT 2: Fallback using update_all_columns helper
+      ui_service$update_all_columns(choices = colnames(empty_session_data), selected = list())
     }
 
     log_debug_kv(
