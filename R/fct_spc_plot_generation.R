@@ -500,15 +500,14 @@ add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
     }
   }
 
-  # Add target line if provided
-  display_target_value <- convert_target_for_display(target_value, qic_data)
-
-  if (!is.null(display_target_value) && is.numeric(display_target_value) &&
-      !is.na(display_target_value)) {
+  # Add target line if target column exists in qic_data
+  if ("target" %in% names(qic_data) && !all(is.na(qic_data$target))) {
     plot <- plot +
-      ggplot2::geom_hline(
-        yintercept = display_target_value,
-        color = hospital_colors$darkgrey, linetype = "42", linewidth = 1.2,
+      ggplot2::geom_line(
+        ggplot2::aes(y = target),
+        color = hospital_colors$darkgrey,
+        linetype = "42",
+        linewidth = 1.2,
         alpha = 0.8
       )
   }
@@ -995,7 +994,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         ggplot2::labs(title = call_args$title, x = "", y = "") +
         ggplot2::theme_minimal()
 
-      # Add target line if provided
+      # Add target line if provided ----
       if (!is.null(target_display) && is.numeric(target_display) && !is.na(target_display)) {
         plot <- plot +
           ggplot2::geom_hline(
