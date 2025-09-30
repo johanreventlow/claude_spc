@@ -854,10 +854,14 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
       # Y-axis formatting based on unit type
       if (y_axis_unit == "percent") {
-        # Percent formatting with % suffix
+        # Percent formatting with % suffix (intelligent decimal handling)
+        # Only shows decimals if present in data (85 % vs 85,2 %)
         plot <- plot + ggplot2::scale_y_continuous(
-          labels = scales::percent_format(scale = 1, accuracy = 0.1, suffix = " %",
-                                           decimal.mark = ",")
+          labels = function(x) {
+            ifelse(x == round(x),
+                   paste0(round(x), " %"),
+                   paste0(format(x, decimal.mark = ",", nsmall = 1), " %"))
+          }
         )
       } else if (y_axis_unit == "count") {
         # Count formatting with intelligent K/M notation
