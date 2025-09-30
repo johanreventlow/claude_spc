@@ -380,7 +380,7 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
 
 ## Execute QIC Call with Post-processing
 # Udfører qicharts2::qic() kald og post-processerer resultaterne
-execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL) {
+execute_qic_call <- function(qic_args, chart_type, config) {
   # Call qic() with prepared arguments
   if (getOption("debug.mode", FALSE)) {
     log_debug("qic_args structure:", .context = "QIC_CALL")
@@ -424,61 +424,14 @@ execute_qic_call <- function(qic_args, chart_type, config, display_scaler = NULL
     qic_data <- log_qic_call_wrapper(qic_args, "execute_qic_call_fallback", call_number)
   }
 
-  if (is.null(display_scaler)) {
-    has_denominator <- !is.null(config$n_col) && config$n_col %in% names(qic_args$data)
-    display_scaler <- create_qic_display_scaler(chart_type, has_denominator)
-  }
-
-  apply_qic_display_scaler(qic_data, display_scaler)
+  qic_data
 }
 
 # PLOT ENHANCEMENT UTILITIES ==================================================
 
-## Convert Target Value to Display Scale
-# Konverterer target value til samme skala som qic_data for korrekt visning
-convert_target_for_display <- function(target_value, qic_data) {
-  if (is.null(target_value) || !is.numeric(target_value) || length(target_value) == 0 ||
-      all(is.na(target_value))) {
-    return(target_value)
-  }
-
-  numeric_target <- target_value[!is.na(target_value)][1]
-
-  if (is.null(qic_data)) {
-    return(numeric_target)
-  }
-
-  display_scaler <- attr(qic_data, "display_scaler")
-  if (!is.null(display_scaler) && is.list(display_scaler) &&
-      !is.null(display_scaler$to_display) && is.function(display_scaler$to_display)) {
-    scaled_value <- display_scaler$to_display(numeric_target)
-    if (is.numeric(scaled_value) && length(scaled_value) > 0 && !all(is.na(scaled_value))) {
-      return(scaled_value[1])
-    }
-  }
-
-  if ("target" %in% names(qic_data)) {
-    target_column <- qic_data$target
-    target_column <- target_column[!is.na(target_column)]
-    if (length(target_column) > 0) {
-      return(target_column[1])
-    }
-  }
-
-  if ("y" %in% names(qic_data)) {
-    y_values <- qic_data$y
-    y_values <- y_values[!is.na(y_values)]
-    if (length(y_values) > 0 && max(y_values) > 1 && numeric_target <= 1) {
-      return(numeric_target * 100)
-    }
-  }
-
-  return(numeric_target)
-}
-
 ## Add Plot Enhancements
 # Tilføjer target lines, phase separations og comment annotations
-add_plot_enhancements <- function(plot, qic_data, target_value, comment_data) {
+add_plot_enhancements <- function(plot, qic_data, comment_data) {
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
@@ -596,8 +549,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Note: Let qic handle ratio calculations directly from raw y and n data
 
   has_denominator <- !is.null(n_data)
-  display_scaler <- create_qic_display_scaler(chart_type, has_denominator)
-  target_display <- display_scaler$to_display(target_value)
 
   # Ensure we have minimum data points after filtering
   if (length(y_data) < 3) {
@@ -713,7 +664,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           )
 
           # Execute QIC call with post-processing
-          qic_data <- execute_qic_call(qic_args, chart_type, config, display_scaler)
+          qic_data <- execute_qic_call(qic_args, chart_type, config)
 
           qic_data
         },
@@ -853,14 +804,11 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
       # Y-axis formatting based on unit type
       if (y_axis_unit == "percent") {
-        # Percent formatting with % suffix (intelligent decimal handling)
-        # Only shows decimals if present in data (85 % vs 85,2 %)
+        # Percent formatting with % suffix
+        # Data from qic is in decimal form (0.9 for 90%), scale = 100 converts to percentage
+        # Danish formatting: decimal.mark = "," (85,5 %), big.mark = "." (not used for %)
         plot <- plot + ggplot2::scale_y_continuous(
-          labels = function(x) {
-            ifelse(x == round(x),
-                   paste0(round(x), " %"),
-                   paste0(format(x, decimal.mark = ",", nsmall = 1), " %"))
-          }
+          labels = scales::label_percent(scale = 100, decimal.mark = ",", accuracy = 0.1)
         )
       } else if (y_axis_unit == "count") {
         # Count formatting with intelligent K/M notation
@@ -976,9 +924,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # For other units - use default ggplot2 formatting
 
       # Add plot enhancements (phase lines, target line, comments)
-      plot <- add_plot_enhancements(plot, qic_data, target_value, comment_data)
+      plot <- add_plot_enhancements(plot, qic_data, comment_data)
 
-      return(list(plot = plot, qic_data = qic_data, display_scaler = display_scaler))
+      return(list(plot = plot, qic_data = qic_data))
     }
   ))
 }

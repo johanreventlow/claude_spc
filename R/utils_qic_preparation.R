@@ -107,67 +107,6 @@ normalize_proportions_to_internal <- function(y_raw, y_sample, user_unit) {
 
 # DISPLAY SCALING HELPERS =====================================================
 
-#' Create display scaler for qic outputs
-#'
-#' @param chart_type Character. QIC chart type
-#' @param has_denominator Logical. TRUE when chart uses numerator/denominator pair
-#' @return List with scaling metadata and helper functions
-#' @keywords internal
-create_qic_display_scaler <- function(chart_type, has_denominator = FALSE) {
-
-  scale_factor <- if (identical(chart_type, "run") && isTRUE(has_denominator)) 100 else 1
-
-  scale_numeric_value <- function(value, multiplier) {
-    if (is.null(value) || !is.numeric(value) || is.na(multiplier) || identical(multiplier, 1)) {
-      return(value)
-    }
-    value * multiplier
-  }
-
-  list(
-    factor = scale_factor,
-    mode = if (scale_factor == 1) "identity" else "percent",
-    to_display = function(value) {
-      scale_numeric_value(value, scale_factor)
-    },
-    to_internal = function(value) {
-      if (scale_factor == 0) {
-        return(value)
-      }
-      scale_numeric_value(value, 1 / scale_factor)
-    }
-  )
-}
-
-#' Apply display scaler to qic data frame
-#'
-#' Ensures qic output columns (y, cl, ucl, lcl, target) share same display scale
-#'
-#' @param qic_data Data frame returned from qicharts2::qic
-#' @param display_scaler List created by create_qic_display_scaler()
-#' @return Data frame with scaled columns and display metadata attribute
-#' @keywords internal
-apply_qic_display_scaler <- function(qic_data, display_scaler) {
-
-  if (is.null(qic_data) || is.null(display_scaler) || !is.list(display_scaler)) {
-    return(qic_data)
-  }
-
-  factor <- display_scaler$factor
-
-  if (!is.null(factor) && !identical(factor, 1)) {
-    numeric_columns <- intersect(names(qic_data), c("y", "cl", "ucl", "lcl", "target"))
-
-    if (length(numeric_columns) > 0) {
-      for (col in numeric_columns) {
-        qic_data[[col]] <- display_scaler$to_display(qic_data[[col]])
-      }
-    }
-  }
-
-  attr(qic_data, "display_scaler") <- display_scaler
-  qic_data
-}
 # QIC CALL WRAPPER ============================================================
 
 #' Create complete qicharts2::qic() call with consistent inputs
