@@ -57,8 +57,21 @@ extract_comment_data <- function(data, kommentar_column, qic_data) {
       trimws(comment_data$comment) != "",
   ]
 
-  # Afkort meget lange kommentarer
+  # SPRINT 3: Sanitize comments for XSS protection
   if (nrow(comment_data) > 0) {
+    # Apply XSS sanitization to all comments
+    if (exists("sanitize_user_input") && is.function(sanitize_user_input)) {
+      comment_data$comment <- sapply(comment_data$comment, function(cmt) {
+        sanitize_user_input(
+          input_value = cmt,
+          max_length = 100,  # Longer limit for comments before truncation
+          allowed_chars = "A-Za-z0-9_æøåÆØÅ .,-:!?",
+          html_escape = TRUE
+        )
+      }, USE.NAMES = FALSE)
+    }
+
+    # Afkort meget lange kommentarer efter sanitization
     comment_data$comment <- dplyr::if_else(
       nchar(comment_data$comment) > 40,
       stringr::str_c(substr(comment_data$comment, 1, 37), "..."),

@@ -381,11 +381,24 @@ process_chart_title <- function(chart_title_reactive, config) {
   )
 
 
-  if (!is.null(custom_title)) {
+  # SPRINT 3: Sanitize title for XSS protection
+  title_result <- if (!is.null(custom_title)) {
     custom_title
   } else {
     paste("SPC Chart -", config$y_col)
   }
+
+  # Apply sanitization to final title
+  if (exists("sanitize_user_input") && is.function(sanitize_user_input)) {
+    title_result <- sanitize_user_input(
+      input_value = title_result,
+      max_length = 200,
+      allowed_chars = "A-Za-z0-9_æøåÆØÅ .,-:!?/",
+      html_escape = TRUE
+    )
+  }
+
+  return(title_result)
 }
 
 #' Validate input parameters for SPC plot generation

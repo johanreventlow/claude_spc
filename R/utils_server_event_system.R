@@ -68,6 +68,20 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
     # UNIFIED DATA UPDATE LOGIC - combines previous data_loaded + data_changed handlers
 
+    # SPRINT 3: Clear performance cache when data changes
+    if (exists("clear_performance_cache") && is.function(clear_performance_cache)) {
+      safe_operation(
+        "Clear performance cache on data update",
+        code = {
+          clear_performance_cache()
+          log_debug("Performance cache cleared due to data update", .context = "CACHE_INVALIDATION")
+        },
+        fallback = function(e) {
+          log_warn(paste("Failed to clear cache:", e$message), .context = "CACHE_INVALIDATION")
+        }
+      )
+    }
+
     # FASE 3: Unfreeze autodetect system when data is updated
     app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
 
@@ -392,6 +406,17 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
+
+    # SPRINT 3: Clear all caches on session reset
+    if (exists("clear_performance_cache") && is.function(clear_performance_cache)) {
+      safe_operation(
+        "Clear performance cache on session reset",
+        code = {
+          clear_performance_cache()
+          log_debug("Performance cache cleared due to session reset", .context = "CACHE_INVALIDATION")
+        }
+      )
+    }
 
     # Reset all state to initial values
     app_state$data$current_data <- NULL
