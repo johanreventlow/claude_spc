@@ -852,6 +852,54 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         }
       }
 
+      # Y-axis formatting based on unit type
+      if (y_axis_unit == "percent") {
+        # Percent formatting with % suffix
+        plot <- plot + ggplot2::scale_y_continuous(
+          labels = scales::percent_format(scale = 1, accuracy = 0.1, suffix = " %",
+                                           decimal.mark = ",")
+        )
+      } else if (y_axis_unit == "count") {
+        # Count formatting with intelligent K/M notation
+        # K starts at 1.000+ for correct notation (K = 1.000, not 10.000)
+        # Trade-off: loses thousand separator for 1.000-9.999 range
+        plot <- plot + ggplot2::scale_y_continuous(
+          labels = scales::label_number(
+            big.mark = ".",
+            decimal.mark = ",",
+            scale_cut = c("K" = 1e3, "M" = 1e6, "mia." = 1e9),
+            accuracy = 1
+          )
+        )
+      } else if (y_axis_unit == "rate") {
+        # Rate formatting with one decimal
+        plot <- plot + ggplot2::scale_y_continuous(
+          labels = scales::number_format(accuracy = 0.1, decimal.mark = ",")
+        )
+      } else if (y_axis_unit == "time") {
+        # Intelligent time formatting based on data range (input: minutes)
+        y_range <- range(qic_data$y, na.rm = TRUE)
+        max_minutes <- max(y_range, na.rm = TRUE)
+
+        if (max_minutes < 60) {
+          # Less than 60 minutes -> show as minutes
+          plot <- plot + ggplot2::scale_y_continuous(
+            labels = scales::number_format(suffix = " min", accuracy = 0.1, decimal.mark = ",")
+          )
+        } else if (max_minutes < 1440) {
+          # Less than 24 hours (1440 min) -> show as hours
+          plot <- plot + ggplot2::scale_y_continuous(
+            labels = function(x) paste0(format(x / 60, decimal.mark = ",", nsmall = 1), " timer")
+          )
+        } else {
+          # 24 hours or more -> show as days
+          plot <- plot + ggplot2::scale_y_continuous(
+            labels = function(x) paste0(format(x / 1440, decimal.mark = ",", nsmall = 1), " dage")
+          )
+        }
+      }
+      # For other units - use default ggplot2 formatting
+
       # Add plot enhancements (phase lines, target line, comments)
       plot <- add_plot_enhancements(plot, qic_data, target_value, comment_data)
 
