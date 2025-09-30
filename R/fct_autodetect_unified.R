@@ -94,7 +94,8 @@ autodetect_engine <- function(data = NULL,
   # ROBUST EXIT HANDLER: Always reset state, even on early returns or errors
   on.exit({
     shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
-    shiny::isolate(app_state$columns$auto_detect$last_run <- Sys.time())
+    # TEST FIX: Don't overwrite last_run here - it's set properly in main logic at line 192
+    # Removed: app_state$columns$auto_detect$last_run <- Sys.time()
     log_debug("Autodetect engine cleanup completed", .context = "UNIFIED_AUTODETECT")
   }, add = TRUE)
 

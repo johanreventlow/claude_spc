@@ -9,6 +9,9 @@
 #' @return Logical indicating if data appears numeric
 #'
 appears_numeric <- function(x) {
+  # TEST FIX: Accept numeric columns as numeric
+  if (is.numeric(x)) return(TRUE)
+
   if (!is.character(x)) return(FALSE)
 
   # Sample a few values for efficiency
@@ -58,10 +61,16 @@ appears_date <- function(x) {
     }
   }
 
-  # Also try actual date parsing
-  suppressWarnings({
-    parsed_dates <- as.Date(sample_data)
-    parse_success_rate <- sum(!is.na(parsed_dates)) / length(sample_data)
+  # TEST FIX: Try actual date parsing with tryCatch to handle errors
+  parse_success_rate <- 0
+  tryCatch({
+    suppressWarnings({
+      parsed_dates <- as.Date(sample_data)
+      parse_success_rate <- sum(!is.na(parsed_dates)) / length(sample_data)
+    })
+  }, error = function(e) {
+    # If parsing fails completely, treat as non-date
+    parse_success_rate <<- 0
   })
 
   return(pattern_matches > 0 || parse_success_rate > 0.5)
