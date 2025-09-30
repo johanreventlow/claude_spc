@@ -435,25 +435,25 @@ add_plot_enhancements <- function(plot, qic_data, comment_data) {
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
-  # Add phase separation lines if parts exist
-  if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
-    # Find phase change points
-    phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
-    # Add phase change lines using tidyverse approach
-    if (length(phase_changes) > 0) {
-      plot <- phase_changes |>
-        purrr::reduce(function(p, change_point) {
-          p +
-            ggplot2::geom_vline(
-              xintercept = qic_data$x[change_point + 1],
-              color = hospital_colors$warning,
-              linetype = "dotted", linewidth = 1, alpha = 0.7
-            )
-        }, .init = plot)
-    }
-  }
+  # Fase tilfæjes - temporarily disabled ----
+  # if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
+  #   # Find phase change points
+  #   phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
+  #   # Add phase change lines using tidyverse approach
+  #   if (length(phase_changes) > 0) {
+  #     plot <- phase_changes |>
+  #       purrr::reduce(function(p, change_point) {
+  #         p +
+  #           ggplot2::geom_vline(
+  #             xintercept = qic_data$x[change_point + 1],
+  #             color = hospital_colors$warning,
+  #             linetype = "dotted", linewidth = 1, alpha = 0.7
+  #           )
+  #       }, .init = plot)
+  #   }
+  # }
 
-  # Add target line if target column exists in qic_data
+  # Mållinje tilføjes ----
   if ("target" %in% names(qic_data) && !all(is.na(qic_data$target))) {
     plot <- plot +
       ggplot2::geom_line(
@@ -465,7 +465,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data) {
       )
   }
 
-  # Add comment labels with ggrepel if comments exist
+  # Kommentarer tilføjes ----
   if (!is.null(comment_data) && nrow(comment_data) > 0) {
     plot <- plot +
       ggrepel::geom_text_repel(
@@ -677,25 +677,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # Handle comment data for labels
       comment_data <- extract_comment_data(data, kommentar_column, qic_data)
 
-      # Build custom ggplot using qic calculations ----
-
+      # Byg grundlæggende plot ----
       plot <- safe_operation(
         "Build custom ggplot",
         code = {
-          plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y))
-
-          plot <- plot + ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1)
-
-          plot <- plot + ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey)
-
-          plot <- plot + ggplot2::geom_line(ggplot2::aes(y = cl),
+          plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) + 
+            ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) + 
+            ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) + 
+            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = runs.signal),
             color = hospital_colors$hospitalblue,
-            linetype = "solid", linewidth = 1
-          )
-
-          plot <- plot + ggplot2::labs(title = call_args$title, x = "", y = "")
-
-          plot <- plot + ggplot2::theme_minimal()
+            linewidth = 1) + 
+            ggplot2::labs(title = call_args$title, x = "", y = "") + 
+            ggplot2::theme_minimal()
 
           plot
         },
@@ -706,24 +699,15 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         error_type = "processing"
       )
 
-      # Add control limits conditionally
-      if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl))) {
+      # Kontrolgrænser tilføjes conditionally ----
+      if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl)) && !is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
         plot <- plot +
-          ggplot2::geom_line(ggplot2::aes(y = ucl),
-            color = hospital_colors$danger,
-            linetype = "dashed", linewidth = 0.8
+          ggplot2::geom_ribbon(ggplot2::aes(ymin = lcl, ymax = ucl),
+                              fill = "#E6F5FD", alpha = 0.5
           )
       }
 
-      if (!is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
-        plot <- plot +
-          ggplot2::geom_line(ggplot2::aes(y = lcl),
-            color = hospital_colors$danger,
-            linetype = "dashed", linewidth = 0.8
-          )
-      }
-
-      # Intelligent x-akse formatering baseret på dato-mønstre
+      # Intelligent x-akse formatering baseret på dato-mønstre ----
       if (!is.null(x_validation$x.format) && x_validation$is_date) {
         # DEBUG: Tjek qic_data$x type
 
@@ -808,7 +792,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         # Data from qic is in decimal form (0.9 for 90%), scale = 100 converts to percentage
         # Danish formatting: decimal.mark = "," (85,5 %), big.mark = "." (not used for %)
         plot <- plot + ggplot2::scale_y_continuous(
-          labels = scales::label_percent(scale = 100, decimal.mark = ",", accuracy = 0.1)
+          labels = scales::label_percent()
         )
       } else if (y_axis_unit == "count") {
         # Count formatting with intelligent K/M notation
