@@ -2,7 +2,6 @@
 # Lazy loading system for heavy modules and diagnostics
 
 #' Lazy loading configuration
-#' @description
 #' Configuration for which modules should be loaded lazily vs. eagerly
 #' based on application usage patterns and startup performance requirements.
 #'
@@ -57,7 +56,6 @@ LAZY_LOADING_CONFIG <- list(
 )
 
 #' Load module lazily
-#' @description
 #' Load a specific module only when needed, with caching to prevent reloading
 #'
 #' @param module_name Name of the module from LAZY_LOADING_CONFIG
@@ -136,7 +134,6 @@ lazy_load_module <- function(module_name, force_reload = FALSE) {
 }
 
 #' Load all modules based on configuration
-#' @description
 #' Load all heavy modules that meet their loading conditions.
 #' Used during startup to load only necessary modules.
 #'
@@ -167,7 +164,6 @@ lazy_load_modules <- function(force_all = FALSE) {
 }
 
 #' Get lazy loading status
-#' @description
 #' Get current status of all lazy loaded modules
 #'
 #' @return List with module loading status
@@ -189,7 +185,6 @@ get_lazy_loading_status <- function() {
 }
 
 #' Ensure module is loaded
-#' @description
 #' Ensure a specific module is loaded before use. This is the main function
 #' to call before using functionality from a lazy-loaded module.
 #'

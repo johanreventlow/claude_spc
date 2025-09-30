@@ -3,7 +3,6 @@
 
 #' Safe operation wrapper with error handling
 #'
-#' @description
 #' Provides a standardized way to execute code with error handling and
 #' fallback behavior. Designed to prevent crashes in reactive contexts
 #' and provide graceful degradation.
@@ -82,7 +81,6 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
 
 #' Validate required objects exist before operation
 #'
-#' @description
 #' Helper function to check that required objects/variables exist
 #' before attempting operations. Prevents common "object not found" errors.
 #'
@@ -115,7 +113,6 @@ validate_exists <- function(..., error_message = "Required objects not found") {
 
 #' Safe environment variable retrieval
 #'
-#' @description
 #' Safely retrieve environment variables with fallback values
 #' and type conversion.
 #'

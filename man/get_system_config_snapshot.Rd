@@ -2,7 +2,8 @@
 % Please edit documentation in R/utils_cache_generators.R
 \name{get_system_config_snapshot}
 \alias{get_system_config_snapshot}
-\title{Get system configuration snapshot for caching}
+\title{Get system configuration snapshot for caching
+Create a snapshot of system configuration that can be cached}
 \usage{
 get_system_config_snapshot()
 }
@@ -10,5 +11,6 @@ get_system_config_snapshot()
 List with system configuration
 }
 \description{
+Get system configuration snapshot for caching
 Create a snapshot of system configuration that can be cached
 }

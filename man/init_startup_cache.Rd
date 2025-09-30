@@ -2,7 +2,8 @@
 % Please edit documentation in R/utils_startup_cache.R
 \name{init_startup_cache}
 \alias{init_startup_cache}
-\title{Initialize startup cache directory}
+\title{Initialize startup cache directory
+Create cache directory if it doesn't exist and clean up old cache files}
 \usage{
 init_startup_cache()
 }
@@ -10,5 +11,6 @@ init_startup_cache()
 TRUE if successful, FALSE otherwise
 }
 \description{
+Initialize startup cache directory
 Create cache directory if it doesn't exist and clean up old cache files
 }

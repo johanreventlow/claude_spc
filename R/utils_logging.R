@@ -3,7 +3,6 @@
 
 #' Log levels liste til SPC App logging system
 #'
-#' @description
 #' Definerer numeriske værdier for forskellige log-niveauer til brug i det
 #' konfigurerede logging-system. **Lavere tal betyder højere prioritet.**
 #'
@@ -34,7 +33,6 @@ LOG_LEVELS <- list(
 
 #' Hent aktuel log level fra environment variabel
 #'
-#' @description
 #' Læser `SPC_LOG_LEVEL` fra environment og returnerer tilsvarende numeriske værdi.
 #' Understøtter både navne (f.eks. `"DEBUG"`) og tal (f.eks. `"1"`).
 #' Fald tilbage til `INFO` ved ugyldig værdi.
@@ -124,7 +122,6 @@ get_log_level <- function() {
 
 #' Primær logging-funktion med level-filtering
 #'
-#' @description
 #' Central logging-funktion der håndterer alle log-beskeder med automatisk
 #' level-filtering baseret på `SPC_LOG_LEVEL`.
 #'
@@ -156,7 +153,6 @@ log_msg <- function(message, level = "INFO", component = NULL) {
 
 #' Log debug-besked (variadisk og Shiny-sikker)
 #'
-#' @description
 #' Convenience-funktion til logging af DEBUG-beskeder.
 #' Accepterer vilkårligt antal argumenter (`...`) og formaterer dem robust
 #' (tåler lister, data.frames m.m.) uden at crashe i Shiny renderers.
@@ -198,7 +194,6 @@ log_debug <- function(..., .context = NULL) {
 
 #' Log information-besked
 #'
-#' @description
 #' Convenience-funktion til logging af INFO-beskeder.
 #'
 #' @param message Besked der skal logges
@@ -232,7 +227,6 @@ log_info <- function(message = NULL, component = NULL, .context = NULL, details 
 
 #' Log warning-besked
 #'
-#' @description
 #' Convenience-funktion til logging af WARN-beskeder.
 #'
 #' @param message Besked der skal logges
@@ -266,7 +260,6 @@ log_warn <- function(message = NULL, component = NULL, .context = NULL, details 
 
 #' Log error-besked
 #'
-#' @description
 #' Convenience-funktion til logging af ERROR-beskeder. Accepterer også en
 #' `condition` direkte (beskeden udtrækkes med `conditionMessage()`).
 #'
@@ -305,7 +298,6 @@ log_error <- function(message = NULL, component = NULL, .context = NULL, details
 
 #' Log afgrænsede debug-blokke (start/stop)
 #'
-#' @description
 #' Helper-funktion til logging af visuelt afgrænsede debug-blokke
 #' med separatorlinjer. Erstatter hardcodede separatorer i koden.
 #'
@@ -342,7 +334,6 @@ log_debug_block <- function(context, action, type = "start") {
 
 #' Log strukturerede key-value par (kompakt)
 #'
-#' @description
 #' Helper-funktion til logging af strukturerede key-value data.
 #' Understøtter både navngivne `...`-argumenter og en liste via `.list_data`.
 #' Værdier formatteres robust (tåler komplekse objekter) uden at crashe i Shiny.
@@ -386,7 +377,6 @@ log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
 
 #' Convenience functions for common log level configurations
 #'
-#' @description
 #' Helper functions to easily switch between development and production
 #' log level configurations. These set the `SPC_LOG_LEVEL` environment
 #' variable for the current R session.
@@ -430,7 +420,6 @@ set_log_level_info <- function() {
 
 #' Set custom log level
 #'
-#' @description
 #' Set any custom log level by name. Validates input and provides helpful
 #' error messages for invalid levels.
 #'
@@ -461,7 +450,6 @@ set_log_level <- function(level) {
 
 #' Get current log level name
 #'
-#' @description
 #' Returns the current log level as a string for easy checking
 #' and debugging purposes.
 #'
@@ -482,7 +470,6 @@ get_log_level_name <- function() {
 
 #' Sanitize session token for logging
 #'
-#' @description
 #' SPRINT 1 SECURITY FIX: Masks session tokens before logging to prevent
 #' session hijacking if logs are compromised. Shows only first 4 and last 4
 #' characters with ellipsis in between.

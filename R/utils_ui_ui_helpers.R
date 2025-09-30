@@ -3,7 +3,6 @@
 
 #' Opret standard flex container style
 #'
-#' @description
 #' Returnerer standard CSS flex container style for kolonnelayout
 #'
 #' @return Karakter string med CSS styles
@@ -101,7 +100,6 @@ create_card_config <- function(title, height = NULL, full_screen = FALSE) {
 
 #' Robust input sanitization for character(0) and NA handling
 #'
-#' @description
 #' Centralized input sanitization function that handles character(0),
 #' NA values, empty strings, and vectors. Used throughout the app
 #' for consistent dropdown and input validation.

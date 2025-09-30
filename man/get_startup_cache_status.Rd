@@ -2,7 +2,8 @@
 % Please edit documentation in R/utils_startup_cache.R
 \name{get_startup_cache_status}
 \alias{get_startup_cache_status}
-\title{Get startup cache status}
+\title{Get startup cache status
+Get information about the current startup cache state}
 \usage{
 get_startup_cache_status()
 }
@@ -10,5 +11,6 @@ get_startup_cache_status()
 List with cache status information
 }
 \description{
+Get startup cache status
 Get information about the current startup cache state
 }

@@ -4,7 +4,6 @@
 
 #' Validate SPC plot configuration
 #'
-#' @description
 #' Validerer input-konfiguration for SPC plot generation.
 #' Ekstraeret fra generateSPCPlot for bedre testability.
 #'
@@ -35,7 +34,6 @@ sanitize_spc_config <- function(config) {
 
 #' Process chart title with reactive handling
 #'
-#' @description
 #' Processor chart titel med robust reactive værdi håndtering.
 #' Ekstraeret fra generateSPCPlot for bedre separation of concerns.
 #'
@@ -72,7 +70,6 @@ process_chart_title <- function(chart_title_reactive, config) {
 
 #' Filter data to complete rows with type preservation
 #'
-#' @description
 #' Filtrerer data til komplette rækker mens POSIXct/Date formats bevares.
 #' Ekstraeret fra generateSPCPlot for genbrug og testability.
 #'
@@ -139,7 +136,6 @@ filter_complete_spc_data <- function(data, y_col, n_col = NULL, x_col = NULL) {
 
 #' Parse and validate numeric data for SPC charts
 #'
-#' @description
 #' Parser og validerer numeriske data med dansk locale support.
 #' Ekstraeret fra generateSPCPlot for bedre error handling.
 #'
@@ -189,7 +185,6 @@ parse_and_validate_spc_data <- function(y_data, n_data = NULL, y_col = "Y", n_co
 
 #' Calculate Y-axis data based on chart type
 #'
-#' @description
 #' Beregner Y-axis data baseret på chart type og tilgængelige data.
 #' Ekstraeret fra generateSPCPlot for bedre modularity.
 #'
@@ -223,7 +218,6 @@ calculate_y_axis_data <- function(chart_type, y_data, n_data = NULL) {
 
 #' Generate Y-axis label based on chart type and configuration
 #'
-#' @description
 #' Genererer Y-axis label baseret på chart type, enheder og kolonnenavne.
 #' Ekstraeret fra generateSPCPlot for consistency og testability.
 #'
@@ -269,7 +263,6 @@ generate_y_axis_label <- function(chart_type, y_unit_label, y_col, n_col = NULL)
 
 #' Get unit label with fallback handling
 #'
-#' @description
 #' Henter unit label fra konfiguration med robust fallback.
 #' Helper function til Y-axis label generation.
 #'
@@ -303,7 +296,6 @@ get_safe_unit_label <- function(y_axis_unit, units_config = NULL) {
 
 #' Extract X-axis data with type safety
 #'
-#' @description
 #' Ekstraherer X-axis data fra data frame med type safety.
 #' Helper function for plot generation.
 #'

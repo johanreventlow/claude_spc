@@ -2,7 +2,7 @@
 # Generator functions for startup cache artifacts
 
 #' Get hospital branding configuration for caching
-#' @description
+#'
 #' Extract all hospital branding data that can be cached for faster startup
 #'
 #' @return List with hospital branding configuration
@@ -54,7 +54,7 @@ get_hospital_branding_config <- function() {
 }
 
 #' Get observer priorities configuration for caching
-#' @description
+#'
 #' Extract observer priorities that can be cached
 #'
 #' @return List with observer priorities
@@ -101,7 +101,7 @@ get_observer_priorities_config <- function() {
 }
 
 #' Get chart types configuration for caching
-#' @description
+#'
 #' Extract chart types configuration that can be cached
 #'
 #' @return List with chart types configuration
@@ -169,7 +169,6 @@ get_chart_types_config <- function() {
 }
 
 #' Get system configuration snapshot for caching
-#' @description
 #' Create a snapshot of system configuration that can be cached
 #'
 #' @return List with system configuration

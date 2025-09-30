@@ -2,7 +2,8 @@
 % Please edit documentation in R/utils_lazy_loading.R
 \name{lazy_load_module}
 \alias{lazy_load_module}
-\title{Load module lazily}
+\title{Load module lazily
+Load a specific module only when needed, with caching to prevent reloading}
 \usage{
 lazy_load_module(module_name, force_reload = FALSE)
 }
@@ -15,5 +16,6 @@ lazy_load_module(module_name, force_reload = FALSE)
 TRUE if loaded successfully, FALSE otherwise
 }
 \description{
+Load module lazily
 Load a specific module only when needed, with caching to prevent reloading
 }

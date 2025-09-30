@@ -4,7 +4,6 @@
 
 #' Chart Module State Manager
 #'
-#' @description
 #' Factory for managing chart module state with consistent patterns.
 #' Ekstraeret fra mod_spc_chart_server.R for bedre testability.
 #'
@@ -116,7 +115,6 @@ create_chart_state_manager <- function(app_state) {
 
 #' Module Data Manager
 #'
-#' @description
 #' Helper for managing module-level data with caching and reactive safety.
 #' Ekstraeret fra mod_spc_chart_server.R for bedre separation.
 #'
@@ -209,7 +207,6 @@ create_module_data_manager <- function(app_state) {
 
 #' SPC Results Processor
 #'
-#' @description
 #' Processer SPC beregninger og ekstraherer relevante metrics.
 #' Ekstraeret fra mod_spc_chart_server.R for bedre testability.
 #'
@@ -371,7 +368,6 @@ create_spc_results_processor <- function() {
 
 #' Chart Validation Service
 #'
-#' @description
 #' Validering af chart data og konfiguration før plot generation.
 #' Ekstraeret fra mod_spc_chart_server.R for genbrug.
 #'

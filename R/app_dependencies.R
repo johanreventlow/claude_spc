@@ -4,7 +4,6 @@
 
 #' Manage Complete Application Dependencies
 #'
-#' @description
 #' Centraliseret dependency management som kan erstatte library() kald i global.R.
 #' Inkluderer environment-aware loading og fallback-strategier.
 #'
@@ -42,7 +41,6 @@ manage_app_dependencies <- function(config = NULL) {
 
 #' Load Core Framework Packages
 #'
-#' @description
 #' Load the absolutely essential packages that cannot be namespace-referenced
 #' due to their pervasive use throughout the application.
 #'
@@ -86,7 +84,6 @@ load_core_packages <- function() {
 
 #' Load Feature-Specific Packages
 #'
-#' @description
 #' Load packages required for specific features, with environment-aware loading.
 #'
 #' @param config App configuration
@@ -157,7 +154,6 @@ load_feature_packages <- function(config) {
 
 #' Load Development-Specific Packages
 #'
-#' @description
 #' Load packages only needed during development and debugging.
 #'
 #' @param config App configuration
@@ -188,7 +184,6 @@ load_development_packages <- function(config) {
 
 #' Setup Performance Package Optimizations
 #'
-#' @description
 #' Configure packages for optimal performance based on environment.
 #'
 #' @param config App configuration
@@ -220,7 +215,6 @@ setup_performance_packages <- function(config) {
 
 #' Safe Package Loading with Error Handling
 #'
-#' @description
 #' Robust package loading med error handling og fallback strategies.
 #'
 #' @param package_name Name of package to load
@@ -281,7 +275,6 @@ safe_load_package <- function(package_name, min_version = NULL, reason = "", req
 
 #' Verify Critical Dependencies
 #'
-#' @description
 #' Post-loading verification that all critical functions are available.
 #'
 #' @return Boolean indicating if all critical dependencies are satisfied
@@ -317,7 +310,6 @@ verify_critical_dependencies <- function() {
 
 #' Get Dependency Status Report
 #'
-#' @description
 #' Generate a comprehensive report of all loaded dependencies.
 #'
 #' @return Data frame with dependency status

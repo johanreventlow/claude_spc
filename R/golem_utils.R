@@ -4,7 +4,6 @@
 
 #' Null-coalescing operator
 #'
-#' @description
 #' Returns the left-hand side if it's not NULL, otherwise returns the right-hand side
 #'
 #' @param lhs Left-hand side value
@@ -17,7 +16,6 @@
 
 #' Set Application Options (Golem-style)
 #'
-#' @description
 #' Centralized options management following golem patterns. Allows runtime
 #' configuration of app behavior without modifying global state directly.
 #'
@@ -74,7 +72,6 @@ set_app_options <- function(options = list()) {
 
 #' Get Application Option (Golem-style)
 #'
-#' @description
 #' Retrieve application options with fallback to defaults.
 #'
 #' @param option_name Name of the option to retrieve
@@ -97,7 +94,6 @@ get_app_option <- function(option_name, default = NULL) {
 
 #' Check if Application is in Development Mode
 #'
-#' @description
 #' Golem-style development mode detection combining explicit options
 #' with environment detection.
 #'
@@ -121,7 +117,6 @@ is_dev_mode <- function() {
 
 #' Check if Application is in Production Mode
 #'
-#' @description
 #' Golem-style production mode detection.
 #'
 #' @return Boolean indicating production mode
@@ -144,7 +139,6 @@ is_prod_mode <- function() {
 
 #' Development Application Runner (Golem-style)
 #'
-#' @description
 #' Enhanced development runner med debugging og development-specific settings.
 #' Equivalent til golem::run_dev() men tilpasset vores arkitektur.
 #'
@@ -204,7 +198,6 @@ run_dev <- function(port = 4040,
 
 #' Production Application Runner (Golem-style)
 #'
-#' @description
 #' Production-ready app runner med optimerede settings for deployment.
 #'
 #' @param port Production port (default: NULL for system assignment)
@@ -246,7 +239,6 @@ run_prod <- function(port = NULL,
 
 #' Get Application Information (Golem-style)
 #'
-#' @description
 #' Retrieve information about the current application configuration.
 #'
 #' @return List with application information
@@ -282,7 +274,6 @@ get_app_info <- function() {
 
 #' Application Resource Path Setup (Golem-style)
 #'
-#' @description
 #' Setup static resource paths following golem conventions.
 #'
 #' @param path Path to add as resource
@@ -363,7 +354,6 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
 #' Favicon Setup (Golem-style)
 #'
-#' @description
 #' Setup application favicon following golem patterns.
 #'
 #' @param path Path to favicon file
@@ -394,7 +384,6 @@ favicon <- function(path = "www/favicon.ico") {
 
 #' Detect Golem Environment
 #'
-#' @description
 #' Detect current deployment environment following golem conventions.
 #'
 #' @return String indicating environment (development, production, testing, default)
@@ -459,7 +448,6 @@ detect_golem_environment <- function() {
 
 #' Get Fallback Golem Configuration
 #'
-#' @description
 #' Provide fallback configuration when YAML loading fails.
 #'
 #' @param env Environment name
@@ -500,7 +488,6 @@ get_fallback_golem_config <- function(env) {
 
 #' Apply Golem Configuration to Runtime
 #'
-#' @description
 #' Apply loaded golem configuration til application runtime.
 #' Bridges between YAML config og eksisterende systems.
 #'
@@ -551,7 +538,6 @@ apply_golem_config <- function(golem_config) {
 
 #' Get Current Golem Configuration Summary
 #'
-#' @description
 #' Get human-readable summary af current golem configuration.
 #'
 #' @return Character vector with configuration summary
@@ -584,5 +570,4 @@ get_golem_config_summary <- function() {
 
 #' Null-coalescing operator
 #'
-#' @description
 # Null coalescing operator is defined in utils_logging.R

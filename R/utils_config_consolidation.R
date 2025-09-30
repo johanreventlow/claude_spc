@@ -4,7 +4,6 @@
 
 #' Configuration Registry
 #'
-#' @description
 #' Centralt registry for applikationskonfiguration. Samler alle
 #' konfigurationsværdier fra spredte config-filer i et enkelt interface.
 #'
@@ -405,7 +404,6 @@ create_config_registry <- function() {
 
 #' Get global configuration value with fallback
 #'
-#' @description
 #' Convenience function for accessing configuration values with
 #' automatic fallback handling and type conversion.
 #'
@@ -460,7 +458,6 @@ get_config <- function(path, default = NULL, type = "character", config_registry
 
 #' Initialize global configuration registry
 #'
-#' @description
 #' Sets up the global configuration registry for use throughout the application.
 #' Should be called once during app initialization.
 #'

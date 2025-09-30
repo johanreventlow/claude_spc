@@ -15,7 +15,6 @@
 
 #' Get or create the SPCify package environment
 #'
-#' @description
 #' Returns the package-level environment used for storing configuration
 #' and global variables. Creates it if it doesn't exist.
 #'

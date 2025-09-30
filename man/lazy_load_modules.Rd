@@ -2,7 +2,9 @@
 % Please edit documentation in R/utils_lazy_loading.R
 \name{lazy_load_modules}
 \alias{lazy_load_modules}
-\title{Load all modules based on configuration}
+\title{Load all modules based on configuration
+Load all heavy modules that meet their loading conditions.
+Used during startup to load only necessary modules.}
 \usage{
 lazy_load_modules(force_all = FALSE)
 }
@@ -13,6 +15,7 @@ lazy_load_modules(force_all = FALSE)
 List of successfully loaded modules
 }
 \description{
+Load all modules based on configuration
 Load all heavy modules that meet their loading conditions.
 Used during startup to load only necessary modules.
 }

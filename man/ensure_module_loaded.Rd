@@ -2,7 +2,9 @@
 % Please edit documentation in R/utils_lazy_loading.R
 \name{ensure_module_loaded}
 \alias{ensure_module_loaded}
-\title{Ensure module is loaded}
+\title{Ensure module is loaded
+Ensure a specific module is loaded before use. This is the main function
+to call before using functionality from a lazy-loaded module.}
 \usage{
 ensure_module_loaded(module_name)
 }
@@ -13,6 +15,7 @@ ensure_module_loaded(module_name)
 TRUE if module is available, FALSE otherwise
 }
 \description{
+Ensure module is loaded
 Ensure a specific module is loaded before use. This is the main function
 to call before using functionality from a lazy-loaded module.
 }

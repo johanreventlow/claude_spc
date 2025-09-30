@@ -423,7 +423,6 @@ validate_spc_inputs <- function(data, config) {
 
 #' Comprehensive Data Structure Validation for SPC Analysis
 #'
-#' @description
 #' Performs comprehensive validation of uploaded data to ensure it is suitable
 #' for SPC (Statistical Process Control) analysis. Integrated from validateDataStructure.
 #'

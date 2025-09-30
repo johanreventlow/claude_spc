@@ -2,7 +2,6 @@
 # Startup cache system for static artifacts to improve boot performance
 
 #' Startup cache configuration
-#' @description
 #' Configuration for caching static artifacts during startup to reduce
 #' repeated computations and file reads on subsequent application starts.
 #'
@@ -47,7 +46,6 @@ STARTUP_CACHE_CONFIG <- list(
 )
 
 #' Initialize startup cache directory
-#' @description
 #' Create cache directory if it doesn't exist and clean up old cache files
 #'
 #' @return TRUE if successful, FALSE otherwise
@@ -78,7 +76,6 @@ init_startup_cache <- function() {
 }
 
 #' Clean up old cache files
-#' @description
 #' Remove cache files that are older than their TTL or if cache size exceeds limit
 #'
 #' @export
@@ -150,7 +147,6 @@ cleanup_old_cache <- function() {
 }
 
 #' Cache startup data
-#' @description
 #' Cache all configured static artifacts for faster subsequent startups
 #'
 #' @return List of successfully cached artifacts
@@ -221,7 +217,6 @@ cache_startup_data <- function() {
 }
 
 #' Load cached startup data
-#' @description
 #' Load cached static artifacts to speed up startup
 #'
 #' @return List of successfully loaded artifacts with their data
@@ -279,7 +274,6 @@ load_cached_startup_data <- function() {
 }
 
 #' Get startup cache status
-#' @description
 #' Get information about the current startup cache state
 #'
 #' @return List with cache status information

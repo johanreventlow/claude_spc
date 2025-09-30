@@ -3,7 +3,6 @@
 
 #' Configure logging level from YAML configuration
 #'
-#' @description
 #' Sets SPC_LOG_LEVEL from golem-config.yml as single source of truth.
 #' Respects explicit log_level parameter override.
 #'
@@ -57,7 +56,6 @@ configure_logging_from_yaml <- function(log_level = NULL) {
 
 #' Configure application environment and test mode
 #'
-#' @description
 #' Centralized configuration of application environment and test mode settings.
 #' Uses golem config as single source of truth instead of scattered environment variable setting.
 #'
@@ -134,7 +132,6 @@ configure_app_environment <- function(enable_test_mode = NULL, golem_options = l
 
 #' Initialize startup performance optimizations
 #'
-#' @description
 #' Initialize startup cache and lazy loading systems at run_app() level.
 #' This ensures performance optimizations work in production regardless of loading mode.
 #'

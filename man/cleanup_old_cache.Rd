@@ -2,10 +2,12 @@
 % Please edit documentation in R/utils_startup_cache.R
 \name{cleanup_old_cache}
 \alias{cleanup_old_cache}
-\title{Clean up old cache files}
+\title{Clean up old cache files
+Remove cache files that are older than their TTL or if cache size exceeds limit}
 \usage{
 cleanup_old_cache()
 }
 \description{
+Clean up old cache files
 Remove cache files that are older than their TTL or if cache size exceeds limit
 }

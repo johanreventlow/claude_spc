@@ -733,7 +733,6 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 
 #' Enqueue UI Update
 #'
-#' @description
 #' Clean API for enqueueing UI updates with automatic processor start
 #'
 #' @param app_state Application state containing queue

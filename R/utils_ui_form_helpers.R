@@ -4,7 +4,6 @@
 
 #' Form Field Update Manager
 #'
-#' @description
 #' Factory for creating form field update functions with standardized patterns.
 #' Ekstraeret fra ui_utils_ui_updates.R for bedre testability og genbrug.
 #'
@@ -144,7 +143,6 @@ create_form_update_service <- function(session) {
 
 #' UI Element Visibility Manager
 #'
-#' @description
 #' Utility for managing UI element visibility with consistent patterns.
 #' Ekstraeret fra ui_utils_ui_updates.R for bedre separation of concerns.
 #'
@@ -216,7 +214,6 @@ create_ui_visibility_service <- function(session) {
 
 #' Column Choice Update Manager
 #'
-#' @description
 #' Specialized service for updating column choice inputs with data-driven choices.
 #' Ekstraeret fra ui_utils_ui_updates.R for better separation og testability.
 #'

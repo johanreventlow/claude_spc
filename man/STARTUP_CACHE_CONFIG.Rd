@@ -3,7 +3,9 @@
 \docType{data}
 \name{STARTUP_CACHE_CONFIG}
 \alias{STARTUP_CACHE_CONFIG}
-\title{Startup cache configuration}
+\title{Startup cache configuration
+Configuration for caching static artifacts during startup to reduce
+repeated computations and file reads on subsequent application starts.}
 \format{
 An object of class \code{list} of length 4.
 }
@@ -11,6 +13,7 @@ An object of class \code{list} of length 4.
 STARTUP_CACHE_CONFIG
 }
 \description{
+Startup cache configuration
 Configuration for caching static artifacts during startup to reduce
 repeated computations and file reads on subsequent application starts.
 }

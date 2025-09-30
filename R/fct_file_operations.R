@@ -5,7 +5,6 @@
 # Bruger readxl og readr til fil-import
 
 #' Validate safe file path for uploads
-#' @description
 #' Enhanced path traversal protection for file uploads
 #' @param uploaded_path Path from file upload input
 #' @return Validated safe file path
@@ -80,7 +79,6 @@ validate_safe_file_path <- function(uploaded_path) {
 }
 
 #' Sanitize session metadata input
-#' @description
 #' Secure input sanitization for Excel session metadata
 #' @param input_value Raw input value from Excel
 #' @param field_type Type of field for specific validation

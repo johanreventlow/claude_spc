@@ -2,7 +2,8 @@
 % Please edit documentation in R/utils_lazy_loading.R
 \name{get_lazy_loading_status}
 \alias{get_lazy_loading_status}
-\title{Get lazy loading status}
+\title{Get lazy loading status
+Get current status of all lazy loaded modules}
 \usage{
 get_lazy_loading_status()
 }
@@ -10,5 +11,6 @@ get_lazy_loading_status()
 List with module loading status
 }
 \description{
+Get lazy loading status
 Get current status of all lazy loaded modules
 }

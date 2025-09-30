@@ -4,7 +4,6 @@
 
 #' Log QIC input parametre til debugging
 #'
-#' @description
 #' Logger alle input parametre til qicharts2::qic() kald for debugging.
 #' Kun aktiv ved DEBUG log niveau for at undgå performance impact.
 #'
@@ -133,7 +132,6 @@ log_qic_inputs <- function(qic_args, call_context = "UNKNOWN", call_number = NUL
 
 #' Log QIC output resultater til debugging
 #'
-#' @description
 #' Logger alle resultater fra qicharts2::qic() kald inklusiv anhoej-rules.
 #' Kun aktiv ved DEBUG log niveau.
 #'
@@ -304,7 +302,6 @@ log_qic_results <- function(qic_result, call_context = "UNKNOWN", call_number = 
 
 #' Wrapper funktion der logger qic() kald før og efter
 #'
-#' @description
 #' Wrapper omkring qicharts2::qic() kald der automatisk logger
 #' input parametre og output resultater for debugging.
 #'
@@ -352,7 +349,6 @@ log_qic_call_wrapper <- function(qic_args, call_context = "UNKNOWN", call_number
 
 #' Log sammenligning mellem forventede og faktiske anhoej resultater
 #'
-#' @description
 #' Hjælpefunktion til debugging af anhoej-rules diskrepanser.
 #' Sammenligner forventede værdier med faktiske qic() output.
 #'

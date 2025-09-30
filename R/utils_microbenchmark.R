@@ -5,7 +5,6 @@
 # the microbenchmark package for statistical analysis of performance.
 
 #' Safely evaluate expressions in benchmark context
-#' @description
 #' Secure wrapper for eval() that validates input and provides controlled execution
 #' @param expr Expression, call, or function to evaluate
 #' @param operation_name Name of the operation for logging

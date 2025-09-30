@@ -3,7 +3,6 @@
 
 #' Opret observer manager
 #'
-#' @description
 #' Giver et sæt hjælpefunktioner til at registrere, fjerne og rydde op i
 #' Shiny observers, så vi undgår memory leaks og hængende observers mellem
 #' sessioner/tests.

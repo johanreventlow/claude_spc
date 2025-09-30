@@ -389,7 +389,6 @@ should_enable_shinylogs <- function() {
 
 #' Initialize shinylogs logging announcement
 #'
-#' @description
 #' Displays shinylogs status information during application initialization.
 #' This function should be called explicitly during server startup, not at parse-time.
 #'

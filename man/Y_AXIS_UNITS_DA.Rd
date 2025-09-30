@@ -3,7 +3,9 @@
 \docType{data}
 \name{Y_AXIS_UNITS_DA}
 \alias{Y_AXIS_UNITS_DA}
-\title{Y-aksen enheder for forskellige chart typer}
+\title{Y-aksen enheder for forskellige chart typer
+Named list mapping Danish display names to English runtime codes.
+Used by get_unit_label() to convert runtime values back to Danish labels.}
 \format{
 An object of class \code{list} of length 12.
 }
@@ -11,6 +13,7 @@ An object of class \code{list} of length 12.
 Y_AXIS_UNITS_DA
 }
 \description{
+Y-aksen enheder for forskellige chart typer
 Named list mapping Danish display names to English runtime codes.
 Used by get_unit_label() to convert runtime values back to Danish labels.
 }

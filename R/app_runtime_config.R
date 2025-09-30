@@ -4,7 +4,6 @@
 
 #' Initialize Complete Runtime Configuration
 #'
-#' @description
 #' Centraliseret runtime konfiguration som erstatter spredte konstanter i global.R
 #' og integrerer med golem-style options og environment profiles for environment-aware configuration.
 #'
@@ -63,7 +62,6 @@ initialize_runtime_config <- function(override_options = list(), use_environment
 
 #' Setup Development Configuration
 #'
-#' @description
 #' Development-specific settings med environment-aware defaults.
 #'
 #' @param override_options Optional override values
@@ -86,7 +84,6 @@ setup_development_config <- function(override_options = list()) {
 
 #' Setup Environment Features
 #'
-#' @description
 #' Environment detection og feature flags for miljøafhængig adfærd.
 #' Uses new environment profile detection system.
 #'
@@ -124,7 +121,6 @@ setup_environment_features <- function(override_options = list()) {
 
 #' Setup Logging Features
 #'
-#' @description
 #' Centraliseret logging configuration med environment-aware levels.
 #'
 #' @param override_options Optional override values
@@ -147,7 +143,6 @@ setup_logging_features <- function(override_options = list()) {
 
 #' Setup Testing Configuration
 #'
-#' @description
 #' Test mode og eksempeldata konfiguration.
 #'
 #' @param override_options Optional override values
@@ -202,7 +197,6 @@ setup_testing_config <- function(override_options = list()) {
 
 #' Setup Performance Configuration
 #'
-#' @description
 #' Performance og timeout settings med environment-aware optimizations.
 #'
 #' @param override_options Optional override values
@@ -241,7 +235,6 @@ setup_performance_config <- function(override_options = list()) {
 
 #' Apply Runtime Configuration to Global Variables
 #'
-#' @description
 #' Sæt globale variabler for backward compatibility med eksisterende kode.
 #' Denne funktion sikrer at eksisterende kode der forventer globale konstanter
 #' stadig fungerer efter centralisering.
@@ -283,7 +276,6 @@ apply_runtime_config <- function(config) {
 
 #' Get Override Value or Default
 #'
-#' @description
 #' Utility function to get override value fra options eller return default.
 #'
 #' @param override_options Override options list
@@ -306,7 +298,6 @@ get_override_or_default <- function(override_options, key, default) {
 
 #' Determine Auto Restore Setting
 #'
-#' @description
 #' Environment-aware auto restore configuration.
 #'
 #' @param override_options Override options
@@ -330,7 +321,6 @@ determine_auto_restore_setting <- function(override_options) {
 
 #' Determine Test Mode Setting
 #'
-#' @description
 #' Environment-aware test mode configuration.
 #'
 #' @param override_options Override options
@@ -365,7 +355,6 @@ determine_test_mode_setting <- function(override_options) {
 
 #' Determine Debug Mode Setting
 #'
-#' @description
 #' Environment-aware debug mode configuration.
 #'
 #' @param override_options Override options
@@ -393,7 +382,6 @@ determine_debug_mode_setting <- function(override_options) {
 
 #' Determine Log Level
 #'
-#' @description
 #' Environment-aware log level determination.
 #'
 #' @param override_options Override options
@@ -423,7 +411,6 @@ determine_log_level <- function(override_options) {
 
 #' Determine Environment Type
 #'
-#' @description
 #' Determine textual environment type fra boolean flags.
 #'
 #' @param env_config Environment configuration
@@ -442,7 +429,6 @@ determine_environment_type <- function(env_config) {
 
 #' Determine Environment Type from Context
 #'
-#' @description
 #' Determine environment type using available context og override options.
 #'
 #' @param override_options Override options
@@ -465,7 +451,6 @@ determine_environment_type_from_context <- function(override_options = list()) {
 
 #' Convert Environment Profile to Legacy Config Format
 #'
-#' @description
 #' Convert environment profile til legacy configuration format for backward compatibility.
 #'
 #' @param profile Environment profile from get_environment_profile()

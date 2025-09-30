@@ -6,7 +6,6 @@
 ## App State Schema -----
 #' Opret centraliseret applikations state struktur (Phase 4)
 #'
-#' @description
 #' Opretter det centraliserede state management schema for SPC App.
 #' Dette implementerer Phase 4 arkitekturen med single source of truth
 #' for al applikations tilstand.

@@ -2,7 +2,8 @@
 % Please edit documentation in R/utils_startup_cache.R
 \name{load_cached_startup_data}
 \alias{load_cached_startup_data}
-\title{Load cached startup data}
+\title{Load cached startup data
+Load cached static artifacts to speed up startup}
 \usage{
 load_cached_startup_data()
 }
@@ -10,5 +11,6 @@ load_cached_startup_data()
 List of successfully loaded artifacts with their data
 }
 \description{
+Load cached startup data
 Load cached static artifacts to speed up startup
 }

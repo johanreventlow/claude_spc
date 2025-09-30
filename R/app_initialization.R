@@ -4,7 +4,6 @@
 
 #' Initialize Complete Shiny Application
 #'
-#' @description
 #' Package-based initialization function that replaces file sourcing with
 #' package namespace access. All functions are assumed to be loaded via
 #' package loading (library(SPCify)).
@@ -54,7 +53,6 @@ initialize_app <- function(force_reload = FALSE, config_override = NULL) {
 
 #' Verify Package Functions Are Available
 #'
-#' @description
 #' Verify that essential package functions are loaded and available.
 #' Replaces the old foundation utilities loading with package verification.
 #'
@@ -96,7 +94,6 @@ verify_package_functions <- function() {
 
 #' Verify Branding Setup
 #'
-#' @description
 #' Verify that branding configuration is properly loaded and available.
 #' Replaces the old core loading with branding verification.
 #'
@@ -150,7 +147,6 @@ verify_branding_setup <- function() {
 
 #' Setup Performance Optimizations
 #'
-#' @description
 #' Configure performance-related settings based on app configuration.
 #' Simplified for package-based loading.
 #'
@@ -188,7 +184,6 @@ setup_performance_optimizations <- function(config) {
 
 #' Verify Initialization Completeness
 #'
-#' @description
 #' Post-initialization verification that all critical components are loaded.
 #' Simplified for package-based approach.
 #'
@@ -242,7 +237,6 @@ verify_initialization_completeness <- function() {
 
 #' Get Initialization Status Report
 #'
-#' @description
 #' Generate comprehensive report of initialization status.
 #' Simplified for package-based approach.
 #'

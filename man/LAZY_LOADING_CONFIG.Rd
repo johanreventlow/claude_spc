@@ -3,7 +3,9 @@
 \docType{data}
 \name{LAZY_LOADING_CONFIG}
 \alias{LAZY_LOADING_CONFIG}
-\title{Lazy loading configuration}
+\title{Lazy loading configuration
+Configuration for which modules should be loaded lazily vs. eagerly
+based on application usage patterns and startup performance requirements.}
 \format{
 An object of class \code{list} of length 2.
 }
@@ -11,6 +13,7 @@ An object of class \code{list} of length 2.
 LAZY_LOADING_CONFIG
 }
 \description{
+Lazy loading configuration
 Configuration for which modules should be loaded lazily vs. eagerly
 based on application usage patterns and startup performance requirements.
 }

@@ -34,7 +34,6 @@ SPC_COLUMN_NAMES <- list(
 )
 
 #' Y-aksen enheder for forskellige chart typer
-#' @description
 #' Named list mapping Danish display names to English runtime codes.
 #' Used by get_unit_label() to convert runtime values back to Danish labels.
 #' @export
