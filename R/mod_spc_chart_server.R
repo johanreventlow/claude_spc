@@ -79,44 +79,77 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       app_state$visualization$module_data_cache <- NULL
     }
 
-    # BALANCED: Listen to key events but with longer debounce to prevent cascades
-    # We need to listen to multiple events but use debouncing to prevent rapid succession
-    module_data_reactive <- shiny::debounce(
-      shiny::reactive({
-        # Key events that should trigger plot updates:
-        app_state$events$navigation_changed  # Final event in chain (primary)
-        app_state$events$data_changed        # Manual data changes (user-initiated)
+    # SPRINT 1 FIX: Atomic event-driven data reactive with race condition prevention
+    # Replaced overlapping event listeners with single consolidated visualization_update event
+    # This implements CLAUDE.md Section 3.1.1 Hybrid Anti-Race Strategy
 
-        app_state$events$auto_detection_completed  # After autodetect completes
+    # Initialize consolidated event in app_state if not exists
+    if (is.null(shiny::isolate(app_state$events$visualization_update_needed))) {
+      app_state$events$visualization_update_needed <- 0L
+    }
 
-        # Note: data_loaded not included as it triggers autodetect → navigation cascade
+    # ATOMIC UPDATE: Consolidated observer with proper guards
+    shiny::observeEvent(
+      app_state$events$visualization_update_needed,
+      ignoreInit = TRUE,
+      priority = OBSERVER_PRIORITIES$DATA_PROCESSING,
+      {
+        # Level 3: Guard condition - prevent concurrent operations
+        if (shiny::isolate(app_state$visualization$cache_updating)) {
+          log_debug("Skipping visualization cache update - already in progress", .context = "VISUALIZATION")
+          return()
+        }
 
-        # GUARD: Skip if data processing is in progress
+        # Level 3: Skip if data processing is in progress
         if (shiny::isolate(app_state$data$updating_table) %||% FALSE) {
-          log_debug("module_data_reactive: skipping - data update in progress", .context = "VISUALIZATION")
-          return(shiny::isolate(app_state$visualization$module_cached_data))
+          log_debug("Skipping visualization cache update - table update in progress", .context = "VISUALIZATION")
+          return()
         }
 
-        # RELAXED GUARD: Allow plot updates during autodetect, only cache if no data
-        autodetect_in_progress <- shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
-        if (autodetect_in_progress) {
-          log_debug("module_data_reactive: autodetect in progress - allowing plot updates", .context = "VISUALIZATION")
-          # Don't block, continue to allow UI updates
-        }
+        # Level 2: Atomic state update with guard flag
+        safe_operation(
+          operation_name = "Update visualization cache (Sprint 1 fix)",
+          code = {
+            # Set atomic guard flag
+            app_state$visualization$cache_updating <- TRUE
 
-        # Get fresh data every time any of these events fire
-        result <- get_module_data()
+            on.exit({
+              # Clear guard flag on function exit (success or error)
+              app_state$visualization$cache_updating <- FALSE
+            }, add = TRUE)
 
-        data_info <- if (!is.null(result)) {
-          paste("rows:", nrow(result), "cols:", ncol(result))
-        } else {
-          "NULL"
-        }
-        log_debug(paste("module_data_reactive called (debounced), returning:", data_info), "VISUALIZATION")
-        return(result)
-      }),
-      millis = 1200  # Increased from 800ms to catch both startup events in same batch  # Increased to prevent cascade invalidations within 300ms event chains
+            # Get fresh data
+            result_data <- get_module_data()
+
+            # Atomic cache update - both values updated together
+            app_state$visualization$module_data_cache <- result_data
+            app_state$visualization$module_cached_data <- result_data
+
+            data_info <- if (!is.null(result_data)) {
+              paste("rows:", nrow(result_data), "cols:", ncol(result_data))
+            } else {
+              "NULL"
+            }
+
+            log_debug(paste("Visualization cache updated atomically:", data_info), "VISUALIZATION")
+          },
+          fallback = function(e) {
+            log_error(paste("Visualization cache update failed:", e$message), "VISUALIZATION")
+            # Guard flag cleared by on.exit() even in error case
+          },
+          error_type = "processing"
+        )
+      }
     )
+
+    # MODULE DATA REACTIVE: Simple cache reader (no overlapping events)
+    module_data_reactive <- shiny::reactive({
+      # React only to navigation for UI updates
+      app_state$events$navigation_changed
+
+      # Return cached data (updated atomically by observer above)
+      return(shiny::isolate(app_state$visualization$module_cached_data))
+    })
 
     # UNIFIED EVENT SYSTEM: Consolidated event handling following Race Condition Prevention strategy
     # Implements Event Consolidation (CLAUDE.md Section 3.1.1) for functionally related events

@@ -212,6 +212,7 @@ autodetect_engine <- function(data = NULL,
 
   # Emit completion event for UI updates
   emit$auto_detection_completed()
+  emit$visualization_update_needed()  # SPRINT 1: Trigger atomic visualization update after autodetect
 
   return(invisible(results))
 }

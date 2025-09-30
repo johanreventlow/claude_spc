@@ -133,16 +133,18 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
   # File upload handler
   shiny::observeEvent(input$data_file, {
     # Enhanced debug tracking for comprehensive testing
+    # SPRINT 1 SECURITY FIX: Sanitize session token before logging
     debug_user_interaction("file_upload_initiated",
                           list(filename = input$data_file$name,
                                size = input$data_file$size,
                                type = input$data_file$type),
-                          session$token)
+                          sanitize_session_token(session$token))
 
     shiny::req(input$data_file)
 
     # Start workflow tracer for file upload
-    upload_tracer <- debug_workflow_tracer("file_upload_workflow", app_state, session$token)
+    # SPRINT 1 SECURITY FIX: Sanitize session token before logging
+    upload_tracer <- debug_workflow_tracer("file_upload_workflow", app_state, sanitize_session_token(session$token))
     upload_tracer$step("upload_initiated")
 
 
@@ -152,12 +154,13 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
                 size_bytes = input$data_file$size,
                 file_type = input$data_file$type
               ),
-              session_id = session$token)
+              session_id = sanitize_session_token(session$token))
 
     upload_tracer$step("file_validation")
 
     # ENHANCED FILE VALIDATION
-    validation_result <- validate_uploaded_file(input$data_file, session$token)
+    # SPRINT 1 SECURITY FIX: Sanitize session token before logging
+    validation_result <- validate_uploaded_file(input$data_file, sanitize_session_token(session$token))
     if (!validation_result$valid) {
       upload_tracer$complete("file_validation_failed")
       debug_log("File validation failed", "ERROR_HANDLING", level = "ERROR",
@@ -165,7 +168,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
                   validation_errors = validation_result$errors,
                   filename = input$data_file$name
                 ),
-                session_id = session$token)
+                session_id = sanitize_session_token(session$token))
 
       shiny::showNotification(
         paste("File validation failed:", paste(validation_result$errors, collapse = "; ")),
@@ -194,7 +197,7 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
 
     debug_log("File upload state flags set", "FILE_UPLOAD_FLOW", level = "TRACE",
               context = list(updating_table = TRUE),
-              session_id = session$token)
+              session_id = sanitize_session_token(session$token))
     on.exit(
       {
         # Unified state assignment only - Clear table updating flag
@@ -219,18 +222,19 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
         upload_tracer$step("file_processing_started")
 
         if (file_ext %in% c("xlsx", "xls")) {
-          debug_log("Starting Excel file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
+          debug_log("Starting Excel file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = sanitize_session_token(session$token))
           handle_excel_upload(file_path, session, app_state, emit, ui_service)
           upload_tracer$step("excel_processing_complete")
         } else {
-          debug_log("Starting CSV file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
-          handle_csv_upload(file_path, app_state, session$token, emit)
+          debug_log("Starting CSV file processing", "FILE_UPLOAD_FLOW", level = "INFO", session_id = sanitize_session_token(session$token))
+          # SPRINT 1 SECURITY FIX: Sanitize token passed to handle_csv_upload
+          handle_csv_upload(file_path, app_state, sanitize_session_token(session$token), emit)
           upload_tracer$step("csv_processing_complete")
         }
 
         # Complete workflow tracing
         upload_tracer$complete("file_upload_workflow_complete")
-        debug_log("File upload workflow completed successfully", "FILE_UPLOAD_FLOW", level = "INFO", session_id = session$token)
+        debug_log("File upload workflow completed successfully", "FILE_UPLOAD_FLOW", level = "INFO", session_id = sanitize_session_token(session$token))
       },
       error_type = "network",
       emit = emit,

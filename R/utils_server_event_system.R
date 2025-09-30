@@ -88,6 +88,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
       } else if (is_table_cells_edit) {
         emit$navigation_changed()
+        emit$visualization_update_needed()  # SPRINT 1: Trigger atomic visualization update
 
       } else if (is_change_context) {
         # Data change path - update column choices AND trigger plot regeneration
@@ -100,6 +101,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
         # Trigger plot regeneration when data is edited in table
         emit$navigation_changed()
+        emit$visualization_update_needed()  # SPRINT 1: Trigger atomic visualization update
 
       } else {
         # General data update - NO autodetect (only update choices)

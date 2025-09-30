@@ -451,6 +451,13 @@ create_emit_api <- function(app_state) {
       })
     },
 
+    # Visualization events (SPRINT 1: Consolidated event for atomic updates)
+    visualization_update_needed = function() {
+      shiny::isolate({
+        app_state$events$visualization_update_needed <- app_state$events$visualization_update_needed + 1L
+      })
+    },
+
     # Session lifecycle events
     session_started = function() {
       shiny::isolate({

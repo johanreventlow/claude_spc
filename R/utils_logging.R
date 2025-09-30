@@ -479,3 +479,43 @@ get_log_level_name <- function() {
   current_numeric <- get_log_level()
   level_names[current_numeric]
 }
+
+#' Sanitize session token for logging
+#'
+#' @description
+#' SPRINT 1 SECURITY FIX: Masks session tokens before logging to prevent
+#' session hijacking if logs are compromised. Shows only first 4 and last 4
+#' characters with ellipsis in between.
+#'
+#' @param session_token Character string containing the session token to sanitize
+#'
+#' @return Masked session token string (e.g., "abc1...xyz9") or "INVALID_SESSION"
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' sanitize_session_token("abc123def456ghi789")
+#' # Returns: "abc1...i789"
+#'
+#' sanitize_session_token(NULL)
+#' # Returns: "NO_SESSION"
+#' }
+sanitize_session_token <- function(session_token) {
+  # Handle NULL or empty tokens
+  if (is.null(session_token) || !is.character(session_token) || length(session_token) == 0) {
+    return("NO_SESSION")
+  }
+
+  # Handle very short tokens (less than 8 characters)
+  token_str <- as.character(session_token[[1]])
+  if (nchar(token_str) < 8) {
+    return("INVALID_SESSION")
+  }
+
+  # Mask middle characters, show first 4 and last 4
+  paste0(
+    substr(token_str, 1, 4),
+    "...",
+    substr(token_str, nchar(token_str) - 3, nchar(token_str))
+  )
+}
