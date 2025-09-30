@@ -979,36 +979,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       plot <- add_plot_enhancements(plot, qic_data, target_value, comment_data)
 
       return(list(plot = plot, qic_data = qic_data, display_scaler = display_scaler))
-    },
-    fallback = function(e) {
-      # Fallback to basic ggplot if qic() fails
-      plot_data <- data.frame(x = call_args$x, y = call_args$y)
-
-      plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = x, y = y)) +
-        ggplot2::geom_point(size = 2, color = hospital_colors$primary) +
-        ggplot2::geom_line(color = hospital_colors$primary, alpha = 0.7) +
-        ggplot2::geom_hline(
-          yintercept = median(call_args$y, na.rm = TRUE),
-          color = hospital_colors$secondary, linetype = "dashed"
-        ) +
-        ggplot2::labs(title = call_args$title, x = "", y = "") +
-        ggplot2::theme_minimal()
-
-      # Add target line if provided ----
-      if (!is.null(target_display) && is.numeric(target_display) && !is.na(target_display)) {
-        plot <- plot +
-          ggplot2::geom_hline(
-            yintercept = target_display,
-            color = SPC_COLORS$target_line,
-            linetype = SPC_LINE_TYPES$solid,
-            linewidth = SPC_LINE_WIDTHS$thick,
-            alpha = SPC_ALPHA_VALUES$target_line
-          )
-      }
-
-      return(list(plot = plot, qic_data = NULL, display_scaler = display_scaler))
-    },
-    error_type = "processing"
+    }
   ))
 }
 
