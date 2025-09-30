@@ -867,38 +867,90 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         # Count formatting with intelligent K/M notation
         # K starts at 1.000+ for correct notation (K = 1.000, not 10.000)
         # Trade-off: loses thousand separator for 1.000-9.999 range
+        # Only shows decimals if present (50K vs 50,5K)
         plot <- plot + ggplot2::scale_y_continuous(
-          labels = scales::label_number(
-            big.mark = ".",
-            decimal.mark = ",",
-            scale_cut = c("K" = 1e3, "M" = 1e6, "mia." = 1e9),
-            accuracy = 1
-          )
+          labels = function(x) {
+            # Apply scale cuts manually
+            if (abs(x) >= 1e9) {
+              scaled <- x / 1e9
+              if (scaled == round(scaled)) {
+                paste0(round(scaled), " mia.")
+              } else {
+                paste0(format(scaled, decimal.mark = ",", nsmall = 1), " mia.")
+              }
+            } else if (abs(x) >= 1e6) {
+              scaled <- x / 1e6
+              if (scaled == round(scaled)) {
+                paste0(round(scaled), "M")
+              } else {
+                paste0(format(scaled, decimal.mark = ",", nsmall = 1), "M")
+              }
+            } else if (abs(x) >= 1e3) {
+              scaled <- x / 1e3
+              if (scaled == round(scaled)) {
+                paste0(round(scaled), "K")
+              } else {
+                paste0(format(scaled, decimal.mark = ",", nsmall = 1), "K")
+              }
+            } else {
+              # No scaling - just format with thousand separator if needed
+              if (x == round(x)) {
+                format(round(x), big.mark = ".", decimal.mark = ",")
+              } else {
+                format(x, big.mark = ".", decimal.mark = ",", nsmall = 1)
+              }
+            }
+          }
         )
       } else if (y_axis_unit == "rate") {
-        # Rate formatting with one decimal
+        # Rate formatting (only shows decimals if present)
         plot <- plot + ggplot2::scale_y_continuous(
-          labels = scales::number_format(accuracy = 0.1, decimal.mark = ",")
+          labels = function(x) {
+            ifelse(x == round(x),
+                   format(round(x), decimal.mark = ","),
+                   format(x, decimal.mark = ",", nsmall = 1))
+          }
         )
       } else if (y_axis_unit == "time") {
         # Intelligent time formatting based on data range (input: minutes)
+        # Only shows decimals if present
         y_range <- range(qic_data$y, na.rm = TRUE)
         max_minutes <- max(y_range, na.rm = TRUE)
 
         if (max_minutes < 60) {
           # Less than 60 minutes -> show as minutes
           plot <- plot + ggplot2::scale_y_continuous(
-            labels = scales::number_format(suffix = " min", accuracy = 0.1, decimal.mark = ",")
+            labels = function(x) {
+              if (x == round(x)) {
+                paste0(round(x), " min")
+              } else {
+                paste0(format(x, decimal.mark = ",", nsmall = 1), " min")
+              }
+            }
           )
         } else if (max_minutes < 1440) {
           # Less than 24 hours (1440 min) -> show as hours
           plot <- plot + ggplot2::scale_y_continuous(
-            labels = function(x) paste0(format(x / 60, decimal.mark = ",", nsmall = 1), " timer")
+            labels = function(x) {
+              scaled <- x / 60
+              if (scaled == round(scaled)) {
+                paste0(round(scaled), " timer")
+              } else {
+                paste0(format(scaled, decimal.mark = ",", nsmall = 1), " timer")
+              }
+            }
           )
         } else {
           # 24 hours or more -> show as days
           plot <- plot + ggplot2::scale_y_continuous(
-            labels = function(x) paste0(format(x / 1440, decimal.mark = ",", nsmall = 1), " dage")
+            labels = function(x) {
+              scaled <- x / 1440
+              if (scaled == round(scaled)) {
+                paste0(round(scaled), " dage")
+              } else {
+                paste0(format(scaled, decimal.mark = ",", nsmall = 1), " dage")
+              }
+            }
           )
         }
       }
