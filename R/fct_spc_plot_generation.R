@@ -666,21 +666,33 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           # Execute QIC call with post-processing
           qic_data <- execute_qic_call(qic_args, chart_type, config)
 
-          # Tilføj kombineret anhoej.signal kolonne (runs ELLER crossings)
+          # Tilføj kombineret anhoej.signal kolonne (runs ELLER crossings) per part
           if (!is.null(qic_data)) {
-            # Beregn om der er brud på runs eller crossings signal
-            has_runs_signal <- "runs.signal" %in% names(qic_data) && any(qic_data$runs.signal, na.rm = TRUE)
-
-            has_crossings_signal <- if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
-              n_cross <- max(qic_data$n.crossings, na.rm = TRUE)
-              n_cross_min <- max(qic_data$n.crossings.min, na.rm = TRUE)
-              !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
+            # Brug runs.signal direkte fra qicharts2 (allerede per-række)
+            runs_sig_col <- if ("runs.signal" %in% names(qic_data)) {
+              qic_data$runs.signal
             } else {
-              FALSE
+              rep(FALSE, nrow(qic_data))
             }
 
-            # Tilføj anhoej.signal kolonne til hele datasættet
-            qic_data$anhoej.signal <- has_runs_signal || has_crossings_signal
+            # Beregn crossings signal per part
+            crossings_sig_col <- rep(FALSE, nrow(qic_data))
+            if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data) && "part" %in% names(qic_data)) {
+              # For hver part, check om crossings signal er brudt
+              for (p in unique(qic_data$part)) {
+                part_rows <- which(qic_data$part == p)
+                if (length(part_rows) > 0) {
+                  part_data <- qic_data[part_rows, ]
+                  n_cross <- max(part_data$n.crossings, na.rm = TRUE)
+                  n_cross_min <- max(part_data$n.crossings.min, na.rm = TRUE)
+                  has_crossing_signal <- !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
+                  crossings_sig_col[part_rows] <- has_crossing_signal
+                }
+              }
+            }
+
+            # Kombinér: TRUE hvis ENTEN runs ELLER crossings signal for den pågældende række
+            qic_data$anhoej.signal <- runs_sig_col | crossings_sig_col
           }
 
           qic_data
