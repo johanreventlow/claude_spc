@@ -454,16 +454,16 @@ add_plot_enhancements <- function(plot, qic_data, comment_data) {
   # }
 
   # Mållinje tilføjes ----
-  if ("target" %in% names(qic_data) && !all(is.na(qic_data$target))) {
-    plot <- plot +
-      ggplot2::geom_line(
-        ggplot2::aes(y = target),
-        color = hospital_colors$darkgrey,
-        linetype = "42",
-        linewidth = 1.2,
-        alpha = 0.8
-      )
-  }
+  # if ("target" %in% names(qic_data) && !all(is.na(qic_data$target))) {
+  #   plot <- plot +
+  #     ggplot2::geom_line(
+  #       ggplot2::aes(y = target),
+  #       color = hospital_colors$darkgrey,
+  #       linetype = "42",
+  #       linewidth = 1.2,
+  #       alpha = 0.8
+  #     )
+  # }
 
   # Kommentarer tilføjes ----
   if (!is.null(comment_data) && nrow(comment_data) > 0) {
@@ -681,14 +681,29 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       plot <- safe_operation(
         "Build custom ggplot",
         code = {
-          plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) + 
-            ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) + 
-            ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) + 
-            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = runs.signal),
-            color = hospital_colors$hospitalblue,
-            linewidth = 1) + 
-            ggplot2::labs(title = call_args$title, x = "", y = "") + 
-            ggplot2::theme_minimal()
+          plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) 
+            
+          # Kontrolgrænser tilføjes conditionally ----
+          if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl)) && !is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
+            plot <- plot +
+              ggplot2::geom_ribbon(ggplot2::aes(ymin = lcl, ymax = ucl), fill = "#E6F5FD", alpha = 0.5) +
+              geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = 2.5, linecolour = NA, textcolour = "#b5b5b9", na.rm = TRUE) +
+              geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = 2.5, linecolour = NA, textcolour = "#b5b7b9", na.rm = TRUE) 
+          }
+          # Resten af plot tilføjes ------
+          plot <- plot +  
+            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = 1, colour = "#565656", linetype="42", na.rm = TRUE) +
+            ggplot2::geom_line(ggplot2::aes(y = y), colour = "#AEAEAE", linewidth = 1, na.rm = TRUE) +
+            ggplot2::geom_point(ggplot2::aes(y = y), colour = "#858585", size = 2, na.rm = TRUE) +
+            
+            # ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) + 
+            # ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) + 
+            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = runs.signal), color = hospital_colors$hospitalblue, linewidth = 1) + 
+            
+            
+            ggplot2::labs(title = call_args$title, x = NULL, y = NULL) + 
+            ggplot2::scale_linetype_manual(values = c("solid", "12")) 
+            
 
           plot
         },
@@ -699,13 +714,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         error_type = "processing"
       )
 
-      # Kontrolgrænser tilføjes conditionally ----
-      if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl)) && !is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
-        plot <- plot +
-          ggplot2::geom_ribbon(ggplot2::aes(ymin = lcl, ymax = ucl),
-                              fill = "#E6F5FD", alpha = 0.5
-          )
-      }
+
 
       # Intelligent x-akse formatering baseret på dato-mønstre ----
       if (!is.null(x_validation$x.format) && x_validation$is_date) {
@@ -786,7 +795,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         }
       }
 
-      # Y-axis formatting based on unit type
+      # Y-axis formatting based on unit type -----
       if (y_axis_unit == "percent") {
         # Percent formatting with % suffix
         # Data from qic is in decimal form (0.9 for 90%), scale = 100 converts to percentage
@@ -839,7 +848,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           }
         )
       } else if (y_axis_unit == "rate") {
-        # Rate formatting (only shows decimals if present)
+        # Rate formatting (only shows decimals if present) ----
         plot <- plot + ggplot2::scale_y_continuous(
           labels = function(x) {
             ifelse(x == round(x),
@@ -848,7 +857,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           }
         )
       } else if (y_axis_unit == "time") {
-        # Intelligent time formatting based on data range (input: minutes)
+        # Intelligent time formatting based on data range (input: minutes) -----
         # Only shows decimals if present
         y_range <- range(qic_data$y, na.rm = TRUE)
         max_minutes <- max(y_range, na.rm = TRUE)
@@ -946,22 +955,38 @@ applyHospitalTheme <- function(plot) {
       )
 
       themed_plot <- plot +
-        ggplot2::theme_minimal() +
+        
+        # ggplot2::theme_minimal()
         ggplot2::theme(
-          plot.title = ggplot2::element_text(color = hospital_colors$primary, size = 14, face = "bold"),
-          plot.subtitle = ggplot2::element_text(color = hospital_colors$secondary, size = 12),
-          axis.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
-          axis.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
-          legend.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
-          legend.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
-          panel.grid.major = ggplot2::element_line(color = hospital_colors$light),
-          panel.grid.minor = ggplot2::element_line(color = hospital_colors$light),
-          strip.text = ggplot2::element_text(color = hospital_colors$primary, face = "bold")
-        ) +
-        ggplot2::labs(caption = footer_text) +
-        ggplot2::theme(
-          plot.caption = ggplot2::element_text(size = 8, color = hospital_colors$secondary, hjust = 0)
-        )
+          plot.margin = ggplot2::unit(c(0, 0, 0, 10), "pt"),
+          panel.background = ggplot2::element_blank(),
+          axis.text.y = ggplot2::element_text(color = "#858585", size = 16, angle = 0, hjust = 1),
+          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = 8),
+          axis.line.x = ggplot2::element_line(color = "#D6D6D6"),
+          axis.ticks.x = ggplot2::element_line(color = "#D6D6D6"),
+          axis.ticks.y = ggplot2::element_line(color = "#D6D6D6"),
+          panel.grid.major = ggplot2::element_blank(),
+          panel.grid.minor = ggplot2::element_blank(),
+          legend.position = "none",
+        ) + lemon::coord_capped_cart(bottom='right', gap = 0)
+        
+        
+        # ggplot2::theme_minimal() +
+        # ggplot2::theme(
+        #   plot.title = ggplot2::element_text(color = hospital_colors$primary, size = 14, face = "bold"),
+        #   plot.subtitle = ggplot2::element_text(color = hospital_colors$secondary, size = 12),
+        #   axis.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
+        #   axis.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
+        #   legend.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
+        #   legend.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
+        #   panel.grid.major = ggplot2::element_line(color = hospital_colors$light),
+        #   panel.grid.minor = ggplot2::element_line(color = hospital_colors$light),
+        #   strip.text = ggplot2::element_text(color = hospital_colors$primary, face = "bold")
+        # ) +
+        # ggplot2::labs(caption = footer_text) +
+        # ggplot2::theme(
+        #   plot.caption = ggplot2::element_text(size = 8, color = hospital_colors$secondary, hjust = 0)
+        # )
 
       return(themed_plot)
     },
