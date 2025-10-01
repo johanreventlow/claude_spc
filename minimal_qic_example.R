@@ -23,7 +23,7 @@ qic_result <- qic(
   n = Nævner,
   data = data,
   chart = "run",
-  freeze = c(3),
+  # freeze = c(3),
   # part = c(14),
   multiply = 100,  # Vis som procent
   return.data = TRUE

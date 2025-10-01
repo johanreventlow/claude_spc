@@ -431,9 +431,132 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
 ## Add Plot Enhancements
 # Tilføjer target lines, phase separations og comment annotations
-add_plot_enhancements <- function(plot, qic_data, comment_data) {
+add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count") {
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
+
+  # Hjælpefunktion til at formatere værdier PRÆCIS som y-aksen ----
+  format_y_value <- function(val, y_unit) {
+    if (is.na(val)) return(NA_character_)
+
+    if (y_unit == "percent") {
+      # Percent formatting - matcher scale_y_continuous(labels = scales::label_percent())
+      scales::label_percent()(val)
+    } else if (y_unit == "count") {
+      # Count formatting with K/M notation - matcher y-akse logik præcist
+      if (abs(val) >= 1e9) {
+        scaled <- val / 1e9
+        if (scaled == round(scaled)) {
+          paste0(round(scaled), " mia.")
+        } else {
+          paste0(format(scaled, decimal.mark = ",", nsmall = 1), " mia.")
+        }
+      } else if (abs(val) >= 1e6) {
+        scaled <- val / 1e6
+        if (scaled == round(scaled)) {
+          paste0(round(scaled), "M")
+        } else {
+          paste0(format(scaled, decimal.mark = ",", nsmall = 1), "M")
+        }
+      } else if (abs(val) >= 1e3) {
+        scaled <- val / 1e3
+        if (scaled == round(scaled)) {
+          paste0(round(scaled), "K")
+        } else {
+          paste0(format(scaled, decimal.mark = ",", nsmall = 1), "K")
+        }
+      } else {
+        # For values < 1000: show decimals only if present
+        if (val == round(val)) {
+          format(round(val), decimal.mark = ",", big.mark = ".")
+        } else {
+          format(val, decimal.mark = ",", big.mark = ".", nsmall = 1)
+        }
+      }
+    } else if (y_unit == "rate") {
+      # Rate formatting - kun decimaler hvis tilstede
+      if (val == round(val)) {
+        format(round(val), decimal.mark = ",")
+      } else {
+        format(val, decimal.mark = ",", nsmall = 1)
+      }
+    } else if (y_unit == "time") {
+      # Time formatting (input: minutes)
+      y_range <- range(qic_data$y, na.rm = TRUE)
+      max_minutes <- max(y_range, na.rm = TRUE)
+
+      if (max_minutes < 60) {
+        # Minutes
+        if (val == round(val)) {
+          paste0(round(val), " min")
+        } else {
+          paste0(format(val, decimal.mark = ",", nsmall = 1), " min")
+        }
+      } else if (max_minutes < 1440) {
+        # Hours
+        hours <- val / 60
+        if (hours == round(hours)) {
+          paste0(round(hours), " timer")
+        } else {
+          paste0(format(hours, decimal.mark = ",", nsmall = 1), " timer")
+        }
+      } else {
+        # Days
+        days <- val / 1440
+        if (days == round(days)) {
+          paste0(round(days), " dage")
+        } else {
+          paste0(format(days, decimal.mark = ",", nsmall = 1), " dage")
+        }
+      }
+    } else {
+      # Default formatting
+      if (val == round(val)) {
+        format(round(val), decimal.mark = ",")
+      } else {
+        format(val, decimal.mark = ",", nsmall = 1)
+      }
+    }
+  }
+
+  # Opret label data for centerline og target ----
+  label_data <- data.frame()
+
+  # Centerline label KUN for seneste part
+  if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
+    # Find seneste part
+    latest_part <- max(qic_data$part, na.rm = TRUE)
+    part_data <- qic_data[qic_data$part == latest_part & !is.na(qic_data$part), ]
+
+    if (nrow(part_data) > 0) {
+      # Brug sidste punkt i seneste part til label placering
+      last_row <- part_data[nrow(part_data), ]
+      cl_value <- last_row$cl
+      if (!is.na(cl_value)) {
+        label_data <- rbind(label_data, data.frame(
+          x = last_row$x,
+          y = cl_value,
+          label = paste0("CL: ", format_y_value(cl_value, y_axis_unit)),
+          type = "cl",
+          stringsAsFactors = FALSE
+        ))
+      }
+    }
+  }
+
+  # Target label (kun én gang - target er konstant)
+  if (!is.null(qic_data$target) && any(!is.na(qic_data$target))) {
+    target_value <- qic_data$target[!is.na(qic_data$target)][1]
+    # Placer ved sidste datapunkt
+    last_x <- qic_data$x[nrow(qic_data)]
+    label_data <- rbind(label_data, data.frame(
+      x = last_x,
+      y = target_value,
+      label = paste0("Mål: ", format_y_value(target_value, y_axis_unit)),
+      type = "target",
+      stringsAsFactors = FALSE
+    ))
+  }
 
   # Fase tilfæjes - temporarily disabled ----
   # if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
@@ -471,8 +594,8 @@ add_plot_enhancements <- function(plot, qic_data, comment_data) {
       ggrepel::geom_text_repel(
         data = comment_data,
         ggplot2::aes(x = x, y = y, label = comment),
-        size = 3,
-        color = hospital_colors$darkgrey
+        size = 6,
+        color = hospital_colors$darkgrey,
         # bg.color = "white",
         # bg.r = 0.1,
         # box.padding = 0.5,
@@ -482,9 +605,28 @@ add_plot_enhancements <- function(plot, qic_data, comment_data) {
         # nudge_x = .15,
         # nudge_y = .5,
         # segment.curvature = -1e-20,
-        # arrow = grid::arrow(length = grid::unit(0.015, "npc")),
+        arrow = grid::arrow(length = grid::unit(0.015, "npc")),
         # max.overlaps = Inf,
         # inherit.aes = FALSE
+      )
+  }
+
+  # CL og Target labels tilføjes ----
+  if (!is.null(label_data) && nrow(label_data) > 0) {
+    plot <- plot +
+      ggrepel::geom_text_repel(
+        data = label_data,
+        ggplot2::aes(x = x, y = y, label = label),
+        size = 4,
+        color = hospital_colors$darkgrey,
+        fontface = "bold",
+        nudge_x = 0,
+        direction = "y",
+        hjust = 1,
+        segment.color = hospital_colors$mediumgrey,
+        segment.size = 0.3,
+        arrow = grid::arrow(length = grid::unit(0.01, "npc")),
+        inherit.aes = FALSE
       )
   }
 
@@ -833,6 +975,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         # Data from qic is in decimal form (0.9 for 90%), scale = 100 converts to percentage
         # Danish formatting: decimal.mark = "," (85,5 %), big.mark = "." (not used for %)
         plot <- plot + ggplot2::scale_y_continuous(
+          expand = ggplot2::expansion(mult = c(.25, .25)),
           labels = scales::label_percent()
         )
       } else if (y_axis_unit == "count") {
@@ -841,6 +984,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         # Trade-off: loses thousand separator for 1.000-9.999 range
         # Only shows decimals if present (50K vs 50,5K)
         plot <- plot + ggplot2::scale_y_continuous(
+          expand = ggplot2::expansion(mult = c(.25, .25)),
           labels = function(x) {
             # Apply scale cuts manually using sapply for vectorization
             sapply(x, function(val) {
@@ -882,6 +1026,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       } else if (y_axis_unit == "rate") {
         # Rate formatting (only shows decimals if present) ----
         plot <- plot + ggplot2::scale_y_continuous(
+          expand = ggplot2::expansion(mult = c(.25, .25)),
           labels = function(x) {
             ifelse(x == round(x),
                    format(round(x), decimal.mark = ","),
@@ -897,6 +1042,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         if (max_minutes < 60) {
           # Less than 60 minutes -> show as minutes
           plot <- plot + ggplot2::scale_y_continuous(
+            expand = ggplot2::expansion(mult = c(.25, .25)),
             labels = function(x) {
               sapply(x, function(val) {
                 # Handle NA values
@@ -913,6 +1059,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         } else if (max_minutes < 1440) {
           # Less than 24 hours (1440 min) -> show as hours
           plot <- plot + ggplot2::scale_y_continuous(
+            expand = ggplot2::expansion(mult = c(.25, .25)),
             labels = function(x) {
               sapply(x, function(val) {
                 # Handle NA values
@@ -930,6 +1077,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         } else {
           # 24 hours or more -> show as days
           plot <- plot + ggplot2::scale_y_continuous(
+            expand = ggplot2::expansion(mult = c(.25, .25)),
             labels = function(x) {
               sapply(x, function(val) {
                 # Handle NA values
@@ -949,7 +1097,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # For other units - use default ggplot2 formatting
 
       # Add plot enhancements (phase lines, target line, comments)
-      plot <- add_plot_enhancements(plot, qic_data, comment_data)
+      plot <- add_plot_enhancements(plot, qic_data, comment_data, y_axis_unit)
 
       return(list(plot = plot, qic_data = qic_data))
     }
