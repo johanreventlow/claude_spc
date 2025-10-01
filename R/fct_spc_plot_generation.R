@@ -718,8 +718,11 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = 1) + 
             
             
-            ggplot2::labs(title = call_args$title, x = NULL, y = NULL) + 
-            ggplot2::scale_linetype_manual(values = c("solid", "12")) 
+            ggplot2::labs(title = call_args$title, x = NULL, y = NULL) +
+            ggplot2::scale_linetype_manual(
+              values = c("FALSE" = "solid", "TRUE" = "12"),
+              guide = "none"  # Skjul legend
+            ) 
             
 
           plot
