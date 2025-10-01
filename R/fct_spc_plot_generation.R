@@ -601,7 +601,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   x_data <- x_validation$x_data
 
   # Define x_unit_label for axis labeling
-  x_unit_label <- if (x_validation$is_date) "Dato" else "Observation"
+  # x_unit_label <- if (x_validation$is_date) "Dato" else "Observation"
 
 
   # Handle phases and freeze configuration
@@ -730,7 +730,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
-              name = x_unit_label,
+              # name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               # breaks = scales::date_breaks(format_config$breaks)
               breaks = scales::breaks_pretty(n = format_config$n_breaks)
@@ -738,21 +738,21 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
-              name = x_unit_label,
+              # name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               breaks = scales::date_breaks(format_config$breaks)
             )
           } else if (!is.null(format_config$breaks)) {
             # Standard intelligent formatering
             plot <- plot + ggplot2::scale_x_datetime(
-              name = x_unit_label,
+              # name = x_unit_label,
               labels = scales::date_format(format_config$labels),
               breaks = scales::date_breaks(format_config$breaks)
             )
           } else {
             # Fallback til breaks_pretty med intelligent antal
             plot <- plot + ggplot2::scale_x_datetime(
-              name = x_unit_label,
+              # name = x_unit_label,
               labels = scales::date_format(format_config$labels),
               breaks = scales::breaks_pretty(n = format_config$n_breaks)
             )
@@ -762,26 +762,26 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_date(
-              name = x_unit_label,
+              # name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               breaks = scales::date_breaks(format_config$breaks)
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_date(
-              name = x_unit_label,
+              # name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               breaks = scales::date_breaks(format_config$breaks)
             )
           } else if (!is.null(format_config$breaks)) {
             plot <- plot + ggplot2::scale_x_date(
-              name = x_unit_label,
+              # name = x_unit_label,
               labels = scales::date_format(format_config$labels),
               breaks = scales::date_breaks(format_config$breaks)
             )
           } else {
             plot <- plot + ggplot2::scale_x_date(
-              name = x_unit_label,
+              # name = x_unit_label,
               labels = scales::date_format(format_config$labels),
               breaks = scales::breaks_pretty(n = format_config$n_breaks)
             )
@@ -789,7 +789,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         } else if (is.numeric(qic_data$x)) {
           # Fallback til continuous scale
           plot <- plot + ggplot2::scale_x_continuous(
-            name = x_unit_label,
+            # name = x_unit_label,
             breaks = scales::pretty_breaks(n = 8)
           )
         }
