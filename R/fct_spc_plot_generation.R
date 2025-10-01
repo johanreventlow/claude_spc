@@ -666,6 +666,23 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           # Execute QIC call with post-processing
           qic_data <- execute_qic_call(qic_args, chart_type, config)
 
+          # Tilføj kombineret anhoej.signal kolonne (runs ELLER crossings)
+          if (!is.null(qic_data)) {
+            # Beregn om der er brud på runs eller crossings signal
+            has_runs_signal <- "runs.signal" %in% names(qic_data) && any(qic_data$runs.signal, na.rm = TRUE)
+
+            has_crossings_signal <- if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
+              n_cross <- max(qic_data$n.crossings, na.rm = TRUE)
+              n_cross_min <- max(qic_data$n.crossings.min, na.rm = TRUE)
+              !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
+            } else {
+              FALSE
+            }
+
+            # Tilføj anhoej.signal kolonne til hele datasættet
+            qic_data$anhoej.signal <- has_runs_signal || has_crossings_signal
+          }
+
           qic_data
         },
         fallback = function(e) {
@@ -696,9 +713,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = 1, na.rm = TRUE) +
             ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = 2, na.rm = TRUE) +
             
-            # ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) + 
-            # ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) + 
-            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = runs.signal), color = hospital_colors$hospitalblue, linewidth = 1) + 
+            # ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) +
+            # ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) +
+            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = 1) + 
             
             
             ggplot2::labs(title = call_args$title, x = NULL, y = NULL) + 

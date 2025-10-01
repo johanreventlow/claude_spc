@@ -78,6 +78,9 @@ update_anhoej_results <- function(previous, qic_results, centerline_changed = FA
         n_cross_min <- max(qic_data_filtered$n.crossings.min, na.rm = TRUE)
         qic_results$crossings_signal <- !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
       }
+
+      # Genberegn kombineret anhoej_signal (runs ELLER crossings)
+      qic_results$anhoej_signal <- (qic_results$runs_signal %||% FALSE) || (qic_results$crossings_signal %||% FALSE)
     }
   }
 

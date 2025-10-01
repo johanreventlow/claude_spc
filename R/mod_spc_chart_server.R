@@ -381,6 +381,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           out_of_control_count = 0L,
           runs_signal = FALSE,
           crossings_signal = FALSE,
+          anhoej_signal = FALSE,
           any_signal = FALSE,
           message = "Validering fejlede - kontroller data",
           has_valid_data = FALSE
@@ -415,17 +416,23 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           set_plot_state("plot_ready", TRUE)
 
           if (!is.null(qic_data)) {
+            # Beregn runs_signal og crossings_signal først
+            runs_sig <- if ("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE
+
+            crossings_sig <- if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
+              n_cross <- safe_max(qic_data$n.crossings)
+              n_cross_min <- safe_max(qic_data$n.crossings.min)
+              !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
+            } else {
+              FALSE
+            }
+
             qic_results <- list(
               any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
               out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
-              runs_signal = if ("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE,
-              crossings_signal = if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
-                n_cross <- safe_max(qic_data$n.crossings)
-                n_cross_min <- safe_max(qic_data$n.crossings.min)
-                !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
-              } else {
-                FALSE
-              },
+              runs_signal = runs_sig,
+              crossings_signal = crossings_sig,
+              anhoej_signal = runs_sig || crossings_sig,  # Kombineret Anhøj-signal
               longest_run = if ("longest.run" %in% names(qic_data)) safe_max(qic_data$longest.run) else NA_real_,
               longest_run_max = if ("longest.run.max" %in% names(qic_data)) safe_max(qic_data$longest.run.max) else NA_real_,
               n_crossings = if ("n.crossings" %in% names(qic_data)) safe_max(qic_data$n.crossings) else NA_real_,
@@ -469,6 +476,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
               out_of_control_count = 0L,
               runs_signal = FALSE,
               crossings_signal = FALSE,
+              anhoej_signal = FALSE,
               any_signal = FALSE,
               message = "Ingen data at analysere",
               has_valid_data = FALSE
@@ -488,6 +496,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             out_of_control_count = 0L,
             runs_signal = FALSE,
             crossings_signal = FALSE,
+            anhoej_signal = FALSE,
             any_signal = FALSE,
             message = paste("Fejl:", e$message),
             has_valid_data = FALSE
@@ -549,17 +558,22 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       }
 
       # Udled metrics fra qic_data (samme logik som i computation-blokken)
+      runs_sig <- if ("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE
+
+      crossings_sig <- if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
+        n_cross <- safe_max(qic_data$n.crossings)
+        n_cross_min <- safe_max(qic_data$n.crossings.min)
+        !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
+      } else {
+        FALSE
+      }
+
       qic_results <- list(
         any_signal = any(qic_data$sigma.signal, na.rm = TRUE),
         out_of_control_count = sum(qic_data$sigma.signal, na.rm = TRUE),
-        runs_signal = if ("runs.signal" %in% names(qic_data)) any(qic_data$runs.signal, na.rm = TRUE) else FALSE,
-        crossings_signal = if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data)) {
-          n_cross <- safe_max(qic_data$n.crossings)
-          n_cross_min <- safe_max(qic_data$n.crossings.min)
-          !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
-        } else {
-          FALSE
-        },
+        runs_signal = runs_sig,
+        crossings_signal = crossings_sig,
+        anhoej_signal = runs_sig || crossings_sig,  # Kombineret Anhøj-signal
         longest_run = if ("longest.run" %in% names(qic_data)) safe_max(qic_data$longest.run) else NA_real_,
         longest_run_max = if ("longest.run.max" %in% names(qic_data)) safe_max(qic_data$longest.run.max) else NA_real_,
         n_crossings = if ("n.crossings" %in% names(qic_data)) safe_max(qic_data$n.crossings) else NA_real_,
