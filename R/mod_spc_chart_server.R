@@ -568,13 +568,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       current_anhoej <- get_plot_state("anhoej_results")
 
-      # Hent show_phases fra inputs
-      inputs <- gather_spc_inputs(
-        chart_type_reactive, column_config, target_reactive, centerline_reactive,
-        chart_title_reactive, freeze_baseline_reactive, module_data_reactive,
-        y_axis_unit_reactive, kommentar_column_reactive
-      )
-      show_phases <- inputs$skift_config$show_phases %||% FALSE
+      # Hent show_phases fra skift_config reactive
+      skift_config <- skift_config_reactive()
+      show_phases <- skift_config$show_phases %||% FALSE
 
       # Opdater altid når vi har gyldige metrics, ellers bevar hvis tidligere var gyldige
       updated_anhoej <- update_anhoej_results(current_anhoej, qic_results, centerline_changed = FALSE,
