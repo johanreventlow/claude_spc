@@ -961,7 +961,7 @@ applyHospitalTheme <- function(plot) {
           plot.margin = ggplot2::unit(c(0, 0, 0, 10), "pt"),
           panel.background = ggplot2::element_blank(),
           axis.text.y = ggplot2::element_text(color = "#858585", size = 16, angle = 0, hjust = 1),
-          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = 8),
+          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = 11),
           axis.line.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.y = ggplot2::element_line(color = "#D6D6D6"),
