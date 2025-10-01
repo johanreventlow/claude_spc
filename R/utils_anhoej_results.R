@@ -51,14 +51,32 @@ update_anhoej_results <- function(previous, qic_results, centerline_changed = FA
   if (!is.null(qic_data) && isTRUE(show_phases)) {
     qic_data_filtered <- filter_latest_part(qic_data, show_phases)
 
-    # Genberegn metrics baseret på filtreret data
+    # Genberegn metrics OG signals baseret på filtreret data
     if (!is.null(qic_data_filtered) && nrow(qic_data_filtered) > 0) {
       # Opdater longest_run og n_crossings fra filtreret data hvis tilgængelig
       if ("longest.run" %in% names(qic_data_filtered)) {
         qic_results$longest_run <- max(qic_data_filtered$longest.run, na.rm = TRUE)
       }
+      if ("longest.run.max" %in% names(qic_data_filtered)) {
+        qic_results$longest_run_max <- max(qic_data_filtered$longest.run.max, na.rm = TRUE)
+      }
       if ("n.crossings" %in% names(qic_data_filtered)) {
         qic_results$n_crossings <- max(qic_data_filtered$n.crossings, na.rm = TRUE)
+      }
+      if ("n.crossings.min" %in% names(qic_data_filtered)) {
+        qic_results$n_crossings_min <- max(qic_data_filtered$n.crossings.min, na.rm = TRUE)
+      }
+
+      # Genberegn runs_signal baseret på filtreret data
+      if ("runs.signal" %in% names(qic_data_filtered)) {
+        qic_results$runs_signal <- any(qic_data_filtered$runs.signal, na.rm = TRUE)
+      }
+
+      # Genberegn crossings_signal baseret på filtreret data
+      if ("n.crossings" %in% names(qic_data_filtered) && "n.crossings.min" %in% names(qic_data_filtered)) {
+        n_cross <- max(qic_data_filtered$n.crossings, na.rm = TRUE)
+        n_cross_min <- max(qic_data_filtered$n.crossings.min, na.rm = TRUE)
+        qic_results$crossings_signal <- !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
       }
     }
   }

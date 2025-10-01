@@ -693,8 +693,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           # Resten af plot tilføjes ------
           plot <- plot +  
             ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = 1, colour = "#565656", linetype="42", na.rm = TRUE) +
-            ggplot2::geom_line(ggplot2::aes(y = y), colour = "#AEAEAE", linewidth = 1, na.rm = TRUE) +
-            ggplot2::geom_point(ggplot2::aes(y = y), colour = "#858585", size = 2, na.rm = TRUE) +
+            ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = 1, na.rm = TRUE) +
+            ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = 2, na.rm = TRUE) +
             
             # ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) + 
             # ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) + 
