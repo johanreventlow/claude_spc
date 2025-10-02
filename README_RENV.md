@@ -25,14 +25,29 @@ renv::restore()
 ```
 
 ### Opdatering af dependencies:
+
+⚠️ **VIGTIGT**: ggrepel fork skal bevares ved opdateringer!
+
 ```r
-# Installer nye pakker normalt
+# ✅ SAFE: Opdater alle pakker UNDTAGEN ggrepel
+renv::update(exclude = "ggrepel")
+testthat::test_dir()     # Test changes
+renv::snapshot()         # Lock new versions
+
+# ⚠️ FARLIGT: Opdaterer også ggrepel (kan ændre SHA)
+renv::update()  # BRUG IKKE denne kommando!
+
+# 🎯 BEDST: Brug automated script
+source(".renv_update_recipe.R")  # Guided update workflow
+```
+
+**Installer nye pakker:**
+```r
 install.packages("pakkenavn")
+renv::snapshot()  # Lock den nye pakke
 
 # Eller GitHub pakker
 remotes::install_github("user/repo@branch")
-
-# Lock den nye tilstand
 renv::snapshot()
 ```
 
