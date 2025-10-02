@@ -475,8 +475,17 @@ compute_label_boxes_data_units <- function(plot, label_data, style, size, linehe
   # Build plot for extracting panel dimensions
   built <- ggplot2::ggplot_build(plot)
   panel_params <- built$layout$panel_params[[1]]
-  x_range <- panel_params$x.range
-  y_range <- panel_params$y.range
+  # Robust extraction across ggplot2 versions
+  x_range <- tryCatch({
+    if (!is.null(panel_params$x.range)) panel_params$x.range else panel_params$x$range
+  }, error = function(e) {
+    range(ggplot2::layer_data(plot)[[1]]$x, na.rm = TRUE)
+  })
+  y_range <- tryCatch({
+    if (!is.null(panel_params$y.range)) panel_params$y.range else panel_params$y$range
+  }, error = function(e) {
+    range(ggplot2::layer_data(plot)[[1]]$y, na.rm = TRUE)
+  })
 
   # Render plot temporarily to get grob structure
   grob <- ggplot2::ggplotGrob(plot)
@@ -490,9 +499,9 @@ compute_label_boxes_data_units <- function(plot, label_data, style, size, linehe
   # Extract panel width/height from grob layout (more robust)
   panel_layout <- grob$layout[panel_index[1], ]
 
-  # Get width and height from grob widths/heights vectors
-  panel_width_unit <- grob$widths[panel_layout$l]
-  panel_height_unit <- grob$heights[panel_layout$t]
+  # Get width and height from grob widths/heights vectors (sum across panel span)
+  panel_width_unit <- Reduce(`+`, grob$widths[panel_layout$l:panel_layout$r])
+  panel_height_unit <- Reduce(`+`, grob$heights[panel_layout$t:panel_layout$b])
 
   # Convert to inches with fallback
   panel_width_inch <- tryCatch({
@@ -517,19 +526,46 @@ compute_label_boxes_data_units <- function(plot, label_data, style, size, linehe
   boxes <- lapply(seq_len(nrow(label_data)), function(i) {
     row <- label_data[i, ]
 
-    # Create temporary grob to measure dimensions
-    # Size in pts needs conversion (1 pt = 1/72 inch)
-    size_inch <- size / 72
+    # Create temporary grob to measure dimensions via marquee if available
+    # Convert ggplot2 size (mm) approximately to points for grid::gpar
+    pt_per_mm <- 72.0 / 25.4
+    fontsize_pt <- size * pt_per_mm
 
-    # Estimate width and height based on text content
-    # Marquee labels have two lines (header + value)
-    text_lines <- strsplit(row$label, "\\n", perl = TRUE)[[1]]
-    n_lines <- length(text_lines)
+    measure <- tryCatch({
+      if (requireNamespace("marquee", quietly = TRUE) &&
+          "marquee_grob" %in% getNamespaceExports("marquee")) {
+        g <- marquee::marquee_grob(
+          label = row$label,
+          style = style,
+          gp = grid::gpar(fontsize = fontsize_pt, lineheight = lineheight, fontfamily = family)
+        )
+        w_in <- grid::convertWidth(grid::grobWidth(g), "inches", valueOnly = TRUE)
+        h_in <- grid::convertHeight(grid::grobHeight(g), "inches", valueOnly = TRUE)
+        c(w_in, h_in)
+      } else {
+        # Fallback: approximate using plain textGrob on stripped markdown
+        plain <- gsub("\\{[^}]+\\}", "", row$label)
+        g <- grid::textGrob(
+          label = plain,
+          gp = grid::gpar(fontsize = fontsize_pt, lineheight = lineheight, fontfamily = family)
+        )
+        w_in <- grid::convertWidth(grid::grobWidth(g), "inches", valueOnly = TRUE)
+        h_in <- grid::convertHeight(grid::grobHeight(g), "inches", valueOnly = TRUE)
+        c(w_in, h_in)
+      }
+    }, error = function(e) {
+      # Conservative fallback if measurement fails
+      # Assume two-line label; estimate width roughly as characters * 0.5 * size
+      size_inch <- (fontsize_pt / 72.0)
+      text_lines <- strsplit(row$label, "\\n", perl = TRUE)[[1]]
+      max_line_chars <- max(nchar(gsub("\\{[^}]+\\}", "", text_lines)))
+      w_in <- max_line_chars * size_inch * 0.5
+      h_in <- length(text_lines) * size_inch * lineheight
+      c(w_in, h_in)
+    })
 
-    # Rough estimation: average character width ~0.5 * size
-    max_line_chars <- max(nchar(gsub("\\{[^}]+\\}", "", text_lines))) # Remove markdown
-    label_width_inch <- max_line_chars * size_inch * 0.5
-    label_height_inch <- n_lines * size_inch * lineheight
+    label_width_inch <- measure[1]
+    label_height_inch <- measure[2]
 
     # Convert to data units
     width_data <- label_width_inch * data_per_inch_x
@@ -643,8 +679,8 @@ derive_box_padding <- function(label_boxes, min_padding_data = NULL) {
     padding <- max(padding, min_padding_data)
   }
 
-  # Clamp to reasonable bounds (increased minimum from 0.2 to 0.5 for better separation)
-  max(0.5, min(padding, 1.5))
+  # Clamp to reasonable bounds (align with tests: [0.2, 1.0])
+  max(0.2, min(padding, 1.0))
 }
 
 #' Assert ingen overlap mellem labels
