@@ -520,7 +520,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   }
 
   # Opret label data for centerline og target ----
-  label_data <- data.frame()
+  label_rows <- list()
 
   # Centerline label KUN for seneste part
   if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
@@ -533,13 +533,15 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       last_row <- part_data[nrow(part_data), ]
       cl_value <- last_row$cl
       if (!is.na(cl_value)) {
-        label_data <- rbind(label_data, data.frame(
+        label_rows[[length(label_rows) + 1]] <- data.frame(
           x = last_row$x,
-          y = cl_value,
-          label = paste0("NUV. NIVEAU: ", format_y_value(cl_value, y_axis_unit)),
+          y_header = cl_value,
           type = "cl",
+          header_label = "NUV. NIVEAU",
+          value_label = format_y_value(cl_value, y_axis_unit),
+          text_color = "#009CE8",
           stringsAsFactors = FALSE
-        ))
+        )
       }
     }
   }
@@ -549,14 +551,18 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     target_value <- qic_data$target[!is.na(qic_data$target)][1]
     # Placer ved sidste datapunkt
     last_x <- qic_data$x[nrow(qic_data)]
-    label_data <- rbind(label_data, data.frame(
+    label_rows[[length(label_rows) + 1]] <- data.frame(
       x = last_x,
-      y = target_value,
-      label = paste0("Mål: ", format_y_value(target_value, y_axis_unit)),
+      y_header = target_value,
       type = "target",
+      header_label = "MÅL",
+      value_label = format_y_value(target_value, y_axis_unit),
+      text_color = "#565656",
       stringsAsFactors = FALSE
-    ))
+    )
   }
+
+  label_data <- if (length(label_rows) > 0) do.call(rbind, label_rows) else data.frame()
 
   # Fase tilfæjes - temporarily disabled ----
   # if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
@@ -629,36 +635,38 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
 
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
-    # Konverter til numerisk for ggpp kompatibilitet
+    label_data$label <- sprintf(
+      "{.12 %s}\n\n{.36 %s}",
+      label_data$header_label,
+      label_data$value_label
+    )
+
     x_range <- range(qic_data$x, na.rm = TRUE)
     label_x_numeric <- as.numeric(x_range[2]) + as.numeric(diff(x_range)) * 0.02
-
-    # Tilføj numerisk x til label_data
     label_data$x_numeric <- as.numeric(label_data$x)
 
     plot <- plot +
-      ggrepel::geom_text_repel(
+      ggrepel::geom_marquee_repel(
         data = label_data,
-        ggplot2::aes(x = x_numeric, y = y, label = label),
-        size = 4,
-        color = hospital_colors$darkgrey,
-        fontface = "bold",
-        position = ggpp::position_nudge_to(x = label_x_numeric),
+        mapping = ggplot2::aes(x = x_numeric, y = y_header, label = label, colour = text_color),
+        size = 6,
+        lineheight = 0.9,
+        box.padding = 0.35,
+        point.padding = 0.2,
         direction = "y",
-        hjust = 0,  # Venstrejuster tekst efter nudge
-        segment.color = hospital_colors$mediumgrey,
-        segment.size = 0.3,
-        segment.curvature = -0.1,
-        segment.ncp = 3,
-        segment.angle = 20,
-        arrow = grid::arrow(length = grid::unit(0.01, "npc")),
-        min.segment.length = 0,
-        box.padding = 0.5,
-        point.padding = 0.3,
+        hjust = 0,
+        position = ggpp::position_nudge_to(x = label_x_numeric),
+        # segment.color = hospital_colors$mediumgrey,
+        # segment.size = 0.3,
+        # segment.curvature = -0.1,
+        # segment.ncp = 3,
+        # segment.angle = 20,
+        # arrow = grid::arrow(length = grid::unit(0.01, "npc")),
+        # min.segment.length = 0,
         force = 2,
-        max.overlaps = Inf,
-        inherit.aes = FALSE
-      )
+        show.legend = FALSE
+      ) +
+      ggplot2::scale_color_identity(guide = "none")
   }
 
   return(plot)

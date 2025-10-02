@@ -289,6 +289,77 @@ test_that("generateSPCPlot target line functionality works", {
   expect_lt(length(no_target_result$plot$layers), length(target_result$plot$layers))
 })
 
+test_that("generateSPCPlot centerline label bruger geom_marquee_repel", {
+  skip_if_not(exists("generateSPCPlot", mode = "function"), "generateSPCPlot function not available")
+  skip_if_not_installed("rlang")
+
+  test_data <- data.frame(
+    Obs = 1:6,
+    Værdi = c(10, 12, 14, 12, 12, 12),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+  config <- list(x_col = "Obs", y_col = "Værdi", n_col = NULL)
+
+  result <- generateSPCPlot(
+    data = test_data,
+    config = config,
+    chart_type = "i",
+    chart_title_reactive = reactive("Centerline Label Test")
+  )
+
+  text_layers <- Filter(function(layer) inherits(layer$geom, "GeomMarqueeRepel") || identical(layer$geom$geom_name, "marquee_repel"), result$plot$layers)
+  expect_equal(length(text_layers), 1)
+
+  layer <- text_layers[[1]]
+  expect_equal(rlang::as_name(layer$mapping$label), "label")
+  expect_equal(layer$aes_params$size, 4)
+
+  cl_rows <- subset(layer$data, type == "cl")
+  expect_gt(nrow(cl_rows), 0)
+  expect_true(all(grepl("NUV\\. NIVEAU", cl_rows$label)))
+  expect_true(all(grepl("font-size:300%", cl_rows$label)))
+  expect_equal(unique(cl_rows$text_color), "#009CE8")
+})
+
+test_that("generateSPCPlot target label bruger geom_marquee_repel", {
+  skip_if_not(exists("generateSPCPlot", mode = "function"), "generateSPCPlot function not available")
+  skip_if_not_installed("rlang")
+
+  test_data <- data.frame(
+    Obs = 1:6,
+    Værdi = c(10, 12, 14, 12, 12, 12),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+
+  config <- list(x_col = "Obs", y_col = "Værdi", n_col = NULL)
+
+  target_value <- 13.5
+
+  result <- generateSPCPlot(
+    data = test_data,
+    config = config,
+    chart_type = "i",
+    target_value = target_value,
+    chart_title_reactive = reactive("Target Label Test")
+  )
+
+  text_layers <- Filter(function(layer) inherits(layer$geom, "GeomMarqueeRepel") || identical(layer$geom$geom_name, "marquee_repel"), result$plot$layers)
+  expect_equal(length(text_layers), 1)
+
+  layer <- text_layers[[1]]
+  expect_equal(rlang::as_name(layer$mapping$label), "label")
+  expect_equal(layer$aes_params$size, 4)
+
+  target_rows <- subset(layer$data, type == "target")
+  expect_gt(nrow(target_rows), 0)
+  expect_true(all(grepl("MÅL", target_rows$label)))
+  expect_true(all(grepl("font-size:300%", target_rows$label)))
+  expect_equal(unique(target_rows$text_color), "#565656")
+})
+
 test_that("generateSPCPlot comment annotations work", {
   # TEST: Comment data processing and ggrepel integration
 
