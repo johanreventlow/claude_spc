@@ -487,11 +487,27 @@ compute_label_boxes_data_units <- function(plot, label_data, style, size, linehe
     stop("Kunne ikke finde panel grob")
   }
 
-  panel_grob <- grob$grobs[[panel_index[1]]]
+  # Extract panel width/height from grob layout (more robust)
+  panel_layout <- grob$layout[panel_index[1], ]
 
-  # Extract panel dimensions in inches
-  panel_width_inch <- grid::convertWidth(panel_grob$width, "inches", valueOnly = TRUE)
-  panel_height_inch <- grid::convertHeight(panel_grob$height, "inches", valueOnly = TRUE)
+  # Get width and height from grob widths/heights vectors
+  panel_width_unit <- grob$widths[panel_layout$l]
+  panel_height_unit <- grob$heights[panel_layout$t]
+
+  # Convert to inches with fallback
+  panel_width_inch <- tryCatch({
+    grid::convertWidth(panel_width_unit, "inches", valueOnly = TRUE)
+  }, error = function(e) {
+    # Fallback: estimate from x_range (assume 7 inches default plot width)
+    7
+  })
+
+  panel_height_inch <- tryCatch({
+    grid::convertHeight(panel_height_unit, "inches", valueOnly = TRUE)
+  }, error = function(e) {
+    # Fallback: estimate from y_range (assume 5 inches default plot height)
+    5
+  })
 
   # Calculate data units per inch
   data_per_inch_x <- diff(x_range) / panel_width_inch
@@ -979,8 +995,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
     label_data$label <- sprintf(
-      "{.12 **%s**}
-      {.36 **%s**}",
+      "{.12 **%s**}  \n{.36 **%s**}",
       label_data$header_label,
       label_data$value_label
     )
@@ -1019,7 +1034,12 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     )
 
     # Buffer linjer som obstacles
-    pad_line <- median(label_boxes$ymax - label_boxes$ymin, na.rm = TRUE) * 0.5
+    pad_line <- if (!is.null(label_boxes) && nrow(label_boxes) > 0) {
+      median(label_boxes$ymax - label_boxes$ymin, na.rm = TRUE) * 0.5
+    } else {
+      0.01 * diff(y_range)
+    }
+
     if (is.na(pad_line) || pad_line == 0) {
       pad_line <- 0.01 * diff(y_range)
     }
