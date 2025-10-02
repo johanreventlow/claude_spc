@@ -643,8 +643,8 @@ derive_box_padding <- function(label_boxes, min_padding_data = NULL) {
     padding <- max(padding, min_padding_data)
   }
 
-  # Clamp to reasonable bounds
-  max(0.2, min(padding, 1.0))
+  # Clamp to reasonable bounds (increased minimum from 0.2 to 0.5 for better separation)
+  max(0.5, min(padding, 1.5))
 }
 
 #' Assert ingen overlap mellem labels
@@ -1064,9 +1064,15 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
         log_warn(paste("Label/line overlap warning:", e$message), .context = "LABEL_COLLISION")
       })
 
+      # Calculate minimum gap dynamically based on median label height
+      min_gap_dynamic <- median(label_boxes$ymax - label_boxes$ymin, na.rm = TRUE) * 0.1
+      if (is.na(min_gap_dynamic) || min_gap_dynamic == 0) {
+        min_gap_dynamic <- 0.005 * diff(y_range)  # Fallback: 0.5% of y-range
+      }
+
       tryCatch({
-        assert_no_label_overlaps(label_boxes, min_gap = 0)
-        log_debug("Labels overlapper ikke hinanden", .context = "LABEL_COLLISION")
+        assert_no_label_overlaps(label_boxes, min_gap = min_gap_dynamic)
+        log_debug(paste("Labels overlapper ikke hinanden (min_gap:", round(min_gap_dynamic, 4), ")"), .context = "LABEL_COLLISION")
       }, error = function(e) {
         log_warn(paste("Label overlap warning:", e$message), .context = "LABEL_COLLISION")
       })
