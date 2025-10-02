@@ -651,7 +651,8 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
     label_data$label <- sprintf(
-      "{.12 %s}\n\n{.36 %s}",
+      "{.12 **%s**}  
+      {.36 **%s**}",
       label_data$header_label,
       label_data$value_label
     )
@@ -660,26 +661,31 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     label_x_numeric <- as.numeric(x_range[2]) + as.numeric(diff(x_range)) * 0.02
     label_data$x_numeric <- as.numeric(label_data$x)
 
+    # Opret custom marquee style med højrejustering
+    right_aligned_style <- marquee::modify_style(
+      marquee::classic_style(),#
+      "p",
+      margin = marquee::trbl(0),
+      align = "right"
+    )
+      
     plot <- plot +
       ggrepel::geom_marquee_repel(
         data = label_data,
         mapping = ggplot2::aes(x = x_numeric, y = y_header, label = label, colour = text_color),
         size = 6,
+        style = right_aligned_style,
         lineheight = 0.9,
+        family = "Roboto Medium",
         box.padding = 0.35,
         point.padding = 0.2,
         direction = "y",
-        hjust = 0,
         position = ggpp::position_nudge_to(x = label_x_numeric),
-        # segment.color = hospital_colors$mediumgrey,
-        # segment.size = 0.3,
-        # segment.curvature = -0.1,
-        # segment.ncp = 3,
-        # segment.angle = 20,
-        # arrow = grid::arrow(length = grid::unit(0.01, "npc")),
-        # min.segment.length = 0,
-        force = 2,
-        show.legend = FALSE
+        min.segment.length = Inf,
+        force = 2.5,
+        show.legend = FALSE,
+        markdown = TRUE,
+        parse = FALSE
       ) +
       ggplot2::scale_color_identity(guide = "none")
   }
