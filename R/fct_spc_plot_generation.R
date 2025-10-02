@@ -536,7 +536,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
         label_data <- rbind(label_data, data.frame(
           x = last_row$x,
           y = cl_value,
-          label = paste0("CL: ", format_y_value(cl_value, y_axis_unit)),
+          label = paste0("NUV. NIVEAU: ", format_y_value(cl_value, y_axis_unit)),
           type = "cl",
           stringsAsFactors = FALSE
         ))
@@ -589,43 +589,74 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   # }
 
   # Kommentarer tilføjes ----
-  if (!is.null(comment_data) && nrow(comment_data) > 0) {
+  if (!is.null(comment_data) && is.data.frame(comment_data) && nrow(comment_data) > 0) {
+    # Konverter til numerisk for ggpp kompatibilitet
+    x_center_numeric <- mean(as.numeric(range(qic_data$x, na.rm = TRUE)))
+    y_center <- mean(range(qic_data$y, na.rm = TRUE))
+
+    # Tilføj numerisk x til comment_data
+    comment_data$x_numeric <- as.numeric(comment_data$x)
+
     plot <- plot +
       ggrepel::geom_text_repel(
         data = comment_data,
-        ggplot2::aes(x = x, y = y, label = comment),
+        ggplot2::aes(x = x_numeric, y = y, label = comment),
         size = 6,
         color = hospital_colors$darkgrey,
-        # bg.color = "white",
-        # bg.r = 0.1,
-        # box.padding = 0.5,
-        # point.padding = 0.5,
-        # segment.color = hospital_colors$mediumgrey,
-        # segment.size = 0.3,
-        # nudge_x = .15,
-        # nudge_y = .5,
-        # segment.curvature = -1e-20,
+        bg.color = "white",
+        bg.r = 0.15,
+        position = ggpp::position_nudge_center(
+          x = x_center_numeric,
+          y = y_center,
+          direction = "radial"
+        ),
+        box.padding = 0.6,
+        point.padding = 0.5,
+        segment.color = hospital_colors$mediumgrey,
+        segment.size = 0.4,
+        segment.curvature = -0.05,
+        segment.ncp = 3,
+        segment.angle = 20,
         arrow = grid::arrow(length = grid::unit(0.015, "npc")),
-        # max.overlaps = Inf,
-        # inherit.aes = FALSE
+        min.segment.length = 0,
+        force = 3,
+        force_pull = 0.5,
+        max.overlaps = Inf,
+        max.iter = 10000,
+        inherit.aes = FALSE
       )
   }
 
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
+    # Konverter til numerisk for ggpp kompatibilitet
+    x_range <- range(qic_data$x, na.rm = TRUE)
+    label_x_numeric <- as.numeric(x_range[2]) + as.numeric(diff(x_range)) * 0.02
+
+    # Tilføj numerisk x til label_data
+    label_data$x_numeric <- as.numeric(label_data$x)
+
     plot <- plot +
       ggrepel::geom_text_repel(
         data = label_data,
-        ggplot2::aes(x = x, y = y, label = label),
+        ggplot2::aes(x = x_numeric, y = y, label = label),
         size = 4,
         color = hospital_colors$darkgrey,
         fontface = "bold",
-        nudge_x = 0,
+        position = ggpp::position_nudge_to(x = label_x_numeric),
         direction = "y",
-        hjust = 1,
+        hjust = 0,  # Venstrejuster tekst efter nudge
         segment.color = hospital_colors$mediumgrey,
         segment.size = 0.3,
+        segment.curvature = -0.1,
+        segment.ncp = 3,
+        segment.angle = 20,
         arrow = grid::arrow(length = grid::unit(0.01, "npc")),
+        min.segment.length = 0,
+        box.padding = 0.5,
+        point.padding = 0.3,
+        force = 2,
+        max.overlaps = Inf,
         inherit.aes = FALSE
       )
   }
