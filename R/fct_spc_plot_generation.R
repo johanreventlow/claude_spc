@@ -4,20 +4,26 @@
 #
 # Dependencies ----------------------------------------------------------------
 
-# Verify ggrepel fork with marquee support on first use
-if (!exists(".ggrepel_marquee_checked", envir = .GlobalEnv)) {
-  if (!"geom_marquee_repel" %in% getNamespaceExports("ggrepel")) {
-    warning(
-      "\n",
-      "SPCify kræver custom ggrepel fork med geom_marquee_repel().\n",
-      "Installér via: remotes::install_github('teunbrand/ggrepel@marquee_repel')\n",
-      "Eller brug: renv::restore()",
-      immediate. = TRUE,
-      call. = FALSE
-    )
+# Verify ggrepel fork with marquee support on first use (package env)
+try({
+  claudespc_env <- get_claudespc_environment()
+  already_checked <- tryCatch(get(".ggrepel_marquee_checked", envir = claudespc_env, inherits = FALSE), error = function(e) FALSE)
+  if (!isTRUE(already_checked)) {
+    if (!"geom_marquee_repel" %in% getNamespaceExports("ggrepel")) {
+      # Observability via central logger (ingen fallback – kun advisory)
+      log_warn(
+        message = paste(
+          "SPCify kræver custom ggrepel fork med geom_marquee_repel().",
+          "Installér via: remotes::install_github('teunbrand/ggrepel@marquee_repel')",
+          "eller brug: renv::restore()",
+          sep = "\n"
+        ),
+        .context = "DEPENDENCY"
+      )
+    }
+    assign(".ggrepel_marquee_checked", TRUE, envir = claudespc_env)
   }
-  assign(".ggrepel_marquee_checked", TRUE, envir = .GlobalEnv)
-}
+}, silent = TRUE)
 
 # COMMENT PROCESSING UTILITIES ================================================
 
@@ -404,12 +410,15 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
   log_debug(qic_args, .context = "QIC")
 
-  # Get call number for debugging correlation
-  call_number <- if (exists("qic_call_counter", envir = .GlobalEnv)) {
-    get("qic_call_counter", envir = .GlobalEnv)
-  } else {
-    NULL
-  }
+  # Get call number for debugging correlation (package env)
+  call_number <- tryCatch({
+    claudespc_env <- get_claudespc_environment()
+    if (exists("qic_call_counter", envir = claudespc_env, inherits = FALSE)) {
+      get("qic_call_counter", envir = claudespc_env)
+    } else {
+      NULL
+    }
+  }, error = function(e) NULL)
 
   # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
   # Feature flag check - disable benchmarking in production by default
@@ -698,14 +707,15 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
-  # PERFORMANCE MONITORING: Track QIC calculation calls
-  if (!exists("qic_call_counter", envir = .GlobalEnv)) {
-    assign("qic_call_counter", 0, envir = .GlobalEnv)
+  # PERFORMANCE MONITORING: Track QIC calculation calls (package env)
+  claudespc_env <- get_claudespc_environment()
+  if (!exists("qic_call_counter", envir = claudespc_env, inherits = FALSE)) {
+    assign("qic_call_counter", 0L, envir = claudespc_env)
   }
-  assign("qic_call_counter", get("qic_call_counter", envir = .GlobalEnv) + 1, envir = .GlobalEnv)
+  assign("qic_call_counter", get("qic_call_counter", envir = claudespc_env) + 1L, envir = claudespc_env)
 
   current_time <- Sys.time()
-  call_number <- get("qic_call_counter", envir = .GlobalEnv)
+  call_number <- get("qic_call_counter", envir = claudespc_env)
 
   # Phase 4: Integrate with enhanced startup metrics
   if (exists("track_generateSPCPlot_call")) {
@@ -729,8 +739,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Process chart title
   title_text <- process_chart_title(chart_title_reactive, config)
 
-  # Extract X-axis data
-  x_data <- extract_x_axis_data(data, config$x_col)
+  # X-akse data udledes senere via validering/caching (extract_x_axis_data ikke nødvendig her)
 
   # Process data based on chart type
   if (chart_type_requires_denominator(chart_type) && !is.null(config$n_col) && config$n_col %in% names(data)) {
@@ -811,25 +820,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   part_positions <- phase_freeze_config$part_positions
   freeze_position <- phase_freeze_config$freeze_position
 
-  # Build qic call arguments dynamically
-  call_args <- build_qic_call_arguments(
-    x_data = x_data,
-    y_data = y_data,
-    chart_type = chart_type,
-    title_text = title_text,
-    ylab_text = ylab_text,
-    n_data = if (exists("n_data")) n_data else NULL,
-    freeze_position = freeze_position,
-    part_positions = part_positions,
-    target_value = target_value
-  )
-
-  # Clean data and prepare arguments for QIC call
-  call_args <- clean_qic_call_args(call_args)
-
-  if (length(call_args$y) < 3) {
-    stop("For få datapunkter efter rensning (minimum 3 påkrævet)")
-  }
+  # Legacy value-based qic() arguments/cleaning er fjernet til fordel for NSE-stien
 
   # Generate SPC data using qicharts2
 
@@ -932,7 +923,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = 1) + 
             
             
-            ggplot2::labs(title = call_args$title, x = NULL, y = NULL) +
+            ggplot2::labs(title = title_text, x = NULL, y = NULL) +
             ggplot2::scale_linetype_manual(
               values = c("FALSE" = "solid", "TRUE" = "12"),
               guide = "none"  # Skjul legend

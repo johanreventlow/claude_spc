@@ -11,11 +11,12 @@
 #'
 #' @export
 reset_qic_counters <- function() {
-  if (exists("qic_call_counter", envir = .GlobalEnv)) {
-    rm("qic_call_counter", envir = .GlobalEnv)
+  claudespc_env <- get_claudespc_environment()
+  if (exists("qic_call_counter", envir = claudespc_env, inherits = FALSE)) {
+    rm("qic_call_counter", envir = claudespc_env)
   }
-  if (exists("actual_qic_call_counter", envir = .GlobalEnv)) {
-    rm("actual_qic_call_counter", envir = .GlobalEnv)
+  if (exists("actual_qic_call_counter", envir = claudespc_env, inherits = FALSE)) {
+    rm("actual_qic_call_counter", envir = claudespc_env)
   }
   log_debug("QIC performance counters reset", .context = "PERFORMANCE_MONITOR")
 }
@@ -27,16 +28,17 @@ reset_qic_counters <- function() {
 #' @return List with generateSPCPlot_calls and actual_qic_calls counts
 #' @export
 get_qic_call_counts <- function() {
-  generateSPCPlot_calls <- if (exists("qic_call_counter", envir = .GlobalEnv)) {
-    get("qic_call_counter", envir = .GlobalEnv)
+  claudespc_env <- get_claudespc_environment()
+  generateSPCPlot_calls <- if (exists("qic_call_counter", envir = claudespc_env, inherits = FALSE)) {
+    get("qic_call_counter", envir = claudespc_env)
   } else {
-    0
+    0L
   }
 
-  actual_qic_calls <- if (exists("actual_qic_call_counter", envir = .GlobalEnv)) {
-    get("actual_qic_call_counter", envir = .GlobalEnv)
+  actual_qic_calls <- if (exists("actual_qic_call_counter", envir = claudespc_env, inherits = FALSE)) {
+    get("actual_qic_call_counter", envir = claudespc_env)
   } else {
-    0
+    0L
   }
 
   result <- list(
