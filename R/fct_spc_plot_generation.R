@@ -451,6 +451,325 @@ execute_qic_call <- function(qic_args, chart_type, config) {
   qic_data
 }
 
+# LABEL COLLISION DETECTION HELPERS ==========================================
+
+#' Beregn label boksstørrelser i data-enheder
+#'
+#' Estimerer hver labels AABB (axis-aligned bounding box) i data-koordinater
+#' ved at render midlertidige marquee grobs og konvertere dimensioner.
+#'
+#' @param plot ggplot objekt uden label-lag (til paneldimensioner)
+#' @param label_data data.frame med x_numeric, y_header, label, style kolonner
+#' @param style marquee style objekt
+#' @param size numerisk tekststørrelse
+#' @param lineheight numerisk linjehøjde
+#' @param family tekstfont navn
+#' @param dpi numerisk DPI værdi (default: 96)
+#'
+#' @return data.frame med kolonner: id, xmin, xmax, ymin, ymax (i data units)
+compute_label_boxes_data_units <- function(plot, label_data, style, size, lineheight, family, dpi = 96) {
+  if (is.null(label_data) || nrow(label_data) == 0) {
+    return(data.frame(id = integer(), xmin = numeric(), xmax = numeric(), ymin = numeric(), ymax = numeric()))
+  }
+
+  # Build plot for extracting panel dimensions
+  built <- ggplot2::ggplot_build(plot)
+  panel_params <- built$layout$panel_params[[1]]
+  x_range <- panel_params$x.range
+  y_range <- panel_params$y.range
+
+  # Render plot temporarily to get grob structure
+  grob <- ggplot2::ggplotGrob(plot)
+
+  # Find panel grob
+  panel_index <- which(grob$layout$name == "panel")
+  if (length(panel_index) == 0) {
+    stop("Kunne ikke finde panel grob")
+  }
+
+  panel_grob <- grob$grobs[[panel_index[1]]]
+
+  # Extract panel dimensions in inches
+  panel_width_inch <- grid::convertWidth(panel_grob$width, "inches", valueOnly = TRUE)
+  panel_height_inch <- grid::convertHeight(panel_grob$height, "inches", valueOnly = TRUE)
+
+  # Calculate data units per inch
+  data_per_inch_x <- diff(x_range) / panel_width_inch
+  data_per_inch_y <- diff(y_range) / panel_height_inch
+
+  # Estimate each label box
+  boxes <- lapply(seq_len(nrow(label_data)), function(i) {
+    row <- label_data[i, ]
+
+    # Create temporary grob to measure dimensions
+    # Size in pts needs conversion (1 pt = 1/72 inch)
+    size_inch <- size / 72
+
+    # Estimate width and height based on text content
+    # Marquee labels have two lines (header + value)
+    text_lines <- strsplit(row$label, "\\n", perl = TRUE)[[1]]
+    n_lines <- length(text_lines)
+
+    # Rough estimation: average character width ~0.5 * size
+    max_line_chars <- max(nchar(gsub("\\{[^}]+\\}", "", text_lines))) # Remove markdown
+    label_width_inch <- max_line_chars * size_inch * 0.5
+    label_height_inch <- n_lines * size_inch * lineheight
+
+    # Convert to data units
+    width_data <- label_width_inch * data_per_inch_x
+    height_data <- label_height_inch * data_per_inch_y
+
+    # Position: hjust = 0 (left-aligned at x position)
+    xmin <- row$x_numeric
+    xmax <- row$x_numeric + width_data
+    ymin <- row$y_header - height_data / 2
+    ymax <- row$y_header + height_data / 2
+
+    data.frame(
+      id = i,
+      xmin = xmin,
+      xmax = xmax,
+      ymin = ymin,
+      ymax = ymax
+    )
+  })
+
+  do.call(rbind, boxes)
+}
+
+#' Buffer linje-segmenter som kollisions-obstacles
+#'
+#' Opretter forbudszoner omkring centerline og targetline som labels
+#' ikke må krydse.
+#'
+#' @param qic_data data.frame med x, cl, target, part kolonner
+#' @param pad_line numerisk buffer i data-enheder
+#'
+#' @return liste med cl_obstacles og target_obstacles data.frames
+buffer_lines_as_obstacles <- function(qic_data, pad_line) {
+  cl_obstacles <- data.frame()
+  target_obstacles <- data.frame()
+
+  # Buffer centerline segments (per part)
+  if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
+    cl_segments <- lapply(unique(qic_data$part), function(p) {
+      part_data <- qic_data[qic_data$part == p & !is.na(qic_data$cl), ]
+      if (nrow(part_data) < 2) return(NULL)
+
+      segments <- lapply(seq_len(nrow(part_data) - 1), function(i) {
+        x1 <- as.numeric(part_data$x[i])
+        x2 <- as.numeric(part_data$x[i + 1])
+        y_cl <- part_data$cl[i]
+
+        data.frame(
+          xmin = min(x1, x2),
+          xmax = max(x1, x2),
+          ymin = y_cl - pad_line,
+          ymax = y_cl + pad_line
+        )
+      })
+      do.call(rbind, segments)
+    })
+    cl_obstacles <- do.call(rbind, Filter(Negate(is.null), cl_segments))
+  }
+
+  # Buffer target line segments
+  if (!is.null(qic_data$target) && any(!is.na(qic_data$target))) {
+    target_value <- qic_data$target[!is.na(qic_data$target)][1]
+    target_data <- qic_data[!is.na(qic_data$x), ]
+
+    if (nrow(target_data) >= 2) {
+      target_segments <- lapply(seq_len(nrow(target_data) - 1), function(i) {
+        x1 <- as.numeric(target_data$x[i])
+        x2 <- as.numeric(target_data$x[i + 1])
+
+        data.frame(
+          xmin = min(x1, x2),
+          xmax = max(x1, x2),
+          ymin = target_value - pad_line,
+          ymax = target_value + pad_line
+        )
+      })
+      target_obstacles <- do.call(rbind, target_segments)
+    }
+  }
+
+  list(cl = cl_obstacles, target = target_obstacles)
+}
+
+#' Afled dynamisk box.padding fra målte label-bokse
+#'
+#' Beregner en konservativ box.padding værdi baseret på label-dimensioner.
+#'
+#' @param label_boxes data.frame fra compute_label_boxes_data_units()
+#' @param min_padding_data optional minimum padding i data-enheder
+#'
+#' @return numerisk værdi til brug i ggrepel box.padding parameter
+derive_box_padding <- function(label_boxes, min_padding_data = NULL) {
+  if (is.null(label_boxes) || nrow(label_boxes) == 0) {
+    return(0.35) # Default fallback
+  }
+
+  # Calculate median label diagonal as conservative estimate
+  label_widths <- label_boxes$xmax - label_boxes$xmin
+  label_heights <- label_boxes$ymax - label_boxes$ymin
+  label_diagonals <- sqrt(label_widths^2 + label_heights^2)
+
+  median_diagonal <- median(label_diagonals, na.rm = TRUE)
+
+  # Convert to "lines" scale (approximate)
+  # ggrepel box.padding is in "lines" units (~0.1 inch per line)
+  # Conservative: use median diagonal / 2 as padding
+  padding <- median_diagonal * 2.5
+
+  # Apply minimum if specified
+  if (!is.null(min_padding_data)) {
+    padding <- max(padding, min_padding_data)
+  }
+
+  # Clamp to reasonable bounds
+  max(0.2, min(padding, 1.0))
+}
+
+#' Assert ingen overlap mellem labels
+#'
+#' Verificerer at label-bokse ikke overlapper hinanden.
+#'
+#' @param label_boxes data.frame med xmin, xmax, ymin, ymax
+#' @param min_gap numerisk minimum gap i data-enheder (default: 0)
+#'
+#' @return TRUE hvis ingen overlap, fejler ellers
+assert_no_label_overlaps <- function(label_boxes, min_gap = 0) {
+  if (is.null(label_boxes) || nrow(label_boxes) < 2) {
+    return(TRUE)
+  }
+
+  n <- nrow(label_boxes)
+  for (i in seq_len(n - 1)) {
+    for (j in (i + 1):n) {
+      box1 <- label_boxes[i, ]
+      box2 <- label_boxes[j, ]
+
+      # Check AABB overlap with min_gap
+      overlaps <- !(
+        box1$xmax + min_gap < box2$xmin ||
+        box1$xmin > box2$xmax + min_gap ||
+        box1$ymax + min_gap < box2$ymin ||
+        box1$ymin > box2$ymax + min_gap
+      )
+
+      if (overlaps) {
+        stop(sprintf(
+          "Label overlap detected: label %d og %d overlapper (min_gap = %f)",
+          i, j, min_gap
+        ))
+      }
+    }
+  }
+
+  TRUE
+}
+
+#' Assert ingen overlap mellem labels og linjer
+#'
+#' Verificerer at label-bokse ikke krydser centerline eller targetline obstacles.
+#'
+#' @param label_boxes data.frame med xmin, xmax, ymin, ymax
+#' @param cl_obstacles data.frame med centerline obstacle rektangler
+#' @param target_obstacles data.frame med target obstacle rektangler
+#'
+#' @return TRUE hvis ingen overlap, fejler ellers
+assert_no_overlap_with_lines <- function(label_boxes, cl_obstacles, target_obstacles) {
+  if (is.null(label_boxes) || nrow(label_boxes) == 0) {
+    return(TRUE)
+  }
+
+  # Check CL obstacles
+  if (!is.null(cl_obstacles) && nrow(cl_obstacles) > 0) {
+    for (i in seq_len(nrow(label_boxes))) {
+      box <- label_boxes[i, ]
+      for (j in seq_len(nrow(cl_obstacles))) {
+        obs <- cl_obstacles[j, ]
+
+        overlaps <- !(
+          box$xmax < obs$xmin ||
+          box$xmin > obs$xmax ||
+          box$ymax < obs$ymin ||
+          box$ymin > obs$ymax
+        )
+
+        if (overlaps) {
+          stop(sprintf(
+            "Label %d overlapper centerline obstacle %d",
+            i, j
+          ))
+        }
+      }
+    }
+  }
+
+  # Check target obstacles
+  if (!is.null(target_obstacles) && nrow(target_obstacles) > 0) {
+    for (i in seq_len(nrow(label_boxes))) {
+      box <- label_boxes[i, ]
+      for (j in seq_len(nrow(target_obstacles))) {
+        obs <- target_obstacles[j, ]
+
+        overlaps <- !(
+          box$xmax < obs$xmin ||
+          box$xmin > obs$xmax ||
+          box$ymax < obs$ymin ||
+          box$ymin > obs$ymax
+        )
+
+        if (overlaps) {
+          stop(sprintf(
+            "Label %d overlapper target obstacle %d",
+            i, j
+          ))
+        }
+      }
+    }
+  }
+
+  TRUE
+}
+
+#' Assert labels er inden for panel-grænser
+#'
+#' Verificerer at label-bokse ikke overskrider panel-dimensioner.
+#'
+#' @param label_boxes data.frame med xmin, xmax, ymin, ymax
+#' @param x_range numerisk vektor med [min, max] x-værdier
+#' @param y_range numerisk vektor med [min, max] y-værdier
+#' @param pad_panel numerisk padding margin i data-enheder (default: 0)
+#'
+#' @return TRUE hvis inden for panel, fejler ellers
+assert_inside_panel <- function(label_boxes, x_range, y_range, pad_panel = 0) {
+  if (is.null(label_boxes) || nrow(label_boxes) == 0) {
+    return(TRUE)
+  }
+
+  x_min_allowed <- x_range[1] + pad_panel
+  x_max_allowed <- x_range[2] - pad_panel
+  y_min_allowed <- y_range[1] + pad_panel
+  y_max_allowed <- y_range[2] - pad_panel
+
+  for (i in seq_len(nrow(label_boxes))) {
+    box <- label_boxes[i, ]
+
+    if (box$xmin < x_min_allowed || box$xmax > x_max_allowed ||
+        box$ymin < y_min_allowed || box$ymax > y_max_allowed) {
+      stop(sprintf(
+        "Label %d er uden for panel bounds: x=[%.2f, %.2f], y=[%.2f, %.2f]",
+        i, box$xmin, box$xmax, box$ymin, box$ymax
+      ))
+    }
+  }
+
+  TRUE
+}
+
 # PLOT ENHANCEMENT UTILITIES ==================================================
 
 ## Add Plot Enhancements
@@ -660,13 +979,14 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
     label_data$label <- sprintf(
-      "{.12 **%s**}  
+      "{.12 **%s**}
       {.36 **%s**}",
       label_data$header_label,
       label_data$value_label
     )
 
     x_range <- range(qic_data$x, na.rm = TRUE)
+    y_range <- range(qic_data$y, na.rm = TRUE)
     label_x_numeric <- as.numeric(x_range[2]) + as.numeric(diff(x_range)) * 0.02
     label_data$x_numeric <- as.numeric(label_data$x)
 
@@ -677,7 +997,77 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       margin = marquee::trbl(0),
       align = "right"
     )
-      
+
+    # COLLISION DETECTION & VALIDATION ----
+    # Beregn label-bokse i data-enheder
+    label_boxes <- safe_operation(
+      "Compute label boxes",
+      code = {
+        compute_label_boxes_data_units(
+          plot = plot,
+          label_data = label_data,
+          style = right_aligned_style,
+          size = 6,
+          lineheight = 0.9,
+          family = "Roboto Medium"
+        )
+      },
+      fallback = function(e) {
+        log_warn(paste("Label box computation fejlede:", e$message), .context = "LABEL_COLLISION")
+        NULL
+      }
+    )
+
+    # Buffer linjer som obstacles
+    pad_line <- median(label_boxes$ymax - label_boxes$ymin, na.rm = TRUE) * 0.5
+    if (is.na(pad_line) || pad_line == 0) {
+      pad_line <- 0.01 * diff(y_range)
+    }
+
+    obstacles <- safe_operation(
+      "Buffer lines as obstacles",
+      code = {
+        buffer_lines_as_obstacles(qic_data, pad_line)
+      },
+      fallback = function(e) {
+        log_warn(paste("Line buffering fejlede:", e$message), .context = "LABEL_COLLISION")
+        list(cl = data.frame(), target = data.frame())
+      }
+    )
+
+    # Assertions for collision detection
+    if (!is.null(label_boxes) && nrow(label_boxes) > 0) {
+      tryCatch({
+        assert_no_overlap_with_lines(label_boxes, obstacles$cl, obstacles$target)
+        log_debug("Labels krydser ikke CL/Target", .context = "LABEL_COLLISION")
+      }, error = function(e) {
+        log_warn(paste("Label/line overlap warning:", e$message), .context = "LABEL_COLLISION")
+      })
+
+      tryCatch({
+        assert_no_label_overlaps(label_boxes, min_gap = 0)
+        log_debug("Labels overlapper ikke hinanden", .context = "LABEL_COLLISION")
+      }, error = function(e) {
+        log_warn(paste("Label overlap warning:", e$message), .context = "LABEL_COLLISION")
+      })
+
+      tryCatch({
+        assert_inside_panel(label_boxes, x_range, y_range, pad_panel = 0)
+        log_debug("Labels er inden for panel", .context = "LABEL_COLLISION")
+      }, error = function(e) {
+        log_warn(paste("Panel bounds warning:", e$message), .context = "LABEL_COLLISION")
+      })
+    }
+
+    # Afled dynamisk box.padding
+    computed_padding <- if (!is.null(label_boxes) && nrow(label_boxes) > 0) {
+      derive_box_padding(label_boxes)
+    } else {
+      0.35 # Fallback
+    }
+
+    log_debug(paste("Computed box.padding:", computed_padding), .context = "LABEL_COLLISION")
+
     plot <- plot +
       ggrepel::geom_marquee_repel(
         data = label_data,
@@ -686,12 +1076,13 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
         style = right_aligned_style,
         lineheight = 0.9,
         family = "Roboto Medium",
-        box.padding = 0.35,
+        box.padding = computed_padding,
         point.padding = 0.2,
         direction = "y",
         position = ggpp::position_nudge_to(x = label_x_numeric),
         min.segment.length = Inf,
         force = 2.5,
+        seed = 1,  # Determinisme til tests
         show.legend = FALSE,
         markdown = TRUE,
         parse = FALSE
