@@ -4,6 +4,21 @@
 #
 # Dependencies ----------------------------------------------------------------
 
+# Verify ggrepel fork with marquee support on first use
+if (!exists(".ggrepel_marquee_checked", envir = .GlobalEnv)) {
+  if (!"geom_marquee_repel" %in% getNamespaceExports("ggrepel")) {
+    warning(
+      "\n",
+      "SPCify kræver custom ggrepel fork med geom_marquee_repel().\n",
+      "Installér via: remotes::install_github('teunbrand/ggrepel@marquee_repel')\n",
+      "Eller brug: renv::restore()",
+      immediate. = TRUE,
+      call. = FALSE
+    )
+  }
+  assign(".ggrepel_marquee_checked", TRUE, envir = .GlobalEnv)
+}
+
 # COMMENT PROCESSING UTILITIES ================================================
 
 ## Extract Comment Data for Plot Annotations

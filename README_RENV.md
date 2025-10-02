@@ -43,13 +43,42 @@ packageVersion("ggrepel")  # Skal være 0.9.6.9999
 "geom_marquee_repel" %in% getNamespaceExports("ggrepel")  # Skal være TRUE
 ```
 
+## Version Konflikt Håndtering
+
+### Problem: Anden bruger har standard ggrepel installeret
+
+Hvis nogen prøver at bruge SPCify med standard CRAN ggrepel (uden marquee support):
+
+**Automatisk detektion:**
+- SPCify viser warning ved opstart hvis geom_marquee_repel mangler
+- Plot-funktioner checker før brug og giver klare fejlbeskeder
+
+**Løsning for brugere:**
+```r
+# Option 1: Brug renv (anbefalet)
+renv::restore()  # Installerer automatisk korrekt fork
+# Genstart R session
+
+# Option 2: Manuel installation
+remotes::install_github('teunbrand/ggrepel@marquee_repel')
+# Genstart R session
+```
+
+### Sikkerhed mod package collision
+
+renv isolerer SPCify's dependencies i projekt-bibliotek:
+- Standard ggrepel i brugerens globale library → **IKKE brugt**
+- Custom ggrepel fork i `renv/library/` → **BRUGES af SPCify**
+- Ingen konflikt mellem versioner
+
 ## Hvad sker der når marquee_repel bliver merged?
 
 Når `geom_marquee_repel` bliver merged ind i officiel ggrepel:
 1. Opdater DESCRIPTION: Fjern `Remotes:` linje, opdater version
 2. Installer fra CRAN: `install.packages("ggrepel")`
-3. Opdater lock: `renv::snapshot()`
-4. Commit og push opdateret `renv.lock`
+3. Fjern version check fra `R/zzz_ggrepel_check.R`
+4. Opdater lock: `renv::snapshot()`
+5. Commit og push opdateret `renv.lock`
 
 ## .gitignore Setup
 
