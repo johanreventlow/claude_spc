@@ -555,7 +555,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       last_row <- part_data[nrow(part_data), ]
       cl_value <- last_row$cl
       if (!is.na(cl_value)) {
-        # Label ved extended position
+        # Label ved extended position (højrejusteret)
         label_data <- rbind(label_data, data.frame(
           x = extended_x,
           y = cl_value,
@@ -579,7 +579,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   if (!is.null(qic_data$target) && any(!is.na(qic_data$target))) {
     target_value <- qic_data$target[!is.na(qic_data$target)][1]
 
-    # Label ved extended position
+    # Label ved extended position (højrejusteret)
     label_data <- rbind(label_data, data.frame(
       x = extended_x,
       y = target_value,
@@ -690,7 +690,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
         size = 4,
         color = hospital_colors$darkgrey,
         fontface = "bold",
-        hjust = 0,  # Left-aligned ved extended position
+        hjust = 1,  # Right-aligned ved extended position
         inherit.aes = FALSE
       )
   }
