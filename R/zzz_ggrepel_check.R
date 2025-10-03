@@ -1,49 +1,42 @@
-#' Check ggrepel version and geom_marquee_repel availability
+#' Check marquee geom availability (strict marquee::geom_marquee)
 #'
 #' @keywords internal
 .onAttach <- function(libname, pkgname) {
-  # Check if we have the correct ggrepel fork with marquee support
-  has_marquee <- "geom_marquee_repel" %in% getNamespaceExports("ggrepel")
-  ggrepel_version <- utils::packageVersion("ggrepel")
+  # Strict requirement: marquee::geom_marquee
+  has_marquee <- tryCatch(requireNamespace("marquee", quietly = TRUE) &&
+    "geom_marquee" %in% getNamespaceExports("marquee"), error = function(e) FALSE)
 
   if (!has_marquee) {
     packageStartupMessage(
       "\n",
       "╔══════════════════════════════════════════════════════════════════╗\n",
-      "║ WARNING: SPCify kræver en custom version af ggrepel             ║\n",
+      "║ WARNING: Marquee geom mangler                                   ║\n",
       "║                                                                  ║\n",
-      "║ Du har ggrepel ", format(ggrepel_version, width = 10), " installeret,                   ║\n",
-      "║ men geom_marquee_repel() funktionen mangler.                    ║\n",
+      "║ Pakken 'marquee' med geom_marquee() er ikke installeret.         ║\n",
       "║                                                                  ║\n",
-      "║ For at installere den korrekte version:                         ║\n",
-      "║   remotes::install_github('teunbrand/ggrepel@marquee_repel')    ║\n",
-      "║                                                                  ║\n",
-      "║ Eller brug renv til automatisk installation:                    ║\n",
-      "║   renv::restore()                                                ║\n",
+      "║ Løsning:                                                         ║\n",
+      "║  • Installer 'marquee'                                           ║\n",
+      "║  • eller kør renv::restore()                                     ║\n",
       "╚══════════════════════════════════════════════════════════════════╝\n"
     )
   } else {
-    # Silent success - only show warning if something is wrong
-    if (ggrepel_version < "0.9.6.9999") {
-      packageStartupMessage(
-        "Note: SPCify bruger custom ggrepel fork (", ggrepel_version, ") med geom_marquee_repel support"
-      )
-    }
+    # Silent success
   }
 }
 
-#' Ensure geom_marquee_repel is available before plotting
+#' Ensure a marquee geom is available before plotting
 #'
 #' @return TRUE if available, stops with informative error otherwise
 #' @keywords internal
 check_ggrepel_marquee <- function() {
-  if (!"geom_marquee_repel" %in% getNamespaceExports("ggrepel")) {
+  has_marquee <- tryCatch(requireNamespace("marquee", quietly = TRUE) &&
+    "geom_marquee" %in% getNamespaceExports("marquee"), error = function(e) FALSE)
+
+  if (!has_marquee) {
     stop(
       "\n",
-      "geom_marquee_repel() er ikke tilgængelig i din ggrepel installation.\n\n",
-      "SPCify kræver en custom fork af ggrepel med marquee support.\n\n",
-      "Installér den korrekte version:\n",
-      "  remotes::install_github('teunbrand/ggrepel@marquee_repel')\n\n",
+      "marquee::geom_marquee er ikke tilgængelig.\n\n",
+      "Installer 'marquee' pakken.\n\n",
       "Eller brug renv:\n",
       "  renv::restore()\n\n",
       "Genstart derefter R session.",

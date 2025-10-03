@@ -4,17 +4,21 @@
 #
 # Dependencies ----------------------------------------------------------------
 
-# Verify ggrepel fork with marquee support on first use (package env)
+# Verify marquee geom availability on first use (package env)
 try({
   claudespc_env <- get_claudespc_environment()
   already_checked <- tryCatch(get(".ggrepel_marquee_checked", envir = claudespc_env, inherits = FALSE), error = function(e) FALSE)
   if (!isTRUE(already_checked)) {
-    if (!"geom_marquee_repel" %in% getNamespaceExports("ggrepel")) {
+    # Strict requirement: marquee::geom_marquee must be available
+    has_marquee <- tryCatch(requireNamespace("marquee", quietly = TRUE) &&
+      "geom_marquee" %in% getNamespaceExports("marquee"), error = function(e) FALSE)
+
+    if (!has_marquee) {
       # Observability via central logger (ingen fallback – kun advisory)
       log_warn(
         message = paste(
-          "SPCify kræver custom ggrepel fork med geom_marquee_repel().",
-          "Installér via: remotes::install_github('teunbrand/ggrepel@marquee_repel')",
+          "Marquee label geometri mangler: marquee::geom_marquee ikke fundet.",
+          "Installér 'marquee' pakken med geom_marquee().",
           "eller brug: renv::restore()",
           sep = "\n"
         ),
@@ -24,6 +28,15 @@ try({
     assign(".ggrepel_marquee_checked", TRUE, envir = claudespc_env)
   }
 }, silent = TRUE)
+
+# Internal helper: resolve marquee geom function (strict marquee)
+resolve_geom_marquee <- function() {
+  if (requireNamespace("marquee", quietly = TRUE) &&
+      "geom_marquee" %in% tryCatch(getNamespaceExports("marquee"), error = function(e) character())) {
+    return(marquee::geom_marquee)
+  }
+  stop("marquee::geom_marquee er ikke tilgængelig", call. = FALSE)
+}
 
 # COMMENT PROCESSING UTILITIES ================================================
 
@@ -510,6 +523,7 @@ compute_label_boxes_data_units <- function(plot, label_data, style, size, linehe
     # Fallback: estimate from x_range (assume 7 inches default plot width)
     7
   })
+  if (!is.finite(panel_width_inch) || panel_width_inch <= 0) panel_width_inch <- 7
 
   panel_height_inch <- tryCatch({
     grid::convertHeight(panel_height_unit, "inches", valueOnly = TRUE)
@@ -517,10 +531,15 @@ compute_label_boxes_data_units <- function(plot, label_data, style, size, linehe
     # Fallback: estimate from y_range (assume 5 inches default plot height)
     5
   })
+  if (!is.finite(panel_height_inch) || panel_height_inch <= 0) panel_height_inch <- 5
+
+  # Ensure numeric ranges to avoid difftime warnings on Date/POSIXct
+  x_range_num <- as.numeric(x_range)
+  y_range_num <- as.numeric(y_range)
 
   # Calculate data units per inch
-  data_per_inch_x <- diff(x_range) / panel_width_inch
-  data_per_inch_y <- diff(y_range) / panel_height_inch
+  data_per_inch_x <- diff(x_range_num) / panel_width_inch
+  data_per_inch_y <- diff(y_range_num) / panel_height_inch
 
   # Estimate each label box
   boxes <- lapply(seq_len(nrow(label_data)), function(i) {
@@ -567,13 +586,36 @@ compute_label_boxes_data_units <- function(plot, label_data, style, size, linehe
     label_width_inch <- measure[1]
     label_height_inch <- measure[2]
 
+    # Fallback if measurement produced invalid values
+    if (!is.finite(label_width_inch) || label_width_inch <= 0 ||
+        !is.finite(label_height_inch) || label_height_inch <= 0) {
+      size_inch_fallback <- (fontsize_pt / 72.0)
+      # Prefer clean header/value text if available to avoid stripping markdown
+      text_lines_fb <- tryCatch({
+        if (all(c("header_label", "value_label") %in% names(row))) {
+          c(as.character(row$header_label), as.character(row$value_label))
+        } else {
+          # Strip simple markdown tokens
+          raw <- strsplit(row$label, "\\n", perl = TRUE)[[1]]
+          gsub("[\\{\\}\\*]", "", raw)
+        }
+      }, error = function(e) {
+        c("Header", "Value")
+      })
+      max_line_chars_fb <- max(nchar(text_lines_fb))
+      if (!is.finite(max_line_chars_fb) || max_line_chars_fb <= 0) max_line_chars_fb <- 6
+      label_width_inch <- max_line_chars_fb * size_inch_fallback * 0.5
+      n_lines_fb <- max(1, length(text_lines_fb))
+      label_height_inch <- n_lines_fb * size_inch_fallback * lineheight
+    }
+
     # Convert to data units
     width_data <- label_width_inch * data_per_inch_x
     height_data <- label_height_inch * data_per_inch_y
 
     # Position: hjust = 0 (left-aligned at x position)
-    xmin <- row$x_numeric
-    xmax <- row$x_numeric + width_data
+    xmin <- as.numeric(row$x_numeric)
+    xmax <- as.numeric(row$x_numeric) + width_data
     ymin <- row$y_header - height_data / 2
     ymax <- row$y_header + height_data / 2
 
@@ -587,6 +629,98 @@ compute_label_boxes_data_units <- function(plot, label_data, style, size, linehe
   })
 
   do.call(rbind, boxes)
+}
+
+#' Beregn label-højder i data-enheder
+#'
+#' Wrapper der genbruger compute_label_boxes_data_units til at udlede
+#' højde per label i data units.
+#'
+#' @return numeric vektor med fuld højde pr. label
+compute_label_heights_data <- function(plot, label_data, style, size, lineheight, family, dpi = 96) {
+  boxes <- compute_label_boxes_data_units(plot, label_data, style, size, lineheight, family, dpi)
+  if (is.null(boxes) || nrow(boxes) == 0) return(numeric(0))
+  (boxes$ymax - boxes$ymin)
+}
+
+#' Deterministisk 1D y-placeringssolver til højre-ankrede labels
+#'
+#' Placerer labels kun langs y-aksen med min. afvigelse fra ønsket y,
+#' respekterer individuelle forbudsbånd og indbyrdes afstand.
+place_labels_right_1d <- function(y_desired, half_heights,
+                                  forbid_intervals = list(),
+                                  min_gap = 0,
+                                  y_bounds = NULL) {
+  if (length(y_desired) == 0) return(numeric(0))
+
+  y <- as.numeric(y_desired)
+  hh <- as.numeric(half_heights)
+
+  # Snap ud af alle forbudsbånd (inkl. den modsatte linje)
+  for (i in seq_along(y)) {
+    intervals_i <- forbid_intervals[[i]]
+    if (is.null(intervals_i)) next
+
+    # Normaliser så vi altid har en liste af [low, high]
+    if (is.numeric(intervals_i) && length(intervals_i) == 2) {
+      intervals_i <- list(intervals_i)
+    }
+
+    iter <- 0L
+    repeat {
+      iter <- iter + 1L
+      # Find alle overlap
+      overlaps <- vapply(intervals_i, function(iv) {
+        low <- iv[1]; high <- iv[2]
+        (y[i] - hh[i]) < high && (y[i] + hh[i]) > low
+      }, logical(1))
+
+      if (!any(overlaps) || iter > 10L) break
+
+      # Vælg nærmeste flugtpunkt over/under på tværs af alle intervaller
+      candidates <- lapply(intervals_i[overlaps], function(iv) {
+        low <- iv[1]; high <- iv[2]
+        up <- high + hh[i] + 1e-9
+        down <- low - hh[i] - 1e-9
+        c(up = up, down = down)
+      })
+      ups <- vapply(candidates, function(x) x["up"], numeric(1))
+      downs <- vapply(candidates, function(x) x["down"], numeric(1))
+      all_cands <- c(ups, downs)
+      # Vælg kandidat tættest på ønsket position
+      y[i] <- all_cands[which.min(abs(all_cands - y_desired[i]))]
+    }
+  }
+
+  # Stabil sortering og greedy skub for at undgå overlap
+  ord <- order(y)
+  y <- y[ord]; hh <- hh[ord]
+  if (length(y) >= 2) {
+    for (i in 2:length(y)) {
+      min_allowed <- y[i - 1] + hh[i - 1] + hh[i] + min_gap
+      if (y[i] < min_allowed) y[i] <- min_allowed
+    }
+  }
+
+  # Håndhæv panelgrænser hvis angivet
+  if (!is.null(y_bounds) && length(y_bounds) == 2) {
+    # Nedre grænse
+    for (i in seq_along(y)) {
+      y[i] <- max(y[i], y_bounds[1] + hh[i])
+    }
+    # Øvre grænse (baglæns for stabilitet)
+    for (i in rev(seq_along(y))) {
+      y[i] <- min(y[i], y_bounds[2] - hh[i])
+      if (i < length(y)) {
+        y[i] <- min(y[i], y[i + 1] - (hh[i] + hh[i + 1] + min_gap))
+      }
+    }
+  }
+
+  # Tilbage til original rækkefølge
+  res <- numeric(length(y))
+  res[ord] <- y
+  res
 }
 
 #' Buffer linje-segmenter som kollisions-obstacles
@@ -1130,26 +1264,123 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
 
     log_debug(paste("Computed box.padding:", computed_padding), .context = "LABEL_COLLISION")
 
-    plot <- plot +
-      ggrepel::geom_marquee_repel(
-        data = label_data,
-        mapping = ggplot2::aes(x = x_numeric, y = y_header, label = label, colour = text_color),
-        size = 6,
-        style = right_aligned_style,
-        lineheight = 0.9,
-        family = "Roboto Medium",
-        box.padding = computed_padding,
-        point.padding = 0.2,
-        direction = "y",
-        position = ggpp::position_nudge_to(x = label_x_numeric),
-        min.segment.length = Inf,
-        force = 2.5,
-        seed = 1,  # Determinisme til tests
-        show.legend = FALSE,
-        markdown = TRUE,
-        parse = FALSE
-      ) +
-      ggplot2::scale_color_identity(guide = "none")
+    # Match X class to avoid scale warnings (Date/POSIXct awareness)
+    if (inherits(qic_data$x, c("POSIXct", "POSIXt"))) {
+      tz_val <- tryCatch(attr(qic_data$x, "tzone"), error = function(e) NULL)
+      if (is.null(tz_val)) tz_val <- "UTC"
+      label_data$x_numeric <- as.POSIXct(as.numeric(label_data$x_numeric), origin = "1970-01-01", tz = tz_val)
+      label_x_numeric <- as.POSIXct(as.numeric(label_x_numeric), origin = "1970-01-01", tz = tz_val)
+    } else if (inherits(qic_data$x, "Date")) {
+      label_data$x_numeric <- as.Date(as.numeric(label_data$x_numeric), origin = "1970-01-01")
+      label_x_numeric <- as.Date(as.numeric(label_x_numeric), origin = "1970-01-01")
+    }
+
+    # DETERMINISTISK 1D Y-PLACERING ----
+    # Mål label-højder i data-enheder og afled half-heights
+    h_data <- safe_operation(
+      "Compute label heights",
+      code = {
+        compute_label_heights_data(
+          plot = plot,
+          label_data = label_data,
+          style = right_aligned_style,
+          size = 6,
+          lineheight = 0.9,
+          family = "Roboto Medium"
+        )
+      },
+      fallback = function(e) {
+        log_warn(paste("Label height computation fejlede:", e$message), .context = "LABEL_COLLISION")
+        rep(0.02 * diff(y_range), nrow(label_data))
+      }
+    )
+    half_h <- h_data / 2
+
+    # Forbudsbånd omkring hver labels egen linje
+    # Forbudsbånd: begge linjer er forbudt for begge labels
+    cl_line <- tryCatch(label_data$y_header[label_data$type == "cl"][1], error = function(e) NA_real_)
+    target_line <- tryCatch(label_data$y_header[label_data$type == "target"][1], error = function(e) NA_real_)
+
+    forbid_intervals <- lapply(seq_len(nrow(label_data)), function(i) {
+      iv <- list()
+      if (is.finite(cl_line))    iv[[length(iv) + 1]] <- c(cl_line - pad_line,    cl_line + pad_line)
+      if (is.finite(target_line)) iv[[length(iv) + 1]] <- c(target_line - pad_line, target_line + pad_line)
+      iv
+    })
+
+    # Mindste lodrette afstand mellem labels
+    min_gap <- 0.15 * stats::median(h_data, na.rm = TRUE)
+    if (!is.finite(min_gap) || min_gap <= 0) min_gap <- 0.005 * diff(y_range)
+
+    # Panelgrænser
+    y_bounds <- as.numeric(y_range)
+
+    # Placer endelige y-koordinater
+    y_placed <- place_labels_right_1d(
+      y_desired = as.numeric(label_data$y_header),
+      half_heights = half_h,
+      forbid_intervals = forbid_intervals,
+      min_gap = min_gap,
+      y_bounds = y_bounds
+    )
+
+    label_data$y_header <- y_placed
+
+    # Recompute bokse for assertions efter placering
+    placed_boxes <- safe_operation(
+      "Recompute label boxes (placed)",
+      code = {
+        compute_label_boxes_data_units(
+          plot = plot,
+          label_data = label_data,
+          style = right_aligned_style,
+          size = 6,
+          lineheight = 0.9,
+          family = "Roboto Medium"
+        )
+      },
+      fallback = NULL
+    )
+
+    if (!is.null(placed_boxes) && nrow(placed_boxes) > 0) {
+      tryCatch({
+        assert_no_overlap_with_lines(placed_boxes, obstacles$cl, obstacles$target)
+        assert_no_label_overlaps(placed_boxes, min_gap = min_gap)
+        assert_inside_panel(placed_boxes, x_range, y_range, pad_panel = 0)
+        log_debug("1D placerings-assertions OK", .context = "LABEL_COLLISION")
+      }, error = function(e) {
+        log_warn(paste("1D placement assertion warning:", e$message), .context = "LABEL_COLLISION")
+      })
+    }
+
+    # Byg lag med strict marquee geom (ingen repel-bevægelse)
+    geom_fun <- resolve_geom_marquee()
+    marquee_formals <- tryCatch(names(formals(geom_fun)), error = function(e) character())
+    pass_markdown <- "markdown" %in% marquee_formals
+    pass_parse <- "parse" %in% marquee_formals
+
+    args <- list(
+      data = label_data,
+      mapping = ggplot2::aes(x = x_numeric, y = y_header, label = label, colour = text_color),
+      size = 6,
+      style = right_aligned_style,
+      lineheight = 0.9,
+      family = "Roboto Medium",
+      position = ggpp::position_nudge_to(x = label_x_numeric),
+      show.legend = FALSE
+    )
+    # Højre-ankring: placer boksens venstrekant ved x og højrejustér indhold
+    if ("hjust" %in% marquee_formals) args$hjust <- 0
+
+    # Parametre understøttet af marquee
+    if ("direction" %in% marquee_formals) args$direction <- "y"
+    if ("seed" %in% marquee_formals) args$seed <- 1
+    if (pass_markdown) args$markdown <- TRUE
+    if (pass_parse) args$parse <- FALSE
+
+    layer <- do.call(geom_fun, args)
+
+    plot <- plot + layer + ggplot2::scale_color_identity(guide = "none")
   }
 
   return(plot)

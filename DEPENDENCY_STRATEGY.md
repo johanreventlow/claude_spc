@@ -37,7 +37,7 @@ unlink("renv.lock")
 
 # Keep only DESCRIPTION with Remotes field
 # DESCRIPTION already specifies:
-#   Remotes: teunbrand/ggrepel@marquee_repel
+#   Imports: marquee (strict requirement for geom_marquee)
 #   ggrepel (>= 0.9.6.9999)
 
 # Installation for users:

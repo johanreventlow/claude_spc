@@ -3,9 +3,14 @@
 # Verificerer at CL/Target labels ikke overlapper hinanden eller linjer
 # gennem collision detection helpers.
 
+has_any_marquee <- function() {
+  tryCatch(require("marquee", quietly = TRUE) &&
+             "geom_marquee" %in% getNamespaceExports("marquee"), error = function(e) FALSE)
+}
+
 test_that("compute_label_boxes_data_units returnerer korrekte dimensioner", {
   skip_if_not(require("ggplot2", quietly = TRUE))
-  skip_if_not(require("ggrepel", quietly = TRUE))
+  skip_if_not(has_any_marquee())
 
   # Setup test data
   test_data <- data.frame(
@@ -195,8 +200,7 @@ test_that("assert_inside_panel detekterer panel-overløb", {
 
 test_that("Determinisme: seed=1 giver identiske label positioner", {
   skip_if_not(require("ggplot2", quietly = TRUE))
-  skip_if_not(require("ggrepel", quietly = TRUE))
-  skip_if_not("geom_marquee_repel" %in% getNamespaceExports("ggrepel"))
+  skip_if_not(has_any_marquee())
 
   # Setup test data
   test_data <- data.frame(
@@ -233,7 +237,7 @@ test_that("Determinisme: seed=1 giver identiske label positioner", {
   built1 <- ggplot2::ggplot_build(result1$plot)
   built2 <- ggplot2::ggplot_build(result2$plot)
 
-  # Find label layers (geom_marquee_repel)
+  # Find label layers (geom_marquee)
   label_layers1 <- which(sapply(built1$data, function(x) "label" %in% names(x)))
   label_layers2 <- which(sapply(built2$data, function(x) "label" %in% names(x)))
 
@@ -251,8 +255,7 @@ test_that("Determinisme: seed=1 giver identiske label positioner", {
 
 test_that("Integration: Full plot med collision detection virker", {
   skip_if_not(require("ggplot2", quietly = TRUE))
-  skip_if_not(require("ggrepel", quietly = TRUE))
-  skip_if_not("geom_marquee_repel" %in% getNamespaceExports("ggrepel"))
+  skip_if_not(has_any_marquee())
 
   # Setup realistic clinical data
   test_data <- data.frame(
