@@ -429,6 +429,73 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
 # PLOT ENHANCEMENT UTILITIES ==================================================
 
+## Adjust Label Y Positions
+# Intelligent y-akse justering af CL og Target labels for at undgå kollisioner
+adjust_label_y_positions <- function(label_data, y_range, qic_data) {
+  if (is.null(label_data) || nrow(label_data) == 0) return(label_data)
+
+  # Estimer label højde baseret på .36 tekst størrelse (største komponent)
+  text_size_pt <- 24
+  pt_to_data_units <- diff(y_range) * 0.015  # ~1.5% af y-range per point
+  label_height <- (text_size_pt * pt_to_data_units * 0.9 * 2.2)  # 2 linjer + spacing
+
+  min_separation <- label_height * 1.3  # 30% buffer mellem labels
+  line_buffer <- label_height * 0.6    # 60% buffer fra egne linjer
+
+  # Find CL og Target rows
+  cl_row <- which(label_data$type == "cl")
+  target_row <- which(label_data$type == "target")
+
+  if (length(cl_row) > 0 && length(target_row) > 0) {
+    cl_y <- label_data$y[cl_row]
+    target_y <- label_data$y[target_row]
+    distance <- abs(cl_y - target_y)
+
+    if (distance < min_separation) {
+      # Kollision detekteret - skub labels væk fra hinanden (kun gap_needed, ingen ekstra buffer)
+
+      # Bestem hvilken label der er øverst
+      if (cl_y > target_y) {
+        # CL er over Target
+        upper_row <- cl_row
+        lower_row <- target_row
+        upper_y <- cl_y
+        lower_y <- target_y
+      } else {
+        # Target er over CL
+        upper_row <- target_row
+        lower_row <- cl_row
+        upper_y <- target_y
+        lower_y <- cl_y
+      }
+
+      # Beregn hvor meget vi skal separere
+      gap_needed <- min_separation - distance
+      move_each <- gap_needed / 2  # Fordel bevægelsen mellem begge
+
+      # Skub labels væk fra hinanden - KUN gap_needed (ingen ekstra line_buffer)
+      label_data$y[upper_row] <- upper_y + move_each
+      label_data$y[lower_row] <- lower_y - move_each
+
+    } else {
+      # Tilstrækkelig afstand - INGEN justering, behold på linjerne
+      # Labels forbliver på deres oprindelige linjer
+      label_data$y[cl_row] <- cl_y
+      label_data$y[target_row] <- target_y
+    }
+  } else if (length(cl_row) > 0) {
+    # Kun CL label - skub ned under linjen
+    cl_y <- label_data$y[cl_row]
+    label_data$y[cl_row] <- cl_y - (line_buffer * 0.3)
+  } else if (length(target_row) > 0) {
+    # Kun Target label - behold på linjen
+    target_y <- label_data$y[target_row]
+    label_data$y[target_row] <- target_y - (line_buffer * 0.3)
+  }
+
+  return(label_data)
+}
+
 ## Add Plot Enhancements
 # Tilføjer target lines, phase separations og comment annotations
 add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count") {
@@ -687,6 +754,10 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
 
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
+    # Intelligent y-akse justering for at undgå kollisioner
+    y_range <- range(qic_data$y, na.rm = TRUE)
+    label_data <- adjust_label_y_positions(label_data, y_range, qic_data)
+
     # Formater labels med marquee markup (header lille, værdi stor)
     label_data$label <- sprintf(
       "{.12 **%s**}  \n{.36 **%s**}",
