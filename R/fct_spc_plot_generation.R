@@ -519,24 +519,53 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     }
   }
 
-  # Opret label data for centerline og target ----
-  label_data <- data.frame()
+  # Beregn extended x position (15% ud over sidste datapunkt) ----
+  last_x <- max(qic_data$x, na.rm = TRUE)
+  first_x <- min(qic_data$x, na.rm = TRUE)
 
-  # Centerline label KUN for seneste part
+  # Beregn 15% extension baseret på data range
+  if (inherits(last_x, c("POSIXct", "POSIXt"))) {
+    # For tidsobjekter: beregn i sekunder
+    range_secs <- as.numeric(difftime(last_x, first_x, units = "secs"))
+    extended_x <- last_x + range_secs * 0.15
+  } else if (inherits(last_x, "Date")) {
+    # For Date: beregn i dage
+    range_days <- as.numeric(last_x - first_x)
+    extended_x <- last_x + range_days * 0.15
+  } else {
+    # For numerisk
+    x_range <- last_x - first_x
+    extended_x <- last_x + (x_range * 0.15)
+  }
+
+  # Opret label data og extended line data ----
+  label_data <- data.frame()
+  extended_lines_data <- data.frame()
+
+  # Centerline label og extended line KUN for seneste part
   if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
     # Find seneste part
     latest_part <- max(qic_data$part, na.rm = TRUE)
     part_data <- qic_data[qic_data$part == latest_part & !is.na(qic_data$part), ]
 
     if (nrow(part_data) > 0) {
-      # Brug sidste punkt i seneste part til label placering
+      # Brug sidste punkt i seneste part
       last_row <- part_data[nrow(part_data), ]
       cl_value <- last_row$cl
       if (!is.na(cl_value)) {
+        # Label ved extended position
         label_data <- rbind(label_data, data.frame(
-          x = last_row$x,
+          x = extended_x,
           y = cl_value,
           label = paste0("CL: ", format_y_value(cl_value, y_axis_unit)),
+          type = "cl",
+          stringsAsFactors = FALSE
+        ))
+
+        # Extended line fra sidste datapunkt til extended_x
+        extended_lines_data <- rbind(extended_lines_data, data.frame(
+          x = c(last_row$x, extended_x),
+          y = c(cl_value, cl_value),
           type = "cl",
           stringsAsFactors = FALSE
         ))
@@ -544,15 +573,23 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     }
   }
 
-  # Target label (kun én gang - target er konstant)
+  # Target label og extended line
   if (!is.null(qic_data$target) && any(!is.na(qic_data$target))) {
     target_value <- qic_data$target[!is.na(qic_data$target)][1]
-    # Placer ved sidste datapunkt
-    last_x <- qic_data$x[nrow(qic_data)]
+
+    # Label ved extended position
     label_data <- rbind(label_data, data.frame(
-      x = last_x,
+      x = extended_x,
       y = target_value,
       label = paste0("Mål: ", format_y_value(target_value, y_axis_unit)),
+      type = "target",
+      stringsAsFactors = FALSE
+    ))
+
+    # Extended line fra sidste datapunkt til extended_x
+    extended_lines_data <- rbind(extended_lines_data, data.frame(
+      x = c(last_x, extended_x),
+      y = c(target_value, target_value),
       type = "target",
       stringsAsFactors = FALSE
     ))
@@ -588,6 +625,37 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   #     )
   # }
 
+  # Extended CL og Target linjer tilføjes ----
+  if (!is.null(extended_lines_data) && nrow(extended_lines_data) > 0) {
+    # CL extension
+    if (any(extended_lines_data$type == "cl")) {
+      cl_ext <- extended_lines_data[extended_lines_data$type == "cl", ]
+      plot <- plot +
+        ggplot2::geom_line(
+          data = cl_ext,
+          ggplot2::aes(x = x, y = y),
+          color = hospital_colors$hospitalblue,
+          linewidth = 1,
+          linetype = "solid",
+          inherit.aes = FALSE
+        )
+    }
+
+    # Target extension
+    if (any(extended_lines_data$type == "target")) {
+      target_ext <- extended_lines_data[extended_lines_data$type == "target", ]
+      plot <- plot +
+        ggplot2::geom_line(
+          data = target_ext,
+          ggplot2::aes(x = x, y = y),
+          color = "#565656",
+          linewidth = 1,
+          linetype = "42",
+          inherit.aes = FALSE
+        )
+    }
+  }
+
   # Kommentarer tilføjes ----
   if (!is.null(comment_data) && nrow(comment_data) > 0) {
     plot <- plot +
@@ -620,7 +688,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
         size = 4,
         color = hospital_colors$darkgrey,
         fontface = "bold",
-        hjust = 1,
+        hjust = 0,  # Left-aligned ved extended position
         inherit.aes = FALSE
       )
   }
@@ -899,6 +967,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
+              expand = ggplot2::expansion(mult = c(0.025, .0)),
               # name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               # breaks = scales::date_breaks(format_config$breaks)
@@ -907,6 +976,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", .context = "X_AXIS_FORMAT")
             plot <- plot + ggplot2::scale_x_datetime(
+              expand = ggplot2::expansion(mult = c(0.025, .0)),
               # name = x_unit_label,
               labels = format_config$labels, # Smart scales::label_date_short()
               breaks = scales::date_breaks(format_config$breaks)
