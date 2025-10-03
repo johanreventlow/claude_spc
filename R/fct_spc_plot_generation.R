@@ -523,15 +523,17 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   last_x <- max(qic_data$x, na.rm = TRUE)
   first_x <- min(qic_data$x, na.rm = TRUE)
 
+  # Konverter Date objekter til POSIXct for uniform håndtering
+  if (inherits(last_x, "Date")) {
+    last_x <- as.POSIXct(last_x)
+    first_x <- as.POSIXct(first_x)
+  }
+
   # Beregn 15% extension baseret på data range
   if (inherits(last_x, c("POSIXct", "POSIXt"))) {
     # For tidsobjekter: beregn i sekunder
     range_secs <- as.numeric(difftime(last_x, first_x, units = "secs"))
     extended_x <- last_x + range_secs * 0.15
-  } else if (inherits(last_x, "Date")) {
-    # For Date: beregn i dage
-    range_days <- as.numeric(last_x - first_x)
-    extended_x <- last_x + range_days * 0.15
   } else {
     # For numerisk
     x_range <- last_x - first_x
@@ -953,6 +955,28 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
 
 
+      # Beregn x-akse limits og breaks for extended area ----
+      data_x_min <- min(qic_data$x, na.rm = TRUE)
+      data_x_max <- max(qic_data$x, na.rm = TRUE)
+
+      # Konverter Date objekter til POSIXct for uniform håndtering
+      if (inherits(data_x_max, "Date")) {
+        data_x_max <- as.POSIXct(data_x_max)
+        data_x_min <- as.POSIXct(data_x_min)
+      }
+
+      # Beregn extended limit (15% ekstra) - matcher add_plot_enhancements beregning
+      if (inherits(data_x_max, c("POSIXct", "POSIXt"))) {
+        range_secs <- as.numeric(difftime(data_x_max, data_x_min, units = "secs"))
+        extended_x_limit <- data_x_max + range_secs * 0.15
+      } else {
+        x_range <- data_x_max - data_x_min
+        extended_x_limit <- data_x_max + (x_range * 0.15)
+      }
+
+      # X-akse limits: udvid til extended_x
+      x_limits <- c(data_x_min, data_x_max)
+
       # Intelligent x-akse formatering baseret på dato-mønstre ----
       if (!is.null(x_validation$x.format) && x_validation$is_date) {
         # DEBUG: Tjek qic_data$x type
@@ -961,65 +985,183 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         interval_info <- detect_date_interval(qic_data$x, debug = TRUE)
         format_config <- get_optimal_formatting(interval_info, debug = TRUE)
 
+        # Hjælpefunktion til at runde datoer til passende interval-start
+        round_to_interval_start <- function(date, interval_type, interval_multiplier = 1) {
+          if (interval_type == "monthly") {
+            # Rund til første dag i måneden
+            lubridate::floor_date(date, unit = "month")
+          } else if (interval_type == "weekly") {
+            # Rund til mandag (start af ugen)
+            lubridate::floor_date(date, unit = "week")
+          } else if (interval_type == "daily") {
+            # Behold dagen som den er
+            date
+          } else {
+            date
+          }
+        }
+
+        # Beregn adaptive interval size baseret på data density
+        base_interval_secs <- if (interval_info$type == "weekly") {
+          7 * 24 * 60 * 60  # 7 dage i sekunder
+        } else if (interval_info$type == "monthly") {
+          30 * 24 * 60 * 60  # ~30 dage i sekunder
+        } else if (interval_info$type == "daily") {
+          24 * 60 * 60  # 1 dag i sekunder
+        } else {
+          NULL  # Fallback til breaks_pretty
+        }
+
+        # Beregn adaptive interval baseret på data density
+        interval_size <- if (!is.null(base_interval_secs)) {
+          timespan_secs <- as.numeric(difftime(data_x_max, data_x_min, units = "secs"))
+          potential_breaks <- timespan_secs / base_interval_secs
+
+          if (potential_breaks > 15) {
+            # Find passende multiplier baseret på interval type
+            multipliers <- if (interval_info$type == "weekly") {
+              c(2, 4, 13)  # 2 uger, 4 uger (måned), 13 uger (kvartal)
+            } else if (interval_info$type == "monthly") {
+              c(3, 6, 12)  # 3 måneder, 6 måneder, 12 måneder
+            } else if (interval_info$type == "daily") {
+              c(2, 4, 8)  # 2 dage, 4 dage, 8 dage
+            } else {
+              c(2, 4, 8)  # Generic fallback
+            }
+
+            # Find første multiplier der giver <= 15 breaks
+            mult <- tail(multipliers, 1)  # Default til største
+            for (m in multipliers) {
+              if (potential_breaks / m <= 15) {
+                mult <- m
+                break
+              }
+            }
+
+            base_interval_secs * mult
+          } else {
+            base_interval_secs
+          }
+        } else {
+          NULL
+        }
+
         # qic() konverterer Date objekter til POSIXct, så brug scale_x_datetime
-        if (inherits(qic_data$x, c("POSIXct", "POSIXt"))) {
+        if (inherits(qic_data$x, c("POSIXct", "POSIXt", "Date"))) {
+          # Konverter Date til POSIXct for uniform håndtering
+          if (inherits(qic_data$x, "Date")) {
+            qic_data$x <- as.POSIXct(qic_data$x)
+          }
+
           # Håndter intelligent formatering separat
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", .context = "X_AXIS_FORMAT")
+            # Rund start til uge-start (mandag)
+            rounded_start <- round_to_interval_start(data_x_min, "weekly")
+            # Rund slut til næste uge-start efter data_x_max (ceiling)
+            rounded_end <- lubridate::ceiling_date(data_x_max, unit = "week")
+
+            # Generer breaks med seq() direkte på datetime objekter - tilføj ekstra interval
+            breaks_posix <- seq(from = rounded_start, to = rounded_end + interval_size, by = interval_size)
+            # Filtrer til kun breaks >= data_x_min (men tillad breaks efter data_x_max)
+            breaks_posix <- breaks_posix[breaks_posix >= data_x_min]
+
+            # Tilføj kun første dato hvis den ikke allerede er med
+            if (length(breaks_posix) == 0 || breaks_posix[1] != data_x_min) {
+              breaks_posix <- unique(c(data_x_min, breaks_posix))
+            }
+
             plot <- plot + ggplot2::scale_x_datetime(
+              # limits = c(data_x_min, extended_x_limit),
               expand = ggplot2::expansion(mult = c(0.025, .0)),
               # name = x_unit_label,
-              labels = format_config$labels, # Smart scales::label_date_short()
-              # breaks = scales::date_breaks(format_config$breaks)
-              breaks = scales::breaks_pretty(n = format_config$n_breaks)
+              labels = format_config$labels,
+              breaks = breaks_posix
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", .context = "X_AXIS_FORMAT")
+            # Rund start til måneds-start (1. i måneden)
+            rounded_start <- round_to_interval_start(data_x_min, "monthly")
+            # Rund slut til næste måneds-start efter data_x_max (ceiling)
+            rounded_end <- lubridate::ceiling_date(data_x_max, unit = "month")
+
+            # Beregn antal måneder baseret på multiplier
+            interval_months <- as.numeric(interval_size) / (30 * 24 * 60 * 60)
+            interval_months <- round(interval_months)
+
+            # Generer breaks månedligt med seq() - tilføj ekstra interval for at sikre coverage
+            # Konverter interval_months til sekunder for at tilføje til rounded_end
+            extended_end <- seq(rounded_end, by = paste(interval_months, "months"), length.out = 2)[2]
+            breaks_posix <- seq(
+              from = rounded_start,
+              to = extended_end,
+              by = paste(interval_months, "months")
+            )
+            # Filtrer til kun breaks >= data_x_min (men tillad breaks efter data_x_max)
+            breaks_posix <- breaks_posix[breaks_posix >= data_x_min]
+
+            # Tilføj kun første dato hvis den ikke allerede er med
+            if (length(breaks_posix) == 0 || breaks_posix[1] != data_x_min) {
+              breaks_posix <- unique(c(data_x_min, breaks_posix))
+            }
+
             plot <- plot + ggplot2::scale_x_datetime(
+              # limits = c(data_x_min, extended_x_limit),
               expand = ggplot2::expansion(mult = c(0.025, .0)),
               # name = x_unit_label,
-              labels = format_config$labels, # Smart scales::label_date_short()
-              breaks = scales::date_breaks(format_config$breaks)
+              labels = format_config$labels,
+              breaks = breaks_posix
             )
-          } else if (!is.null(format_config$breaks)) {
+          } else if (!is.null(format_config$breaks) && !is.null(interval_size)) {
             # Standard intelligent formatering
+            if (interval_info$type == "monthly") {
+              # Monthly data: brug månedlige breaks
+              rounded_start <- round_to_interval_start(data_x_min, "monthly")
+              # Rund slut til næste måneds-start efter data_x_max (ceiling)
+              rounded_end <- lubridate::ceiling_date(data_x_max, unit = "month")
+
+              interval_months <- as.numeric(interval_size) / (30 * 24 * 60 * 60)
+              interval_months <- round(interval_months)
+
+              # Generer breaks månedligt med seq() - tilføj ekstra interval for at sikre coverage
+              # Konverter interval_months til sekunder for at tilføje til rounded_end
+              extended_end <- seq(rounded_end, by = paste(interval_months, "months"), length.out = 2)[2]
+              breaks_posix <- seq(
+                from = rounded_start,
+                to = extended_end,
+                by = paste(interval_months, "months")
+              )
+              # Filtrer til kun breaks >= data_x_min (men tillad breaks efter data_x_max)
+              breaks_posix <- breaks_posix[breaks_posix >= data_x_min]
+
+              # Tilføj kun første dato hvis den ikke allerede er med
+              if (length(breaks_posix) == 0 || breaks_posix[1] != data_x_min) {
+                breaks_posix <- unique(c(data_x_min, breaks_posix))
+              }
+            } else {
+              # Weekly/daily data: brug sekund-baserede breaks
+              rounded_start <- round_to_interval_start(data_x_min, interval_info$type)
+              # Generer breaks til mindst data_x_max
+              breaks_posix <- seq(from = rounded_start, to = data_x_max + interval_size, by = interval_size)
+              # Filtrer til kun breaks >= data_x_min
+              breaks_posix <- breaks_posix[breaks_posix >= data_x_min]
+
+              # Tilføj kun første dato hvis den ikke allerede er med
+              if (length(breaks_posix) == 0 || breaks_posix[1] != data_x_min) {
+                breaks_posix <- unique(c(data_x_min, breaks_posix))
+              }
+            }
+
             plot <- plot + ggplot2::scale_x_datetime(
+              # limits = c(data_x_min, extended_x_limit),
               # name = x_unit_label,
               labels = scales::date_format(format_config$labels),
-              breaks = scales::date_breaks(format_config$breaks)
+              breaks = breaks_posix
             )
           } else {
             # Fallback til breaks_pretty med intelligent antal
             plot <- plot + ggplot2::scale_x_datetime(
-              # name = x_unit_label,
-              labels = scales::date_format(format_config$labels),
-              breaks = scales::breaks_pretty(n = format_config$n_breaks)
-            )
-          }
-        } else if (inherits(qic_data$x, "Date")) {
-          # Date objekter - tilsvarende intelligent håndtering
-          if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects", .context = "X_AXIS_FORMAT")
-            plot <- plot + ggplot2::scale_x_date(
-              # name = x_unit_label,
-              labels = format_config$labels, # Smart scales::label_date_short()
-              breaks = scales::date_breaks(format_config$breaks)
-            )
-          } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects", .context = "X_AXIS_FORMAT")
-            plot <- plot + ggplot2::scale_x_date(
-              # name = x_unit_label,
-              labels = format_config$labels, # Smart scales::label_date_short()
-              breaks = scales::date_breaks(format_config$breaks)
-            )
-          } else if (!is.null(format_config$breaks)) {
-            plot <- plot + ggplot2::scale_x_date(
-              # name = x_unit_label,
-              labels = scales::date_format(format_config$labels),
-              breaks = scales::date_breaks(format_config$breaks)
-            )
-          } else {
-            plot <- plot + ggplot2::scale_x_date(
+              # limits = c(data_x_min, extended_x_limit),
               # name = x_unit_label,
               labels = scales::date_format(format_config$labels),
               breaks = scales::breaks_pretty(n = format_config$n_breaks)
@@ -1028,6 +1170,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         } else if (is.numeric(qic_data$x)) {
           # Fallback til continuous scale
           plot <- plot + ggplot2::scale_x_continuous(
+            # limits = c(data_x_min, extended_x_limit),
             # name = x_unit_label,
             breaks = scales::pretty_breaks(n = 8)
           )
