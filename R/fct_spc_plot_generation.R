@@ -614,18 +614,13 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
     plot <- plot +
-      ggrepel::geom_text_repel(
+      marquee::geom_marquee(
         data = label_data,
         ggplot2::aes(x = x, y = y, label = label),
         size = 4,
         color = hospital_colors$darkgrey,
         fontface = "bold",
-        nudge_x = 0,
-        direction = "y",
         hjust = 1,
-        segment.color = hospital_colors$mediumgrey,
-        segment.size = 0.3,
-        arrow = grid::arrow(length = grid::unit(0.01, "npc")),
         inherit.aes = FALSE
       )
   }
@@ -1135,13 +1130,14 @@ applyHospitalTheme <- function(plot) {
       )
 
       themed_plot <- plot +
-        
+
         # ggplot2::theme_minimal()
         ggplot2::theme(
+          text = ggplot2::element_text(family = "Roboto Medium"),
           plot.margin = ggplot2::unit(c(0, 0, 0, 10), "pt"),
           panel.background = ggplot2::element_blank(),
-          axis.text.y = ggplot2::element_text(color = "#858585", size = 16, angle = 0, hjust = 1),
-          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = 11),
+          axis.text.y = ggplot2::element_text(color = "#858585", size = 16, angle = 0, hjust = 1, family = "Roboto Medium"),
+          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = 11, family = "Roboto Medium"),
           axis.line.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.y = ggplot2::element_line(color = "#D6D6D6"),
