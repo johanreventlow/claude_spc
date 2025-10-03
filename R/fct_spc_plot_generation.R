@@ -559,8 +559,10 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
         label_data <- rbind(label_data, data.frame(
           x = extended_x,
           y = cl_value,
-          label = paste0("CL: ", format_y_value(cl_value, y_axis_unit)),
           type = "cl",
+          header_label = "NUV. NIVEAU",
+          value_label = format_y_value(cl_value, y_axis_unit),
+          text_color = "#009CE8",
           stringsAsFactors = FALSE
         ))
 
@@ -583,8 +585,10 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     label_data <- rbind(label_data, data.frame(
       x = extended_x,
       y = target_value,
-      label = paste0("Mål: ", format_y_value(target_value, y_axis_unit)),
       type = "target",
+      header_label = "MÅL",
+      value_label = format_y_value(target_value, y_axis_unit),
+      text_color = "#565656",
       stringsAsFactors = FALSE
     ))
 
@@ -683,16 +687,33 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
 
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
+    # Formater labels med marquee markup (header lille, værdi stor)
+    label_data$label <- sprintf(
+      "{.12 **%s**}  \n{.36 **%s**}",
+      label_data$header_label,
+      label_data$value_label
+    )
+
+    # Opret custom marquee style med højrejustering
+    right_aligned_style <- marquee::modify_style(
+      marquee::classic_style(),
+      "p",
+      margin = marquee::trbl(0),
+      align = "right"
+    )
+
     plot <- plot +
       marquee::geom_marquee(
         data = label_data,
-        ggplot2::aes(x = x, y = y, label = label),
-        size = 4,
-        color = hospital_colors$darkgrey,
-        fontface = "bold",
+        ggplot2::aes(x = x, y = y, label = label, colour = text_color),
+        size = 6,
+        style = right_aligned_style,
+        lineheight = 0.9,
+        family = "Roboto Medium",
         hjust = 1,  # Right-aligned ved extended position
         inherit.aes = FALSE
-      )
+      ) +
+      ggplot2::scale_color_identity(guide = "none")
   }
 
   return(plot)
