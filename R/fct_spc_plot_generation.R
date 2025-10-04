@@ -431,13 +431,13 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
 ## Adjust Label Y Positions
 # Intelligent y-akse justering af CL og Target labels for at undgå kollisioner
-adjust_label_y_positions <- function(label_data, y_range, qic_data) {
+adjust_label_y_positions <- function(label_data, y_range, qic_data, value_font_size = 30) {
   if (is.null(label_data) || nrow(label_data) == 0) return(label_data)
 
-  # Estimer label højde baseret på .36 tekst størrelse (største komponent)
-  text_size_pt <- 24
+  # Beregn label højde baseret på faktisk value_font_size (responsive)
+  # value_font_size er den største tekst komponent i marquee label
   pt_to_data_units <- diff(y_range) * 0.015  # ~1.5% af y-range per point
-  label_height <- (text_size_pt * pt_to_data_units * 0.9 * 2.2)  # 2 linjer + spacing
+  label_height <- (value_font_size * pt_to_data_units * 0.9 * 2.2)  # 2 linjer + spacing
 
   min_separation <- label_height * 1.3  # 30% buffer mellem labels
   line_buffer <- label_height * 0.6    # 60% buffer fra egne linjer
@@ -754,15 +754,15 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
 
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
-    # Intelligent y-akse justering for at undgå kollisioner
-    y_range <- range(qic_data$y, na.rm = TRUE)
-    label_data <- adjust_label_y_positions(label_data, y_range, qic_data)
-
     # Beregn responsive marquee font sizes baseret på label_size
-    # Reference: label_size = 6 giver header 12pt og value 36pt
+    # Reference: label_size = 6 giver header 10pt og value 30pt
     scale_factor <- label_size / 6
     header_font_size <- round(10 * scale_factor)
     value_font_size <- round(30 * scale_factor)
+
+    # Intelligent y-akse justering for at undgå kollisioner (med faktisk font size)
+    y_range <- range(qic_data$y, na.rm = TRUE)
+    label_data <- adjust_label_y_positions(label_data, y_range, qic_data, value_font_size)
 
     # Formater labels med marquee markup (skalerede font sizes)
     label_data$label <- sprintf(
