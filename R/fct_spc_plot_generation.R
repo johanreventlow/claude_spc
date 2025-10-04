@@ -498,7 +498,7 @@ adjust_label_y_positions <- function(label_data, y_range, qic_data) {
 
 ## Add Plot Enhancements
 # Tilføjer target lines, phase separations og comment annotations
-add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count") {
+add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6, label_size = 6) {
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
@@ -708,7 +708,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
           data = cl_ext,
           ggplot2::aes(x = x, y = y),
           color = hospital_colors$hospitalblue,
-          linewidth = 1,
+          linewidth = cl_linewidth,
           linetype = "solid",
           inherit.aes = FALSE
         )
@@ -722,7 +722,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
           data = target_ext,
           ggplot2::aes(x = x, y = y),
           color = "#565656",
-          linewidth = 1,
+          linewidth = target_linewidth,
           linetype = "42",
           inherit.aes = FALSE
         )
@@ -735,7 +735,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       ggrepel::geom_text_repel(
         data = comment_data,
         ggplot2::aes(x = x, y = y, label = comment),
-        size = 6,
+        size = comment_size,
         color = hospital_colors$darkgrey,
         # bg.color = "white",
         # bg.r = 0.1,
@@ -758,10 +758,18 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     y_range <- range(qic_data$y, na.rm = TRUE)
     label_data <- adjust_label_y_positions(label_data, y_range, qic_data)
 
-    # Formater labels med marquee markup (header lille, værdi stor)
+    # Beregn responsive marquee font sizes baseret på label_size
+    # Reference: label_size = 6 giver header 12pt og value 36pt
+    scale_factor <- label_size / 6
+    header_font_size <- round(10 * scale_factor)
+    value_font_size <- round(30 * scale_factor)
+
+    # Formater labels med marquee markup (skalerede font sizes)
     label_data$label <- sprintf(
-      "{.12 **%s**}  \n{.36 **%s**}",
+      "{.%d **%s**}  \n{.%d **%s**}",
+      header_font_size,
       label_data$header_label,
+      value_font_size,
       label_data$value_label
     )
 
@@ -777,7 +785,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       marquee::geom_marquee(
         data = label_data,
         ggplot2::aes(x = x, y = y, label = label, colour = text_color),
-        size = 6,
+        size = label_size,
         style = right_aligned_style,
         lineheight = 0.9,
         family = "Roboto Medium",
@@ -790,10 +798,23 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   return(plot)
 }
 
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14) {
   # Generate SPC plot with specified parameters
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
+
+  # Beregn responsive geom størrelser baseret på base_size
+  # Reference: base_size 14 giver original størrelser
+  scale_factor <- base_size / 14
+
+  # Skalerede størrelser for geom elementer
+  ucl_linewidth <- 2.5 * scale_factor
+  target_linewidth <- 1 * scale_factor
+  data_linewidth <- 1 * scale_factor
+  cl_linewidth <- 1 * scale_factor
+  point_size <- 2 * scale_factor
+  comment_size <- 6 * scale_factor
+  label_size <- 6 * scale_factor
 
   # PERFORMANCE MONITORING: Track QIC calculation calls
   if (!exists("qic_call_counter", envir = .GlobalEnv)) {
@@ -1015,18 +1036,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl)) && !is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
             plot <- plot +
               ggplot2::geom_ribbon(ggplot2::aes(ymin = lcl, ymax = ucl), fill = "#E6F5FD", alpha = 0.5) +
-              geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = 2.5, linecolour = NA, textcolour = "#b5b5b9", na.rm = TRUE) +
-              geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = 2.5, linecolour = NA, textcolour = "#b5b7b9", na.rm = TRUE) 
+              geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b5b9", na.rm = TRUE) +
+              geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b7b9", na.rm = TRUE)
           }
           # Resten af plot tilføjes ------
-          plot <- plot +  
-            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = 1, colour = "#565656", linetype="42", na.rm = TRUE) +
-            ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = 1, na.rm = TRUE) +
-            ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = 2, na.rm = TRUE) +
-            
+          plot <- plot +
+            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = target_linewidth, colour = "#565656", linetype="42", na.rm = TRUE) +
+            ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = data_linewidth, na.rm = TRUE) +
+            ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = point_size, na.rm = TRUE) +
+
             # ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) +
             # ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) +
-            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = 1) + 
+            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = cl_linewidth) + 
             
             
             ggplot2::labs(title = call_args$title, x = NULL, y = NULL) +
@@ -1397,7 +1418,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # For other units - use default ggplot2 formatting
 
       # Add plot enhancements (phase lines, target line, comments)
-      plot <- add_plot_enhancements(plot, qic_data, comment_data, y_axis_unit)
+      plot <- add_plot_enhancements(
+        plot, qic_data, comment_data, y_axis_unit,
+        cl_linewidth = cl_linewidth,
+        target_linewidth = target_linewidth,
+        comment_size = comment_size,
+        label_size = label_size
+      )
 
       return(list(plot = plot, qic_data = qic_data))
     }
@@ -1408,7 +1435,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
 ## Hospital Tema til Plots
 # Anvender hospital branding og farvepalette på SPC plots
-applyHospitalTheme <- function(plot) {
+# base_size: Responsive base font size (default 14, automatisk beregnet i Shiny renderPlot)
+applyHospitalTheme <- function(plot, base_size = 14) {
   if (is.null(plot) || !inherits(plot, "ggplot")) {
     return(plot)
   }
@@ -1435,14 +1463,13 @@ applyHospitalTheme <- function(plot) {
       )
 
       themed_plot <- plot +
-
-        # ggplot2::theme_minimal()
+        ggplot2::theme_minimal(base_size = base_size) +
         ggplot2::theme(
           text = ggplot2::element_text(family = "Roboto Medium"),
           plot.margin = ggplot2::unit(c(0, 0, 0, 10), "pt"),
           panel.background = ggplot2::element_blank(),
-          axis.text.y = ggplot2::element_text(color = "#858585", size = 16, angle = 0, hjust = 1, family = "Roboto Medium"),
-          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = 11, family = "Roboto Medium"),
+          axis.text.y = ggplot2::element_text(color = "#858585", size = ggplot2::rel(1.0), angle = 0, hjust = 1, family = "Roboto Medium"),
+          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = ggplot2::rel(0.7), family = "Roboto Medium"),
           axis.line.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.y = ggplot2::element_line(color = "#D6D6D6"),
