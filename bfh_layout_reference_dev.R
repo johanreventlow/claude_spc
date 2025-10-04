@@ -633,41 +633,62 @@ add_right_labels_marquee <- function(
     p <- add_debug_visualization(p, placement, mapper, params)
   }
 
-  # Create marquee grobs
-  grobs <- list()
+  # Konverter NPC y-positions til data coordinates
+  yA_data <- if (!is.na(placement$yA)) mapper$npc_to_y(placement$yA) else NA_real_
+  yB_data <- if (!is.na(placement$yB)) mapper$npc_to_y(placement$yB) else NA_real_
 
-  if (!is.na(placement$yA)) {
-    # Wrap text med farve fra gpA
-    color_A <- if (!is.null(gpA$col)) gpA$col else "#009CE8"
-    styled_textA <- paste0("<span style='color:", color_A, "'>", textA, "</span>")
+  # Hent x-koordinater fra plottet
+  # Find den maksimale x-værdi fra den underliggende data
+  x_range <- ggplot_build(p)$layout$panel_params[[1]]$x.range
+  x_max <- as.POSIXct(x_range[2], origin = "1970-01-01", tz = "UTC")
 
-    grobs$A <- marquee::marquee_grob(
-      styled_textA,
-      x = unit(x_npc, "npc"),
-      y = unit(placement$yA, "npc"),
-      hjust = 1,
-      vjust = 0.5
-    )
+  # Opret label data frame
+  label_data <- tibble::tibble(
+    x = as.POSIXct(character()),
+    y = numeric(),
+    label = character(),
+    color = character()
+  )
+
+  color_A <- if (!is.null(gpA$col)) gpA$col else "#009CE8"
+  color_B <- if (!is.null(gpB$col)) gpB$col else "#565656"
+
+  if (!is.na(yA_data)) {
+    label_data <- label_data %>%
+      bind_rows(tibble::tibble(
+        x = x_max,
+        y = yA_data,
+        label = textA,
+        color = color_A
+      ))
   }
 
-  if (!is.na(placement$yB)) {
-    # Wrap text med farve fra gpB
-    color_B <- if (!is.null(gpB$col)) gpB$col else "#565656"
-    styled_textB <- paste0("<span style='color:", color_B, "'>", textB, "</span>")
-
-    grobs$B <- marquee::marquee_grob(
-      styled_textB,
-      x = unit(x_npc, "npc"),
-      y = unit(placement$yB, "npc"),
-      hjust = 1,
-      vjust = 0.5
-    )
+  if (!is.na(yB_data)) {
+    label_data <- label_data %>%
+      bind_rows(tibble::tibble(
+        x = x_max,
+        y = yB_data,
+        label = textB,
+        color = color_B
+      ))
   }
 
-  # Draw with cowplot
-  result <- ggdraw(p)
-  if (!is.null(grobs$A)) result <- result + draw_grob(grobs$A)
-  if (!is.null(grobs$B)) result <- result + draw_grob(grobs$B)
+  # Tilføj labels med ggtext::geom_richtext
+  result <- p
+  if (nrow(label_data) > 0) {
+    result <- result +
+      ggtext::geom_richtext(
+        data = label_data,
+        aes(x = x, y = y, label = label, color = color),
+        hjust = 1,
+        vjust = 0.5,
+        fill = NA,
+        label.color = NA,
+        label.padding = grid::unit(rep(0, 4), "pt"),
+        inherit.aes = FALSE
+      ) +
+      scale_color_identity()
+  }
 
   # Attach metadata
   attr(result, "placement_info") <- placement
@@ -803,7 +824,7 @@ plot <- add_right_labels_marquee(
   ),
   gpA = grid::gpar(col = "#009CE8"),
   gpB = grid::gpar(col = "#565656"),
-  x_npc = 0.96,              # Højre-justering
+  x_npc = 0.99,              # Højre-justering helt ude til kanten
   verbose = TRUE,            # Print warnings
   debug_mode = FALSE         # Sæt til TRUE for visual debugging
 )
