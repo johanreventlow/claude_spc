@@ -167,39 +167,65 @@ npc_mapper_from_plot <- function(p, panel = 1) {
 # ADAPTIV LABEL-HØJDE MÅLING
 # ============================================================================
 
-#' Mål faktisk label-højde i NPC units
+#' Estimer label-højde i NPC units fra font-størrelser
 #'
-#' Konverterer grob-højde til panel-NPC enheder. Bruger fallback hvis måling fejler.
+#' Beregner omtrentlig label-højde baseret på marquee font sizes.
+#' Bruger heuristik: total_pt * 0.0004 (empirisk afledt).
 #'
-#' @param text character string med marquee markup
-#' @param color character hex color for text styling
-#' @param fallback_npc numeric fallback værdi hvis måling fejler
+#' @param text character string med marquee markup (fx "{.8 text}\n{.24 text}")
+#' @param base_size numeric base font size in pt (default 11)
+#' @param fallback_npc numeric fallback værdi hvis parsing fejler
 #' @return numeric label height in npc units
+#'
+#' @details
+#' Udtrækker font-størrelser fra marquee {.size Xpt} tags og summerer.
+#' Konvertering: pt → mm → npc (approx for standard plot dimensions)
 
-measure_label_height_npc <- function(text, color = "#000000", fallback_npc = 0.035) {
+estimate_label_height_npc <- function(text, base_size = 11, fallback_npc = 0.055) {
   tryCatch({
-    # Opret midlertidig grob for at måle
-    styled_text <- paste0("<span style='color:", color, "'>", text, "</span>")
-    temp_grob <- marquee::marquee_grob(
-      styled_text,
-      x = unit(0.5, "npc"),
-      y = unit(0.5, "npc")
-    )
+    # Udtræk font sizes fra marquee syntax: {.8 ...} eller {.size 8pt ...}
+    # Match både {.8 ...} og {.size 8pt ...}
+    sizes <- stringr::str_extract_all(text, "\\{\\.(?:size\\s+)?(\\d+)(?:pt)?")[[1]]
 
-    # Mål højde
-    h <- grid::grobHeight(temp_grob)
+    if (length(sizes) == 0) {
+      # Ingen sizes fundet, brug fallback
+      return(fallback_npc)
+    }
 
-    # Konverter til npc (antager at vi er i panel viewport)
-    # Dette er en approksimation - vi bruger fallback hvis usikkert
-    h_mm <- as.numeric(convertUnit(h, "mm", valueOnly = TRUE))
+    # Udtræk numeriske værdier
+    size_vals <- as.numeric(stringr::str_extract(sizes, "\\d+"))
 
-    # Vi kan ikke direkte konvertere mm til npc uden viewport context,
-    # så vi bruger en heuristik baseret på typisk plot størrelse
-    # eller returner fallback
-    return(fallback_npc)
+    # Beregn total højde: sum af font sizes + line spacing
+    # Heuristik: hver pt ≈ 0.3528mm, panel typisk ~140-200mm
+    # 1 NPC ≈ 150mm (typisk), så pt_to_npc ≈ 0.3528/150 ≈ 0.0024
+    # Men vi skal også have line spacing, så vi bruger empirisk factor
+    total_pt <- sum(size_vals)
+
+    # Empirisk afledt konvertering (konservativ for at undgå overlap):
+    # - 8pt + 24pt = 32pt total → ~0.13 NPC (med line spacing + margin)
+    # - Factor: 0.13/32 ≈ 0.004
+    # Øget fra 0.0025 til 0.004 for bedre margin
+    pt_to_npc_factor <- 0.0033
+
+    estimated_height <- total_pt * pt_to_npc_factor
+
+    # Tilføj linjeskift overhead hvis \n findes
+    if (grepl("\\n", text)) {
+      line_count <- length(gregexpr("\\n", text)[[1]]) + 1
+      line_spacing_npc <- 0.015 * (line_count - 1)  # 1.5% per ekstra linje
+      estimated_height <- estimated_height + line_spacing_npc
+    }
+
+    # Tilføj sikkerheds-margin for marquee rendering
+    estimated_height <- estimated_height * 1.1  # 10% safety margin
+
+    # Sikr rimelig værdi
+    estimated_height <- max(0.02, min(0.3, estimated_height))
+
+    return(estimated_height)
 
   }, error = function(e) {
-    warning("Kunne ikke måle label-højde, bruger fallback: ", fallback_npc)
+    warning("Kunne ikke estimere label-højde fra font sizes, bruger fallback: ", fallback_npc)
     return(fallback_npc)
   })
 }
@@ -590,16 +616,38 @@ add_debug_visualization <- function(p, placement_result, mapper, params) {
 
 #' Add right-aligned marquee labels med NPC-baseret placering
 #'
+#' Anvender marquee::geom_marquee for at placere to-linje labels ved højre kant.
+#'
 #' @param p ggplot object
 #' @param yA numeric(1) y-værdi (data units) for label A (CL)
 #' @param yB numeric(1) y-værdi (data units) for label B (Target)
-#' @param textA,textB character marquee markup strings
+#' @param textA,textB character marquee markup strings med format:
+#'   "{.size 12pt **Header**}\n{.size 36pt **Value**}"
 #' @param params list of placement parameters
-#' @param gpA,gpB grid::gpar styling
-#' @param x_npc numeric(1) horizontal anchor position
+#' @param gpA,gpB grid::gpar styling (bruges til farve)
+#' @param x_npc numeric(1) horizontal anchor position (ikke brugt med geom_marquee)
 #' @param verbose logical print placement warnings
 #' @param debug_mode logical add visual debug annotations
-#' @return cowplot object med labels
+#' @return ggplot object med marquee labels
+#'
+#' @details
+#' Marquee syntax eksempler:
+#' - {.8 **text**} - 8pt bold text (kort notation)
+#' - {.size 24pt text} - 24pt normal text (lang notation)
+#' - {.align right} - Højrejuster tekst (left/center/right/justify)
+#' - {.b text} - Fed tekst (shorthand for bold)
+#' - <span style='color:#009CE8'>...</span> - Farvet text
+#' - \n - Linjeskift
+#'
+#' Auto-beregning af parametre:
+#' - `label_height_npc`: Beregnes fra font sizes hvis ikke angivet
+#'   (fx {.8 ...}\n{.24 ...} → 0.09 NPC)
+#' - `gap_line`: Default 15% af label_height_npc
+#' - `gap_labels`: Default 30% af label_height_npc
+#'
+#' Overskrivning:
+#' Alle params kan manuelt overstyres ved at angive i params list.
+#' Eks: params = list(label_height_npc = 0.12, gap_line = 0.02)
 
 add_right_labels_marquee <- function(
     p,
@@ -623,10 +671,22 @@ add_right_labels_marquee <- function(
     debug_mode = FALSE
 ) {
 
+  # Auto-beregn label_height hvis ikke angivet
+  if (is.null(params$label_height_npc)) {
+    # Estimer fra begge labels og tag max
+    height_A <- estimate_label_height_npc(textA)
+    height_B <- estimate_label_height_npc(textB)
+    params$label_height_npc <- max(height_A, height_B)
+
+    if (verbose) {
+      message("Auto-beregnet label_height_npc: ", round(params$label_height_npc, 4),
+              " (A: ", round(height_A, 4), ", B: ", round(height_B, 4), ")")
+    }
+  }
+
   # Default parameters hvis ikke angivet
-  if (is.null(params$label_height_npc)) params$label_height_npc <- 0.035
-  if (is.null(params$gap_line)) params$gap_line <- 0.015
-  if (is.null(params$gap_labels)) params$gap_labels <- 0.03
+  if (is.null(params$gap_line)) params$gap_line <- params$label_height_npc * 0.15  # 15% af label height
+  if (is.null(params$gap_labels)) params$gap_labels <- params$label_height_npc * 0.3  # 30% af label height
   if (is.null(params$pad_top)) params$pad_top <- 0.01
   if (is.null(params$pad_bot)) params$pad_bot <- 0.01
   if (is.null(params$pref_pos)) params$pref_pos <- c("under", "under")
@@ -676,7 +736,7 @@ add_right_labels_marquee <- function(
   x_range <- ggplot_build(p)$layout$panel_params[[1]]$x.range
   x_max <- as.POSIXct(x_range[2], origin = "1970-01-01", tz = "UTC")
 
-  # Opret label data frame
+  # Opret label data frame med marquee-formateret text
   label_data <- tibble::tibble(
     x = as.POSIXct(character()),
     y = numeric(),
@@ -688,6 +748,7 @@ add_right_labels_marquee <- function(
   color_B <- if (!is.null(gpB$col)) gpB$col else "#565656"
 
   if (!is.na(yA_data)) {
+    # Marquee label uden color wrapper (farve sættes via color aesthetic)
     label_data <- label_data %>%
       bind_rows(tibble::tibble(
         x = x_max,
@@ -706,22 +767,30 @@ add_right_labels_marquee <- function(
         color = color_B
       ))
   }
+  
+  right_aligned_style <- marquee::modify_style(
+    marquee::classic_style(),#
+    "p",
+    margin = marquee::trbl(0),
+    align = "right"
+  )
 
-  # Tilføj labels med ggtext::geom_richtext
+  # Tilføj labels med marquee::geom_marquee
   result <- p
   if (nrow(label_data) > 0) {
     result <- result +
-      ggtext::geom_richtext(
+      marquee::geom_marquee(
         data = label_data,
         aes(x = x, y = y, label = label, color = color),
         hjust = 1,
         vjust = 0.5,
-        fill = NA,
-        label.color = NA,
-        label.padding = grid::unit(rep(0, 4), "pt"),
+        style = right_aligned_style,
+        size = 6,
+        lineheight = 0.9,
+        family = "Roboto Medium",
         inherit.aes = FALSE
       ) +
-      scale_color_identity()
+      scale_color_identity()  # Brug faktiske farveværdier fra color column
   }
 
   # Attach metadata
@@ -768,7 +837,7 @@ qic_resultat <- qic(
   x = Tid,
   y = Taeller,
   n = Naevner,
-  target = 0.44,
+  target = 0.47,
   data = data,
   chart = "p"
 )
@@ -805,7 +874,7 @@ spc_plot <-
   labs(x=NULL, y=NULL) +
   scale_linetype_manual(values = c("solid", "12")) +
   scale_x_datetime(
-    expand = expansion(mult = c(0.025, .0)),
+    # expand = expansion(mult = c(0.025, .0)),
     labels = scales::label_date_short(),
     breaks = scales::fullseq(c(as_datetime("2023-01-01"), as_datetime("2025-04-01")), "3 month")
   )+
@@ -815,7 +884,7 @@ spc_plot <-
     labels = scales::label_percent(decimal.mark = ",", accuracy = 1)
   ) +
   theme(
-    plot.margin = unit(c(0, 0, 0, 10), "pt"),
+    # plot.margin = unit(c(0, 0, 0, 10), "pt"),
     panel.background = element_blank(),
     axis.text.y = element_text(family = "sans", color = "#858585", size = 16, angle = 0, hjust = 1),
     axis.text.x = element_text(color = "#858585", angle = 0, size = 8, family = "sans", face = "plain"),
@@ -836,9 +905,18 @@ spc_plot <-
 y_cl  <- tail(stats::na.omit(qic_data$cl_extension), 1)
 y_target <- tail(stats::na.omit(qic_data$target), 1)
 
-# Opret marquee-formaterede labels
-label_cl <- paste0("**NUV. NIVEAU**\n**", round(y_cl * 100), "%**")
-label_target <- paste0("**MÅL**\n**", størreend, round(y_target * 100), "%**")
+# Opret marquee-formaterede labels med size tags og højrejustering
+# Format: {.align right}{.8 **Header**}\n{.24 **Værdi**}
+label_cl <- sprintf(
+  "{.8 **NUV. NIVEAU**}  \n{.24 **%s%%**}",
+  round(y_cl * 100)
+)
+
+label_target <- sprintf(
+  "{.8 **MÅL**}  \n{.24 **%s%s%%**}",
+  størreend,
+  round(y_target * 100)
+)
 
 # Placer labels med forbedret system
 plot <- add_right_labels_marquee(
@@ -848,9 +926,9 @@ plot <- add_right_labels_marquee(
   textA = label_cl,
   textB = label_target,
   params = list(
-    label_height_npc = 0.035,  # Kan justeres efter behov
-    gap_line = 0.015,          # Min afstand til linje
-    gap_labels = 0.03,         # Min afstand mellem labels
+    # label_height_npc - AUTO-BEREGNES fra font sizes i textA/textB
+    # gap_line - AUTO: 15% af label_height_npc
+    # gap_labels - AUTO: 30% af label_height_npc
     pad_top = 0.01,            # Top padding
     pad_bot = 0.01,            # Bottom padding
     pref_pos = c("under", "under"),  # Default: placer under linjer
@@ -858,8 +936,8 @@ plot <- add_right_labels_marquee(
   ),
   gpA = grid::gpar(col = "#009CE8"),
   gpB = grid::gpar(col = "#565656"),
-  x_npc = 0.99,              # Højre-justering helt ude til kanten
-  verbose = TRUE,            # Print warnings
+  x_npc = 0.99,              # Ikke brugt med geom_marquee
+  verbose = TRUE,            # Print warnings inkl. auto-beregninger
   debug_mode = FALSE         # Sæt til TRUE for visual debugging
 )
 
