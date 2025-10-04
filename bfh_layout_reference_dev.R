@@ -313,6 +313,26 @@ place_two_labels_npc <- function(
 
   pref_pos <- rep_len(pref_pos, 2)
 
+  # Hvis linjer er meget tætte, flip strategy: en over, en under
+  line_gap_npc <- abs(yA_npc - yB_npc)
+  min_center_gap <- label_height_npc + gap_labels
+
+  if (line_gap_npc < min_center_gap * 0.5) {
+    # Linjer er for tætte til begge at være på samme side
+    warnings <- c(warnings, paste0("Linjer meget tætte (gap=", round(line_gap_npc, 3), ") - bruger over/under strategi"))
+
+    # Placer den øverste linje's label OVER, den nederste UNDER
+    if (yA_npc > yB_npc) {
+      # A er højere
+      pref_pos[1] <- "over"   # A over
+      pref_pos[2] <- "under"  # B under
+    } else {
+      # B er højere
+      pref_pos[1] <- "under"  # A under
+      pref_pos[2] <- "over"   # B over
+    }
+  }
+
   # Initial proposals
   propA <- propose_single_label(yA_npc, pref_pos[1], label_height_npc, gap_line, pad_top, pad_bot)
   propB <- propose_single_label(yB_npc, pref_pos[2], label_height_npc, gap_line, pad_top, pad_bot)
@@ -413,6 +433,7 @@ place_two_labels_npc <- function(
   }
 
   # Final verification: line-gap enforcement
+  # MEN: Prioriter collision avoidance over line-gap hvis konflikt
   verify_line_gap <- function(y_center, y_line, side, label_h) {
     half <- label_h / 2
     if (side == "under") {
@@ -432,13 +453,26 @@ place_two_labels_npc <- function(
   verifyA <- verify_line_gap(yA, yA_npc, sideA, label_height_npc)
   verifyB <- verify_line_gap(yB, yB_npc, sideB, label_height_npc)
 
-  if (verifyA$violated) {
-    warnings <- c(warnings, "Label A justeret for line-gap compliance")
-    yA <- clamp01(verifyA$y)
-  }
-  if (verifyB$violated) {
-    warnings <- c(warnings, "Label B justeret for line-gap compliance")
-    yB <- clamp01(verifyB$y)
+  # Tjek om line-gap enforcement vil skabe ny collision
+  if (verifyA$violated || verifyB$violated) {
+    proposed_yA <- if (verifyA$violated) verifyA$y else yA
+    proposed_yB <- if (verifyB$violated) verifyB$y else yB
+
+    # Vil dette skabe collision?
+    if (abs(proposed_yA - proposed_yB) < min_center_gap) {
+      warnings <- c(warnings, "Line-gap enforcement ville skabe collision - prioriterer collision avoidance")
+      # Behold nuværende positioner (collision-free)
+    } else {
+      # Sikkert at enforc line-gaps
+      if (verifyA$violated) {
+        warnings <- c(warnings, "Label A justeret for line-gap compliance")
+        yA <- clamp01(verifyA$y)
+      }
+      if (verifyB$violated) {
+        warnings <- c(warnings, "Label B justeret for line-gap compliance")
+        yB <- clamp01(verifyB$y)
+      }
+    }
   }
 
   list(
@@ -705,7 +739,7 @@ add_right_labels_marquee <- function(
 # ============================================================================
 
 # Simuler data i tidy stil
-set.seed(NULL)  # Ny sample hver gang
+set.seed(123)  # Ny sample hver gang
 
 generer_data_tid <- function(n = 30, niveau = c("måned", "uge", "dag"), startdato = Sys.Date()) {
   niveau <- match.arg(niveau)
@@ -734,7 +768,7 @@ qic_resultat <- qic(
   x = Tid,
   y = Taeller,
   n = Naevner,
-  target = 0.9,
+  target = 0.44,
   data = data,
   chart = "p"
 )
@@ -790,8 +824,8 @@ spc_plot <-
     axis.ticks.y =  element_line(color = "#D6D6D6"),
     panel.grid.major=element_blank(),
     panel.grid.minor=element_blank(),
-    legend.position = "none",
-    aspect.ratio = 210/297  # Sætter højde/bredde-forhold til A4 landscape
+    legend.position = "none"
+    # aspect.ratio = 210/297  # Sætter højde/bredde-forhold til A4 landscape
   ) + coord_capped_cart(bottom='right', gap = 0)
 
 # ============================================================================
@@ -829,21 +863,34 @@ plot <- add_right_labels_marquee(
   debug_mode = FALSE         # Sæt til TRUE for visual debugging
 )
 
+# Gem mapper for debugging
+mapper <- npc_mapper_from_plot(spc_plot)
+
 # ============================================================================
 # OUTPUT
 # ============================================================================
 
-# Print placement info hvis ønsket
+# Print placement info for debugging
 if (FALSE) {
   placement_info <- attr(plot, "placement_info")
   cat("\n=== Placement Info ===\n")
   cat("Label A (CL):\n")
   cat("  Y-position (npc):", placement_info$yA, "\n")
+  cat("  Y-position (data):", mapper$npc_to_y(placement_info$yA), "\n")
   cat("  Side:", placement_info$sideA, "\n")
   cat("Label B (Target):\n")
   cat("  Y-position (npc):", placement_info$yB, "\n")
+  cat("  Y-position (data):", mapper$npc_to_y(placement_info$yB), "\n")
   cat("  Side:", placement_info$sideB, "\n")
   cat("Quality:", placement_info$placement_quality, "\n")
+
+  cat("\nLine positions:\n")
+  cat("  CL line (data):", y_cl, "\n")
+  cat("  CL line (npc):", mapper$y_to_npc(y_cl), "\n")
+  cat("  Target line (data):", y_target, "\n")
+  cat("  Target line (npc):", mapper$y_to_npc(y_target), "\n")
+  cat("  Gap between lines (npc):", abs(mapper$y_to_npc(y_cl) - mapper$y_to_npc(y_target)), "\n")
+  cat("  Gap between labels (npc):", abs(placement_info$yA - placement_info$yB), "\n")
 
   mapper_info <- attr(plot, "mapper_info")
   cat("\nMapper Info:\n")
