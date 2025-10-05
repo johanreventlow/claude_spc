@@ -534,7 +534,7 @@ qic_resultat <- qic(
   x = Tid,
   y = Taeller,
   n = Naevner,
-  target = 0.4,
+  target = 0.9,
   data = data,
   chart = "p"
 )
