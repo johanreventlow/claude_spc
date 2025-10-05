@@ -401,10 +401,77 @@ add_right_labels_marquee <- function(
 #' create_responsive_label("MÅL", "≥90%", base_size = 20)
 #' # → "{.11 **MÅL**}\n{.34 **≥90%**}"
 
+#' Sanitize text for marquee markup
+#'
+#' Escaper specialtegn der har betydning i marquee markup
+#' for at forhindre injection attacks
+sanitize_marquee_text <- function(text) {
+  if (is.null(text) || length(text) == 0) {
+    return("")
+  }
+
+  if (!is.character(text)) {
+    warning("sanitize_marquee_text: Konverterer ikke-character input til character")
+    text <- as.character(text)
+  }
+
+  if (length(text) > 1) {
+    warning("sanitize_marquee_text: Flere værdier modtaget, bruger kun første")
+    text <- text[1]
+  }
+
+  # Escape marquee special characters
+  # Note: Marquee bruger {} til markup, ** bevar vi da det skal være bold i output
+  text <- gsub("\\{", "&#123;", text)    # Escape {
+  text <- gsub("\\}", "&#125;", text)    # Escape }
+
+  # Fjern kontroltegn (men bevar \n for linjeskift)
+  text <- gsub("[[:cntrl:]&&[^\n]]", "", text)
+
+  # Begræns længde for at forhindre memory exhaustion
+  max_length <- 200
+  if (nchar(text) > max_length) {
+    warning(sprintf("Text afkortet fra %d til %d tegn", nchar(text), max_length))
+    text <- substr(text, 1, max_length)
+  }
+
+  text
+}
+
 create_responsive_label <- function(header, value, base_size = 14, header_pt = 8, value_pt = 24) {
+  # Input validation
+  if (!is.numeric(base_size) || length(base_size) != 1 || base_size <= 0) {
+    stop("base_size skal være et positivt tal, modtog: ", base_size)
+  }
+
+  if (base_size < 8 || base_size > 48) {
+    warning("base_size uden for normalt interval (8-48), modtog: ", base_size)
+  }
+
+  if (!is.numeric(header_pt) || !is.numeric(value_pt)) {
+    stop("header_pt og value_pt skal være numeriske")
+  }
+
+  if (header_pt <= 0 || value_pt <= 0) {
+    stop("header_pt og value_pt skal være positive")
+  }
+
+  # Sanitize inputs
+  header <- sanitize_marquee_text(header)
+  value <- sanitize_marquee_text(value)
+
+  # Compute scaled sizes
   scale_factor <- base_size / 14
   header_size <- round(header_pt * scale_factor)
   value_size <- round(value_pt * scale_factor)
+
+  # Sanity check sizes
+  if (header_size < 1 || header_size > 100) {
+    stop(sprintf("Beregnet header_size uden for gyldigt interval: %d", header_size))
+  }
+  if (value_size < 1 || value_size > 100) {
+    stop(sprintf("Beregnet value_size uden for gyldigt interval: %d", value_size))
+  }
 
   sprintf(
     "{.%d **%s**}  \n{.%d **%s**}",
@@ -486,7 +553,6 @@ spc_plot <-
   labs(x=NULL, y=NULL) +
   scale_linetype_manual(values = c("solid", "12")) +
   scale_x_datetime(
-    # expand = expansion(mult = c(0.025, .0)),
     labels = scales::label_date_short(),
     breaks = scales::fullseq(c(as_datetime("2023-01-01"), as_datetime("2025-04-01")), "3 month")
   )+
@@ -496,7 +562,6 @@ spc_plot <-
     labels = scales::label_percent(decimal.mark = ",", accuracy = 1)
   ) +
   theme(
-    # plot.margin = unit(c(0, 0, 0, 10), "pt"),
     panel.background = element_blank(),
     axis.text.y = element_text(family = "sans", color = "#858585", size = 16, angle = 0, hjust = 1),
     axis.text.x = element_text(color = "#858585", angle = 0, size = 8, family = "sans", face = "plain"),
@@ -506,7 +571,6 @@ spc_plot <-
     panel.grid.major=element_blank(),
     panel.grid.minor=element_blank(),
     legend.position = "none"
-    # aspect.ratio = 210/297  # Sætter højde/bredde-forhold til A4 landscape
   ) + coord_capped_cart(bottom='right', gap = 0)
 
 # ============================================================================

@@ -74,6 +74,20 @@
 #' @param x Numerisk værdi eller vektor
 #' @return Værdi begrænset til [0, 1]
 clamp01 <- function(x) {
+  # Input validation
+  if (is.null(x) || length(x) == 0) {
+    stop("clamp01: x må ikke være NULL eller tom")
+  }
+
+  if (!is.numeric(x)) {
+    stop("clamp01: x skal være numerisk, modtog: ", class(x)[1])
+  }
+
+  if (any(!is.finite(x[!is.na(x)]))) {
+    warning("clamp01: Ikke-finite værdier (Inf/-Inf) detekteret")
+    x[!is.finite(x)] <- NA_real_
+  }
+
   pmax(0, pmin(1, x))
 }
 
@@ -87,6 +101,19 @@ clamp01 <- function(x) {
 #' @param high_bound Øvre grænse
 #' @return Værdi begrænset til [low_bound, high_bound]
 clamp_to_bounds <- function(x, low_bound, high_bound) {
+  # Input validation
+  if (is.null(x) || length(x) == 0) {
+    stop("clamp_to_bounds: x må ikke være NULL eller tom")
+  }
+
+  if (!is.numeric(x) || !is.numeric(low_bound) || !is.numeric(high_bound)) {
+    stop("clamp_to_bounds: Alle parametre skal være numeriske")
+  }
+
+  if (low_bound >= high_bound) {
+    stop("clamp_to_bounds: low_bound skal være mindre end high_bound")
+  }
+
   pmax(low_bound, pmin(high_bound, x))
 }
 
@@ -115,9 +142,39 @@ clamp_to_bounds <- function(x, low_bound, high_bound) {
 #' mapper$y_to_npc(20)  # Konverter 20 mpg til NPC
 #' mapper$npc_to_y(0.5) # Konverter 0.5 NPC til mpg
 npc_mapper_from_plot <- function(p, panel = 1) {
-  stopifnot(inherits(p, "ggplot"))
+  # Validate ggplot object
+  if (is.null(p) || !inherits(p, "ggplot")) {
+    stop("npc_mapper_from_plot: p skal være et ggplot object, modtog: ", class(p)[1])
+  }
 
-  b <- ggplot2::ggplot_build(p)
+  # Validate panel parameter
+  if (!is.numeric(panel) || length(panel) != 1 || panel < 1 || panel != floor(panel)) {
+    stop("npc_mapper_from_plot: panel skal være et positivt heltal, modtog: ", panel)
+  }
+
+  # Build plot med fejlhåndtering
+  b <- tryCatch({
+    ggplot2::ggplot_build(p)
+  }, error = function(e) {
+    stop("npc_mapper_from_plot: Kunne ikke bygge ggplot object. Fejl: ", e$message)
+  })
+
+  # Validate plot build structure
+  if (is.null(b) || !inherits(b, "ggplot_built")) {
+    stop("npc_mapper_from_plot: Ugyldig ggplot_build struktur")
+  }
+
+  if (is.null(b$layout) || is.null(b$layout$panel_params)) {
+    stop("npc_mapper_from_plot: Plot mangler layout information")
+  }
+
+  # Validate panel exists
+  if (panel > length(b$layout$panel_params)) {
+    stop(sprintf(
+      "npc_mapper_from_plot: Panel %d eksisterer ikke (plot har kun %d panels)",
+      panel, length(b$layout$panel_params)
+    ))
+  }
 
   # Prøv forskellige metoder til at få panel params (robust på tværs af ggplot2 versioner)
   pp <- tryCatch({
@@ -201,6 +258,15 @@ npc_mapper_from_plot <- function(p, panel = 1) {
         yt <- info$trans(y[valid])
         y0 <- info$trans(ymin)
         y1 <- info$trans(ymax)
+
+        # Protect against division by zero
+        if (abs(y1 - y0) < .Machine$double.eps) {
+          stop(sprintf(
+            "Y-akse range er praktisk talt nul efter transformation: y0=%.10f, y1=%.10f",
+            y0, y1
+          ))
+        }
+
         result[valid] <- (yt - y0) / (y1 - y0)
       }
       return(result)
@@ -208,6 +274,15 @@ npc_mapper_from_plot <- function(p, panel = 1) {
     yt <- info$trans(y)
     y0 <- info$trans(ymin)
     y1 <- info$trans(ymax)
+
+    # Protect against division by zero
+    if (abs(y1 - y0) < .Machine$double.eps) {
+      stop(sprintf(
+        "Y-akse range er praktisk talt nul efter transformation: y0=%.10f, y1=%.10f",
+        y0, y1
+      ))
+    }
+
     (yt - y0) / (y1 - y0)
   }
 
@@ -448,6 +523,81 @@ place_two_labels_npc <- function(
     pref_pos = c("under", "under"),
     debug = FALSE
 ) {
+
+  # ============================================================================
+  # INPUT VALIDATION
+  # ============================================================================
+
+  # Helper function for NPC parameter validation
+  validate_npc_param <- function(value, name, allow_na = TRUE) {
+    if (is.null(value)) return(invisible(NULL))
+
+    if (!is.numeric(value)) {
+      stop(sprintf("%s skal være numerisk, modtog: %s", name, class(value)[1]))
+    }
+
+    if (length(value) != 1) {
+      stop(sprintf("%s skal være en enkelt værdi, modtog: %d værdier", name, length(value)))
+    }
+
+    if (!allow_na && is.na(value)) {
+      stop(sprintf("%s må ikke være NA", name))
+    }
+
+    if (!is.na(value) && !is.finite(value)) {
+      stop(sprintf("%s skal være finite (ikke Inf/-Inf), modtog: %s", name, value))
+    }
+
+    invisible(NULL)
+  }
+
+  # Validér alle NPC inputs
+  validate_npc_param(yA_npc, "yA_npc", allow_na = TRUE)
+  validate_npc_param(yB_npc, "yB_npc", allow_na = TRUE)
+  validate_npc_param(label_height_npc, "label_height_npc", allow_na = FALSE)
+  validate_npc_param(gap_line, "gap_line", allow_na = FALSE)
+  validate_npc_param(gap_labels, "gap_labels", allow_na = FALSE)
+  validate_npc_param(pad_top, "pad_top", allow_na = FALSE)
+  validate_npc_param(pad_bot, "pad_bot", allow_na = FALSE)
+
+  # Bounds validation for label_height_npc
+  if (!is.null(label_height_npc)) {
+    if (label_height_npc <= 0) {
+      stop("label_height_npc skal være positiv, modtog: ", label_height_npc)
+    }
+    if (label_height_npc > 0.5) {
+      stop("label_height_npc må ikke overstige 0.5 (50% af panel), modtog: ", label_height_npc)
+    }
+  }
+
+  # Bounds validation for padding
+  if (!is.null(pad_top) && (pad_top < 0 || pad_top > 0.2)) {
+    stop("pad_top skal være mellem 0 og 0.2, modtog: ", pad_top)
+  }
+  if (!is.null(pad_bot) && (pad_bot < 0 || pad_bot > 0.2)) {
+    stop("pad_bot skal være mellem 0 og 0.2, modtog: ", pad_bot)
+  }
+
+  # Priority validation
+  priority <- match.arg(priority, choices = c("A", "B"))
+
+  # pref_pos validation
+  if (!is.character(pref_pos) || length(pref_pos) == 0) {
+    stop("pref_pos skal være en character vektor")
+  }
+  pref_pos <- rep_len(pref_pos, 2)
+  if (!all(pref_pos %in% c("under", "over"))) {
+    stop("pref_pos skal indeholde 'under' eller 'over', modtog: ", paste(pref_pos, collapse = ", "))
+  }
+
+  # debug validation
+  if (!is.logical(debug) || length(debug) != 1) {
+    stop("debug skal være en enkelt logical værdi")
+  }
+
+  # ============================================================================
+  # CONFIGURATION LOADING
+  # ============================================================================
 
   # Source config hvis tilgængelig (standalone compatibility)
   if (exists("get_label_placement_param", mode = "function")) {
