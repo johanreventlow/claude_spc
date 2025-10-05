@@ -555,6 +555,21 @@ estimate_label_height_npc <- function(
     # Opret marquee grob for at måle faktisk højde
     # NOTE: marquee_grob() bruger default size fra style
     # For at måle korrekt skal vi bruge samme setup som ved rendering
+
+    # VIGTIGT: Sikr at der er en aktiv device for at undgå Rplots.pdf
+    # Grob operationer kræver en graphics device, men vi vil ikke skabe filer
+    device_was_open <- grDevices::dev.cur() != 1
+
+    if (!device_was_open) {
+      # Åbn en usynlig device uden fil output
+      # Vi SKAL åbne device før nogen grid operationer for at undgå Rplots.pdf
+      # Brug png med /dev/null på Unix eller NUL på Windows
+      null_file <- if (.Platform$OS.type == "windows") "NUL" else "/dev/null"
+      suppressMessages(
+        grDevices::png(filename = null_file, width = 480, height = 480)
+      )
+    }
+
     g <- marquee::marquee_grob(
       text = text,
       x = 0.5,
@@ -564,6 +579,11 @@ estimate_label_height_npc <- function(
 
     # Mål højde i native units
     h_native <- grid::grobHeight(g)
+
+    # Luk midlertidig device hvis vi åbnede en
+    if (!device_was_open) {
+      grDevices::dev.off()
+    }
 
     # Konverter til NPC
     # Hvis panel_height kendt, brug den; ellers brug current viewport

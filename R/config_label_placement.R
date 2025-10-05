@@ -43,10 +43,9 @@ LABEL_PLACEMENT_CONFIG <- list(
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
 
   relative_gap_line = 0.0,
-  # 5% af label højde (ændret fra 8% 2025-01-05)
-  # Rationale: Tættere placering ved linjer for mere kompakt layout.
-  #            5% giver tydelig separation uden at labels virker løsrevet fra linjer.
-  #            Testet på produktion-formater (16:9, A4, dashboards) med god visuel balance.
+  # 0% - ingen gap under fejlsøgning
+  # Rationale: Under fejlsøgning af marquee internal spacing.
+  #            Matematisk skal labels placeres præcist ved linjer.
 
   relative_gap_labels = 0.30,
   # 30% af label højde

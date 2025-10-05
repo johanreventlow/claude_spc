@@ -194,11 +194,19 @@ add_right_labels_marquee <- function(
   scale_factor <- base_size / 14
 
   # Opret right-aligned style FØRST (bruges til højdemåling)
+  # VIGTIGT: Inkludér lineheight fra config for at sikre konsistent måling/rendering
+  marquee_lineheight <- if (exists("get_label_placement_param", mode = "function")) {
+    get_label_placement_param("marquee_lineheight")
+  } else {
+    0.9  # Fallback
+  }
+
   right_aligned_style <- marquee::modify_style(
     marquee::classic_style(),
     "p",
     margin = marquee::trbl(0),
-    align = "right"
+    align = "right",
+    lineheight = marquee_lineheight  # Samme værdi som bruges i rendering
   )
 
   # DEFENSIVE: Mål faktisk panel højde for korrekt NPC-normalisering
@@ -323,9 +331,11 @@ add_right_labels_marquee <- function(
 
   if (!is.na(placement$yA)) {
     yA_npc_adjusted <- if (placement$sideA == "under") {
-      placement$yA + params$label_height_npc$npc / 2  # Shift down for vjust=1.0
+      # Under: Shift down med h/2 for vjust=1.0
+      placement$yA + params$label_height_npc$npc / 2
     } else {
-      placement$yA - params$label_height_npc$npc / 2  # Shift up for vjust=0.0
+      # Over: Shift up med h/2 for vjust=0.0
+      placement$yA - params$label_height_npc$npc / 2
     }
     yA_data <- mapper$npc_to_y(yA_npc_adjusted)
   } else {
@@ -334,9 +344,9 @@ add_right_labels_marquee <- function(
 
   if (!is.na(placement$yB)) {
     yB_npc_adjusted <- if (placement$sideB == "under") {
-      placement$yB + params$label_height_npc$npc / 2  # Shift down for vjust=1.0
+      placement$yB + params$label_height_npc$npc / 2
     } else {
-      placement$yB - params$label_height_npc$npc / 2  # Shift up for vjust=0.0
+      placement$yB - params$label_height_npc$npc / 2
     }
     yB_data <- mapper$npc_to_y(yB_npc_adjusted)
   } else {
@@ -395,12 +405,8 @@ add_right_labels_marquee <- function(
   }
   marquee_size <- marquee_size_factor * scale_factor
 
-  # Hent lineheight fra config
-  marquee_lineheight <- if (config_available) {
-    get_label_placement_param("marquee_lineheight")
-  } else {
-    0.9  # Fallback
-  }
+  # NOTE: marquee_lineheight er allerede hentet tidligere (linje 198-202)
+  # for at sikre konsistent måling og rendering
 
   # Tilføj labels med marquee::geom_marquee
   result <- p
