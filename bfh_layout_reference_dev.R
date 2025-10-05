@@ -325,30 +325,16 @@ add_right_labels_marquee <- function(
 
   # Konverter NPC y-positions til data coordinates
   # VIGTIGT: placement$yA/yB er LABEL CENTER position
-  # Men vi bruger vjust != 0.5, så vi skal justere positionen
-  # vjust=1.0 (under): ggplot2 fortolker y som TOP edge → shift down med h/2
-  # vjust=0.0 (over):  ggplot2 fortolker y som BOTTOM edge → shift up med h/2
+  # Vi bruger vjust=0.5 (center) og kompenserer for marquee spacing med negativ gap
 
   if (!is.na(placement$yA)) {
-    yA_npc_adjusted <- if (placement$sideA == "under") {
-      # Under: Shift down med h/2 for vjust=1.0
-      placement$yA + params$label_height_npc$npc / 2
-    } else {
-      # Over: Shift up med h/2 for vjust=0.0
-      placement$yA - params$label_height_npc$npc / 2
-    }
-    yA_data <- mapper$npc_to_y(yA_npc_adjusted)
+    yA_data <- mapper$npc_to_y(placement$yA)
   } else {
     yA_data <- NA_real_
   }
 
   if (!is.na(placement$yB)) {
-    yB_npc_adjusted <- if (placement$sideB == "under") {
-      placement$yB + params$label_height_npc$npc / 2
-    } else {
-      placement$yB - params$label_height_npc$npc / 2
-    }
-    yB_data <- mapper$npc_to_y(yB_npc_adjusted)
+    yB_data <- mapper$npc_to_y(placement$yB)
   } else {
     yB_data <- NA_real_
   }
@@ -371,27 +357,25 @@ add_right_labels_marquee <- function(
 
   if (!is.na(yA_data)) {
     # Marquee label uden color wrapper (farve sættes via color aesthetic)
-    # vjust baseret på side: under = 1.0 (top edge), over = 0.0 (bottom edge)
-    vjust_A <- if (placement$sideA == "under") 1.0 else 0.0
+    # Brug vjust=0.5 (center) - position er allerede center fra placement
     label_data <- label_data %>%
       bind_rows(tibble::tibble(
         x = x_max,
         y = yA_data,
         label = textA,
         color = color_A,
-        vjust = vjust_A
+        vjust = 0.5
       ))
   }
 
   if (!is.na(yB_data)) {
-    vjust_B <- if (placement$sideB == "under") 1.0 else 0.0
     label_data <- label_data %>%
       bind_rows(tibble::tibble(
         x = x_max,
         y = yB_data,
         label = textB,
         color = color_B,
-        vjust = vjust_B
+        vjust = 0.5
       ))
   }
 

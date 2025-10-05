@@ -43,9 +43,9 @@ LABEL_PLACEMENT_CONFIG <- list(
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
 
   relative_gap_line = 0.0,
-  # 0% - ingen gap under fejlsøgning
-  # Rationale: Under fejlsøgning af marquee internal spacing.
-  #            Matematisk skal labels placeres præcist ved linjer.
+  # 0% - ingen gap (baseline efter fejlsøgning)
+  # Rationale: Gap mellem label og linje elimineres via placement algoritme.
+  #            Negativ gap kan bruges til kompensation hvis marquee spacing ændres.
 
   relative_gap_labels = 0.30,
   # 30% af label højde
