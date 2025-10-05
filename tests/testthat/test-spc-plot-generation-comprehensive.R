@@ -289,7 +289,7 @@ test_that("generateSPCPlot target line functionality works", {
   expect_lt(length(no_target_result$plot$layers), length(target_result$plot$layers))
 })
 
-test_that("generateSPCPlot centerline label bruger geom_marquee_repel", {
+test_that("generateSPCPlot centerline label bruger geom_marquee", {
   skip_if_not(exists("generateSPCPlot", mode = "function"), "generateSPCPlot function not available")
   skip_if_not_installed("rlang")
 
@@ -309,7 +309,7 @@ test_that("generateSPCPlot centerline label bruger geom_marquee_repel", {
     chart_title_reactive = reactive("Centerline Label Test")
   )
 
-  text_layers <- Filter(function(layer) inherits(layer$geom, "GeomMarqueeRepel") || identical(layer$geom$geom_name, "marquee_repel"), result$plot$layers)
+  text_layers <- Filter(function(layer) inherits(layer$geom, "GeomMarquee"), result$plot$layers)
   expect_equal(length(text_layers), 1)
 
   layer <- text_layers[[1]]
@@ -319,11 +319,11 @@ test_that("generateSPCPlot centerline label bruger geom_marquee_repel", {
   cl_rows <- subset(layer$data, type == "cl")
   expect_gt(nrow(cl_rows), 0)
   expect_true(all(grepl("NUV\\. NIVEAU", cl_rows$label)))
-  expect_true(all(grepl("font-size:300%", cl_rows$label)))
+  expect_true(all(grepl("\\*\\*", cl_rows$label)))  # Marquee markdown bold syntax
   expect_equal(unique(cl_rows$text_color), "#009CE8")
 })
 
-test_that("generateSPCPlot target label bruger geom_marquee_repel", {
+test_that("generateSPCPlot target label bruger geom_marquee", {
   skip_if_not(exists("generateSPCPlot", mode = "function"), "generateSPCPlot function not available")
   skip_if_not_installed("rlang")
 
@@ -346,7 +346,7 @@ test_that("generateSPCPlot target label bruger geom_marquee_repel", {
     chart_title_reactive = reactive("Target Label Test")
   )
 
-  text_layers <- Filter(function(layer) inherits(layer$geom, "GeomMarqueeRepel") || identical(layer$geom$geom_name, "marquee_repel"), result$plot$layers)
+  text_layers <- Filter(function(layer) inherits(layer$geom, "GeomMarquee"), result$plot$layers)
   expect_equal(length(text_layers), 1)
 
   layer <- text_layers[[1]]
@@ -356,7 +356,7 @@ test_that("generateSPCPlot target label bruger geom_marquee_repel", {
   target_rows <- subset(layer$data, type == "target")
   expect_gt(nrow(target_rows), 0)
   expect_true(all(grepl("MÅL", target_rows$label)))
-  expect_true(all(grepl("font-size:300%", target_rows$label)))
+  expect_true(all(grepl("\\*\\*", target_rows$label)))  # Marquee markdown bold syntax
   expect_equal(unique(target_rows$text_color), "#565656")
 })
 

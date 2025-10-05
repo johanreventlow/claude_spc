@@ -142,7 +142,7 @@ test_that("phase separation lines work correctly", {
 })
 
 test_that("comment annotations work correctly", {
-  # TEST: Adding comment annotations with ggrepel
+  # TEST: Adding comment annotations with ggrepel (main branch)
 
   # Skip if ggrepel not available
   skip_if_not_installed("ggrepel")
@@ -170,8 +170,8 @@ test_that("comment annotations work correctly", {
       ggplot2::aes(x = x, y = y, label = comment),
       size = 3,
       color = "#495057",
-      bg.color = "white",
-      bg.r = 0.1,
+      box.padding = 0.5,
+      point.padding = 0.5,
       inherit.aes = FALSE
     ) +
     ggplot2::labs(title = "SPC Chart with Comments", x = "", y = "Proportion") +

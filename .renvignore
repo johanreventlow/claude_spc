@@ -1,6 +1,0 @@
-# Ignore test and temporary files
-tests/
-testthat/
-*.Rproj
-.Rproj.user/
-.DS_Store

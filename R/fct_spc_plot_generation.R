@@ -737,18 +737,12 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
         ggplot2::aes(x = x, y = y, label = comment),
         size = comment_size,
         color = hospital_colors$darkgrey,
-        # bg.color = "white",
-        # bg.r = 0.1,
-        # box.padding = 0.5,
-        # point.padding = 0.5,
-        # segment.color = hospital_colors$mediumgrey,
-        # segment.size = 0.3,
-        # nudge_x = .15,
-        # nudge_y = .5,
-        # segment.curvature = -1e-20,
+        box.padding = 0.5,
+        point.padding = 0.5,
+        segment.color = hospital_colors$mediumgrey,
+        segment.size = 0.3,
         arrow = grid::arrow(length = grid::unit(0.015, "npc")),
-        # max.overlaps = Inf,
-        # inherit.aes = FALSE
+        max.overlaps = Inf
       )
   }
 

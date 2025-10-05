@@ -29,13 +29,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-# renv - ignore library but keep lockfile
-renv/library/
-renv/local/
-renv/cellar/
-renv/lock/
-renv/python/
-renv/staging/
 .Rproj.user
 .Rdata
 .httr-oauth
