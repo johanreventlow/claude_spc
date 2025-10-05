@@ -486,10 +486,90 @@ place_two_labels_npc <- function(
 
     # Vil dette skabe collision?
     if (abs(proposed_yA - proposed_yB) < min_center_gap) {
-      warnings <- c(warnings, "Line-gap enforcement ville skabe collision - prioriterer collision avoidance")
-      # Behold nuværende positioner (collision-free)
+      warnings <- c(warnings, "Line-gap enforcement ville skabe collision - forsøger multi-level fallback")
+
+      # === NIVEAU 1: Reducer gap_labels for at give mere plads ===
+      reduced_gap_successful <- FALSE
+      for (reduction_factor in c(0.5, 0.3, 0.15)) {
+        reduced_min_gap <- label_height_npc + gap_labels * reduction_factor
+
+        if (abs(proposed_yA - proposed_yB) >= reduced_min_gap) {
+          # Success! Vi kan bruge line-gap enforcement med reduceret label-gap
+          warnings <- c(warnings, paste0("NIVEAU 1: Reduceret label gap til ",
+                                         round(reduction_factor * 100), "% - line-gaps overholdt"))
+          yA <- clamp01(proposed_yA)
+          yB <- clamp01(proposed_yB)
+          reduced_gap_successful <- TRUE
+          placement_quality <- "acceptable"
+          break
+        }
+      }
+
+      # === NIVEAU 2: Flip label til modsatte side ===
+      if (!reduced_gap_successful) {
+        warnings <- c(warnings, "NIVEAU 1 fejlede - forsøger NIVEAU 2: flip labels til modsatte side")
+
+        # Prøv begge flip-strategier i prioritetsrækkefølge
+        # Strategi 1: Flip A (CL) til modsatte side, hold B (Target) fast
+        new_side_A <- if (sideA == "under") "over" else "under"
+        propA_flipped <- propose_single_label(yA_npc, new_side_A, label_height_npc, gap_line, pad_top, pad_bot)
+        verifyA_flipped <- verify_line_gap(propA_flipped$center, yA_npc, propA_flipped$side, label_height_npc)
+        test_yA <- if (verifyA_flipped$violated) verifyA_flipped$y else propA_flipped$center
+
+        # Check om flip A løser problemet
+        if (abs(test_yA - proposed_yB) >= label_height_npc) {  # Minimum: labels må ikke overlappe
+          yA <- clamp01(test_yA)
+          yB <- clamp01(proposed_yB)
+          sideA <- propA_flipped$side
+          warnings <- c(warnings, "NIVEAU 2a: Flippet label A til modsatte side - konflikt løst")
+          placement_quality <- "acceptable"
+          reduced_gap_successful <- TRUE
+        } else {
+          # Strategi 2: Hold A fast, flip B til modsatte side
+          new_side_B <- if (sideB == "under") "over" else "under"
+          propB_flipped <- propose_single_label(yB_npc, new_side_B, label_height_npc, gap_line, pad_top, pad_bot)
+          verifyB_flipped <- verify_line_gap(propB_flipped$center, yB_npc, propB_flipped$side, label_height_npc)
+          test_yB <- if (verifyB_flipped$violated) verifyB_flipped$y else propB_flipped$center
+
+          if (abs(proposed_yA - test_yB) >= label_height_npc) {
+            yA <- clamp01(proposed_yA)
+            yB <- clamp01(test_yB)
+            sideB <- propB_flipped$side
+            warnings <- c(warnings, "NIVEAU 2b: Flippet label B til modsatte side - konflikt løst")
+            placement_quality <- "acceptable"
+            reduced_gap_successful <- TRUE
+          } else {
+            # Strategi 3: Flip BEGGE labels til modsatte side
+            if (abs(test_yA - test_yB) >= label_height_npc) {
+              yA <- clamp01(test_yA)
+              yB <- clamp01(test_yB)
+              sideA <- propA_flipped$side
+              sideB <- propB_flipped$side
+              warnings <- c(warnings, "NIVEAU 2c: Flippet BEGGE labels til modsatte side - konflikt løst")
+              placement_quality <- "suboptimal"
+              reduced_gap_successful <- TRUE
+            }
+          }
+        }
+      }
+
+      # === NIVEAU 3: Shelf placement som sidste udvej ===
+      if (!reduced_gap_successful) {
+        warnings <- c(warnings, "NIVEAU 2 fejlede - bruger NIVEAU 3: shelf placement")
+
+        # Prioriter den vigtigste label tættest på sin linje
+        if (priority == "A") {
+          yA <- clamp01(proposed_yA)
+          yB <- if (yA < 0.5) high_bound else low_bound  # Modsatte shelf
+        } else {
+          yB <- clamp01(proposed_yB)
+          yA <- if (yB < 0.5) high_bound else low_bound
+        }
+        placement_quality <- "degraded"
+      }
+
     } else {
-      # Sikkert at enforc line-gaps
+      # Sikkert at enforce line-gaps uden collision
       if (verifyA$violated) {
         warnings <- c(warnings, "Label A justeret for line-gap compliance")
         yA <- clamp01(verifyA$y)
@@ -626,6 +706,7 @@ add_debug_visualization <- function(p, placement_result, mapper, params) {
 #' @param params list of placement parameters
 #' @param gpA,gpB grid::gpar styling (bruges til farve)
 #' @param x_npc numeric(1) horizontal anchor position (ikke brugt med geom_marquee)
+#' @param base_size numeric base font size for responsive sizing (default 14)
 #' @param verbose logical print placement warnings
 #' @param debug_mode logical add visual debug annotations
 #' @return ggplot object med marquee labels
@@ -639,15 +720,31 @@ add_debug_visualization <- function(p, placement_result, mapper, params) {
 #' - <span style='color:#009CE8'>...</span> - Farvet text
 #' - \n - Linjeskift
 #'
+#' Responsive sizing med base_size:
+#' - `base_size = 14` er reference (standard)
+#' - `marquee_size = 6 × (base_size/14)` - Skaleret label størrelse
+#' - Label font sizes skal også skaleres i textA/textB markup
+#' - Følger samme pattern som fct_spc_plot_generation.R
+#'
 #' Auto-beregning af parametre:
 #' - `label_height_npc`: Beregnes fra font sizes hvis ikke angivet
-#'   (fx {.8 ...}\n{.24 ...} → 0.09 NPC)
-#' - `gap_line`: Default 15% af label_height_npc
+#'   (fx {.8 ...}\n{.24 ...} → 0.13 NPC ved base_size=14)
+#' - `gap_line`: Default 8% af label_height_npc (sikrer ingen overlap med linjer)
 #' - `gap_labels`: Default 30% af label_height_npc
 #'
 #' Overskrivning:
 #' Alle params kan manuelt overstyres ved at angive i params list.
 #' Eks: params = list(label_height_npc = 0.12, gap_line = 0.02)
+#'
+#' @examples
+#' # Med base_size = 14 (standard):
+#' header_size <- 8; value_size <- 24
+#' label <- sprintf("{.%d **Header**}\n{.%d **Value**}", header_size, value_size)
+#'
+#' # Med base_size = 20 (større plot):
+#' scale <- 20/14
+#' header_size <- round(8 * scale); value_size <- round(24 * scale)
+#' # → {.11 **Header**}\n{.34 **Value**}
 
 add_right_labels_marquee <- function(
     p,
@@ -656,9 +753,9 @@ add_right_labels_marquee <- function(
     textA,
     textB,
     params = list(
-      label_height_npc = 0.035,
-      gap_line = 0.015,
-      gap_labels = 0.03,
+      label_height_npc = NULL,  # Auto-beregnes
+      gap_line = NULL,          # Auto-beregnes
+      gap_labels = NULL,        # Auto-beregnes
       pad_top = 0.01,
       pad_bot = 0.01,
       pref_pos = c("under", "under"),
@@ -667,13 +764,20 @@ add_right_labels_marquee <- function(
     gpA = grid::gpar(col = "#009CE8"),
     gpB = grid::gpar(col = "#565656"),
     x_npc = 0.98,
+    base_size = 14,
     verbose = TRUE,
     debug_mode = FALSE
 ) {
 
+  # Beregn responsive størrelser baseret på base_size
+  # Reference: base_size 14 giver original størrelser
+  scale_factor <- base_size / 14
+
   # Auto-beregn label_height hvis ikke angivet
   if (is.null(params$label_height_npc)) {
     # Estimer fra begge labels og tag max
+    # NOTE: textA/textB er allerede skaleret med base_size via create_responsive_label()
+    # så estimate_label_height_npc() parser de korrekte størrelser direkte
     height_A <- estimate_label_height_npc(textA)
     height_B <- estimate_label_height_npc(textB)
     params$label_height_npc <- max(height_A, height_B)
@@ -685,7 +789,9 @@ add_right_labels_marquee <- function(
   }
 
   # Default parameters hvis ikke angivet
-  if (is.null(params$gap_line)) params$gap_line <- params$label_height_npc * 0.15  # 15% af label height
+  # gap_line sættes til 8% for sikker placering ved linjer uden overlap
+  # Balancerer mellem "tæt placering" og "ingen overlap med linjer"
+  if (is.null(params$gap_line)) params$gap_line <- params$label_height_npc * 0.08  # 8% af label height
   if (is.null(params$gap_labels)) params$gap_labels <- params$label_height_npc * 0.3  # 30% af label height
   if (is.null(params$pad_top)) params$pad_top <- 0.01
   if (is.null(params$pad_bot)) params$pad_bot <- 0.01
@@ -775,6 +881,9 @@ add_right_labels_marquee <- function(
     align = "right"
   )
 
+  # Skalerede størrelser for marquee labels
+  marquee_size <- 6 * scale_factor
+
   # Tilføj labels med marquee::geom_marquee
   result <- p
   if (nrow(label_data) > 0) {
@@ -785,7 +894,7 @@ add_right_labels_marquee <- function(
         hjust = 1,
         vjust = 0.5,
         style = right_aligned_style,
-        size = 6,
+        size = marquee_size,
         lineheight = 0.9,
         family = "Roboto Medium",
         inherit.aes = FALSE
@@ -804,11 +913,45 @@ add_right_labels_marquee <- function(
 }
 
 # ============================================================================
+# HELPER FUNCTIONS FOR RESPONSIVE LABELS
+# ============================================================================
+
+#' Generer responsive marquee label med skalerede font-størrelser
+#'
+#' @param header character header text
+#' @param value character value text
+#' @param base_size numeric base font size (default 14)
+#' @param header_pt numeric header font size ved base_size=14 (default 8)
+#' @param value_pt numeric value font size ved base_size=14 (default 24)
+#' @return character marquee-formateret label string
+#'
+#' @examples
+#' create_responsive_label("MÅL", "≥90%", base_size = 14)
+#' # → "{.8 **MÅL**}\n{.24 **≥90%**}"
+#'
+#' create_responsive_label("MÅL", "≥90%", base_size = 20)
+#' # → "{.11 **MÅL**}\n{.34 **≥90%**}"
+
+create_responsive_label <- function(header, value, base_size = 14, header_pt = 8, value_pt = 24) {
+  scale_factor <- base_size / 14
+  header_size <- round(header_pt * scale_factor)
+  value_size <- round(value_pt * scale_factor)
+
+  sprintf(
+    "{.%d **%s**}  \n{.%d **%s**}",
+    header_size,
+    header,
+    value_size,
+    value
+  )
+}
+
+# ============================================================================
 # DATA GENERERING OG PLOT (ORIGINAL KODE BEVARET)
 # ============================================================================
 
 # Simuler data i tidy stil
-set.seed(123)  # Ny sample hver gang
+set.seed(123)
 
 generer_data_tid <- function(n = 30, niveau = c("måned", "uge", "dag"), startdato = Sys.Date()) {
   niveau <- match.arg(niveau)
@@ -837,7 +980,7 @@ qic_resultat <- qic(
   x = Tid,
   y = Taeller,
   n = Naevner,
-  target = 0.47,
+  target = 0.4,
   data = data,
   chart = "p"
 )
@@ -905,17 +1048,20 @@ spc_plot <-
 y_cl  <- tail(stats::na.omit(qic_data$cl_extension), 1)
 y_target <- tail(stats::na.omit(qic_data$target), 1)
 
-# Opret marquee-formaterede labels med size tags og højrejustering
-# Format: {.align right}{.8 **Header**}\n{.24 **Værdi**}
-label_cl <- sprintf(
-  "{.8 **NUV. NIVEAU**}  \n{.24 **%s%%**}",
-  round(y_cl * 100)
+# Base size for responsive scaling
+base_size_plot <- 14  # Standard base size (matches theme_minimal default)
+
+# Opret responsive marquee-formaterede labels
+label_cl <- create_responsive_label(
+  header = "NUV. NIVEAU",
+  value = paste0(round(y_cl * 100), "%"),
+  base_size = base_size_plot
 )
 
-label_target <- sprintf(
-  "{.8 **MÅL**}  \n{.24 **%s%s%%**}",
-  størreend,
-  round(y_target * 100)
+label_target <- create_responsive_label(
+  header = "MÅL",
+  value = paste0(størreend, round(y_target * 100), "%"),
+  base_size = base_size_plot
 )
 
 # Placer labels med forbedret system
@@ -937,6 +1083,7 @@ plot <- add_right_labels_marquee(
   gpA = grid::gpar(col = "#009CE8"),
   gpB = grid::gpar(col = "#565656"),
   x_npc = 0.99,              # Ikke brugt med geom_marquee
+  base_size = base_size_plot,  # Responsive sizing (matches plot theme)
   verbose = TRUE,            # Print warnings inkl. auto-beregninger
   debug_mode = FALSE         # Sæt til TRUE for visual debugging
 )
