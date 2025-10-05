@@ -370,19 +370,30 @@ place_two_labels_npc <- function(
 
   # Tjek for coincident lines (meget tætte)
   if (abs(yA_npc - yB_npc) < 0.001) {
-    warnings <- c(warnings, "Sammenfaldende linjer - stacker labels")
-    # Stack: en over, en under
-    yA <- clamp01(yA_npc + gap_line + half)
-    yB <- clamp01(yA_npc - gap_line - half)
-    sideA <- "over"
-    sideB <- "under"
+    warnings <- c(warnings, "Sammenfaldende linjer - placerer labels over/under")
 
-    # Verificér gap
-    if (abs(yA - yB) < (label_height_npc + gap_labels)) {
-      warnings <- c(warnings, "Utilstrækkelig plads til stacking - bruger shelf placement")
-      yA <- high_bound
-      yB <- low_bound
-      placement_quality <- "suboptimal"
+    # Placer den ene label over, den anden under samme linje
+    # Prioriter CL (A) til foretrukken side
+    if (pref_pos[1] == "under") {
+      # CL under, Target over
+      yA <- clamp01(yA_npc - gap_line - half)
+      yB <- clamp01(yA_npc + gap_line + half)
+      sideA <- "under"
+      sideB <- "over"
+    } else {
+      # CL over, Target under
+      yA <- clamp01(yA_npc + gap_line + half)
+      yB <- clamp01(yA_npc - gap_line - half)
+      sideA <- "over"
+      sideB <- "under"
+    }
+
+    # Verificér at begge labels er inden for bounds
+    if (yA < low_bound || yA > high_bound || yB < low_bound || yB > high_bound) {
+      warnings <- c(warnings, "Label(s) uden for bounds - justerer til bounds")
+      yA <- clamp01(yA)
+      yB <- clamp01(yB)
+      placement_quality <- "acceptable"
     }
 
     return(list(
