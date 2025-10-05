@@ -77,6 +77,19 @@ clamp01 <- function(x) {
   pmax(0, pmin(1, x))
 }
 
+#' Clamp værdi til custom bounds interval
+#'
+#' Bruges til at sikre at labels respekterer panel padding (pad_top/pad_bot)
+#' også ved flip-scenarios.
+#'
+#' @param x Numerisk værdi eller vektor
+#' @param low_bound Nedre grænse
+#' @param high_bound Øvre grænse
+#' @return Værdi begrænset til [low_bound, high_bound]
+clamp_to_bounds <- function(x, low_bound, high_bound) {
+  pmax(low_bound, pmin(high_bound, x))
+}
+
 
 # ==============================================================================
 # NPC MAPPING
@@ -325,17 +338,17 @@ propose_single_label <- function(y_line_npc, pref_side, label_h, gap, pad_top, p
     if (y >= low_bound) {
       return(list(center = y, side = "under"))
     }
-    # Flip til over
+    # Flip til over - NU MED BOUNDS-AWARE CLAMPING
     y <- y_line_npc + gap + half
-    return(list(center = clamp01(y), side = "over"))
+    return(list(center = clamp_to_bounds(y, low_bound, high_bound), side = "over"))
   } else {
     y <- y_line_npc + gap + half
     if (y <= high_bound) {
       return(list(center = y, side = "over"))
     }
-    # Flip til under
+    # Flip til under - NU MED BOUNDS-AWARE CLAMPING
     y <- y_line_npc - gap - half
-    return(list(center = clamp01(y), side = "under"))
+    return(list(center = clamp_to_bounds(y, low_bound, high_bound), side = "under"))
   }
 }
 
