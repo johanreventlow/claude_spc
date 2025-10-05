@@ -349,6 +349,8 @@ get_grob_cache_stats <- function() {
 #'
 #' @param p ggplot object
 #' @param panel Panel index (default 1)
+#' @param device_width Device width i inches (default 7, bruges kun hvis ingen device er åben)
+#' @param device_height Device height i inches (default 7, bruges kun hvis ingen device er åben)
 #'
 #' @return Panel højde i inches, eller NULL hvis måling fejler
 #'
@@ -359,16 +361,26 @@ get_grob_cache_stats <- function() {
 #' Strategien er:
 #' 1. Build ggplot → gtable
 #' 2. Find panel viewport navn fra layout
-#' 3. Render på temp device
+#' 3. Render på current device (eller temp device hvis ingen er åben)
 #' 4. Navigate til panel viewport
 #' 5. Mål højde i inches
-#' 6. Clean up temp device
+#' 6. Clean up temp device (hvis oprettet)
+#'
+#' VIGTIGT: Fra 2025-01-05 er funktionen device-aware:
+#' - Hvis en device er åben: Brug den (respekter caller's viewport)
+#' - Hvis ingen device: Åbn temp device med device_width x device_height
 #'
 #' @examples
 #' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
 #' panel_h <- measure_panel_height_inches(p)
-#' # Returns ca. 4-5 inches for standard 7x7 device (minus margener)
-measure_panel_height_inches <- function(p, panel = 1) {
+#' # Returns ca. 6.48 inches for standard 7x7 device (minus margener)
+#'
+#' # Med custom device size
+#' pdf("test.pdf", width = 12, height = 4)
+#' panel_h <- measure_panel_height_inches(p)  # Uses current 12x4 device
+#' # Returns ca. 3.6 inches (4 inches minus margener)
+#' dev.off()
+measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_height = 7) {
   tryCatch({
     # Validate input
     if (!inherits(p, "ggplot")) {
@@ -396,14 +408,20 @@ measure_panel_height_inches <- function(p, panel = 1) {
                             panel_row$t, panel_row$l,
                             panel_row$b, panel_row$r)
 
-    # Open temporary PDF device for measurement
-    # NOTE: Vi bruger PDF fordi det er deterministisk (ikke skærmafhængigt)
-    temp_file <- tempfile(fileext = ".pdf")
-    grDevices::pdf(file = temp_file, width = 7, height = 7)
-    on.exit({
-      grDevices::dev.off()
-      unlink(temp_file, force = TRUE)
-    }, add = TRUE)
+    # Check om der er en aktiv device
+    # dev.cur() returnerer 1 hvis ingen device er åben (null device)
+    needs_temp_device <- (grDevices::dev.cur() == 1)
+
+    if (needs_temp_device) {
+      # Open temporary PDF device for measurement
+      # NOTE: Vi bruger PDF fordi det er deterministisk (ikke skærmafhængigt)
+      temp_file <- tempfile(fileext = ".pdf")
+      grDevices::pdf(file = temp_file, width = device_width, height = device_height)
+      on.exit({
+        grDevices::dev.off()
+        unlink(temp_file, force = TRUE)
+      }, add = TRUE)
+    }
 
     # Render plot til device
     grid::grid.newpage()
@@ -513,8 +531,9 @@ estimate_label_height_npc <- function(
         style$p$lineheight
       ), algo = "xxhash32")  # Fast hash algorithm
 
-      # Include panel_height in cache key for proper cache isolation
+      # Include panel_height AND return_details in cache key for proper cache isolation
       # Different panel heights → different NPC values for same absolute height
+      # Different return_details → different return formats (numeric vs list)
       cache_key <- digest::digest(list(
         text = text,
         style = style_hash,
@@ -522,7 +541,8 @@ estimate_label_height_npc <- function(
           round(panel_height_inches, 4)  # Round to avoid float precision issues
         } else {
           "viewport"  # Different cache entry for viewport-based measurement
-        }
+        },
+        return_details = return_details  # VIGTIG: Undgå cache collision mellem formats
       ), algo = "xxhash32")
 
       # Check cache
@@ -563,9 +583,12 @@ estimate_label_height_npc <- function(
     h_inches_with_margin <- h_inches * 1.05
 
     # Sanity check: Verificer at målingen er rimelig
-    if (!is.finite(h_npc) || h_npc <= 0 || h_npc > 0.5) {
+    # VIGTIGT: Fra 2025-01-05 - Tillad store labels (>50%) på små paneler
+    # Dette er nødvendigt for facets og lave viewports
+    if (!is.finite(h_npc) || h_npc <= 0) {
+      # FATAL error - return fallback
       warning(
-        "Grob-måling gav usandsynlig værdi (", round(h_npc, 4), "), bruger fallback. ",
+        "Grob-måling gav invalid værdi (", round(h_npc, 4), "), bruger fallback. ",
         "Dette kan skyldes manglende viewport eller ugyldigt marquee markup."
       )
       if (return_details) {
@@ -578,21 +601,35 @@ estimate_label_height_npc <- function(
       return(fallback_npc)
     }
 
-    # Store in cache for future reuse (if caching enabled)
-    if (use_cache) {
-      .grob_height_cache[[cache_key]] <- h_npc
+    # Warn hvis label er meget stor relativt til panel (men tillad det)
+    if (h_npc > 0.5) {
+      warning(
+        sprintf(
+          "Label optager %.1f%% af panel højde (%.2f inches). ",
+          h_npc * 100, panel_height_inches
+        ),
+        "Dette kan indikere et meget lille panel eller en fejlmåling."
+      )
     }
 
-    # Return based on return_details flag
+    # Prepare return value based on return_details flag
     if (return_details) {
-      return(list(
+      result <- list(
         npc = as.numeric(h_npc),
         inches = as.numeric(h_inches_with_margin),
         panel_height_inches = panel_height_inches
-      ))
+      )
+    } else {
+      result <- as.numeric(h_npc)
     }
 
-    return(as.numeric(h_npc))
+    # Store in cache for future reuse (if caching enabled)
+    # VIGTIGT: Cache det faktiske result (list eller numeric) ikke bare h_npc
+    if (use_cache) {
+      .grob_height_cache[[cache_key]] <- result
+    }
+
+    return(result)
 
   }, error = function(e) {
     warning(
