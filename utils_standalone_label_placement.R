@@ -1,0 +1,730 @@
+# ==============================================================================
+# INTELLIGENT LABEL PLACEMENT SYSTEM - STANDALONE VERSION
+# ==============================================================================
+#
+# Intelligent label placement system med NPC-koordinater og multi-level
+# collision avoidance.
+#
+# Kan genbruges i ethvert R plotting projekt til at placere labels ved
+# horisontale linjer uden overlaps.
+#
+# FEATURES:
+# - Ingen overlaps mellem labels eller med linjer
+# - Multi-level collision avoidance (3 niveauer)
+# - Auto-adaptive parametre baseret på font sizes
+# - Device-independent (NPC koordinater 0-1)
+# - Robust på tværs af ggplot2 versioner
+# - Edge case handling (sammenfaldende linjer, bounds violations)
+#
+# DEPENDENCIES:
+# - ggplot2
+# - stringr
+#
+# USAGE:
+# library(ggplot2)
+#
+# # Opret plot
+# p <- ggplot(mtcars, aes(x = wt, y = mpg)) +
+#   geom_point() +
+#   geom_hline(yintercept = 20, color = "blue") +
+#   geom_hline(yintercept = 25, color = "red") +
+#   theme_minimal()
+#
+# # Opret NPC mapper
+# mapper <- npc_mapper_from_plot(p)
+#
+# # Definer labels (marquee format)
+# label_A <- "{.8 **CL**}  \n{.24 **20 mpg**}"
+# label_B <- "{.8 **Target**}  \n{.24 **25 mpg**}"
+#
+# # Auto-beregn label height
+# label_height <- estimate_label_height_npc(label_A)
+#
+# # Placer labels
+# result <- place_two_labels_npc(
+#   yA_npc = mapper$y_to_npc(20),
+#   yB_npc = mapper$y_to_npc(25),
+#   label_height_npc = label_height,
+#   gap_line = label_height * 0.08,     # 8% af label height
+#   gap_labels = label_height * 0.3,    # 30% af label height
+#   priority = "A",
+#   pref_pos = c("under", "under")
+# )
+#
+# # Konverter NPC tilbage til data coordinates
+# yA_data <- mapper$npc_to_y(result$yA)
+# yB_data <- mapper$npc_to_y(result$yB)
+#
+# EXPORTS:
+# - npc_mapper_from_plot()
+# - estimate_label_height_npc()
+# - place_two_labels_npc()
+# - propose_single_label()
+# - clamp01()
+#
+# ==============================================================================
+
+
+# ==============================================================================
+# HELPER FUNCTIONS
+# ==============================================================================
+
+#' Clamp værdi til interval [0, 1]
+#'
+#' @param x Numerisk værdi eller vektor
+#' @return Værdi begrænset til [0, 1]
+clamp01 <- function(x) {
+  pmax(0, pmin(1, x))
+}
+
+
+# ==============================================================================
+# NPC MAPPING
+# ==============================================================================
+
+#' Opret NPC mapper fra ggplot object
+#'
+#' Denne funktion bygger ggplot og udtræker scale information for at konvertere
+#' mellem data-koordinater og NPC (Normalized Parent Coordinates, 0-1).
+#'
+#' @param p ggplot object
+#' @param panel Panel nummer (default = 1)
+#'
+#' @return List med:
+#'   - `y_to_npc`: function(y_data) → NPC
+#'   - `npc_to_y`: function(npc) → y_data
+#'   - `limits`: c(ymin, ymax)
+#'   - `trans_name`: transformation navn (fx "identity", "log10")
+#'
+#' @examples
+#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+#' mapper <- npc_mapper_from_plot(p)
+#' mapper$y_to_npc(20)  # Konverter 20 mpg til NPC
+#' mapper$npc_to_y(0.5) # Konverter 0.5 NPC til mpg
+npc_mapper_from_plot <- function(p, panel = 1) {
+  stopifnot(inherits(p, "ggplot"))
+
+  b <- ggplot2::ggplot_build(p)
+
+  # Prøv forskellige metoder til at få panel params (robust på tværs af ggplot2 versioner)
+  pp <- tryCatch({
+    b$layout$panel_params[[panel]]
+  }, error = function(e) {
+    tryCatch({
+      b$layout$panel_scales_y[[panel]]
+    }, error = function(e2) NULL)
+  })
+
+  if (is.null(pp)) {
+    stop("Kunne ikke hente panel parameters fra ggplot. Tjek ggplot2 version.")
+  }
+
+  # Udtræk limits og transformation
+  get_scale_info <- function(pp) {
+    lims <- NULL
+    trans <- NULL
+    trans_name <- "identity"
+
+    # Prøv struktureret y scale i panel params
+    if (!is.null(pp$y) && !is.null(pp$y$range)) {
+      lims <- tryCatch(pp$y$range$range, error = function(e) NULL)
+      trans <- tryCatch(pp$y$trans, error = function(e) NULL)
+      if (!is.null(trans)) {
+        trans_name <- if (is.character(trans)) trans else if (!is.null(trans$name)) trans$name else "identity"
+      }
+    }
+
+    if (is.null(lims) && !is.null(pp$y.range)) {
+      lims <- pp$y.range
+    }
+
+    # Fallback til plot scale
+    if (is.null(lims)) {
+      y_scales <- Filter(function(s) "y" %in% s$aesthetics, p$scales$scales)
+      if (length(y_scales) > 0) {
+        lims <- y_scales[[1]]$get_limits()
+        trans <- y_scales[[1]]$trans
+        if (!is.null(trans)) {
+          trans_name <- if (!is.null(trans$name)) trans$name else "identity"
+        }
+      }
+    }
+
+    if (is.null(lims) || length(lims) != 2) {
+      stop("Kunne ikke bestemme y-akse limits fra plot.")
+    }
+
+    # Trans function
+    trans_fun <- if (!is.null(trans) && !is.null(trans$transform)) {
+      trans$transform
+    } else {
+      function(x) x
+    }
+
+    # Inverse trans function
+    inv_trans_fun <- if (!is.null(trans) && !is.null(trans$inverse)) {
+      trans$inverse
+    } else {
+      function(x) x
+    }
+
+    list(lims = lims, trans = trans_fun, inv_trans = inv_trans_fun, trans_name = trans_name)
+  }
+
+  info <- get_scale_info(pp)
+  ymin <- info$lims[1]
+  ymax <- info$lims[2]
+
+  if (!is.finite(ymin) || !is.finite(ymax) || ymax <= ymin) {
+    stop("Ugyldige y-akse limits: [", ymin, ", ", ymax, "]")
+  }
+
+  # Y-data → NPC mapper
+  y_to_npc <- function(y) {
+    if (any(is.na(y))) {
+      result <- rep(NA_real_, length(y))
+      valid <- !is.na(y)
+      if (any(valid)) {
+        yt <- info$trans(y[valid])
+        y0 <- info$trans(ymin)
+        y1 <- info$trans(ymax)
+        result[valid] <- (yt - y0) / (y1 - y0)
+      }
+      return(result)
+    }
+    yt <- info$trans(y)
+    y0 <- info$trans(ymin)
+    y1 <- info$trans(ymax)
+    (yt - y0) / (y1 - y0)
+  }
+
+  # NPC → Y-data inverse mapper
+  npc_to_y <- function(npc) {
+    if (any(is.na(npc))) {
+      result <- rep(NA_real_, length(npc))
+      valid <- !is.na(npc)
+      if (any(valid)) {
+        y0 <- info$trans(ymin)
+        y1 <- info$trans(ymax)
+        yt <- y0 + npc[valid] * (y1 - y0)
+        result[valid] <- info$inv_trans(yt)
+      }
+      return(result)
+    }
+    y0 <- info$trans(ymin)
+    y1 <- info$trans(ymax)
+    yt <- y0 + npc * (y1 - y0)
+    info$inv_trans(yt)
+  }
+
+  list(
+    y_to_npc = y_to_npc,
+    npc_to_y = npc_to_y,
+    limits = c(ymin, ymax),
+    trans_name = info$trans_name
+  )
+}
+
+
+# ==============================================================================
+# LABEL HEIGHT ESTIMATION
+# ==============================================================================
+
+#' Estimér label højde fra marquee markup
+#'
+#' Parser marquee syntax for at beregne forventet label højde i NPC koordinater.
+#' Understøtter format: `{.8 **Header**}  \n{.24 **Value**}`
+#'
+#' @param text Marquee string med font size markup
+#' @param base_size Base font size for responsive sizing (default = 11)
+#' @param fallback_npc Fallback værdi hvis parsing fejler (default = 0.055)
+#'
+#' @return Estimeret label højde i NPC koordinater (0-1)
+#'
+#' @examples
+#' label <- "{.8 **CL**}  \n{.24 **45%**}"
+#' height <- estimate_label_height_npc(label)
+#' # Returns ~0.13 NPC for standard 2-line label
+estimate_label_height_npc <- function(text, base_size = 11, fallback_npc = 0.055) {
+  tryCatch({
+    # Udtræk font sizes fra marquee syntax: {.8 ...} eller {.size 8pt ...}
+    # Match både {.8 ...} og {.size 8pt ...}
+    sizes <- stringr::str_extract_all(text, "\\{\\.(?:size\\s+)?(\\d+)(?:pt)?")[[1]]
+
+    if (length(sizes) == 0) {
+      # Ingen sizes fundet, brug fallback
+      return(fallback_npc)
+    }
+
+    # Udtræk numeriske værdier
+    size_vals <- as.numeric(stringr::str_extract(sizes, "\\d+"))
+
+    # Beregn total højde: sum af font sizes + line spacing
+    # Heuristik: hver pt ≈ 0.3528mm, panel typisk ~140-200mm
+    # 1 NPC ≈ 150mm (typisk), så pt_to_npc ≈ 0.3528/150 ≈ 0.0024
+    # Men vi skal også have line spacing, så vi bruger empirisk factor
+    total_pt <- sum(size_vals)
+
+    # Empirisk afledt konvertering (konservativ for at undgå overlap):
+    # - 8pt + 24pt = 32pt total → ~0.13 NPC (med line spacing + margin)
+    # - Factor: 0.13/32 ≈ 0.004
+    # Øget fra 0.0025 til 0.004 for bedre margin
+    pt_to_npc_factor <- 0.0033
+
+    estimated_height <- total_pt * pt_to_npc_factor
+
+    # Tilføj linjeskift overhead hvis \n findes
+    if (grepl("\\n", text)) {
+      line_count <- length(gregexpr("\\n", text)[[1]]) + 1
+      line_spacing_npc <- 0.015 * (line_count - 1)  # 1.5% per ekstra linje
+      estimated_height <- estimated_height + line_spacing_npc
+    }
+
+    # Tilføj sikkerheds-margin for marquee rendering
+    estimated_height <- estimated_height * 1.1  # 10% safety margin
+
+    # Sikr rimelig værdi
+    estimated_height <- max(0.02, min(0.3, estimated_height))
+
+    return(estimated_height)
+
+  }, error = function(e) {
+    warning("Kunne ikke estimere label-højde fra font sizes, bruger fallback: ", fallback_npc)
+    return(fallback_npc)
+  })
+}
+
+
+# ==============================================================================
+# LABEL PLACEMENT - HELPER FUNCTION
+# ==============================================================================
+
+#' Helper: propose single label placement
+#'
+#' Foreslår en position for én label ved en linje, med foretrukken side.
+#' Flipper automatisk til modsatte side hvis foretrukken side er udenfor bounds.
+#'
+#' @param y_line_npc Linje position i NPC
+#' @param pref_side Foretrukken side: "under" eller "over"
+#' @param label_h Label højde i NPC
+#' @param gap Min gap fra label edge til linje
+#' @param pad_top Top padding
+#' @param pad_bot Bottom padding
+#'
+#' @return List med:
+#'   - `center`: NPC position for label center
+#'   - `side`: Faktisk side ("under" eller "over")
+propose_single_label <- function(y_line_npc, pref_side, label_h, gap, pad_top, pad_bot) {
+  half <- label_h / 2
+  low_bound  <- pad_bot + half
+  high_bound <- 1 - pad_top - half
+
+  # Prøv foretrukket side først
+  if (pref_side == "under") {
+    y <- y_line_npc - gap - half
+    if (y >= low_bound) {
+      return(list(center = y, side = "under"))
+    }
+    # Flip til over
+    y <- y_line_npc + gap + half
+    return(list(center = clamp01(y), side = "over"))
+  } else {
+    y <- y_line_npc + gap + half
+    if (y <= high_bound) {
+      return(list(center = y, side = "over"))
+    }
+    # Flip til under
+    y <- y_line_npc - gap - half
+    return(list(center = clamp01(y), side = "under"))
+  }
+}
+
+
+# ==============================================================================
+# LABEL PLACEMENT - CORE ALGORITHM
+# ==============================================================================
+
+#' Placer to labels ved horisontale linjer med collision avoidance
+#'
+#' Core placement algoritme med multi-level collision avoidance:
+#' - NIVEAU 1: Reducer label gap (50% → 30% → 15%)
+#' - NIVEAU 2: Flip labels til modsatte side (3 strategier)
+#' - NIVEAU 3: Shelf placement (sidste udvej)
+#'
+#' @param yA_npc Y-position for linje A i NPC (0-1)
+#' @param yB_npc Y-position for linje B i NPC (0-1)
+#' @param label_height_npc Label højde i NPC (brug estimate_label_height_npc())
+#' @param gap_line Min gap fra label edge til linje (default 0.015, anbefalet 8% af label_height)
+#' @param gap_labels Min gap mellem labels (default 0.03, anbefalet 30% af label_height)
+#' @param pad_top Top panel padding (default 0.01)
+#' @param pad_bot Bottom panel padding (default 0.01)
+#' @param priority Prioriteret label: "A" eller "B" (default "A")
+#' @param pref_pos Foretrukne positioner: c("under"/"over", "under"/"over") (default c("under", "under"))
+#' @param debug Returnér debug info? (default FALSE)
+#'
+#' @return List med:
+#'   - `yA`: NPC position for label A center
+#'   - `yB`: NPC position for label B center
+#'   - `sideA`: "over" eller "under"
+#'   - `sideB`: "over" eller "under"
+#'   - `placement_quality`: "optimal" / "acceptable" / "suboptimal" / "degraded" / "failed"
+#'   - `warnings`: Character vector med warnings
+#'   - `debug_info`: (kun hvis debug=TRUE)
+#'
+#' @examples
+#' # Basic usage
+#' result <- place_two_labels_npc(
+#'   yA_npc = 0.4,
+#'   yB_npc = 0.6,
+#'   label_height_npc = 0.13,
+#'   gap_line = 0.01,
+#'   gap_labels = 0.04
+#' )
+#'
+#' # Coincident lines (target = CL)
+#' result <- place_two_labels_npc(
+#'   yA_npc = 0.5,
+#'   yB_npc = 0.5,  # Samme værdi
+#'   label_height_npc = 0.13,
+#'   pref_pos = c("under", "under")
+#' )
+#' # Result: sideA = "under", sideB = "over"
+place_two_labels_npc <- function(
+    yA_npc,
+    yB_npc,
+    label_height_npc = 0.035,
+    gap_line = 0.015,
+    gap_labels = 0.03,
+    pad_top = 0.01,
+    pad_bot = 0.01,
+    priority = c("A", "B")[1],
+    pref_pos = c("under", "under"),
+    debug = FALSE
+) {
+
+  warnings <- character(0)
+  placement_quality <- "optimal"
+
+  # Håndter NA værdier
+  if (is.na(yA_npc) && is.na(yB_npc)) {
+    warnings <- c(warnings, "Begge linjer er NA - ingen labels placeret")
+    return(list(
+      yA = NA_real_,
+      yB = NA_real_,
+      sideA = NA_character_,
+      sideB = NA_character_,
+      warnings = warnings,
+      placement_quality = "failed"
+    ))
+  }
+
+  # Håndter out-of-bounds
+  if (!is.na(yA_npc) && (yA_npc < 0 || yA_npc > 1)) {
+    warnings <- c(warnings, paste0("Label A linje uden for panel (", round(yA_npc, 3), ")"))
+    yA_npc <- NA_real_
+  }
+  if (!is.na(yB_npc) && (yB_npc < 0 || yB_npc > 1)) {
+    warnings <- c(warnings, paste0("Label B linje uden for panel (", round(yB_npc, 3), ")"))
+    yB_npc <- NA_real_
+  }
+
+  # Hvis kun én linje er valid
+  if (is.na(yA_npc) && !is.na(yB_npc)) {
+    yB <- propose_single_label(yB_npc, pref_pos[2], label_height_npc, gap_line, pad_top, pad_bot)
+    return(list(
+      yA = NA_real_,
+      yB = yB$center,
+      sideA = NA_character_,
+      sideB = yB$side,
+      warnings = c(warnings, "Kun label B placeret"),
+      placement_quality = "degraded"
+    ))
+  }
+  if (is.na(yB_npc) && !is.na(yA_npc)) {
+    yA <- propose_single_label(yA_npc, pref_pos[1], label_height_npc, gap_line, pad_top, pad_bot)
+    return(list(
+      yA = yA$center,
+      yB = NA_real_,
+      sideA = yA$side,
+      sideB = NA_character_,
+      warnings = c(warnings, "Kun label A placeret"),
+      placement_quality = "degraded"
+    ))
+  }
+
+  # Begge linjer er valid - fuld placeringsalgoritme
+  half <- label_height_npc / 2
+  low_bound  <- pad_bot + half
+  high_bound <- 1 - pad_top - half
+
+  pref_pos <- rep_len(pref_pos, 2)
+
+  # Hvis linjer er meget tætte, flip strategy: en over, en under
+  line_gap_npc <- abs(yA_npc - yB_npc)
+  min_center_gap <- label_height_npc + gap_labels
+
+  if (line_gap_npc < min_center_gap * 0.5) {
+    # Linjer er for tætte til begge at være på samme side
+    warnings <- c(warnings, paste0("Linjer meget tætte (gap=", round(line_gap_npc, 3), ") - bruger over/under strategi"))
+
+    # Placer den øverste linje's label OVER, den nederste UNDER
+    if (yA_npc > yB_npc) {
+      # A er højere
+      pref_pos[1] <- "over"   # A over
+      pref_pos[2] <- "under"  # B under
+    } else {
+      # B er højere
+      pref_pos[1] <- "under"  # A under
+      pref_pos[2] <- "over"   # B over
+    }
+  }
+
+  # Initial proposals
+  propA <- propose_single_label(yA_npc, pref_pos[1], label_height_npc, gap_line, pad_top, pad_bot)
+  propB <- propose_single_label(yB_npc, pref_pos[2], label_height_npc, gap_line, pad_top, pad_bot)
+
+  yA <- propA$center
+  yB <- propB$center
+  sideA <- propA$side
+  sideB <- propB$side
+
+  # Tjek for coincident lines (meget tætte)
+  if (abs(yA_npc - yB_npc) < 0.001) {
+    warnings <- c(warnings, "Sammenfaldende linjer - placerer labels over/under")
+
+    # Placer den ene label over, den anden under samme linje
+    # Prioriter CL (A) til foretrukken side
+    if (pref_pos[1] == "under") {
+      # CL under, Target over
+      yA <- clamp01(yA_npc - gap_line - half)
+      yB <- clamp01(yA_npc + gap_line + half)
+      sideA <- "under"
+      sideB <- "over"
+    } else {
+      # CL over, Target under
+      yA <- clamp01(yA_npc + gap_line + half)
+      yB <- clamp01(yA_npc - gap_line - half)
+      sideA <- "over"
+      sideB <- "under"
+    }
+
+    # Verificér at begge labels er inden for bounds
+    if (yA < low_bound || yA > high_bound || yB < low_bound || yB > high_bound) {
+      warnings <- c(warnings, "Label(s) uden for bounds - justerer til bounds")
+      yA <- clamp01(yA)
+      yB <- clamp01(yB)
+      placement_quality <- "acceptable"
+    }
+
+    return(list(
+      yA = yA,
+      yB = yB,
+      sideA = sideA,
+      sideB = sideB,
+      warnings = warnings,
+      placement_quality = placement_quality
+    ))
+  }
+
+  # Collision detection
+  min_center_gap <- label_height_npc + gap_labels
+
+  if (abs(yA - yB) < min_center_gap) {
+    # Kollision detekteret
+    warnings <- c(warnings, "Label kollision detekteret - justerer placering")
+
+    # Sortér efter linje-position (lower først)
+    if (yA_npc < yB_npc) {
+      lower_y <- yA
+      upper_y <- yB
+      lower_is_A <- TRUE
+    } else {
+      lower_y <- yB
+      upper_y <- yA
+      lower_is_A <- FALSE
+    }
+
+    # Prøv at skubbe upper opad
+    new_upper <- lower_y + min_center_gap
+    if (new_upper <= high_bound) {
+      upper_y <- new_upper
+    } else {
+      # Prøv at skubbe lower nedad
+      new_lower <- upper_y - min_center_gap
+      if (new_lower >= low_bound) {
+        lower_y <- new_lower
+      } else {
+        # Kan ikke opfylde begge constraints - brug shelf placement
+        warnings <- c(warnings, "Umuligt at opfylde alle constraints - bruger shelf placement")
+        placement_quality <- "suboptimal"
+
+        # Prioriter den vigtigste label tættest på sin linje
+        if (priority == "A") {
+          if (lower_is_A) {
+            lower_y <- max(low_bound, min(propA$center, high_bound))
+            upper_y <- high_bound
+          } else {
+            lower_y <- low_bound
+            upper_y <- min(high_bound, max(propA$center, low_bound))
+          }
+        } else {
+          if (lower_is_A) {
+            lower_y <- low_bound
+            upper_y <- min(high_bound, max(propB$center, low_bound))
+          } else {
+            lower_y <- max(low_bound, min(propB$center, high_bound))
+            upper_y <- high_bound
+          }
+        }
+      }
+    }
+
+    # Map tilbage til A/B
+    if (lower_is_A) {
+      yA <- lower_y
+      yB <- upper_y
+    } else {
+      yA <- upper_y
+      yB <- lower_y
+    }
+  }
+
+  # Final verification: line-gap enforcement
+  # MEN: Prioriter collision avoidance over line-gap hvis konflikt
+  verify_line_gap <- function(y_center, y_line, side, label_h) {
+    half <- label_h / 2
+    if (side == "under") {
+      required_max <- y_line - gap_line - half
+      if (y_center > required_max) {
+        return(list(y = required_max, violated = TRUE))
+      }
+    } else {
+      required_min <- y_line + gap_line + half
+      if (y_center < required_min) {
+        return(list(y = required_min, violated = TRUE))
+      }
+    }
+    return(list(y = y_center, violated = FALSE))
+  }
+
+  verifyA <- verify_line_gap(yA, yA_npc, sideA, label_height_npc)
+  verifyB <- verify_line_gap(yB, yB_npc, sideB, label_height_npc)
+
+  # Tjek om line-gap enforcement vil skabe ny collision
+  if (verifyA$violated || verifyB$violated) {
+    proposed_yA <- if (verifyA$violated) verifyA$y else yA
+    proposed_yB <- if (verifyB$violated) verifyB$y else yB
+
+    # Vil dette skabe collision?
+    if (abs(proposed_yA - proposed_yB) < min_center_gap) {
+      warnings <- c(warnings, "Line-gap enforcement ville skabe collision - forsøger multi-level fallback")
+
+      # === NIVEAU 1: Reducer gap_labels for at give mere plads ===
+      reduced_gap_successful <- FALSE
+      for (reduction_factor in c(0.5, 0.3, 0.15)) {
+        reduced_min_gap <- label_height_npc + gap_labels * reduction_factor
+
+        if (abs(proposed_yA - proposed_yB) >= reduced_min_gap) {
+          # Success! Vi kan bruge line-gap enforcement med reduceret label-gap
+          warnings <- c(warnings, paste0("NIVEAU 1: Reduceret label gap til ",
+                                         round(reduction_factor * 100), "% - line-gaps overholdt"))
+          yA <- clamp01(proposed_yA)
+          yB <- clamp01(proposed_yB)
+          reduced_gap_successful <- TRUE
+          placement_quality <- "acceptable"
+          break
+        }
+      }
+
+      # === NIVEAU 2: Flip label til modsatte side ===
+      if (!reduced_gap_successful) {
+        warnings <- c(warnings, "NIVEAU 1 fejlede - forsøger NIVEAU 2: flip labels til modsatte side")
+
+        # Prøv begge flip-strategier i prioritetsrækkefølge
+        # Strategi 1: Flip A (CL) til modsatte side, hold B (Target) fast
+        new_side_A <- if (sideA == "under") "over" else "under"
+        propA_flipped <- propose_single_label(yA_npc, new_side_A, label_height_npc, gap_line, pad_top, pad_bot)
+        verifyA_flipped <- verify_line_gap(propA_flipped$center, yA_npc, propA_flipped$side, label_height_npc)
+        test_yA <- if (verifyA_flipped$violated) verifyA_flipped$y else propA_flipped$center
+
+        # Check om flip A løser problemet
+        if (abs(test_yA - proposed_yB) >= label_height_npc) {  # Minimum: labels må ikke overlappe
+          yA <- clamp01(test_yA)
+          yB <- clamp01(proposed_yB)
+          sideA <- propA_flipped$side
+          warnings <- c(warnings, "NIVEAU 2a: Flippet label A til modsatte side - konflikt løst")
+          placement_quality <- "acceptable"
+          reduced_gap_successful <- TRUE
+        } else {
+          # Strategi 2: Hold A fast, flip B til modsatte side
+          new_side_B <- if (sideB == "under") "over" else "under"
+          propB_flipped <- propose_single_label(yB_npc, new_side_B, label_height_npc, gap_line, pad_top, pad_bot)
+          verifyB_flipped <- verify_line_gap(propB_flipped$center, yB_npc, propB_flipped$side, label_height_npc)
+          test_yB <- if (verifyB_flipped$violated) verifyB_flipped$y else propB_flipped$center
+
+          if (abs(proposed_yA - test_yB) >= label_height_npc) {
+            yA <- clamp01(proposed_yA)
+            yB <- clamp01(test_yB)
+            sideB <- propB_flipped$side
+            warnings <- c(warnings, "NIVEAU 2b: Flippet label B til modsatte side - konflikt løst")
+            placement_quality <- "acceptable"
+            reduced_gap_successful <- TRUE
+          } else {
+            # Strategi 3: Flip BEGGE labels til modsatte side
+            if (abs(test_yA - test_yB) >= label_height_npc) {
+              yA <- clamp01(test_yA)
+              yB <- clamp01(test_yB)
+              sideA <- propA_flipped$side
+              sideB <- propB_flipped$side
+              warnings <- c(warnings, "NIVEAU 2c: Flippet BEGGE labels til modsatte side - konflikt løst")
+              placement_quality <- "suboptimal"
+              reduced_gap_successful <- TRUE
+            }
+          }
+        }
+      }
+
+      # === NIVEAU 3: Shelf placement som sidste udvej ===
+      if (!reduced_gap_successful) {
+        warnings <- c(warnings, "NIVEAU 2 fejlede - bruger NIVEAU 3: shelf placement")
+
+        # Prioriter den vigtigste label tættest på sin linje
+        if (priority == "A") {
+          yA <- clamp01(proposed_yA)
+          yB <- if (yA < 0.5) high_bound else low_bound  # Modsatte shelf
+        } else {
+          yB <- clamp01(proposed_yB)
+          yA <- if (yB < 0.5) high_bound else low_bound
+        }
+        placement_quality <- "degraded"
+      }
+
+    } else {
+      # Sikkert at enforce line-gaps uden collision
+      if (verifyA$violated) {
+        warnings <- c(warnings, "Label A justeret for line-gap compliance")
+        yA <- clamp01(verifyA$y)
+      }
+      if (verifyB$violated) {
+        warnings <- c(warnings, "Label B justeret for line-gap compliance")
+        yB <- clamp01(verifyB$y)
+      }
+    }
+  }
+
+  list(
+    yA = yA,
+    yB = yB,
+    sideA = sideA,
+    sideB = sideB,
+    warnings = warnings,
+    placement_quality = placement_quality,
+    debug_info = if (debug) list(
+      yA_npc = yA_npc,
+      yB_npc = yB_npc,
+      propA = propA,
+      propB = propB,
+      bounds = c(low_bound, high_bound)
+    ) else NULL
+  )
+}
