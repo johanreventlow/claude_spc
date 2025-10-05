@@ -318,6 +318,30 @@ npc_mapper_from_plot <- function(p, panel = 1) {
 # LABEL HEIGHT ESTIMATION
 # ==============================================================================
 
+# Global memoization cache for grob height measurements
+# Created once at package/script load time
+.grob_height_cache <- new.env(parent = emptyenv())
+
+#' Clear grob height cache (for testing or memory management)
+#'
+#' @keywords internal
+clear_grob_height_cache <- function() {
+  rm(list = ls(.grob_height_cache), envir = .grob_height_cache)
+  invisible(NULL)
+}
+
+#' Get cache statistics
+#'
+#' @return List with cache_size and example keys
+#' @keywords internal
+get_grob_cache_stats <- function() {
+  keys <- ls(.grob_height_cache)
+  list(
+    cache_size = length(keys),
+    cached_keys = if (length(keys) > 5) keys[1:5] else keys
+  )
+}
+
 #' Estimér label højde fra marquee markup VED FAKTISK GROB-MÅLING
 #'
 #' Opretter et marquee grob med de faktiske styles og måler højden præcist.
@@ -353,7 +377,8 @@ estimate_label_height_npc <- function(
   text,
   style = NULL,
   panel_height_inches = NULL,
-  fallback_npc = 0.13
+  fallback_npc = 0.13,
+  use_cache = TRUE
 ) {
 
   tryCatch({
@@ -367,6 +392,24 @@ estimate_label_height_npc <- function(
         margin = marquee::trbl(0),
         align = "right"
       )
+    }
+
+    # Generate cache key from text + style signature
+    # Key parameters affecting height: margin, align, lineheight
+    if (use_cache) {
+      style_hash <- digest::digest(list(
+        style$p$margin,
+        style$p$align,
+        style$p$lineheight
+      ), algo = "xxhash32")  # Fast hash algorithm
+
+      cache_key <- paste0(text, "_", style_hash)
+
+      # Check cache
+      cached_result <- .grob_height_cache[[cache_key]]
+      if (!is.null(cached_result)) {
+        return(cached_result)
+      }
     }
 
     # Opret marquee grob for at måle faktisk højde
@@ -403,6 +446,11 @@ estimate_label_height_npc <- function(
         "Dette kan skyldes manglende viewport eller ugyldigt marquee markup."
       )
       return(fallback_npc)
+    }
+
+    # Store in cache for future reuse (if caching enabled)
+    if (use_cache) {
+      .grob_height_cache[[cache_key]] <- h_npc
     }
 
     return(as.numeric(h_npc))
@@ -602,41 +650,49 @@ place_two_labels_npc <- function(
   # Source config hvis tilgængelig (standalone compatibility)
   if (exists("get_label_placement_param", mode = "function")) {
     config_available <- TRUE
+
+    # OPTIMIZATION: Batch load all config values at once
+    cfg <- list(
+      relative_gap_line = get_label_placement_param("relative_gap_line"),
+      relative_gap_labels = get_label_placement_param("relative_gap_labels"),
+      pad_top = get_label_placement_param("pad_top"),
+      pad_bot = get_label_placement_param("pad_bot"),
+      tight_lines_threshold_factor = get_label_placement_param("tight_lines_threshold_factor"),
+      coincident_threshold_factor = get_label_placement_param("coincident_threshold_factor"),
+      gap_reduction_factors = get_label_placement_param("gap_reduction_factors"),
+      shelf_center_threshold = get_label_placement_param("shelf_center_threshold")
+    )
   } else {
     config_available <- FALSE
+
+    # Fallback config for standalone mode
+    cfg <- list(
+      relative_gap_line = 0.08,
+      relative_gap_labels = 0.30,
+      pad_top = 0.01,
+      pad_bot = 0.01,
+      tight_lines_threshold_factor = 0.5,
+      coincident_threshold_factor = 0.1,
+      gap_reduction_factors = c(0.5, 0.3, 0.15),
+      shelf_center_threshold = 0.5
+    )
   }
 
-  # Beregn defaults fra config (eller brug fallback for standalone mode)
+  # Beregn defaults fra config
   if (is.null(gap_line)) {
-    if (config_available) {
-      gap_line <- label_height_npc * get_label_placement_param("relative_gap_line")
-    } else {
-      gap_line <- label_height_npc * 0.08  # Fallback: 8% af label height
-    }
+    gap_line <- label_height_npc * cfg$relative_gap_line
   }
 
   if (is.null(gap_labels)) {
-    if (config_available) {
-      gap_labels <- label_height_npc * get_label_placement_param("relative_gap_labels")
-    } else {
-      gap_labels <- label_height_npc * 0.30  # Fallback: 30% af label height
-    }
+    gap_labels <- label_height_npc * cfg$relative_gap_labels
   }
 
   if (is.null(pad_top)) {
-    if (config_available) {
-      pad_top <- get_label_placement_param("pad_top")
-    } else {
-      pad_top <- 0.01  # Fallback: 1%
-    }
+    pad_top <- cfg$pad_top
   }
 
   if (is.null(pad_bot)) {
-    if (config_available) {
-      pad_bot <- get_label_placement_param("pad_bot")
-    } else {
-      pad_bot <- 0.01  # Fallback: 1%
-    }
+    pad_bot <- cfg$pad_bot
   }
 
   warnings <- character(0)
@@ -700,12 +756,8 @@ place_two_labels_npc <- function(
   line_gap_npc <- abs(yA_npc - yB_npc)
   min_center_gap <- label_height_npc + gap_labels
 
-  # Hent tight_lines_threshold fra config
-  tight_threshold_factor <- if (config_available) {
-    get_label_placement_param("tight_lines_threshold_factor")
-  } else {
-    0.5  # Fallback: 50% af min_center_gap
-  }
+  # Brug batch-loaded config
+  tight_threshold_factor <- cfg$tight_lines_threshold_factor
 
   if (line_gap_npc < min_center_gap * tight_threshold_factor) {
     # Linjer er for tætte til begge at være på samme side
@@ -733,12 +785,8 @@ place_two_labels_npc <- function(
   sideB <- propB$side
 
   # Tjek for coincident lines (meget tætte)
-  # Hent coincident_threshold fra config (som procent af label_height)
-  coincident_threshold <- if (config_available) {
-    label_height_npc * get_label_placement_param("coincident_threshold_factor")
-  } else {
-    label_height_npc * 0.1  # Fallback: 10% af label højde
-  }
+  # Brug batch-loaded config
+  coincident_threshold <- label_height_npc * cfg$coincident_threshold_factor
 
   if (abs(yA_npc - yB_npc) < coincident_threshold) {
     warnings <- c(warnings, "Sammenfaldende linjer - placerer labels over/under")
@@ -780,6 +828,20 @@ place_two_labels_npc <- function(
   # Collision detection
   min_center_gap <- label_height_npc + gap_labels
 
+  # OPTIMIZATION: Early exit hvis ingen kollision
+  if (abs(yA - yB) >= min_center_gap) {
+    # Ingen kollision - returnér optimal placering med det samme
+    return(list(
+      yA = yA,
+      yB = yB,
+      sideA = sideA,
+      sideB = sideB,
+      warnings = warnings,
+      placement_quality = "optimal"
+    ))
+  }
+
+  # Kollision detekteret - fortsæt med resolution logic
   if (abs(yA - yB) < min_center_gap) {
     # Kollision detekteret
     warnings <- c(warnings, "Label kollision detekteret - justerer placering")
@@ -873,12 +935,8 @@ place_two_labels_npc <- function(
       # === NIVEAU 1: Reducer gap_labels for at give mere plads ===
       reduced_gap_successful <- FALSE
 
-      # Hent gap_reduction_factors fra config
-      reduction_factors <- if (config_available) {
-        get_label_placement_param("gap_reduction_factors")
-      } else {
-        c(0.5, 0.3, 0.15)  # Fallback: 50%, 30%, 15%
-      }
+      # Brug batch-loaded config
+      reduction_factors <- cfg$gap_reduction_factors
 
       for (reduction_factor in reduction_factors) {
         reduced_min_gap <- label_height_npc + gap_labels * reduction_factor
@@ -947,12 +1005,8 @@ place_two_labels_npc <- function(
       if (!reduced_gap_successful) {
         warnings <- c(warnings, "NIVEAU 2 fejlede - bruger NIVEAU 3: shelf placement")
 
-        # Hent shelf_center_threshold fra config
-        shelf_threshold <- if (config_available) {
-          get_label_placement_param("shelf_center_threshold")
-        } else {
-          0.5  # Fallback: midtpunkt (50% NPC)
-        }
+        # Brug batch-loaded config
+        shelf_threshold <- cfg$shelf_center_threshold
 
         # Prioriter den vigtigste label tættest på sin linje
         if (priority == "A") {
