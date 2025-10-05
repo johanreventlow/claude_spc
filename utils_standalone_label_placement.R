@@ -449,8 +449,13 @@ measure_panel_height_inches <- function(p, panel = 1) {
 #' @param style marquee style object (default: classic_style med right align)
 #' @param panel_height_inches Panel højde i inches (hvis kendt, ellers NULL for auto-detect)
 #' @param fallback_npc Fallback værdi hvis grob-måling fejler (default 0.13)
+#' @param return_details Hvis TRUE, returnér list med npc, inches og panel_height (default FALSE)
 #'
-#' @return Faktisk label højde i NPC koordinater (0-1)
+#' @return Hvis return_details=FALSE: Numerisk værdi med label højde i NPC (0-1)
+#'         Hvis return_details=TRUE: List med:
+#'           - npc: Label højde i NPC koordinater
+#'           - inches: Label højde i inches (absolut)
+#'           - panel_height_inches: Panel højde i inches
 #'
 #' @details
 #' Denne funktion erstatter den tidligere estimation-baserede tilgang med
@@ -469,14 +474,21 @@ measure_panel_height_inches <- function(p, panel = 1) {
 #'   margin = marquee::trbl(0),
 #'   align = "right"
 #' )
+#'
+#' # Simpel brug (backward compatible)
 #' height <- estimate_label_height_npc(label, style = style)
 #' # Returns faktisk målt højde (typisk ~0.10-0.15 for 2-line label)
+#'
+#' # Detaljeret brug (ny API for fixed gaps)
+#' height_details <- estimate_label_height_npc(label, style = style, return_details = TRUE)
+#' # Returns list(npc = 0.12, inches = 0.5, panel_height_inches = 4.2)
 estimate_label_height_npc <- function(
   text,
   style = NULL,
   panel_height_inches = NULL,
   fallback_npc = 0.13,
-  use_cache = TRUE
+  use_cache = TRUE,
+  return_details = FALSE
 ) {
 
   tryCatch({
@@ -541,11 +553,14 @@ estimate_label_height_npc <- function(
     } else {
       # Auto-detect fra current viewport
       h_npc <- grid::convertHeight(h_native, "npc", valueOnly = TRUE)
+      # Beregn også inches for details-return
+      h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
     }
 
     # Tilføj lille sikkerhedsmargin (5%) for at være konservativ
     # Dette sikrer at labels ikke overlapper selv med små afrundingsfejl
     h_npc <- h_npc * 1.05
+    h_inches_with_margin <- h_inches * 1.05
 
     # Sanity check: Verificer at målingen er rimelig
     if (!is.finite(h_npc) || h_npc <= 0 || h_npc > 0.5) {
@@ -553,12 +568,28 @@ estimate_label_height_npc <- function(
         "Grob-måling gav usandsynlig værdi (", round(h_npc, 4), "), bruger fallback. ",
         "Dette kan skyldes manglende viewport eller ugyldigt marquee markup."
       )
+      if (return_details) {
+        return(list(
+          npc = fallback_npc,
+          inches = NA_real_,
+          panel_height_inches = panel_height_inches
+        ))
+      }
       return(fallback_npc)
     }
 
     # Store in cache for future reuse (if caching enabled)
     if (use_cache) {
       .grob_height_cache[[cache_key]] <- h_npc
+    }
+
+    # Return based on return_details flag
+    if (return_details) {
+      return(list(
+        npc = as.numeric(h_npc),
+        inches = as.numeric(h_inches_with_margin),
+        panel_height_inches = panel_height_inches
+      ))
     }
 
     return(as.numeric(h_npc))
@@ -568,6 +599,13 @@ estimate_label_height_npc <- function(
       "Grob-baseret højdemåling fejlede: ", e$message,
       " - bruger fallback: ", fallback_npc
     )
+    if (return_details) {
+      return(list(
+        npc = fallback_npc,
+        inches = NA_real_,
+        panel_height_inches = panel_height_inches
+      ))
+    }
     return(fallback_npc)
   })
 }
@@ -631,11 +669,15 @@ propose_single_label <- function(y_line_npc, pref_side, label_h, gap, pad_top, p
 #'
 #' @param yA_npc Y-position for linje A i NPC (0-1)
 #' @param yB_npc Y-position for linje B i NPC (0-1)
-#' @param label_height_npc Label højde i NPC (brug estimate_label_height_npc())
-#' @param gap_line Min gap fra label edge til linje (default 0.015, anbefalet 8% af label_height)
-#' @param gap_labels Min gap mellem labels (default 0.03, anbefalet 30% af label_height)
-#' @param pad_top Top panel padding (default 0.01)
-#' @param pad_bot Bottom panel padding (default 0.01)
+#' @param label_height_npc Label højde - enten:
+#'   - Numerisk værdi i NPC (backward compatible)
+#'   - List fra estimate_label_height_npc(..., return_details=TRUE) med $npc, $inches, $panel_height_inches
+#' @param gap_line Min gap fra label edge til linje (default NULL = auto-beregn fra config)
+#'   - Hvis label_height_npc er list: Beregnes som fast % af absolute højde (inches)
+#'   - Hvis label_height_npc er numerisk: Beregnes som % af NPC (legacy)
+#' @param gap_labels Min gap mellem labels (default NULL = auto-beregn fra config)
+#' @param pad_top Top panel padding (default NULL = hent fra config)
+#' @param pad_bot Bottom panel padding (default NULL = hent fra config)
 #' @param priority Prioriteret label: "A" eller "B" (default "A")
 #' @param pref_pos Foretrukne positioner: c("under"/"over", "under"/"over") (default c("under", "under"))
 #' @param debug Returnér debug info? (default FALSE)
@@ -650,14 +692,24 @@ propose_single_label <- function(y_line_npc, pref_side, label_h, gap, pad_top, p
 #'   - `debug_info`: (kun hvis debug=TRUE)
 #'
 #' @examples
-#' # Basic usage
+#' # Basic usage (backward compatible - NPC-baseret gap)
 #' result <- place_two_labels_npc(
 #'   yA_npc = 0.4,
 #'   yB_npc = 0.6,
-#'   label_height_npc = 0.13,
-#'   gap_line = 0.01,
-#'   gap_labels = 0.04
+#'   label_height_npc = 0.13
 #' )
+#'
+#' # Ny API (fixed absolute gap baseret på label inches)
+#' height_details <- estimate_label_height_npc(
+#'   "{.8 **CL**}  \n{.24 **45%**}",
+#'   return_details = TRUE
+#' )
+#' result <- place_two_labels_npc(
+#'   yA_npc = 0.4,
+#'   yB_npc = 0.6,
+#'   label_height_npc = height_details  # List med npc/inches/panel_height
+#' )
+#' # Gap vil nu være fast % af label's faktiske højde
 #'
 #' # Coincident lines (target = CL)
 #' result <- place_two_labels_npc(
@@ -681,8 +733,34 @@ place_two_labels_npc <- function(
 ) {
 
   # ============================================================================
-  # INPUT VALIDATION
+  # INPUT VALIDATION & PARSING
   # ============================================================================
+
+  # Parse label_height_npc - kan være enten numerisk eller list
+  label_height_is_list <- is.list(label_height_npc)
+
+  if (label_height_is_list) {
+    # Ny API: List med details
+    if (!all(c("npc", "inches", "panel_height_inches") %in% names(label_height_npc))) {
+      stop("label_height_npc list skal indeholde 'npc', 'inches', og 'panel_height_inches'")
+    }
+
+    label_height_npc_value <- label_height_npc$npc
+    label_height_inches <- label_height_npc$inches
+    panel_height_inches <- label_height_npc$panel_height_inches
+
+    # Validér at panel_height er tilgængelig for absolute gap beregning
+    if (is.null(panel_height_inches) || is.na(panel_height_inches)) {
+      warning("panel_height_inches ikke tilgængelig - falder tilbage til NPC-baseret gap")
+      label_height_is_list <- FALSE
+      label_height_inches <- NA_real_
+    }
+  } else {
+    # Legacy API: Enkelt numerisk værdi
+    label_height_npc_value <- label_height_npc
+    label_height_inches <- NA_real_
+    panel_height_inches <- NULL
+  }
 
   # Helper function for NPC parameter validation
   validate_npc_param <- function(value, name, allow_na = TRUE) {
@@ -710,19 +788,19 @@ place_two_labels_npc <- function(
   # Validér alle NPC inputs
   validate_npc_param(yA_npc, "yA_npc", allow_na = TRUE)
   validate_npc_param(yB_npc, "yB_npc", allow_na = TRUE)
-  validate_npc_param(label_height_npc, "label_height_npc", allow_na = FALSE)
+  validate_npc_param(label_height_npc_value, "label_height_npc", allow_na = FALSE)
   validate_npc_param(gap_line, "gap_line", allow_na = FALSE)
   validate_npc_param(gap_labels, "gap_labels", allow_na = FALSE)
   validate_npc_param(pad_top, "pad_top", allow_na = FALSE)
   validate_npc_param(pad_bot, "pad_bot", allow_na = FALSE)
 
   # Bounds validation for label_height_npc
-  if (!is.null(label_height_npc)) {
-    if (label_height_npc <= 0) {
-      stop("label_height_npc skal være positiv, modtog: ", label_height_npc)
+  if (!is.null(label_height_npc_value)) {
+    if (label_height_npc_value <= 0) {
+      stop("label_height_npc skal være positiv, modtog: ", label_height_npc_value)
     }
-    if (label_height_npc > 0.5) {
-      stop("label_height_npc må ikke overstige 0.5 (50% af panel), modtog: ", label_height_npc)
+    if (label_height_npc_value > 0.5) {
+      stop("label_height_npc må ikke overstige 0.5 (50% af panel), modtog: ", label_height_npc_value)
     }
   }
 
@@ -787,12 +865,27 @@ place_two_labels_npc <- function(
   }
 
   # Beregn defaults fra config
+  # VIGTIG FORBEDRING: Beregn gap baseret på absolute inches hvis tilgængelig
   if (is.null(gap_line)) {
-    gap_line <- label_height_npc * cfg$relative_gap_line
+    if (label_height_is_list && !is.na(label_height_inches)) {
+      # Ny API: Beregn gap som fast % af absolute label højde
+      gap_line_inches <- label_height_inches * cfg$relative_gap_line
+      gap_line <- gap_line_inches / panel_height_inches  # Konverter til NPC
+    } else {
+      # Legacy API: Beregn gap som % af NPC
+      gap_line <- label_height_npc_value * cfg$relative_gap_line
+    }
   }
 
   if (is.null(gap_labels)) {
-    gap_labels <- label_height_npc * cfg$relative_gap_labels
+    if (label_height_is_list && !is.na(label_height_inches)) {
+      # Ny API: Beregn gap som fast % af absolute label højde
+      gap_labels_inches <- label_height_inches * cfg$relative_gap_labels
+      gap_labels <- gap_labels_inches / panel_height_inches  # Konverter til NPC
+    } else {
+      # Legacy API: Beregn gap som % af NPC
+      gap_labels <- label_height_npc_value * cfg$relative_gap_labels
+    }
   }
 
   if (is.null(pad_top)) {
@@ -831,7 +924,7 @@ place_two_labels_npc <- function(
 
   # Hvis kun én linje er valid
   if (is.na(yA_npc) && !is.na(yB_npc)) {
-    yB <- propose_single_label(yB_npc, pref_pos[2], label_height_npc, gap_line, pad_top, pad_bot)
+    yB <- propose_single_label(yB_npc, pref_pos[2], label_height_npc_value, gap_line, pad_top, pad_bot)
     return(list(
       yA = NA_real_,
       yB = yB$center,
@@ -842,7 +935,7 @@ place_two_labels_npc <- function(
     ))
   }
   if (is.na(yB_npc) && !is.na(yA_npc)) {
-    yA <- propose_single_label(yA_npc, pref_pos[1], label_height_npc, gap_line, pad_top, pad_bot)
+    yA <- propose_single_label(yA_npc, pref_pos[1], label_height_npc_value, gap_line, pad_top, pad_bot)
     return(list(
       yA = yA$center,
       yB = NA_real_,
@@ -854,7 +947,7 @@ place_two_labels_npc <- function(
   }
 
   # Begge linjer er valid - fuld placeringsalgoritme
-  half <- label_height_npc / 2
+  half <- label_height_npc_value / 2
   low_bound  <- pad_bot + half
   high_bound <- 1 - pad_top - half
 
@@ -862,7 +955,7 @@ place_two_labels_npc <- function(
 
   # Hvis linjer er meget tætte, flip strategy: en over, en under
   line_gap_npc <- abs(yA_npc - yB_npc)
-  min_center_gap <- label_height_npc + gap_labels
+  min_center_gap <- label_height_npc_value + gap_labels
 
   # Brug batch-loaded config
   tight_threshold_factor <- cfg$tight_lines_threshold_factor
@@ -884,8 +977,8 @@ place_two_labels_npc <- function(
   }
 
   # Initial proposals
-  propA <- propose_single_label(yA_npc, pref_pos[1], label_height_npc, gap_line, pad_top, pad_bot)
-  propB <- propose_single_label(yB_npc, pref_pos[2], label_height_npc, gap_line, pad_top, pad_bot)
+  propA <- propose_single_label(yA_npc, pref_pos[1], label_height_npc_value, gap_line, pad_top, pad_bot)
+  propB <- propose_single_label(yB_npc, pref_pos[2], label_height_npc_value, gap_line, pad_top, pad_bot)
 
   yA <- propA$center
   yB <- propB$center
@@ -894,7 +987,7 @@ place_two_labels_npc <- function(
 
   # Tjek for coincident lines (meget tætte)
   # Brug batch-loaded config
-  coincident_threshold <- label_height_npc * cfg$coincident_threshold_factor
+  coincident_threshold <- label_height_npc_value * cfg$coincident_threshold_factor
 
   if (abs(yA_npc - yB_npc) < coincident_threshold) {
     warnings <- c(warnings, "Sammenfaldende linjer - placerer labels over/under")
@@ -934,7 +1027,7 @@ place_two_labels_npc <- function(
   }
 
   # Collision detection
-  min_center_gap <- label_height_npc + gap_labels
+  min_center_gap <- label_height_npc_value + gap_labels
 
   # OPTIMIZATION: Early exit hvis ingen kollision
   if (abs(yA - yB) >= min_center_gap) {
@@ -1028,8 +1121,8 @@ place_two_labels_npc <- function(
     return(list(y = y_center, violated = FALSE))
   }
 
-  verifyA <- verify_line_gap(yA, yA_npc, sideA, label_height_npc)
-  verifyB <- verify_line_gap(yB, yB_npc, sideB, label_height_npc)
+  verifyA <- verify_line_gap(yA, yA_npc, sideA, label_height_npc_value)
+  verifyB <- verify_line_gap(yB, yB_npc, sideB, label_height_npc_value)
 
   # Tjek om line-gap enforcement vil skabe ny collision
   if (verifyA$violated || verifyB$violated) {
@@ -1047,7 +1140,7 @@ place_two_labels_npc <- function(
       reduction_factors <- cfg$gap_reduction_factors
 
       for (reduction_factor in reduction_factors) {
-        reduced_min_gap <- label_height_npc + gap_labels * reduction_factor
+        reduced_min_gap <- label_height_npc_value + gap_labels * reduction_factor
 
         if (abs(proposed_yA - proposed_yB) >= reduced_min_gap) {
           # Success! Vi kan bruge line-gap enforcement med reduceret label-gap
@@ -1068,12 +1161,12 @@ place_two_labels_npc <- function(
         # Prøv begge flip-strategier i prioritetsrækkefølge
         # Strategi 1: Flip A (CL) til modsatte side, hold B (Target) fast
         new_side_A <- if (sideA == "under") "over" else "under"
-        propA_flipped <- propose_single_label(yA_npc, new_side_A, label_height_npc, gap_line, pad_top, pad_bot)
-        verifyA_flipped <- verify_line_gap(propA_flipped$center, yA_npc, propA_flipped$side, label_height_npc)
+        propA_flipped <- propose_single_label(yA_npc, new_side_A, label_height_npc_value, gap_line, pad_top, pad_bot)
+        verifyA_flipped <- verify_line_gap(propA_flipped$center, yA_npc, propA_flipped$side, label_height_npc_value)
         test_yA <- if (verifyA_flipped$violated) verifyA_flipped$y else propA_flipped$center
 
         # Check om flip A løser problemet
-        if (abs(test_yA - proposed_yB) >= label_height_npc) {  # Minimum: labels må ikke overlappe
+        if (abs(test_yA - proposed_yB) >= label_height_npc_value) {  # Minimum: labels må ikke overlappe
           yA <- clamp01(test_yA)
           yB <- clamp01(proposed_yB)
           sideA <- propA_flipped$side
@@ -1083,11 +1176,11 @@ place_two_labels_npc <- function(
         } else {
           # Strategi 2: Hold A fast, flip B til modsatte side
           new_side_B <- if (sideB == "under") "over" else "under"
-          propB_flipped <- propose_single_label(yB_npc, new_side_B, label_height_npc, gap_line, pad_top, pad_bot)
-          verifyB_flipped <- verify_line_gap(propB_flipped$center, yB_npc, propB_flipped$side, label_height_npc)
+          propB_flipped <- propose_single_label(yB_npc, new_side_B, label_height_npc_value, gap_line, pad_top, pad_bot)
+          verifyB_flipped <- verify_line_gap(propB_flipped$center, yB_npc, propB_flipped$side, label_height_npc_value)
           test_yB <- if (verifyB_flipped$violated) verifyB_flipped$y else propB_flipped$center
 
-          if (abs(proposed_yA - test_yB) >= label_height_npc) {
+          if (abs(proposed_yA - test_yB) >= label_height_npc_value) {
             yA <- clamp01(proposed_yA)
             yB <- clamp01(test_yB)
             sideB <- propB_flipped$side
@@ -1096,7 +1189,7 @@ place_two_labels_npc <- function(
             reduced_gap_successful <- TRUE
           } else {
             # Strategi 3: Flip BEGGE labels til modsatte side
-            if (abs(test_yA - test_yB) >= label_height_npc) {
+            if (abs(test_yA - test_yB) >= label_height_npc_value) {
               yA <- clamp01(test_yA)
               yB <- clamp01(test_yB)
               sideA <- propA_flipped$side
