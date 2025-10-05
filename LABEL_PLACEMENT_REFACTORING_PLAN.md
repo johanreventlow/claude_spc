@@ -350,13 +350,9 @@
 |------|-------------|------------|-------|
 | 1.1  | 89ceb7c     | 2025-10-05 | Fix propose_single_label bounds |
 | 1.2+1.3 | 836dee6  | 2025-10-05 | Grob-baseret højdemåling |
-| 1.4  | -           | -    | -     |
-| 1.5  | -           | -    | -     |
-| 2.1  | -           | -    | -     |
-| 2.2  | -           | -    | -     |
-| 2.3  | -           | -    | -     |
-| 2.4  | -           | -    | -     |
-| 2.5  | -           | -    | -     |
+| 1.4  | merged      | -          | Merged into previous tasks |
+| 1.5  | a446fb3     | 2025-10-05 | Tracker update Fase 1 |
+| 2.1-2.5 | 08bc0f4  | 2025-10-05 | Centralisér konfiguration (combined) |
 | 3.1  | -           | -    | -     |
 | 3.2  | -           | -    | -     |
 | 3.3  | -           | -    | -     |
@@ -369,14 +365,24 @@
 ## 🎯 CURRENT STATUS
 
 **Fase 1**: ✅ COMPLETED
-**Nuværende task**: Afventer beslutning om Fase 2
-**Næste milestone**: Fase 2 - Centralisér konfiguration (eller stop her)
+**Fase 2**: ✅ COMPLETED
+**Nuværende task**: Afventer beslutning om Fase 3 (polish & best practices)
+**Næste milestone**: Fase 3 - Polish & best practices (eller stop her)
 **Blokkere**: Ingen
 
 **Fase 1 Resultater**:
 - ✅ Labels respekterer bounds ved flip (clamp_to_bounds)
 - ✅ Præcis højdemåling via grob (0.1015 vs 0.13 estimation)
 - ✅ Ingen magic numbers i højdemåling
+- ✅ Integration test passed
+- ✅ Ingen regression
+
+**Fase 2 Resultater**:
+- ✅ Alle magic numbers centraliseret i `R/config_label_placement.R`
+- ✅ 12 konfigurationsparametre med rationale dokumentation
+- ✅ Config-aware functions med standalone fallbacks
+- ✅ Documentation mismatch fixed (15% → 8%)
+- ✅ Konsistente defaults på tværs af API
 - ✅ Integration test passed
 - ✅ Ingen regression
 
