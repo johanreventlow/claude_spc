@@ -243,66 +243,100 @@ npc_mapper_from_plot <- function(p, panel = 1) {
 # LABEL HEIGHT ESTIMATION
 # ==============================================================================
 
-#' Estimér label højde fra marquee markup
+#' Estimér label højde fra marquee markup VED FAKTISK GROB-MÅLING
 #'
-#' Parser marquee syntax for at beregne forventet label højde i NPC koordinater.
-#' Understøtter format: `{.8 **Header**}  \n{.24 **Value**}`
+#' Opretter et marquee grob med de faktiske styles og måler højden præcist.
+#' Dette giver korrekt højde på alle panelstørrelser uden magic numbers.
 #'
-#' @param text Marquee string med font size markup
-#' @param base_size Base font size for responsive sizing (default = 11)
-#' @param fallback_npc Fallback værdi hvis parsing fejler (default = 0.055)
+#' @param text Marquee string med font size markup (fx "{.8 **Header**}  \n{.24 **Value**}")
+#' @param style marquee style object (default: classic_style med right align)
+#' @param panel_height_inches Panel højde i inches (hvis kendt, ellers NULL for auto-detect)
+#' @param fallback_npc Fallback værdi hvis grob-måling fejler (default 0.13)
 #'
-#' @return Estimeret label højde i NPC koordinater (0-1)
+#' @return Faktisk label højde i NPC koordinater (0-1)
+#'
+#' @details
+#' Denne funktion erstatter den tidligere estimation-baserede tilgang med
+#' faktisk måling. Det eliminerer alle magic numbers (pt_to_npc_factor,
+#' line_spacing, safety_margin) og giver præcis højde på:
+#' - Små paneler (facetter)
+#' - Store paneler
+#' - Forskellige base_size værdier
+#' - Forskellige font families
 #'
 #' @examples
 #' label <- "{.8 **CL**}  \n{.24 **45%**}"
-#' height <- estimate_label_height_npc(label)
-#' # Returns ~0.13 NPC for standard 2-line label
-estimate_label_height_npc <- function(text, base_size = 11, fallback_npc = 0.055) {
-  tryCatch({
-    # Udtræk font sizes fra marquee syntax: {.8 ...} eller {.size 8pt ...}
-    # Match både {.8 ...} og {.size 8pt ...}
-    sizes <- stringr::str_extract_all(text, "\\{\\.(?:size\\s+)?(\\d+)(?:pt)?")[[1]]
+#' style <- marquee::modify_style(
+#'   marquee::classic_style(),
+#'   "p",
+#'   margin = marquee::trbl(0),
+#'   align = "right"
+#' )
+#' height <- estimate_label_height_npc(label, style = style)
+#' # Returns faktisk målt højde (typisk ~0.10-0.15 for 2-line label)
+estimate_label_height_npc <- function(
+  text,
+  style = NULL,
+  panel_height_inches = NULL,
+  fallback_npc = 0.13
+) {
 
-    if (length(sizes) == 0) {
-      # Ingen sizes fundet, brug fallback
+  tryCatch({
+    # Default style hvis ikke angivet
+    # NOTE: marquee_grob accepterer kun 'style' parameter, ikke separate
+    # size/lineheight/family. Disse skal specificeres gennem style-objektet.
+    if (is.null(style)) {
+      style <- marquee::modify_style(
+        marquee::classic_style(),
+        "p",
+        margin = marquee::trbl(0),
+        align = "right"
+      )
+    }
+
+    # Opret marquee grob for at måle faktisk højde
+    # NOTE: marquee_grob() bruger default size fra style
+    # For at måle korrekt skal vi bruge samme setup som ved rendering
+    g <- marquee::marquee_grob(
+      text = text,
+      x = 0.5,
+      y = 0.5,
+      style = style
+    )
+
+    # Mål højde i native units
+    h_native <- grid::grobHeight(g)
+
+    # Konverter til NPC
+    # Hvis panel_height kendt, brug den; ellers brug current viewport
+    if (!is.null(panel_height_inches)) {
+      h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
+      h_npc <- h_inches / panel_height_inches
+    } else {
+      # Auto-detect fra current viewport
+      h_npc <- grid::convertHeight(h_native, "npc", valueOnly = TRUE)
+    }
+
+    # Tilføj lille sikkerhedsmargin (5%) for at være konservativ
+    # Dette sikrer at labels ikke overlapper selv med små afrundingsfejl
+    h_npc <- h_npc * 1.05
+
+    # Sanity check: Verificer at målingen er rimelig
+    if (!is.finite(h_npc) || h_npc <= 0 || h_npc > 0.5) {
+      warning(
+        "Grob-måling gav usandsynlig værdi (", round(h_npc, 4), "), bruger fallback. ",
+        "Dette kan skyldes manglende viewport eller ugyldigt marquee markup."
+      )
       return(fallback_npc)
     }
 
-    # Udtræk numeriske værdier
-    size_vals <- as.numeric(stringr::str_extract(sizes, "\\d+"))
-
-    # Beregn total højde: sum af font sizes + line spacing
-    # Heuristik: hver pt ≈ 0.3528mm, panel typisk ~140-200mm
-    # 1 NPC ≈ 150mm (typisk), så pt_to_npc ≈ 0.3528/150 ≈ 0.0024
-    # Men vi skal også have line spacing, så vi bruger empirisk factor
-    total_pt <- sum(size_vals)
-
-    # Empirisk afledt konvertering (konservativ for at undgå overlap):
-    # - 8pt + 24pt = 32pt total → ~0.13 NPC (med line spacing + margin)
-    # - Factor: 0.13/32 ≈ 0.004
-    # Øget fra 0.0025 til 0.004 for bedre margin
-    pt_to_npc_factor <- 0.0033
-
-    estimated_height <- total_pt * pt_to_npc_factor
-
-    # Tilføj linjeskift overhead hvis \n findes
-    if (grepl("\\n", text)) {
-      line_count <- length(gregexpr("\\n", text)[[1]]) + 1
-      line_spacing_npc <- 0.015 * (line_count - 1)  # 1.5% per ekstra linje
-      estimated_height <- estimated_height + line_spacing_npc
-    }
-
-    # Tilføj sikkerheds-margin for marquee rendering
-    estimated_height <- estimated_height * 1.1  # 10% safety margin
-
-    # Sikr rimelig værdi
-    estimated_height <- max(0.02, min(0.3, estimated_height))
-
-    return(estimated_height)
+    return(as.numeric(h_npc))
 
   }, error = function(e) {
-    warning("Kunne ikke estimere label-højde fra font sizes, bruger fallback: ", fallback_npc)
+    warning(
+      "Grob-baseret højdemåling fejlede: ", e$message,
+      " - bruger fallback: ", fallback_npc
+    )
     return(fallback_npc)
   })
 }

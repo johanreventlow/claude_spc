@@ -191,17 +191,31 @@ add_right_labels_marquee <- function(
   # Reference: base_size 14 giver original størrelser
   scale_factor <- base_size / 14
 
-  # Auto-beregn label_height hvis ikke angivet
+  # Opret right-aligned style FØRST (bruges til højdemåling)
+  right_aligned_style <- marquee::modify_style(
+    marquee::classic_style(),
+    "p",
+    margin = marquee::trbl(0),
+    align = "right"
+  )
+
+  # Auto-beregn label_height hvis ikke angivet - NU MED GROB-BASERET MÅLING
   if (is.null(params$label_height_npc)) {
-    # Estimer fra begge labels og tag max
+    # Mål faktisk højde fra marquee grobs
     # NOTE: textA/textB er allerede skaleret med base_size via create_responsive_label()
-    # så estimate_label_height_npc() parser de korrekte størrelser direkte
-    height_A <- estimate_label_height_npc(textA)
-    height_B <- estimate_label_height_npc(textB)
+    # Style-objektet indeholder allerede alle nødvendige formatting-info
+    height_A <- estimate_label_height_npc(
+      text = textA,
+      style = right_aligned_style
+    )
+    height_B <- estimate_label_height_npc(
+      text = textB,
+      style = right_aligned_style
+    )
     params$label_height_npc <- max(height_A, height_B)
 
     if (verbose) {
-      message("Auto-beregnet label_height_npc: ", round(params$label_height_npc, 4),
+      message("Auto-beregnet label_height_npc via grob-måling: ", round(params$label_height_npc, 4),
               " (A: ", round(height_A, 4), ", B: ", round(height_B, 4), ")")
     }
   }
@@ -292,14 +306,8 @@ add_right_labels_marquee <- function(
       ))
   }
 
-  right_aligned_style <- marquee::modify_style(
-    marquee::classic_style(),#
-    "p",
-    margin = marquee::trbl(0),
-    align = "right"
-  )
-
   # Skalerede størrelser for marquee labels
+  # NOTE: right_aligned_style er allerede oprettet tidligere (bruges til højdemåling)
   marquee_size <- 6 * scale_factor
 
   # Tilføj labels med marquee::geom_marquee
