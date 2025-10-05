@@ -342,6 +342,104 @@ get_grob_cache_stats <- function() {
   )
 }
 
+#' Mål faktisk panel højde fra ggplot
+#'
+#' Ekstraherer den faktiske panel viewport højde fra et ggplot object.
+#' Dette sikrer at NPC-normalisering sker mod korrekt reference (panel, ikke device).
+#'
+#' @param p ggplot object
+#' @param panel Panel index (default 1)
+#'
+#' @return Panel højde i inches, eller NULL hvis måling fejler
+#'
+#' @details
+#' Denne funktion løser problemet hvor ROOT viewport er hele device-fladen
+#' (inkl. margener), mens labels skal normaliseres mod panel-området.
+#'
+#' Strategien er:
+#' 1. Build ggplot → gtable
+#' 2. Find panel viewport navn fra layout
+#' 3. Render på temp device
+#' 4. Navigate til panel viewport
+#' 5. Mål højde i inches
+#' 6. Clean up temp device
+#'
+#' @examples
+#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+#' panel_h <- measure_panel_height_inches(p)
+#' # Returns ca. 4-5 inches for standard 7x7 device (minus margener)
+measure_panel_height_inches <- function(p, panel = 1) {
+  tryCatch({
+    # Validate input
+    if (!inherits(p, "ggplot")) {
+      stop("p skal være et ggplot object")
+    }
+
+    # Build plot structure
+    b <- ggplot2::ggplot_build(p)
+    gt <- ggplot2::ggplot_gtable(b)
+
+    # Find panel viewport navn fra gtable layout
+    panel_layout <- gt$layout[gt$layout$name == "panel", , drop = FALSE]
+
+    if (nrow(panel_layout) == 0) {
+      stop("Kunne ikke finde panel i plot layout")
+    }
+
+    if (panel > nrow(panel_layout)) {
+      stop(sprintf("Panel %d findes ikke (plot har %d panels)", panel, nrow(panel_layout)))
+    }
+
+    # Construct panel viewport navn (typisk format: "panel.t-l-b-r")
+    panel_row <- panel_layout[panel, , drop = FALSE]
+    panel_vp_name <- sprintf("panel.%s-%s-%s-%s",
+                            panel_row$t, panel_row$l,
+                            panel_row$b, panel_row$r)
+
+    # Open temporary PDF device for measurement
+    # NOTE: Vi bruger PDF fordi det er deterministisk (ikke skærmafhængigt)
+    temp_file <- tempfile(fileext = ".pdf")
+    grDevices::pdf(file = temp_file, width = 7, height = 7)
+    on.exit({
+      grDevices::dev.off()
+      unlink(temp_file, force = TRUE)
+    }, add = TRUE)
+
+    # Render plot til device
+    grid::grid.newpage()
+    grid::grid.draw(gt)
+
+    # Force all grobs to be evaluated
+    grid::grid.force()
+
+    # Navigate til panel viewport
+    # NOTE: seekViewport() finder viewport i hele tree
+    tryCatch({
+      grid::seekViewport(panel_vp_name)
+    }, error = function(e) {
+      # Fallback: prøv generisk "panel" navn
+      grid::seekViewport("panel")
+    })
+
+    # Mål højde i current (panel) viewport
+    panel_height <- grid::convertHeight(
+      grid::unit(1, "npc"),
+      "inches",
+      valueOnly = TRUE
+    )
+
+    # Navigate tilbage til ROOT
+    grid::upViewport(0)
+
+    return(panel_height)
+
+  }, error = function(e) {
+    warning("measure_panel_height_inches fejlede: ", e$message,
+            " - returnerer NULL")
+    return(NULL)
+  })
+}
+
 #' Estimér label højde fra marquee markup VED FAKTISK GROB-MÅLING
 #'
 #' Opretter et marquee grob med de faktiske styles og måler højden præcist.
@@ -394,8 +492,8 @@ estimate_label_height_npc <- function(
       )
     }
 
-    # Generate cache key from text + style signature
-    # Key parameters affecting height: margin, align, lineheight
+    # Generate cache key from text + style signature + panel height
+    # Key parameters affecting height: margin, align, lineheight, panel_height
     if (use_cache) {
       style_hash <- digest::digest(list(
         style$p$margin,
@@ -403,7 +501,17 @@ estimate_label_height_npc <- function(
         style$p$lineheight
       ), algo = "xxhash32")  # Fast hash algorithm
 
-      cache_key <- paste0(text, "_", style_hash)
+      # Include panel_height in cache key for proper cache isolation
+      # Different panel heights → different NPC values for same absolute height
+      cache_key <- digest::digest(list(
+        text = text,
+        style = style_hash,
+        panel_height = if (!is.null(panel_height_inches)) {
+          round(panel_height_inches, 4)  # Round to avoid float precision issues
+        } else {
+          "viewport"  # Different cache entry for viewport-based measurement
+        }
+      ), algo = "xxhash32")
 
       # Check cache
       cached_result <- .grob_height_cache[[cache_key]]
