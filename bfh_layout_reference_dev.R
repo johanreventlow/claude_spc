@@ -197,18 +197,36 @@ add_right_labels_marquee <- function(
     align = "right"
   )
 
+  # DEFENSIVE: Mål faktisk panel højde for korrekt NPC-normalisering
+  # Dette sikrer at labels normaliseres mod panel (ikke hele device inkl. margener)
+  panel_height_inches <- tryCatch({
+    measure_panel_height_inches(p)
+  }, error = function(e) {
+    if (verbose) {
+      message("Kunne ikke måle panel højde: ", e$message, " - bruger viewport fallback")
+    }
+    NULL  # Fallback til viewport-baseret måling
+  })
+
+  if (verbose && !is.null(panel_height_inches)) {
+    message("Målt panel højde: ", round(panel_height_inches, 3), " inches")
+  }
+
   # Auto-beregn label_height hvis ikke angivet - NU MED GROB-BASERET MÅLING
   if (is.null(params$label_height_npc)) {
     # Mål faktisk højde fra marquee grobs
     # NOTE: textA/textB er allerede skaleret med base_size via create_responsive_label()
     # Style-objektet indeholder allerede alle nødvendige formatting-info
+    # DEFENSIVE: Send panel_height_inches videre for korrekt normalisering
     height_A <- estimate_label_height_npc(
       text = textA,
-      style = right_aligned_style
+      style = right_aligned_style,
+      panel_height_inches = panel_height_inches
     )
     height_B <- estimate_label_height_npc(
       text = textB,
-      style = right_aligned_style
+      style = right_aligned_style,
+      panel_height_inches = panel_height_inches
     )
     params$label_height_npc <- max(height_A, height_B)
 
