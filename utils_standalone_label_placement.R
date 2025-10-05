@@ -577,10 +577,16 @@ estimate_label_height_npc <- function(
       h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
     }
 
-    # Tilføj lille sikkerhedsmargin (5%) for at være konservativ
+    # Tilføj sikkerhedsmargin for at være konservativ
     # Dette sikrer at labels ikke overlapper selv med små afrundingsfejl
-    h_npc <- h_npc * 1.05
-    h_inches_with_margin <- h_inches * 1.05
+    # HENT FRA CONFIG for at gøre det konfigurerbart
+    safety_margin <- if (exists("get_label_placement_param", mode = "function")) {
+      get_label_placement_param("height_safety_margin")
+    } else {
+      1.05  # Fallback hvis config ikke tilgængelig
+    }
+    h_npc <- h_npc * safety_margin
+    h_inches_with_margin <- h_inches * safety_margin
 
     # Sanity check: Verificer at målingen er rimelig
     # VIGTIGT: Fra 2025-01-05 - Tillad store labels (>50%) på små paneler
@@ -908,9 +914,21 @@ place_two_labels_npc <- function(
       # Ny API: Beregn gap som fast % af absolute label højde
       gap_line_inches <- label_height_inches * cfg$relative_gap_line
       gap_line <- gap_line_inches / panel_height_inches  # Konverter til NPC
+      if (debug) {
+        message(sprintf("[DEBUG] gap_line beregnet fra config (NY API): %.4f inches × %.2f = %.4f inches = %.4f NPC",
+                        label_height_inches, cfg$relative_gap_line, gap_line_inches, gap_line))
+      }
     } else {
       # Legacy API: Beregn gap som % af NPC
       gap_line <- label_height_npc_value * cfg$relative_gap_line
+      if (debug) {
+        message(sprintf("[DEBUG] gap_line beregnet fra config (LEGACY API): %.4f NPC × %.2f = %.4f NPC",
+                        label_height_npc_value, cfg$relative_gap_line, gap_line))
+      }
+    }
+  } else {
+    if (debug) {
+      message(sprintf("[DEBUG] gap_line var eksplicit sat til: %.4f NPC (config IKKE brugt)", gap_line))
     }
   }
 

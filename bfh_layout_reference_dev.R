@@ -40,6 +40,10 @@ pilned <- "\U2193"
 # utils_standalone_label_placement.R
 # ============================================================================
 
+# VIGTIGT: Load konfiguration FØRST (definerer LABEL_PLACEMENT_CONFIG)
+source("R/config_label_placement.R")
+
+# Derefter load placement functions (bruger config fra ovenstående)
 source("utils_standalone_label_placement.R")
 
 # ============================================================================
@@ -214,50 +218,48 @@ add_right_labels_marquee <- function(
 
   # Auto-beregn label_height hvis ikke angivet - NU MED GROB-BASERET MÅLING
   if (is.null(params$label_height_npc)) {
-    # Mål faktisk højde fra marquee grobs
+    # Mål faktisk højde fra marquee grobs MED NY API
     # NOTE: textA/textB er allerede skaleret med base_size via create_responsive_label()
     # Style-objektet indeholder allerede alle nødvendige formatting-info
     # DEFENSIVE: Send panel_height_inches videre for korrekt normalisering
+    # VIGTIGT: return_details=TRUE giver os absolute inches for fixed gap calculation
     height_A <- estimate_label_height_npc(
       text = textA,
       style = right_aligned_style,
-      panel_height_inches = panel_height_inches
+      panel_height_inches = panel_height_inches,
+      return_details = TRUE
     )
     height_B <- estimate_label_height_npc(
       text = textB,
       style = right_aligned_style,
-      panel_height_inches = panel_height_inches
+      panel_height_inches = panel_height_inches,
+      return_details = TRUE
     )
-    params$label_height_npc <- max(height_A, height_B)
+
+    # Vælg det største label baseret på NPC værdi, men behold hele list-strukturen
+    if (height_A$npc > height_B$npc) {
+      params$label_height_npc <- height_A
+    } else {
+      params$label_height_npc <- height_B
+    }
 
     if (verbose) {
-      message("Auto-beregnet label_height_npc via grob-måling: ", round(params$label_height_npc, 4),
-              " (A: ", round(height_A, 4), ", B: ", round(height_B, 4), ")")
+      message("Auto-beregnet label_height_npc via grob-måling: ", round(params$label_height_npc$npc, 4),
+              " (A: ", round(height_A$npc, 4), ", B: ", round(height_B$npc, 4), ")",
+              " [", round(params$label_height_npc$inches, 4), " inches]")
     }
   }
 
-  # Default parameters hvis ikke angivet - HENT FRA CONFIG
-  # NOTE: place_two_labels_npc() vil også bruge config, men vi sætter dem her
-  # for klarhed og for at kunne override ved behov
+  # Default parameters hvis ikke angivet
+  # NOTE: Med ny API (return_details=TRUE), lader vi place_two_labels_npc()
+  # beregne gap automatisk fra config baseret på absolute inches.
+  # Vi sætter KUN params hvis caller har eksplicit override.
 
-  # Check om config er tilgængelig
+  # Check om config er tilgængelig (for padding - gap håndteres automatisk)
   config_available <- exists("get_label_placement_param", mode = "function")
 
-  if (is.null(params$gap_line)) {
-    if (config_available) {
-      params$gap_line <- params$label_height_npc * get_label_placement_param("relative_gap_line")
-    } else {
-      params$gap_line <- params$label_height_npc * 0.08  # Fallback: 8% af label height
-    }
-  }
-
-  if (is.null(params$gap_labels)) {
-    if (config_available) {
-      params$gap_labels <- params$label_height_npc * get_label_placement_param("relative_gap_labels")
-    } else {
-      params$gap_labels <- params$label_height_npc * 0.3  # Fallback: 30% af label height
-    }
-  }
+  # GAP_LINE og GAP_LABELS beregnes automatisk af place_two_labels_npc() når
+  # label_height_npc er i list-format. Sæt kun hvis eksplicit override.
 
   if (is.null(params$pad_top)) {
     if (config_available) {
@@ -314,8 +316,32 @@ add_right_labels_marquee <- function(
   }
 
   # Konverter NPC y-positions til data coordinates
-  yA_data <- if (!is.na(placement$yA)) mapper$npc_to_y(placement$yA) else NA_real_
-  yB_data <- if (!is.na(placement$yB)) mapper$npc_to_y(placement$yB) else NA_real_
+  # VIGTIGT: placement$yA/yB er LABEL CENTER position
+  # Men vi bruger vjust != 0.5, så vi skal justere positionen
+  # vjust=1.0 (under): ggplot2 fortolker y som TOP edge → shift down med h/2
+  # vjust=0.0 (over):  ggplot2 fortolker y som BOTTOM edge → shift up med h/2
+
+  if (!is.na(placement$yA)) {
+    yA_npc_adjusted <- if (placement$sideA == "under") {
+      placement$yA + params$label_height_npc$npc / 2  # Shift down for vjust=1.0
+    } else {
+      placement$yA - params$label_height_npc$npc / 2  # Shift up for vjust=0.0
+    }
+    yA_data <- mapper$npc_to_y(yA_npc_adjusted)
+  } else {
+    yA_data <- NA_real_
+  }
+
+  if (!is.na(placement$yB)) {
+    yB_npc_adjusted <- if (placement$sideB == "under") {
+      placement$yB + params$label_height_npc$npc / 2  # Shift down for vjust=1.0
+    } else {
+      placement$yB - params$label_height_npc$npc / 2  # Shift up for vjust=0.0
+    }
+    yB_data <- mapper$npc_to_y(yB_npc_adjusted)
+  } else {
+    yB_data <- NA_real_
+  }
 
   # Hent x-koordinater fra plottet
   # Find den maksimale x-værdi fra den underliggende data
@@ -335,22 +361,27 @@ add_right_labels_marquee <- function(
 
   if (!is.na(yA_data)) {
     # Marquee label uden color wrapper (farve sættes via color aesthetic)
+    # vjust baseret på side: under = 1.0 (top edge), over = 0.0 (bottom edge)
+    vjust_A <- if (placement$sideA == "under") 1.0 else 0.0
     label_data <- label_data %>%
       bind_rows(tibble::tibble(
         x = x_max,
         y = yA_data,
         label = textA,
-        color = color_A
+        color = color_A,
+        vjust = vjust_A
       ))
   }
 
   if (!is.na(yB_data)) {
+    vjust_B <- if (placement$sideB == "under") 1.0 else 0.0
     label_data <- label_data %>%
       bind_rows(tibble::tibble(
         x = x_max,
         y = yB_data,
         label = textB,
-        color = color_B
+        color = color_B,
+        vjust = vjust_B
       ))
   }
 
@@ -377,9 +408,9 @@ add_right_labels_marquee <- function(
     result <- result +
       marquee::geom_marquee(
         data = label_data,
-        aes(x = x, y = y, label = label, color = color),
+        aes(x = x, y = y, label = label, color = color, vjust = vjust),
         hjust = 1,
-        vjust = 0.5,
+        # vjust kommer fra data: 1.0 for "under" (top edge), 0.0 for "over" (bottom edge)
         style = right_aligned_style,
         size = marquee_size,
         lineheight = marquee_lineheight,
@@ -635,7 +666,7 @@ plot <- add_right_labels_marquee(
   gpB = grid::gpar(col = "#565656"),
   base_size = base_size_plot,  # Responsive sizing (matches plot theme)
   verbose = TRUE,            # Print warnings inkl. auto-beregninger
-  debug_mode = FALSE         # Sæt til TRUE for visual debugging
+  debug_mode = FALSE         # Sæt til TRUE for visual debugging + gap verification
 )
 
 # Gem mapper for debugging

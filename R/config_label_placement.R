@@ -42,7 +42,7 @@ LABEL_PLACEMENT_CONFIG <- list(
   # === Gap Configuration (relative til label_height_npc) ===
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
 
-  relative_gap_line = 0.05,
+  relative_gap_line = 0.0,
   # 5% af label højde (ændret fra 8% 2025-01-05)
   # Rationale: Tættere placering ved linjer for mere kompakt layout.
   #            5% giver tydelig separation uden at labels virker løsrevet fra linjer.
@@ -107,10 +107,11 @@ LABEL_PLACEMENT_CONFIG <- list(
 
   # === Height Estimation (grob-baseret) ===
 
-  height_safety_margin = 1.05,
-  # 5% ekstra margin
-  # Rationale: Konservativ buffer ved grob-måling for at undgå overlap ved afrundingsfejl.
-  #            Mindre aggressiv end den gamle 10% margin.
+  height_safety_margin = 1.0,
+  # Ingen ekstra margin (ændret fra 1.05 for tæt label placering)
+  # Rationale: Labels placeres præcist uden buffer.
+  #            ADVARSEL: Kan medføre minimal overlap ved afrundingsfejl.
+  #            Brug 1.05 hvis du oplever overlap issues.
 
   height_fallback_npc = 0.13
   # 13% NPC fallback
