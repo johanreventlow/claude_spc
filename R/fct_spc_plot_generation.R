@@ -4,21 +4,6 @@
 #
 # Dependencies ----------------------------------------------------------------
 
-# Verify ggrepel fork with marquee support on first use
-if (!exists(".ggrepel_marquee_checked", envir = .GlobalEnv)) {
-  if (!"geom_marquee_repel" %in% getNamespaceExports("ggrepel")) {
-    warning(
-      "\n",
-      "SPCify kræver custom ggrepel fork med geom_marquee_repel().\n",
-      "Installér via: remotes::install_github('teunbrand/ggrepel@marquee_repel')\n",
-      "Eller brug: renv::restore()",
-      immediate. = TRUE,
-      call. = FALSE
-    )
-  }
-  assign(".ggrepel_marquee_checked", TRUE, envir = .GlobalEnv)
-}
-
 # COMMENT PROCESSING UTILITIES ================================================
 
 ## Extract Comment Data for Plot Annotations
@@ -444,9 +429,76 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
 # PLOT ENHANCEMENT UTILITIES ==================================================
 
+## Adjust Label Y Positions
+# Intelligent y-akse justering af CL og Target labels for at undgå kollisioner
+adjust_label_y_positions <- function(label_data, y_range, qic_data, value_font_size = 30) {
+  if (is.null(label_data) || nrow(label_data) == 0) return(label_data)
+
+  # Beregn label højde baseret på faktisk value_font_size (responsive)
+  # value_font_size er den største tekst komponent i marquee label
+  pt_to_data_units <- diff(y_range) * 0.015  # ~1.5% af y-range per point
+  label_height <- (value_font_size * pt_to_data_units * 0.9 * 2.2)  # 2 linjer + spacing
+
+  min_separation <- label_height * 1.3  # 30% buffer mellem labels
+  line_buffer <- label_height * 0.6    # 60% buffer fra egne linjer
+
+  # Find CL og Target rows
+  cl_row <- which(label_data$type == "cl")
+  target_row <- which(label_data$type == "target")
+
+  if (length(cl_row) > 0 && length(target_row) > 0) {
+    cl_y <- label_data$y[cl_row]
+    target_y <- label_data$y[target_row]
+    distance <- abs(cl_y - target_y)
+
+    if (distance < min_separation) {
+      # Kollision detekteret - skub labels væk fra hinanden (kun gap_needed, ingen ekstra buffer)
+
+      # Bestem hvilken label der er øverst
+      if (cl_y > target_y) {
+        # CL er over Target
+        upper_row <- cl_row
+        lower_row <- target_row
+        upper_y <- cl_y
+        lower_y <- target_y
+      } else {
+        # Target er over CL
+        upper_row <- target_row
+        lower_row <- cl_row
+        upper_y <- target_y
+        lower_y <- cl_y
+      }
+
+      # Beregn hvor meget vi skal separere
+      gap_needed <- min_separation - distance
+      move_each <- gap_needed / 2  # Fordel bevægelsen mellem begge
+
+      # Skub labels væk fra hinanden - KUN gap_needed (ingen ekstra line_buffer)
+      label_data$y[upper_row] <- upper_y + move_each
+      label_data$y[lower_row] <- lower_y - move_each
+
+    } else {
+      # Tilstrækkelig afstand - INGEN justering, behold på linjerne
+      # Labels forbliver på deres oprindelige linjer
+      label_data$y[cl_row] <- cl_y
+      label_data$y[target_row] <- target_y
+    }
+  } else if (length(cl_row) > 0) {
+    # Kun CL label - skub ned under linjen
+    cl_y <- label_data$y[cl_row]
+    label_data$y[cl_row] <- cl_y - (line_buffer * 0.3)
+  } else if (length(target_row) > 0) {
+    # Kun Target label - behold på linjen
+    target_y <- label_data$y[target_row]
+    label_data$y[target_row] <- target_y - (line_buffer * 0.3)
+  }
+
+  return(label_data)
+}
+
 ## Add Plot Enhancements
 # Tilføjer target lines, phase separations og comment annotations
-add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count") {
+add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6, label_size = 6) {
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
@@ -534,50 +586,87 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     }
   }
 
-  # Opret label data for centerline og target ----
-  label_rows <- list()
+  # Beregn extended x position (15% ud over sidste datapunkt) ----
+  last_x <- max(qic_data$x, na.rm = TRUE)
+  first_x <- min(qic_data$x, na.rm = TRUE)
 
-  # Centerline label KUN for seneste part
+  # Konverter Date objekter til POSIXct for uniform håndtering
+  if (inherits(last_x, "Date")) {
+    last_x <- as.POSIXct(last_x)
+    first_x <- as.POSIXct(first_x)
+  }
+
+  # Beregn 15% extension baseret på data range
+  if (inherits(last_x, c("POSIXct", "POSIXt"))) {
+    # For tidsobjekter: beregn i sekunder
+    range_secs <- as.numeric(difftime(last_x, first_x, units = "secs"))
+    extended_x <- last_x + range_secs * 0.15
+  } else {
+    # For numerisk
+    x_range <- last_x - first_x
+    extended_x <- last_x + (x_range * 0.15)
+  }
+
+  # Opret label data og extended line data ----
+  label_data <- data.frame()
+  extended_lines_data <- data.frame()
+
+  # Centerline label og extended line KUN for seneste part
   if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
     # Find seneste part
     latest_part <- max(qic_data$part, na.rm = TRUE)
     part_data <- qic_data[qic_data$part == latest_part & !is.na(qic_data$part), ]
 
     if (nrow(part_data) > 0) {
-      # Brug sidste punkt i seneste part til label placering
+      # Brug sidste punkt i seneste part
       last_row <- part_data[nrow(part_data), ]
       cl_value <- last_row$cl
       if (!is.na(cl_value)) {
-        label_rows[[length(label_rows) + 1]] <- data.frame(
-          x = last_row$x,
-          y_header = cl_value,
+        # Label ved extended position (højrejusteret)
+        label_data <- rbind(label_data, data.frame(
+          x = extended_x,
+          y = cl_value,
           type = "cl",
           header_label = "NUV. NIVEAU",
           value_label = format_y_value(cl_value, y_axis_unit),
           text_color = "#009CE8",
           stringsAsFactors = FALSE
-        )
+        ))
+
+        # Extended line fra sidste datapunkt til extended_x
+        extended_lines_data <- rbind(extended_lines_data, data.frame(
+          x = c(last_row$x, extended_x),
+          y = c(cl_value, cl_value),
+          type = "cl",
+          stringsAsFactors = FALSE
+        ))
       }
     }
   }
 
-  # Target label (kun én gang - target er konstant)
+  # Target label og extended line
   if (!is.null(qic_data$target) && any(!is.na(qic_data$target))) {
     target_value <- qic_data$target[!is.na(qic_data$target)][1]
-    # Placer ved sidste datapunkt
-    last_x <- qic_data$x[nrow(qic_data)]
-    label_rows[[length(label_rows) + 1]] <- data.frame(
-      x = last_x,
-      y_header = target_value,
+
+    # Label ved extended position (højrejusteret)
+    label_data <- rbind(label_data, data.frame(
+      x = extended_x,
+      y = target_value,
       type = "target",
       header_label = "MÅL",
       value_label = format_y_value(target_value, y_axis_unit),
       text_color = "#565656",
       stringsAsFactors = FALSE
-    )
-  }
+    ))
 
-  label_data <- if (length(label_rows) > 0) do.call(rbind, label_rows) else data.frame()
+    # Extended line fra sidste datapunkt til extended_x
+    extended_lines_data <- rbind(extended_lines_data, data.frame(
+      x = c(last_x, extended_x),
+      y = c(target_value, target_value),
+      type = "target",
+      stringsAsFactors = FALSE
+    ))
+  }
 
   # Fase tilfæjes - temporarily disabled ----
   # if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
@@ -609,77 +698,99 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   #     )
   # }
 
+  # Extended CL og Target linjer tilføjes ----
+  if (!is.null(extended_lines_data) && nrow(extended_lines_data) > 0) {
+    # CL extension
+    if (any(extended_lines_data$type == "cl")) {
+      cl_ext <- extended_lines_data[extended_lines_data$type == "cl", ]
+      plot <- plot +
+        ggplot2::geom_line(
+          data = cl_ext,
+          ggplot2::aes(x = x, y = y),
+          color = hospital_colors$hospitalblue,
+          linewidth = cl_linewidth,
+          linetype = "solid",
+          inherit.aes = FALSE
+        )
+    }
+
+    # Target extension
+    if (any(extended_lines_data$type == "target")) {
+      target_ext <- extended_lines_data[extended_lines_data$type == "target", ]
+      plot <- plot +
+        ggplot2::geom_line(
+          data = target_ext,
+          ggplot2::aes(x = x, y = y),
+          color = "#565656",
+          linewidth = target_linewidth,
+          linetype = "42",
+          inherit.aes = FALSE
+        )
+    }
+  }
+
   # Kommentarer tilføjes ----
-  if (!is.null(comment_data) && is.data.frame(comment_data) && nrow(comment_data) > 0) {
-    # Konverter til numerisk for ggpp kompatibilitet
-    x_center_numeric <- mean(as.numeric(range(qic_data$x, na.rm = TRUE)))
-    y_center <- mean(range(qic_data$y, na.rm = TRUE))
-
-    # Tilføj numerisk x til comment_data
-    comment_data$x_numeric <- as.numeric(comment_data$x)
-
+  if (!is.null(comment_data) && nrow(comment_data) > 0) {
     plot <- plot +
       ggrepel::geom_text_repel(
         data = comment_data,
-        ggplot2::aes(x = x_numeric, y = y, label = comment),
-        size = 6,
+        ggplot2::aes(x = x, y = y, label = comment),
+        size = comment_size,
         color = hospital_colors$darkgrey,
-        bg.color = "white",
-        bg.r = 0.15,
-        position = ggpp::position_nudge_center(
-          x = x_center_numeric,
-          y = y_center,
-          direction = "radial"
-        ),
-        box.padding = 0.6,
-        point.padding = 0.5,
-        segment.color = hospital_colors$mediumgrey,
-        segment.size = 0.4,
-        segment.curvature = -0.05,
-        segment.ncp = 3,
-        segment.angle = 20,
+        # bg.color = "white",
+        # bg.r = 0.1,
+        # box.padding = 0.5,
+        # point.padding = 0.5,
+        # segment.color = hospital_colors$mediumgrey,
+        # segment.size = 0.3,
+        # nudge_x = .15,
+        # nudge_y = .5,
+        # segment.curvature = -1e-20,
         arrow = grid::arrow(length = grid::unit(0.015, "npc")),
-        min.segment.length = 0,
-        force = 3,
-        force_pull = 0.5,
-        max.overlaps = Inf,
-        max.iter = 10000,
-        inherit.aes = FALSE
+        # max.overlaps = Inf,
+        # inherit.aes = FALSE
       )
   }
 
   # CL og Target labels tilføjes ----
   if (!is.null(label_data) && nrow(label_data) > 0) {
+    # Beregn responsive marquee font sizes baseret på label_size
+    # Reference: label_size = 6 giver header 10pt og value 30pt
+    scale_factor <- label_size / 6
+    header_font_size <- round(10 * scale_factor)
+    value_font_size <- round(30 * scale_factor)
+
+    # Intelligent y-akse justering for at undgå kollisioner (med faktisk font size)
+    y_range <- range(qic_data$y, na.rm = TRUE)
+    label_data <- adjust_label_y_positions(label_data, y_range, qic_data, value_font_size)
+
+    # Formater labels med marquee markup (skalerede font sizes)
     label_data$label <- sprintf(
-      "{.12 %s}\n\n{.36 %s}",
+      "{.%d **%s**}  \n{.%d **%s**}",
+      header_font_size,
       label_data$header_label,
+      value_font_size,
       label_data$value_label
     )
 
-    x_range <- range(qic_data$x, na.rm = TRUE)
-    label_x_numeric <- as.numeric(x_range[2]) + as.numeric(diff(x_range)) * 0.02
-    label_data$x_numeric <- as.numeric(label_data$x)
+    # Opret custom marquee style med højrejustering
+    right_aligned_style <- marquee::modify_style(
+      marquee::classic_style(),
+      "p",
+      margin = marquee::trbl(0),
+      align = "right"
+    )
 
     plot <- plot +
-      ggrepel::geom_marquee_repel(
+      marquee::geom_marquee(
         data = label_data,
-        mapping = ggplot2::aes(x = x_numeric, y = y_header, label = label, colour = text_color),
-        size = 6,
+        ggplot2::aes(x = x, y = y, label = label, colour = text_color),
+        size = label_size,
+        style = right_aligned_style,
         lineheight = 0.9,
-        box.padding = 0.35,
-        point.padding = 0.2,
-        direction = "y",
-        hjust = 0,
-        position = ggpp::position_nudge_to(x = label_x_numeric),
-        # segment.color = hospital_colors$mediumgrey,
-        # segment.size = 0.3,
-        # segment.curvature = -0.1,
-        # segment.ncp = 3,
-        # segment.angle = 20,
-        # arrow = grid::arrow(length = grid::unit(0.01, "npc")),
-        # min.segment.length = 0,
-        force = 2,
-        show.legend = FALSE
+        family = "Roboto Medium",
+        hjust = 1,  # Right-aligned ved extended position
+        inherit.aes = FALSE
       ) +
       ggplot2::scale_color_identity(guide = "none")
   }
@@ -687,10 +798,23 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   return(plot)
 }
 
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14) {
   # Generate SPC plot with specified parameters
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
+
+  # Beregn responsive geom størrelser baseret på base_size
+  # Reference: base_size 14 giver original størrelser
+  scale_factor <- base_size / 14
+
+  # Skalerede størrelser for geom elementer
+  ucl_linewidth <- 2.5 * scale_factor
+  target_linewidth <- 1 * scale_factor
+  data_linewidth <- 1 * scale_factor
+  cl_linewidth <- 1 * scale_factor
+  point_size <- 2 * scale_factor
+  comment_size <- 6 * scale_factor
+  label_size <- 6 * scale_factor
 
   # PERFORMANCE MONITORING: Track QIC calculation calls
   if (!exists("qic_call_counter", envir = .GlobalEnv)) {
@@ -912,18 +1036,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl)) && !is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
             plot <- plot +
               ggplot2::geom_ribbon(ggplot2::aes(ymin = lcl, ymax = ucl), fill = "#E6F5FD", alpha = 0.5) +
-              geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = 2.5, linecolour = NA, textcolour = "#b5b5b9", na.rm = TRUE) +
-              geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = 2.5, linecolour = NA, textcolour = "#b5b7b9", na.rm = TRUE) 
+              geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b5b9", na.rm = TRUE) +
+              geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b7b9", na.rm = TRUE)
           }
           # Resten af plot tilføjes ------
-          plot <- plot +  
-            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = 1, colour = "#565656", linetype="42", na.rm = TRUE) +
-            ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = 1, na.rm = TRUE) +
-            ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = 2, na.rm = TRUE) +
-            
+          plot <- plot +
+            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = target_linewidth, colour = "#565656", linetype="42", na.rm = TRUE) +
+            ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = data_linewidth, na.rm = TRUE) +
+            ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = point_size, na.rm = TRUE) +
+
             # ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) +
             # ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) +
-            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = 1) + 
+            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = cl_linewidth) + 
             
             
             ggplot2::labs(title = call_args$title, x = NULL, y = NULL) +
@@ -944,6 +1068,28 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
 
 
+      # Beregn x-akse limits og breaks for extended area ----
+      data_x_min <- min(qic_data$x, na.rm = TRUE)
+      data_x_max <- max(qic_data$x, na.rm = TRUE)
+
+      # Konverter Date objekter til POSIXct for uniform håndtering
+      if (inherits(data_x_max, "Date")) {
+        data_x_max <- as.POSIXct(data_x_max)
+        data_x_min <- as.POSIXct(data_x_min)
+      }
+
+      # Beregn extended limit (15% ekstra) - matcher add_plot_enhancements beregning
+      if (inherits(data_x_max, c("POSIXct", "POSIXt"))) {
+        range_secs <- as.numeric(difftime(data_x_max, data_x_min, units = "secs"))
+        extended_x_limit <- data_x_max + range_secs * 0.15
+      } else {
+        x_range <- data_x_max - data_x_min
+        extended_x_limit <- data_x_max + (x_range * 0.15)
+      }
+
+      # X-akse limits: udvid til extended_x
+      x_limits <- c(data_x_min, data_x_max)
+
       # Intelligent x-akse formatering baseret på dato-mønstre ----
       if (!is.null(x_validation$x.format) && x_validation$is_date) {
         # DEBUG: Tjek qic_data$x type
@@ -952,63 +1098,183 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         interval_info <- detect_date_interval(qic_data$x, debug = TRUE)
         format_config <- get_optimal_formatting(interval_info, debug = TRUE)
 
+        # Hjælpefunktion til at runde datoer til passende interval-start
+        round_to_interval_start <- function(date, interval_type, interval_multiplier = 1) {
+          if (interval_type == "monthly") {
+            # Rund til første dag i måneden
+            lubridate::floor_date(date, unit = "month")
+          } else if (interval_type == "weekly") {
+            # Rund til mandag (start af ugen)
+            lubridate::floor_date(date, unit = "week")
+          } else if (interval_type == "daily") {
+            # Behold dagen som den er
+            date
+          } else {
+            date
+          }
+        }
+
+        # Beregn adaptive interval size baseret på data density
+        base_interval_secs <- if (interval_info$type == "weekly") {
+          7 * 24 * 60 * 60  # 7 dage i sekunder
+        } else if (interval_info$type == "monthly") {
+          30 * 24 * 60 * 60  # ~30 dage i sekunder
+        } else if (interval_info$type == "daily") {
+          24 * 60 * 60  # 1 dag i sekunder
+        } else {
+          NULL  # Fallback til breaks_pretty
+        }
+
+        # Beregn adaptive interval baseret på data density
+        interval_size <- if (!is.null(base_interval_secs)) {
+          timespan_secs <- as.numeric(difftime(data_x_max, data_x_min, units = "secs"))
+          potential_breaks <- timespan_secs / base_interval_secs
+
+          if (potential_breaks > 15) {
+            # Find passende multiplier baseret på interval type
+            multipliers <- if (interval_info$type == "weekly") {
+              c(2, 4, 13)  # 2 uger, 4 uger (måned), 13 uger (kvartal)
+            } else if (interval_info$type == "monthly") {
+              c(3, 6, 12)  # 3 måneder, 6 måneder, 12 måneder
+            } else if (interval_info$type == "daily") {
+              c(2, 4, 8)  # 2 dage, 4 dage, 8 dage
+            } else {
+              c(2, 4, 8)  # Generic fallback
+            }
+
+            # Find første multiplier der giver <= 15 breaks
+            mult <- tail(multipliers, 1)  # Default til største
+            for (m in multipliers) {
+              if (potential_breaks / m <= 15) {
+                mult <- m
+                break
+              }
+            }
+
+            base_interval_secs * mult
+          } else {
+            base_interval_secs
+          }
+        } else {
+          NULL
+        }
+
         # qic() konverterer Date objekter til POSIXct, så brug scale_x_datetime
-        if (inherits(qic_data$x, c("POSIXct", "POSIXt"))) {
+        if (inherits(qic_data$x, c("POSIXct", "POSIXt", "Date"))) {
+          # Konverter Date til POSIXct for uniform håndtering
+          if (inherits(qic_data$x, "Date")) {
+            qic_data$x <- as.POSIXct(qic_data$x)
+          }
+
           # Håndter intelligent formatering separat
           if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting", .context = "X_AXIS_FORMAT")
+            # Rund start til uge-start (mandag)
+            rounded_start <- round_to_interval_start(data_x_min, "weekly")
+            # Rund slut til næste uge-start efter data_x_max (ceiling)
+            rounded_end <- lubridate::ceiling_date(data_x_max, unit = "week")
+
+            # Generer breaks med seq() direkte på datetime objekter - tilføj ekstra interval
+            breaks_posix <- seq(from = rounded_start, to = rounded_end + interval_size, by = interval_size)
+            # Filtrer til kun breaks >= data_x_min (men tillad breaks efter data_x_max)
+            breaks_posix <- breaks_posix[breaks_posix >= data_x_min]
+
+            # Tilføj kun første dato hvis den ikke allerede er med
+            if (length(breaks_posix) == 0 || breaks_posix[1] != data_x_min) {
+              breaks_posix <- unique(c(data_x_min, breaks_posix))
+            }
+
             plot <- plot + ggplot2::scale_x_datetime(
+              # limits = c(data_x_min, extended_x_limit),
+              expand = ggplot2::expansion(mult = c(0.025, .0)),
               # name = x_unit_label,
-              labels = format_config$labels, # Smart scales::label_date_short()
-              # breaks = scales::date_breaks(format_config$breaks)
-              breaks = scales::breaks_pretty(n = format_config$n_breaks)
+              labels = format_config$labels,
+              breaks = breaks_posix
             )
           } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
             log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting", .context = "X_AXIS_FORMAT")
-            plot <- plot + ggplot2::scale_x_datetime(
-              # name = x_unit_label,
-              labels = format_config$labels, # Smart scales::label_date_short()
-              breaks = scales::date_breaks(format_config$breaks)
+            # Rund start til måneds-start (1. i måneden)
+            rounded_start <- round_to_interval_start(data_x_min, "monthly")
+            # Rund slut til næste måneds-start efter data_x_max (ceiling)
+            rounded_end <- lubridate::ceiling_date(data_x_max, unit = "month")
+
+            # Beregn antal måneder baseret på multiplier
+            interval_months <- as.numeric(interval_size) / (30 * 24 * 60 * 60)
+            interval_months <- round(interval_months)
+
+            # Generer breaks månedligt med seq() - tilføj ekstra interval for at sikre coverage
+            # Konverter interval_months til sekunder for at tilføje til rounded_end
+            extended_end <- seq(rounded_end, by = paste(interval_months, "months"), length.out = 2)[2]
+            breaks_posix <- seq(
+              from = rounded_start,
+              to = extended_end,
+              by = paste(interval_months, "months")
             )
-          } else if (!is.null(format_config$breaks)) {
-            # Standard intelligent formatering
+            # Filtrer til kun breaks >= data_x_min (men tillad breaks efter data_x_max)
+            breaks_posix <- breaks_posix[breaks_posix >= data_x_min]
+
+            # Tilføj kun første dato hvis den ikke allerede er med
+            if (length(breaks_posix) == 0 || breaks_posix[1] != data_x_min) {
+              breaks_posix <- unique(c(data_x_min, breaks_posix))
+            }
+
             plot <- plot + ggplot2::scale_x_datetime(
+              # limits = c(data_x_min, extended_x_limit),
+              expand = ggplot2::expansion(mult = c(0.025, .0)),
+              # name = x_unit_label,
+              labels = format_config$labels,
+              breaks = breaks_posix
+            )
+          } else if (!is.null(format_config$breaks) && !is.null(interval_size)) {
+            # Standard intelligent formatering
+            if (interval_info$type == "monthly") {
+              # Monthly data: brug månedlige breaks
+              rounded_start <- round_to_interval_start(data_x_min, "monthly")
+              # Rund slut til næste måneds-start efter data_x_max (ceiling)
+              rounded_end <- lubridate::ceiling_date(data_x_max, unit = "month")
+
+              interval_months <- as.numeric(interval_size) / (30 * 24 * 60 * 60)
+              interval_months <- round(interval_months)
+
+              # Generer breaks månedligt med seq() - tilføj ekstra interval for at sikre coverage
+              # Konverter interval_months til sekunder for at tilføje til rounded_end
+              extended_end <- seq(rounded_end, by = paste(interval_months, "months"), length.out = 2)[2]
+              breaks_posix <- seq(
+                from = rounded_start,
+                to = extended_end,
+                by = paste(interval_months, "months")
+              )
+              # Filtrer til kun breaks >= data_x_min (men tillad breaks efter data_x_max)
+              breaks_posix <- breaks_posix[breaks_posix >= data_x_min]
+
+              # Tilføj kun første dato hvis den ikke allerede er med
+              if (length(breaks_posix) == 0 || breaks_posix[1] != data_x_min) {
+                breaks_posix <- unique(c(data_x_min, breaks_posix))
+              }
+            } else {
+              # Weekly/daily data: brug sekund-baserede breaks
+              rounded_start <- round_to_interval_start(data_x_min, interval_info$type)
+              # Generer breaks til mindst data_x_max
+              breaks_posix <- seq(from = rounded_start, to = data_x_max + interval_size, by = interval_size)
+              # Filtrer til kun breaks >= data_x_min
+              breaks_posix <- breaks_posix[breaks_posix >= data_x_min]
+
+              # Tilføj kun første dato hvis den ikke allerede er med
+              if (length(breaks_posix) == 0 || breaks_posix[1] != data_x_min) {
+                breaks_posix <- unique(c(data_x_min, breaks_posix))
+              }
+            }
+
+            plot <- plot + ggplot2::scale_x_datetime(
+              # limits = c(data_x_min, extended_x_limit),
               # name = x_unit_label,
               labels = scales::date_format(format_config$labels),
-              breaks = scales::date_breaks(format_config$breaks)
+              breaks = breaks_posix
             )
           } else {
             # Fallback til breaks_pretty med intelligent antal
             plot <- plot + ggplot2::scale_x_datetime(
-              # name = x_unit_label,
-              labels = scales::date_format(format_config$labels),
-              breaks = scales::breaks_pretty(n = format_config$n_breaks)
-            )
-          }
-        } else if (inherits(qic_data$x, "Date")) {
-          # Date objekter - tilsvarende intelligent håndtering
-          if (interval_info$type == "weekly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART WEEKLY LABELS: Applying intelligent week formatting for Date objects", .context = "X_AXIS_FORMAT")
-            plot <- plot + ggplot2::scale_x_date(
-              # name = x_unit_label,
-              labels = format_config$labels, # Smart scales::label_date_short()
-              breaks = scales::date_breaks(format_config$breaks)
-            )
-          } else if (interval_info$type == "monthly" && !is.null(format_config$use_smart_labels) && format_config$use_smart_labels) {
-            log_debug("SMART MONTHLY LABELS: Applying intelligent month formatting for Date objects", .context = "X_AXIS_FORMAT")
-            plot <- plot + ggplot2::scale_x_date(
-              # name = x_unit_label,
-              labels = format_config$labels, # Smart scales::label_date_short()
-              breaks = scales::date_breaks(format_config$breaks)
-            )
-          } else if (!is.null(format_config$breaks)) {
-            plot <- plot + ggplot2::scale_x_date(
-              # name = x_unit_label,
-              labels = scales::date_format(format_config$labels),
-              breaks = scales::date_breaks(format_config$breaks)
-            )
-          } else {
-            plot <- plot + ggplot2::scale_x_date(
+              # limits = c(data_x_min, extended_x_limit),
               # name = x_unit_label,
               labels = scales::date_format(format_config$labels),
               breaks = scales::breaks_pretty(n = format_config$n_breaks)
@@ -1017,6 +1283,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         } else if (is.numeric(qic_data$x)) {
           # Fallback til continuous scale
           plot <- plot + ggplot2::scale_x_continuous(
+            # limits = c(data_x_min, extended_x_limit),
             # name = x_unit_label,
             breaks = scales::pretty_breaks(n = 8)
           )
@@ -1151,7 +1418,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       # For other units - use default ggplot2 formatting
 
       # Add plot enhancements (phase lines, target line, comments)
-      plot <- add_plot_enhancements(plot, qic_data, comment_data, y_axis_unit)
+      plot <- add_plot_enhancements(
+        plot, qic_data, comment_data, y_axis_unit,
+        cl_linewidth = cl_linewidth,
+        target_linewidth = target_linewidth,
+        comment_size = comment_size,
+        label_size = label_size
+      )
 
       return(list(plot = plot, qic_data = qic_data))
     }
@@ -1162,7 +1435,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
 ## Hospital Tema til Plots
 # Anvender hospital branding og farvepalette på SPC plots
-applyHospitalTheme <- function(plot) {
+# base_size: Responsive base font size (default 14, automatisk beregnet i Shiny renderPlot)
+applyHospitalTheme <- function(plot, base_size = 14) {
   if (is.null(plot) || !inherits(plot, "ggplot")) {
     return(plot)
   }
@@ -1189,13 +1463,13 @@ applyHospitalTheme <- function(plot) {
       )
 
       themed_plot <- plot +
-        
-        # ggplot2::theme_minimal()
+        ggplot2::theme_minimal(base_size = base_size) +
         ggplot2::theme(
+          text = ggplot2::element_text(family = "Roboto Medium"),
           plot.margin = ggplot2::unit(c(0, 0, 0, 10), "pt"),
           panel.background = ggplot2::element_blank(),
-          axis.text.y = ggplot2::element_text(color = "#858585", size = 16, angle = 0, hjust = 1),
-          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = 11),
+          axis.text.y = ggplot2::element_text(color = "#858585", size = ggplot2::rel(1.0), angle = 0, hjust = 1, family = "Roboto Medium"),
+          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = ggplot2::rel(0.7), family = "Roboto Medium"),
           axis.line.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.y = ggplot2::element_line(color = "#D6D6D6"),

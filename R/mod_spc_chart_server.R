@@ -302,6 +302,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
       kommentar_value <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
 
+      # Beregn responsive base_size baseret på plot bredde
+      width_px <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]] %||% 800
+      base_size <- max(8, min(14, width_px / 70))
+
       list(
         data = data,
         data_hash = digest::digest(data, algo = "xxhash64"),
@@ -315,7 +319,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         frys_hash = digest::digest(frys_column, algo = "xxhash64"),
         title = title_value,
         y_axis_unit = unit_value,
-        kommentar_column = kommentar_value
+        kommentar_column = kommentar_value,
+        base_size = base_size
       )
     })
 
@@ -406,10 +411,11 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             frys_column = inputs$frys_column,
             chart_title_reactive = chart_title_reactive,
             y_axis_unit = inputs$y_axis_unit,
-            kommentar_column = inputs$kommentar_column
+            kommentar_column = inputs$kommentar_column,
+            base_size = inputs$base_size
           )
 
-          plot <- applyHospitalTheme(spc_result$plot)
+          plot <- applyHospitalTheme(spc_result$plot, base_size = inputs$base_size)
           qic_data <- spc_result$qic_data
 
           set_plot_state("plot_object", plot)
@@ -610,8 +616,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
 
     ## Faktisk Plot Rendering
-    # Separat renderPlot for det faktiske SPC plot
-    # PRODUCTION VERSION with fixes applied
+    # Separat renderPlot for det faktiske SPC plot med responsive font sizing
+    # base_size beregnes automatisk i spc_inputs() reactive baseret på plot bredde
+    # res = 144 giver skarp tekst på HiDPI-skærme
     output$spc_plot_actual <- shiny::renderPlot({
       data <- module_data_reactive()
 
@@ -631,7 +638,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       print(plot_result)
       invisible(plot_result)
-    })
+    }, res = 144)
 
     # Status og Information ---------------------------------------------------
 
