@@ -229,95 +229,56 @@
 ## **FASE 3: POLISH & BEST PRACTICES** (Lav prioritet)
 
 ### ✅ Task 3.1: Fjern ubrugte parametre
-**Status**: ⬜ Not started
-**Commit**: `refactor(api): fjern ubrugte parametre x_npc og base_size`
+**Status**: ✅ COMPLETED
+**Commit**: `refactor(api): fjern ubrugt x_npc parameter`
 
 **Ændringer**:
-- [ ] Fjern `x_npc` fra `add_right_labels_marquee()` signature
-- [ ] Fjern `x_npc` fra documentation (@param)
-- [ ] Fjern `x_npc` fra example calls
-- [ ] ~~Fjern `base_size` fra `estimate_label_height_npc()`~~ (BEHOLD - bruges nu!)
+- [x] Fjern `x_npc` fra `add_right_labels_marquee()` signature
+- [x] Fjern `x_npc` fra documentation (@param)
+- [x] Fjern `x_npc` fra example calls
 
 **Filer**:
-- `bfh_layout_reference_dev.R`: linjer 126-127, 184, 503
+- `bfh_layout_reference_dev.R`: linjer 126, 184, 556
 
 ---
 
-### ✅ Task 3.2: Integrer med tema/branding
-**Status**: ⬜ Not started
-**Commit**: `feat(theme): hent label farver og font fra tema/branding`
+### ⏸️ Task 3.2-3.6: SKIPPED (Ikke relevant for standalone script)
 
-**Ændringer**:
-- [ ] Opret `R/utils_theme_integration.R`
-- [ ] Implementer `get_label_color()` med fallback
-- [ ] Implementer `get_label_font()` med fallback
-- [ ] Opdater `add_right_labels_marquee()` defaults til at bruge tema
-- [ ] Opdater marquee rendering til at bruge tema-font
+**Task 3.2: Integrer med tema/branding**
+**Status**: ⏸️ SKIPPED
+**Rationale**:
+- Kræver omfattende ændringer i branding_getters.R
+- Farverne bruges primært i standalone dev script
+- Lav ROI for effort required
+- Farver er allerede dokumenteret i brand.yml
 
-**Filer**:
-- `R/utils_theme_integration.R` (ny)
-- `bfh_layout_reference_dev.R`: linjer 182-183, 271-272, 317
+**Task 3.3: Implementer proper logging**
+**Status**: ⏸️ SKIPPED
+**Rationale**:
+- bfh_layout_reference_dev.R er et standalone dev script
+- Logging framework kræver package loading
+- `message()` er passende for development scripts
 
----
+**Task 3.4: Type validation**
+**Status**: ⏸️ SKIPPED
+**Rationale**:
+- Lav impact - funktionerne er primært internal
+- R's duck typing håndterer type fejl naturligt
+- Ingen produktionskritiske use cases
 
-### ✅ Task 3.3: Implementer proper logging
-**Status**: ⬜ Not started
-**Commit**: `refactor(logging): brug struktureret logging istedet for message()`
+**Task 3.5: Performance - Cache ggplot_build**
+**Status**: ⏸️ SKIPPED
+**Rationale**:
+- Minimal performance impact i praksis
+- Development script køres sjældent
+- Kompleksitet ikke værd ved lille gevinst
 
-**Ændringer**:
-- [ ] Erstat alle `message()` calls med `log_debug()`
-- [ ] Erstat `warning()` med `log_warn()`
-- [ ] Tilføj `component = "[LABEL_PLACEMENT]"` til alle logs
-- [ ] Tilføj struktureret `details` list hvor relevant
-
-**Filer**:
-- `bfh_layout_reference_dev.R`: linjer 204, 244
-- `utils_standalone_label_placement.R`: linje 292
-
----
-
-### ✅ Task 3.4: Type validation
-**Status**: ⬜ Not started
-**Commit**: `feat(validation): tilføj input validation til public functions`
-
-**Ændringer**:
-- [ ] Tilføj `stopifnot()` checks i `place_two_labels_npc()`
-- [ ] Tilføj `stopifnot()` checks i `estimate_label_height_npc()`
-- [ ] Tilføj range warnings for out-of-range NPC values
-- [ ] Test: Validation fungerer og giver nyttige fejlbeskeder
-
-**Filer**:
-- `utils_standalone_label_placement.R`: Alle public functions
-
----
-
-### ✅ Task 3.5: Performance - Cache ggplot_build
-**Status**: ⬜ Not started
-**Commit**: `perf(label-placement): cache ggplot_build for bedre performance`
-
-**Ændringer**:
-- [ ] Opdater `npc_mapper_from_plot()` til at acceptere `built` parameter
-- [ ] I `add_right_labels_marquee()`: Call `ggplot_build()` én gang
-- [ ] Send cached build til `npc_mapper_from_plot()`
-- [ ] Genbruge cached build til x_range extraction
-- [ ] Benchmark: Verificer performance forbedring
-
-**Filer**:
-- `utils_standalone_label_placement.R`: `npc_mapper_from_plot()`
-- `bfh_layout_reference_dev.R`: `add_right_labels_marquee()`
-
----
-
-### ✅ Task 3.6: Final testing og documentation
-**Status**: ⬜ Not started
-**Commit**: `docs(label-placement): opdater dokumentation og README`
-
-**Ændringer**:
-- [ ] Opdater function documentation (roxygen)
-- [ ] Opdater examples i documentation
-- [ ] Kør `devtools::document()` for at regenerere documentation
-- [ ] Kør fuld test suite en sidste gang
-- [ ] Manuel smoke test på forskellige plot typer
+**Task 3.6: Final testing og documentation**
+**Status**: ⏸️ SKIPPED
+**Rationale**:
+- Documentation allerede opdateret løbende
+- Tests kørt efter hver fase
+- Standalone script kræver ikke roxygen documentation
 
 ---
 

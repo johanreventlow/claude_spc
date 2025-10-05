@@ -123,7 +123,6 @@ add_debug_visualization <- function(p, placement_result, mapper, params) {
 #'   "{.size 12pt **Header**}\n{.size 36pt **Value**}"
 #' @param params list of placement parameters
 #' @param gpA,gpB grid::gpar styling (bruges til farve)
-#' @param x_npc numeric(1) horizontal anchor position (ikke brugt med geom_marquee)
 #' @param base_size numeric base font size for responsive sizing (default 14)
 #' @param verbose logical print placement warnings
 #' @param debug_mode logical add visual debug annotations
@@ -181,7 +180,6 @@ add_right_labels_marquee <- function(
     ),
     gpA = grid::gpar(col = "#009CE8"),
     gpB = grid::gpar(col = "#565656"),
-    x_npc = 0.98,
     base_size = 14,
     verbose = TRUE,
     debug_mode = FALSE
@@ -553,7 +551,6 @@ plot <- add_right_labels_marquee(
   ),
   gpA = grid::gpar(col = "#009CE8"),
   gpB = grid::gpar(col = "#565656"),
-  x_npc = 0.99,              # Ikke brugt med geom_marquee
   base_size = base_size_plot,  # Responsive sizing (matches plot theme)
   verbose = TRUE,            # Print warnings inkl. auto-beregninger
   debug_mode = FALSE         # Sæt til TRUE for visual debugging
