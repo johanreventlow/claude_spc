@@ -220,13 +220,45 @@ add_right_labels_marquee <- function(
     }
   }
 
-  # Default parameters hvis ikke angivet
-  # gap_line sættes til 8% for sikker placering ved linjer uden overlap
-  # Balancerer mellem "tæt placering" og "ingen overlap med linjer"
-  if (is.null(params$gap_line)) params$gap_line <- params$label_height_npc * 0.08  # 8% af label height
-  if (is.null(params$gap_labels)) params$gap_labels <- params$label_height_npc * 0.3  # 30% af label height
-  if (is.null(params$pad_top)) params$pad_top <- 0.01
-  if (is.null(params$pad_bot)) params$pad_bot <- 0.01
+  # Default parameters hvis ikke angivet - HENT FRA CONFIG
+  # NOTE: place_two_labels_npc() vil også bruge config, men vi sætter dem her
+  # for klarhed og for at kunne override ved behov
+
+  # Check om config er tilgængelig
+  config_available <- exists("get_label_placement_param", mode = "function")
+
+  if (is.null(params$gap_line)) {
+    if (config_available) {
+      params$gap_line <- params$label_height_npc * get_label_placement_param("relative_gap_line")
+    } else {
+      params$gap_line <- params$label_height_npc * 0.08  # Fallback: 8% af label height
+    }
+  }
+
+  if (is.null(params$gap_labels)) {
+    if (config_available) {
+      params$gap_labels <- params$label_height_npc * get_label_placement_param("relative_gap_labels")
+    } else {
+      params$gap_labels <- params$label_height_npc * 0.3  # Fallback: 30% af label height
+    }
+  }
+
+  if (is.null(params$pad_top)) {
+    if (config_available) {
+      params$pad_top <- get_label_placement_param("pad_top")
+    } else {
+      params$pad_top <- 0.01  # Fallback
+    }
+  }
+
+  if (is.null(params$pad_bot)) {
+    if (config_available) {
+      params$pad_bot <- get_label_placement_param("pad_bot")
+    } else {
+      params$pad_bot <- 0.01  # Fallback
+    }
+  }
+
   if (is.null(params$pref_pos)) params$pref_pos <- c("under", "under")
   if (is.null(params$priority)) params$priority <- "A"
 
@@ -308,7 +340,20 @@ add_right_labels_marquee <- function(
 
   # Skalerede størrelser for marquee labels
   # NOTE: right_aligned_style er allerede oprettet tidligere (bruges til højdemåling)
-  marquee_size <- 6 * scale_factor
+  # Hent marquee_size_factor fra config
+  marquee_size_factor <- if (config_available) {
+    get_label_placement_param("marquee_size_factor")
+  } else {
+    6  # Fallback
+  }
+  marquee_size <- marquee_size_factor * scale_factor
+
+  # Hent lineheight fra config
+  marquee_lineheight <- if (config_available) {
+    get_label_placement_param("marquee_lineheight")
+  } else {
+    0.9  # Fallback
+  }
 
   # Tilføj labels med marquee::geom_marquee
   result <- p
@@ -321,7 +366,7 @@ add_right_labels_marquee <- function(
         vjust = 0.5,
         style = right_aligned_style,
         size = marquee_size,
-        lineheight = 0.9,
+        lineheight = marquee_lineheight,
         family = "Roboto Medium",
         inherit.aes = FALSE
       ) +
@@ -499,10 +544,10 @@ plot <- add_right_labels_marquee(
   textB = label_target,
   params = list(
     # label_height_npc - AUTO-BEREGNES fra font sizes i textA/textB
-    # gap_line - AUTO: 15% af label_height_npc
-    # gap_labels - AUTO: 30% af label_height_npc
-    pad_top = 0.01,            # Top padding
-    pad_bot = 0.01,            # Bottom padding
+    # gap_line - AUTO: 8% af label_height_npc (fra config)
+    # gap_labels - AUTO: 30% af label_height_npc (fra config)
+    pad_top = 0.01,            # Top padding (fra config)
+    pad_bot = 0.01,            # Bottom padding (fra config)
     pref_pos = c("under", "under"),  # Default: placer under linjer
     priority = "A"             # Beskyt CL label ved konflikter
   ),

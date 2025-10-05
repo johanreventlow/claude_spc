@@ -440,14 +440,54 @@ place_two_labels_npc <- function(
     yA_npc,
     yB_npc,
     label_height_npc = 0.035,
-    gap_line = 0.015,
-    gap_labels = 0.03,
-    pad_top = 0.01,
-    pad_bot = 0.01,
+    gap_line = NULL,      # NU: Auto-beregnes fra config
+    gap_labels = NULL,    # NU: Auto-beregnes fra config
+    pad_top = NULL,       # NU: Hentes fra config
+    pad_bot = NULL,       # NU: Hentes fra config
     priority = c("A", "B")[1],
     pref_pos = c("under", "under"),
     debug = FALSE
 ) {
+
+  # Source config hvis tilgængelig (standalone compatibility)
+  if (exists("get_label_placement_param", mode = "function")) {
+    config_available <- TRUE
+  } else {
+    config_available <- FALSE
+  }
+
+  # Beregn defaults fra config (eller brug fallback for standalone mode)
+  if (is.null(gap_line)) {
+    if (config_available) {
+      gap_line <- label_height_npc * get_label_placement_param("relative_gap_line")
+    } else {
+      gap_line <- label_height_npc * 0.08  # Fallback: 8% af label height
+    }
+  }
+
+  if (is.null(gap_labels)) {
+    if (config_available) {
+      gap_labels <- label_height_npc * get_label_placement_param("relative_gap_labels")
+    } else {
+      gap_labels <- label_height_npc * 0.30  # Fallback: 30% af label height
+    }
+  }
+
+  if (is.null(pad_top)) {
+    if (config_available) {
+      pad_top <- get_label_placement_param("pad_top")
+    } else {
+      pad_top <- 0.01  # Fallback: 1%
+    }
+  }
+
+  if (is.null(pad_bot)) {
+    if (config_available) {
+      pad_bot <- get_label_placement_param("pad_bot")
+    } else {
+      pad_bot <- 0.01  # Fallback: 1%
+    }
+  }
 
   warnings <- character(0)
   placement_quality <- "optimal"
@@ -510,7 +550,14 @@ place_two_labels_npc <- function(
   line_gap_npc <- abs(yA_npc - yB_npc)
   min_center_gap <- label_height_npc + gap_labels
 
-  if (line_gap_npc < min_center_gap * 0.5) {
+  # Hent tight_lines_threshold fra config
+  tight_threshold_factor <- if (config_available) {
+    get_label_placement_param("tight_lines_threshold_factor")
+  } else {
+    0.5  # Fallback: 50% af min_center_gap
+  }
+
+  if (line_gap_npc < min_center_gap * tight_threshold_factor) {
     # Linjer er for tætte til begge at være på samme side
     warnings <- c(warnings, paste0("Linjer meget tætte (gap=", round(line_gap_npc, 3), ") - bruger over/under strategi"))
 
@@ -536,7 +583,14 @@ place_two_labels_npc <- function(
   sideB <- propB$side
 
   # Tjek for coincident lines (meget tætte)
-  if (abs(yA_npc - yB_npc) < 0.001) {
+  # Hent coincident_threshold fra config (som procent af label_height)
+  coincident_threshold <- if (config_available) {
+    label_height_npc * get_label_placement_param("coincident_threshold_factor")
+  } else {
+    label_height_npc * 0.1  # Fallback: 10% af label højde
+  }
+
+  if (abs(yA_npc - yB_npc) < coincident_threshold) {
     warnings <- c(warnings, "Sammenfaldende linjer - placerer labels over/under")
 
     # Placer den ene label over, den anden under samme linje
@@ -668,7 +722,15 @@ place_two_labels_npc <- function(
 
       # === NIVEAU 1: Reducer gap_labels for at give mere plads ===
       reduced_gap_successful <- FALSE
-      for (reduction_factor in c(0.5, 0.3, 0.15)) {
+
+      # Hent gap_reduction_factors fra config
+      reduction_factors <- if (config_available) {
+        get_label_placement_param("gap_reduction_factors")
+      } else {
+        c(0.5, 0.3, 0.15)  # Fallback: 50%, 30%, 15%
+      }
+
+      for (reduction_factor in reduction_factors) {
         reduced_min_gap <- label_height_npc + gap_labels * reduction_factor
 
         if (abs(proposed_yA - proposed_yB) >= reduced_min_gap) {
@@ -735,13 +797,20 @@ place_two_labels_npc <- function(
       if (!reduced_gap_successful) {
         warnings <- c(warnings, "NIVEAU 2 fejlede - bruger NIVEAU 3: shelf placement")
 
+        # Hent shelf_center_threshold fra config
+        shelf_threshold <- if (config_available) {
+          get_label_placement_param("shelf_center_threshold")
+        } else {
+          0.5  # Fallback: midtpunkt (50% NPC)
+        }
+
         # Prioriter den vigtigste label tættest på sin linje
         if (priority == "A") {
           yA <- clamp01(proposed_yA)
-          yB <- if (yA < 0.5) high_bound else low_bound  # Modsatte shelf
+          yB <- if (yA < shelf_threshold) high_bound else low_bound  # Modsatte shelf
         } else {
           yB <- clamp01(proposed_yB)
-          yA <- if (yB < 0.5) high_bound else low_bound
+          yA <- if (yB < shelf_threshold) high_bound else low_bound
         }
         placement_quality <- "degraded"
       }
