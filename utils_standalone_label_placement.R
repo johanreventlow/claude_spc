@@ -522,20 +522,39 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
                           panel_row$t, panel_row$l,
                           panel_row$b, panel_row$r)
 
-  # Check om der er en aktiv device
-  # dev.cur() returnerer 1 hvis ingen device er åben (null device)
-  needs_temp_device <- (grDevices::dev.cur() == 1)
+  # VIGTIGT: Brug ALTID en off-screen PDF device for measurements
+  # Dette forhindrer synlig rendering når scripts kører med aktiv device
+  #
+  # Gem den nuværende device
+  current_dev <- grDevices::dev.cur()
 
-  if (needs_temp_device) {
-    # Open temporary PDF device for measurement
-    # NOTE: Vi bruger PDF fordi det er deterministisk (ikke skærmafhængigt)
-    temp_file <- tempfile(fileext = ".pdf")
-    grDevices::pdf(file = temp_file, width = device_width, height = device_height)
-    on.exit({
+  # Open temporary PDF device for measurement (off-screen)
+  # NOTE: Vi bruger PDF fordi det er deterministisk (ikke skærmafhængigt)
+  temp_file <- tempfile(fileext = ".pdf")
+  grDevices::pdf(file = temp_file, width = device_width, height = device_height)
+  temp_dev <- grDevices::dev.cur()
+
+  on.exit({
+    # Luk vores temp device hvis den stadig er aktiv
+    if (grDevices::dev.cur() == temp_dev) {
       grDevices::dev.off()
-      unlink(temp_file, force = TRUE)
-    }, add = TRUE)
-  }
+    }
+
+    # Vend tilbage til oprindelig device hvis den var reel (ikke null og ikke vores temp)
+    # Vi ignorerer device 2 hvis current_dev var 1, da ggplot_build() ofte åbner en temp device
+    if (current_dev > 1 && current_dev != temp_dev) {
+      if (current_dev %in% grDevices::dev.list()) {
+        tryCatch({
+          grDevices::dev.set(current_dev)
+        }, error = function(e) {
+          # Ignorer hvis device ikke findes
+        })
+      }
+    }
+
+    # Slet temp fil
+    unlink(temp_file, force = TRUE)
+  }, add = TRUE)
 
   # Render plot til device
   grid::grid.newpage()
@@ -756,16 +775,24 @@ estimate_label_heights_npc <- function(
     )
   }
 
-  # Check if device is needed
-  device_was_open <- grDevices::dev.cur() != 1
+  # VIGTIGT: Brug ALTID en off-screen device for measurements
+  # Dette forhindrer synlig rendering når scripts kører med aktiv device
+  #
+  # Gem reference til nuværende device
+  current_dev <- grDevices::dev.cur()
 
-  if (!device_was_open) {
-    # Open ONE device for all measurements
-    null_file <- if (.Platform$OS.type == "windows") "NUL" else "/dev/null"
-    suppressMessages(
-      grDevices::png(filename = null_file, width = 480, height = 480)
-    )
-  }
+  # Open ONE off-screen device for all measurements
+  # NOTE: På macOS kan PNG ikke bruge /dev/null, så vi bruger tempfile
+  temp_png <- tempfile(fileext = ".png")
+  suppressMessages(
+    grDevices::png(filename = temp_png, width = 480, height = 480)
+  )
+  temp_dev <- grDevices::dev.cur()
+
+  # Ensure cleanup of temp file
+  on.exit({
+    unlink(temp_png, force = TRUE)
+  }, add = TRUE, after = FALSE)
 
   # Measure all texts with shared device
   results <- lapply(texts, function(text) {
@@ -791,9 +818,20 @@ estimate_label_heights_npc <- function(
     })
   })
 
-  # Close device if we opened it
-  if (!device_was_open) {
+  # Luk off-screen device hvis den stadig er aktiv
+  if (grDevices::dev.cur() == temp_dev) {
     grDevices::dev.off()
+  }
+
+  # Vend tilbage til oprindelig device hvis den var reel (ikke null og ikke vores temp)
+  if (current_dev > 1 && current_dev != temp_dev) {
+    if (current_dev %in% grDevices::dev.list()) {
+      tryCatch({
+        grDevices::dev.set(current_dev)
+      }, error = function(e) {
+        # Ignorer hvis device ikke findes
+      })
+    }
   }
 
   return(results)
