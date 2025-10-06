@@ -76,9 +76,33 @@ add_right_labels_marquee <- function(
   built_plot <- ggplot2::ggplot_build(p)
   gtable <- ggplot2::ggplot_gtable(built_plot)
 
-  # Mål panel højde
+  # Detektér aktiv device størrelse for korrekt panel height measurement
+  # FIX: Brug faktisk device size i stedet for hardcoded 7×7 inches
+  device_size <- tryCatch({
+    if (grDevices::dev.cur() > 1) {  # Device aktiv (ikke null device)
+      dev_inches <- grDevices::dev.size("in")
+      list(width = dev_inches[1], height = dev_inches[2])
+    } else {
+      # Ingen aktiv device - brug defaults
+      list(width = 7, height = 7)
+    }
+  }, error = function(e) {
+    # Fallback hvis dev.size() fejler
+    list(width = 7, height = 7)
+  })
+
+  if (verbose) {
+    message(sprintf("Device size: %.2f × %.2f inches",
+                    device_size$width, device_size$height))
+  }
+
+  # Mål panel højde med faktisk device størrelse
   panel_height_inches <- tryCatch({
-    measure_panel_height_from_gtable(gtable)
+    measure_panel_height_from_gtable(
+      gtable,
+      device_width = device_size$width,
+      device_height = device_size$height
+    )
   }, error = function(e) {
     if (verbose) {
       message("Kunne ikke måle panel højde: ", e$message, " - bruger viewport fallback")
