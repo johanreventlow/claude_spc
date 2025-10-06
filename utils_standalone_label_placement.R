@@ -601,6 +601,204 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
   })
 }
 
+#' INTERN: Mål label højde med aktiv device (ingen device management)
+#'
+#' Forventer at en graphics device allerede er åben.
+#' Håndterer caching men IKKE device lifecycle.
+#'
+#' @keywords internal
+.estimate_label_height_npc_internal <- function(
+  text,
+  style,
+  panel_height_inches = NULL,
+  fallback_npc = 0.13,
+  use_cache = TRUE,
+  return_details = FALSE
+) {
+  # Generate cache key
+  if (use_cache) {
+    style_hash <- digest::digest(list(
+      style$p$margin,
+      style$p$align,
+      style$p$lineheight
+    ), algo = "xxhash32")
+
+    cache_key <- digest::digest(list(
+      text = text,
+      style = style_hash,
+      panel_height = if (!is.null(panel_height_inches)) {
+        round(panel_height_inches, 4)
+      } else {
+        "viewport"
+      },
+      return_details = return_details
+    ), algo = "xxhash32")
+
+    # Check cache
+    cached_result <- .grob_height_cache[[cache_key]]
+    if (!is.null(cached_result)) {
+      return(cached_result)
+    }
+  }
+
+  # Create grob and measure (assumes active device exists)
+  g <- marquee::marquee_grob(
+    text = text,
+    x = 0.5,
+    y = 0.5,
+    style = style
+  )
+
+  h_native <- grid::grobHeight(g)
+
+  # Convert to NPC
+  if (!is.null(panel_height_inches)) {
+    h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
+    h_npc <- h_inches / panel_height_inches
+  } else {
+    h_npc <- grid::convertHeight(h_native, "npc", valueOnly = TRUE)
+    h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
+  }
+
+  # Safety margin from config
+  safety_margin <- if (exists("get_label_placement_config", mode = "function")) {
+    cfg <- get_label_placement_config()
+    value <- cfg[["height_safety_margin"]]
+    if (is.null(value)) 1.05 else value
+  } else if (exists("get_label_placement_param", mode = "function")) {
+    get_label_placement_param("height_safety_margin")
+  } else {
+    1.05
+  }
+  h_npc <- h_npc * safety_margin
+  h_inches_with_margin <- h_inches * safety_margin
+
+  # Validation
+  if (!is.finite(h_npc) || h_npc <= 0) {
+    warning(
+      "Grob-måling gav invalid værdi (", round(h_npc, 4), "), bruger fallback."
+    )
+    if (return_details) {
+      return(list(
+        npc = fallback_npc,
+        inches = NA_real_,
+        panel_height_inches = panel_height_inches
+      ))
+    }
+    return(fallback_npc)
+  }
+
+  # Warn if very large
+  if (h_npc > 0.5 && !is.null(panel_height_inches)) {
+    warning(
+      sprintf(
+        "Label optager %.1f%% af panel højde (%.2f inches). ",
+        h_npc * 100, panel_height_inches
+      )
+    )
+  }
+
+  # Prepare result
+  if (return_details) {
+    result <- list(
+      npc = as.numeric(h_npc),
+      inches = as.numeric(h_inches_with_margin),
+      panel_height_inches = panel_height_inches
+    )
+  } else {
+    result <- as.numeric(h_npc)
+  }
+
+  # Cache result
+  if (use_cache) {
+    .grob_height_cache[[cache_key]] <- result
+  }
+
+  return(result)
+}
+
+#' Batch-mål flere label højder med én device session
+#'
+#' @param texts Character vector af marquee-formaterede tekster
+#' @param style marquee style object (delt for alle labels)
+#' @param panel_height_inches Panel højde i inches
+#' @param fallback_npc Fallback værdi hvis måling fejler
+#' @param use_cache Om cache skal bruges
+#' @param return_details Om der skal returneres liste med details
+#'
+#' @return List af målinger (samme format som estimate_label_height_npc)
+#'
+#' @details
+#' PERFORMANCE: Åbner kun én device for alle målinger i stedet for N devices.
+#' Dette giver betydelig performance improvement ved multiple labels (2+).
+#'
+#' Typisk use case: Måling af CL og Target labels samtidigt
+#' - Gamle approach: 2 device åbninger (~20-40ms overhead)
+#' - Ny approach: 1 device åbning (~10-20ms overhead)
+#' - Saving: ~50% reduction i device overhead
+#'
+#' @keywords internal
+estimate_label_heights_npc <- function(
+  texts,
+  style = NULL,
+  panel_height_inches = NULL,
+  fallback_npc = 0.13,
+  use_cache = TRUE,
+  return_details = FALSE
+) {
+  # Default style hvis ikke angivet
+  if (is.null(style)) {
+    style <- marquee::modify_style(
+      marquee::classic_style(),
+      "p",
+      margin = marquee::trbl(0),
+      align = "right"
+    )
+  }
+
+  # Check if device is needed
+  device_was_open <- grDevices::dev.cur() != 1
+
+  if (!device_was_open) {
+    # Open ONE device for all measurements
+    null_file <- if (.Platform$OS.type == "windows") "NUL" else "/dev/null"
+    suppressMessages(
+      grDevices::png(filename = null_file, width = 480, height = 480)
+    )
+  }
+
+  # Measure all texts with shared device
+  results <- lapply(texts, function(text) {
+    tryCatch({
+      .estimate_label_height_npc_internal(
+        text = text,
+        style = style,
+        panel_height_inches = panel_height_inches,
+        fallback_npc = fallback_npc,
+        use_cache = use_cache,
+        return_details = return_details
+      )
+    }, error = function(e) {
+      warning(
+        "Grob-baseret højdemåling fejlede: ", e$message,
+        " - bruger fallback"
+      )
+      if (return_details) {
+        list(npc = fallback_npc, inches = NA_real_, panel_height_inches = panel_height_inches)
+      } else {
+        fallback_npc
+      }
+    })
+  })
+
+  # Close device if we opened it
+  if (!device_was_open) {
+    grDevices::dev.off()
+  }
+
+  return(results)
+}
+
 #' Estimér label højde fra marquee markup VED FAKTISK GROB-MÅLING
 #'
 #' Opretter et marquee grob med de faktiske styles og måler højden præcist.

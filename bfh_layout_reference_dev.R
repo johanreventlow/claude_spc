@@ -253,23 +253,19 @@ add_right_labels_marquee <- function(
 
   # Auto-beregn label_height hvis ikke angivet - NU MED GROB-BASERET MÅLING
   if (is.null(params$label_height_npc)) {
-    # Mål faktisk højde fra marquee grobs MED NY API
+    # PERFORMANCE: Mål begge labels med én device session (batch API)
+    # Dette reducerer device overhead fra 2 åbninger til 1 (~50% hurtigere)
     # NOTE: textA/textB er allerede skaleret med base_size via create_responsive_label()
-    # Style-objektet indeholder allerede alle nødvendige formatting-info
     # DEFENSIVE: Send panel_height_inches videre for korrekt normalisering
     # VIGTIGT: return_details=TRUE giver os absolute inches for fixed gap calculation
-    height_A <- estimate_label_height_npc(
-      text = textA,
+    heights <- estimate_label_heights_npc(
+      texts = c(textA, textB),
       style = right_aligned_style,
       panel_height_inches = panel_height_inches,
       return_details = TRUE
     )
-    height_B <- estimate_label_height_npc(
-      text = textB,
-      style = right_aligned_style,
-      panel_height_inches = panel_height_inches,
-      return_details = TRUE
-    )
+    height_A <- heights[[1]]
+    height_B <- heights[[2]]
 
     # Vælg det største label baseret på NPC værdi, men behold hele list-strukturen
     if (height_A$npc > height_B$npc) {
