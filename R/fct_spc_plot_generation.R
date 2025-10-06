@@ -429,76 +429,10 @@ execute_qic_call <- function(qic_args, chart_type, config) {
 
 # PLOT ENHANCEMENT UTILITIES ==================================================
 
-## Adjust Label Y Positions
-# Intelligent y-akse justering af CL og Target labels for at undgå kollisioner
-adjust_label_y_positions <- function(label_data, y_range, qic_data, value_font_size = 30) {
-  if (is.null(label_data) || nrow(label_data) == 0) return(label_data)
-
-  # Beregn label højde baseret på faktisk value_font_size (responsive)
-  # value_font_size er den største tekst komponent i marquee label
-  pt_to_data_units <- diff(y_range) * 0.015  # ~1.5% af y-range per point
-  label_height <- (value_font_size * pt_to_data_units * 0.9 * 2.2)  # 2 linjer + spacing
-
-  min_separation <- label_height * 1.3  # 30% buffer mellem labels
-  line_buffer <- label_height * 0.6    # 60% buffer fra egne linjer
-
-  # Find CL og Target rows
-  cl_row <- which(label_data$type == "cl")
-  target_row <- which(label_data$type == "target")
-
-  if (length(cl_row) > 0 && length(target_row) > 0) {
-    cl_y <- label_data$y[cl_row]
-    target_y <- label_data$y[target_row]
-    distance <- abs(cl_y - target_y)
-
-    if (distance < min_separation) {
-      # Kollision detekteret - skub labels væk fra hinanden (kun gap_needed, ingen ekstra buffer)
-
-      # Bestem hvilken label der er øverst
-      if (cl_y > target_y) {
-        # CL er over Target
-        upper_row <- cl_row
-        lower_row <- target_row
-        upper_y <- cl_y
-        lower_y <- target_y
-      } else {
-        # Target er over CL
-        upper_row <- target_row
-        lower_row <- cl_row
-        upper_y <- target_y
-        lower_y <- cl_y
-      }
-
-      # Beregn hvor meget vi skal separere
-      gap_needed <- min_separation - distance
-      move_each <- gap_needed / 2  # Fordel bevægelsen mellem begge
-
-      # Skub labels væk fra hinanden - KUN gap_needed (ingen ekstra line_buffer)
-      label_data$y[upper_row] <- upper_y + move_each
-      label_data$y[lower_row] <- lower_y - move_each
-
-    } else {
-      # Tilstrækkelig afstand - INGEN justering, behold på linjerne
-      # Labels forbliver på deres oprindelige linjer
-      label_data$y[cl_row] <- cl_y
-      label_data$y[target_row] <- target_y
-    }
-  } else if (length(cl_row) > 0) {
-    # Kun CL label - skub ned under linjen
-    cl_y <- label_data$y[cl_row]
-    label_data$y[cl_row] <- cl_y - (line_buffer * 0.3)
-  } else if (length(target_row) > 0) {
-    # Kun Target label - behold på linjen
-    target_y <- label_data$y[target_row]
-    label_data$y[target_row] <- target_y - (line_buffer * 0.3)
-  }
-
-  return(label_data)
-}
-
 ## Add Plot Enhancements
-# Tilføjer target lines, phase separations og comment annotations
-add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6, label_size = 6) {
+# Tilføjer extended lines, phase separations og comment annotations
+# NOTE: Label placement er flyttet til add_spc_labels() funktion
+add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6) {
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
@@ -607,11 +541,11 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     extended_x <- last_x + (x_range * 0.15)
   }
 
-  # Opret label data og extended line data ----
-  label_data <- data.frame()
+  # Opret extended line data ----
+  # NOTE: Labels håndteres nu af add_spc_labels() funktion
   extended_lines_data <- data.frame()
 
-  # Centerline label og extended line KUN for seneste part
+  # Centerline extended line KUN for seneste part
   if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
     # Find seneste part
     latest_part <- max(qic_data$part, na.rm = TRUE)
@@ -622,17 +556,6 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       last_row <- part_data[nrow(part_data), ]
       cl_value <- last_row$cl
       if (!is.na(cl_value)) {
-        # Label ved extended position (højrejusteret)
-        label_data <- rbind(label_data, data.frame(
-          x = extended_x,
-          y = cl_value,
-          type = "cl",
-          header_label = "NUV. NIVEAU",
-          value_label = format_y_value(cl_value, y_axis_unit),
-          text_color = "#009CE8",
-          stringsAsFactors = FALSE
-        ))
-
         # Extended line fra sidste datapunkt til extended_x
         extended_lines_data <- rbind(extended_lines_data, data.frame(
           x = c(last_row$x, extended_x),
@@ -644,20 +567,9 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     }
   }
 
-  # Target label og extended line
+  # Target extended line
   if (!is.null(qic_data$target) && any(!is.na(qic_data$target))) {
     target_value <- qic_data$target[!is.na(qic_data$target)][1]
-
-    # Label ved extended position (højrejusteret)
-    label_data <- rbind(label_data, data.frame(
-      x = extended_x,
-      y = target_value,
-      type = "target",
-      header_label = "MÅL",
-      value_label = format_y_value(target_value, y_axis_unit),
-      text_color = "#565656",
-      stringsAsFactors = FALSE
-    ))
 
     # Extended line fra sidste datapunkt til extended_x
     extended_lines_data <- rbind(extended_lines_data, data.frame(
@@ -746,48 +658,8 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       )
   }
 
-  # CL og Target labels tilføjes ----
-  if (!is.null(label_data) && nrow(label_data) > 0) {
-    # Beregn responsive marquee font sizes baseret på label_size
-    # Reference: label_size = 6 giver header 10pt og value 30pt
-    scale_factor <- label_size / 6
-    header_font_size <- round(10 * scale_factor)
-    value_font_size <- round(30 * scale_factor)
-
-    # Intelligent y-akse justering for at undgå kollisioner (med faktisk font size)
-    y_range <- range(qic_data$y, na.rm = TRUE)
-    label_data <- adjust_label_y_positions(label_data, y_range, qic_data, value_font_size)
-
-    # Formater labels med marquee markup (skalerede font sizes)
-    label_data$label <- sprintf(
-      "{.%d **%s**}  \n{.%d **%s**}",
-      header_font_size,
-      label_data$header_label,
-      value_font_size,
-      label_data$value_label
-    )
-
-    # Opret custom marquee style med højrejustering
-    right_aligned_style <- marquee::modify_style(
-      marquee::classic_style(),
-      "p",
-      margin = marquee::trbl(0),
-      align = "right"
-    )
-
-    plot <- plot +
-      marquee::geom_marquee(
-        data = label_data,
-        ggplot2::aes(x = x, y = y, label = label, colour = text_color),
-        size = label_size,
-        style = right_aligned_style,
-        lineheight = 0.9,
-        family = "Roboto Medium",
-        hjust = 1,  # Right-aligned ved extended position
-        inherit.aes = FALSE
-      ) +
-      ggplot2::scale_color_identity(guide = "none")
-  }
+  # NOTE: CL og Target labels håndteres nu af add_spc_labels() funktion
+  # som kaldes fra generate_spc_plot() efter add_plot_enhancements()
 
   return(plot)
 }
@@ -1411,13 +1283,22 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       }
       # For other units - use default ggplot2 formatting
 
-      # Add plot enhancements (phase lines, target line, comments)
+      # Add plot enhancements (extended lines, phase lines, comments)
       plot <- add_plot_enhancements(
         plot, qic_data, comment_data, y_axis_unit,
         cl_linewidth = cl_linewidth,
         target_linewidth = target_linewidth,
-        comment_size = comment_size,
-        label_size = label_size
+        comment_size = comment_size
+      )
+
+      # Add SPC labels (CL og Target) med advanced placement system
+      plot <- add_spc_labels(
+        plot = plot,
+        qic_data = qic_data,
+        y_axis_unit = y_axis_unit,
+        label_size = label_size,
+        verbose = FALSE,
+        debug_mode = FALSE
       )
 
       return(list(plot = plot, qic_data = qic_data))

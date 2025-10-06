@@ -4,7 +4,13 @@
 \alias{update_anhoej_results}
 \title{Opdater Anhøj resultater ud fra nye QIC-beregninger}
 \usage{
-update_anhoej_results(previous, qic_results, centerline_changed = FALSE)
+update_anhoej_results(
+  previous,
+  qic_results,
+  centerline_changed = FALSE,
+  qic_data = NULL,
+  show_phases = FALSE
+)
 }
 \arguments{
 \item{previous}{list. Forrige \code{anhoej_results} (kan være NULL ved første kørsel)}
@@ -12,6 +18,10 @@ update_anhoej_results(previous, qic_results, centerline_changed = FALSE)
 \item{qic_results}{list. Nye beregnede metrics fra QIC-kald (kan indeholde NA)}
 
 \item{centerline_changed}{logical. TRUE hvis centerline/baseline er ændret (inkl. ryddet)}
+
+\item{qic_data}{data.frame. QIC data (bruges til part filtrering)}
+
+\item{show_phases}{logical. TRUE hvis parts/skift er aktivt}
 }
 \value{
 list. Opdateret \code{anhoej_results}
