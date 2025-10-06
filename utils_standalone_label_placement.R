@@ -365,6 +365,47 @@ get_grob_cache_stats <- function() {
   )
 }
 
+# Global cache for panel height measurements
+# Avoids expensive grid.draw() operations for repeated measurements
+.panel_height_cache <- new.env(parent = emptyenv())
+
+#' Clear panel height cache (for testing or memory management)
+#'
+#' @keywords internal
+clear_panel_height_cache <- function() {
+  rm(list = ls(.panel_height_cache), envir = .panel_height_cache)
+  invisible(NULL)
+}
+
+#' Get panel height cache statistics
+#'
+#' @return List with cache_size, hits, misses
+#' @keywords internal
+get_panel_height_cache_stats <- function() {
+  all_keys <- ls(.panel_height_cache)
+
+  # Filter out metadata keys (start with dot)
+  data_keys <- all_keys[!grepl("^\\.", all_keys)]
+
+  hits <- if (exists(".cache_hits", envir = .panel_height_cache)) {
+    .panel_height_cache[[".cache_hits"]]
+  } else {
+    0L
+  }
+  misses <- if (exists(".cache_misses", envir = .panel_height_cache)) {
+    .panel_height_cache[[".cache_misses"]]
+  } else {
+    0L
+  }
+
+  list(
+    cache_size = length(data_keys),  # Only count actual cached values
+    cache_hits = hits,
+    cache_misses = misses,
+    hit_rate = if (hits + misses > 0) hits / (hits + misses) else 0
+  )
+}
+
 #' Mål faktisk panel højde fra ggplot
 #'
 #' Ekstraherer den faktiske panel viewport højde fra et ggplot object.
@@ -407,7 +448,7 @@ get_grob_cache_stats <- function() {
 #' @return Panel højde i inches, eller NULL hvis måling fejler
 #'
 #' @keywords internal
-measure_panel_height_from_built <- function(built_plot, gtable = NULL, panel = 1, device_width = 7, device_height = 7) {
+measure_panel_height_from_built <- function(built_plot, gtable = NULL, panel = 1, device_width = 7, device_height = 7, use_cache = TRUE) {
   tryCatch({
     # Validate input
     if (!inherits(built_plot, "ggplot_built")) {
@@ -420,7 +461,7 @@ measure_panel_height_from_built <- function(built_plot, gtable = NULL, panel = 1
     }
 
     # Delegate til shared implementation
-    measure_panel_height_from_gtable(gtable, panel, device_width, device_height)
+    measure_panel_height_from_gtable(gtable, panel, device_width, device_height, use_cache)
   }, error = function(e) {
     warning("Kunne ikke måle panel højde: ", e$message)
     return(NULL)
@@ -430,7 +471,40 @@ measure_panel_height_from_built <- function(built_plot, gtable = NULL, panel = 1
 #' Mål panel højde fra gtable (SHARED IMPLEMENTATION)
 #'
 #' @keywords internal
-measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, device_height = 7) {
+measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, device_height = 7, use_cache = TRUE) {
+  # PERFORMANCE: Cache panel height measurements to avoid expensive grid.draw() operations
+  # Konstruer cache key fra gtable layout structure
+  if (use_cache) {
+    # Build stable cache key from layout dimensions
+    # Include: layout structure, heights, panel index, device dimensions
+    layout_digest <- digest::digest(list(
+      layout = gt$layout,
+      heights = as.character(gt$heights),
+      widths = as.character(gt$widths),
+      panel = panel,
+      device_width = device_width,
+      device_height = device_height
+    ))
+
+    cache_key <- paste0("panel_height_", layout_digest)
+
+    # Check cache
+    if (exists(cache_key, envir = .panel_height_cache)) {
+      # Cache hit - return cached value
+      if (!exists(".cache_hits", envir = .panel_height_cache)) {
+        .panel_height_cache[[".cache_hits"]] <- 0L
+      }
+      .panel_height_cache[[".cache_hits"]] <- .panel_height_cache[[".cache_hits"]] + 1L
+      return(.panel_height_cache[[cache_key]])
+    }
+
+    # Cache miss - record statistics
+    if (!exists(".cache_misses", envir = .panel_height_cache)) {
+      .panel_height_cache[[".cache_misses"]] <- 0L
+    }
+    .panel_height_cache[[".cache_misses"]] <- .panel_height_cache[[".cache_misses"]] + 1L
+  }
+
   # Find panel viewport navn fra gtable layout
   panel_layout <- gt$layout[gt$layout$name == "panel", , drop = FALSE]
 
@@ -489,6 +563,11 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
   # Navigate tilbage til ROOT
   grid::upViewport(0)
 
+  # Store in cache
+  if (use_cache) {
+    .panel_height_cache[[cache_key]] <- panel_height
+  }
+
   return(panel_height)
 }
 
@@ -502,7 +581,7 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
 #' panel_h <- measure_panel_height_inches(p)  # Uses current 12x4 device
 #' # Returns ca. 3.6 inches (4 inches minus margener)
 #' dev.off()
-measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_height = 7) {
+measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_height = 7, use_cache = TRUE) {
   tryCatch({
     # Validate input
     if (!inherits(p, "ggplot")) {
@@ -514,7 +593,7 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
     gt <- ggplot2::ggplot_gtable(b)
 
     # Delegate til shared implementation
-    measure_panel_height_from_gtable(gt, panel, device_width, device_height)
+    measure_panel_height_from_gtable(gt, panel, device_width, device_height, use_cache)
   }, error = function(e) {
     warning("measure_panel_height_inches fejlede: ", e$message,
             " - returnerer NULL")

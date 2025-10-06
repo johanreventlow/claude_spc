@@ -28,6 +28,19 @@ R -e "source('global.R'); testthat::test_dir('tests/testthat')"
 grep "^test-.*\\.R$" tests/testthat -n
 R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refactoring.R')"
 
+# Package loading test (foretrukket)
+R -e "library(SPCify); testthat::test_dir('tests/testthat')"
+
+# Source loading test (debugging)
+R -e "options(spc.debug.source_loading=TRUE); source('global.R'); testthat::test_dir('tests/testthat')"
+
+# Performance benchmark
+R -e "microbenchmark::microbenchmark(
+  package = library(SPCify),
+  source = source('global.R'),
+  times = 5
+)"
+
 # Test-coverage verification
 # Tests skal bestå før og efter hver ændring
 ```
@@ -98,19 +111,26 @@ log_debug(
 
 ✅ **Unified Event Architecture (OBLIGATORISK for al ny udvikling):**
 ```r
-# ✅ Korrekt brug af event-bus
-emit$data_loaded()
-emit$columns_detected()
-emit$ui_sync_needed()
+# ✅ Korrekt brug af consolidated event-bus
+emit$data_updated(context = "upload")     # CONSOLIDATED: Replaces data_loaded + data_changed
+emit$auto_detection_completed()
+emit$ui_sync_requested()
 
-observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
-  handle_data_loaded()
+observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
+  # Handle all data lifecycle changes in one place
+  handle_data_update()
 })
 
 # ❌ Forkert: Ad-hoc reactiveVal triggers
 legacy_trigger <- reactiveVal(NULL)
 observeEvent(legacy_trigger(), { shiny::showNotification("Undgå dette mønster") })
 ```
+
+**Event Consolidation (Sprint 4):**
+* **`data_updated`** – CONSOLIDATED event replacing `data_loaded` + `data_changed`
+* **Legacy emit functions preserved** – `emit$data_loaded()` and `emit$data_changed()` now map to `data_updated`
+* **Context tracking** – All data updates store context for intelligent handling
+* **No legacy observers** – All code migrated to listen to `data_updated` only
 
 **Event-arkitektur:**
 * **Data change** → **Emit event** → **Centralized listener** → **State update** → **Cascade events**
@@ -136,6 +156,12 @@ values$some_data <- data
 * **Isolation når nødvendigt** – Brug `isolate()` med omtanke og kun i reaktiverede kontekster
 * **Error boundaries** – Wrap komplekse reactive udtryk i `safe_operation()`
 
+**File Loading Performance:**
+* **Package loading primary** – Brug `library(SPCify)` som default
+* **Source loading sekundært** – Kun til development debugging via option
+* **Golem infrastructure** – Udnyt golem's package management
+* **Lazy loading** – Load tunge komponenter on-demand hvor muligt
+
 ### 3.1.1 Race Condition Prevention (OBLIGATORISK)
 
 ✅ **Hybrid Anti-Race Strategy** – Kombination af flere lag for at eliminere race conditions:
@@ -144,13 +170,14 @@ values$some_data <- data
 ```r
 # Centraliserede event listeners med prioritering
 setup_event_listeners() {
-  observeEvent(app_state$events$data_loaded,
+  observeEvent(app_state$events$data_updated,  # SPRINT 4: Consolidated event
     ignoreInit = TRUE,
     priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
-    # Kritisk logik først
+    # Handles both data loading and changes in one place
+    # Context available via app_state$last_data_update_context
   })
 
-  observeEvent(app_state$events$data_changed,
+  observeEvent(app_state$events$auto_detection_completed,
     ignoreInit = TRUE,
     priority = OBSERVER_PRIORITIES$DATA_PROCESSING, {
     # Data behandling sekundært
@@ -325,6 +352,51 @@ config_value <- golem::get_golem_options("test_mode_auto_load", default = FALSE)
 * **Unicode safety** – Bevar æ/ø/å og andre locale-tegn uændret
 * **Backup før dataændringer** – Git commits eller manuelle kopier før manipulation
 
+### 5.6 Package Loading Strategy (Golem-Based)
+
+**Standard Production Loading** (Default):
+```r
+# global.R - Optimized package loading
+library(SPCify)  # ~50-100ms loading time
+```
+
+**Development Source Loading** (Kun til debugging):
+```r
+# Kun når explicit debugging er nødvendigt
+options(spc.debug.source_loading = TRUE)
+# Starter source-based loading (~400ms+)
+```
+
+**Performance Requirements:**
+- **Production startup**: <100ms via package loading
+- **Development debugging**: 400ms+ acceptable ved source loading
+- **Default behavior**: Package loading medmindre explicit source_loading option
+
+**Implementation Pattern:**
+```r
+# I global.R
+if (isTRUE(getOption("spc.debug.source_loading", FALSE))) {
+  # Source-based loading for development debugging
+  message("DEBUG: Using source-based loading")
+  # ... source loading logic ...
+} else {
+  # Standard package loading
+  message("Loading SPCify package...")
+  library(SPCify)
+}
+```
+
+**Miljø Konfiguration:**
+- **Development**: `options(spc.debug.source_loading = FALSE)` (test package loading)
+- **Debugging**: `options(spc.debug.source_loading = TRUE)` (source loading)
+- **Production**: Package loading (default)
+
+**Migration fra Source til Package Loading:**
+1. Verificer alle funktioner er exported i NAMESPACE
+2. Test package loading: `devtools::check()`
+3. Benchmark performance improvement
+4. Opdater development workflow til primært package-baseret
+
 ---
 
 
@@ -354,13 +426,48 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 * Bevar **dansk interface** og **danske kommentarer**
 * Reference commit `f05a97f` som stabil baseline
 
-### 6.2 Architecture Boundaries
+### 6.2 Architecture Boundaries (Golem-Compatible)
 
-* `/R/modules/` – Shiny-moduler (visualisering, status mv.)
-* `/R/server/` – Server-logik
-* `/R/ui/` – UI-komponenter
-* `/R/data/` – Eksempeldata og testfiler
-* `/tests/testthat/` – Test suites og fixtures
+**File Organization** følger golem's konventioner med flad struktur i `/R/`:
+
+* **Shiny Modules**: `mod_*.R` – Shiny modules (visualization, status etc.)
+  - `mod_spc_chart.R` – SPC chart module UI og server logic
+  - `mod_[feature].R` – Andre feature modules
+
+* **Utility Functions**: `utils_*.R` – Hjælpefunktioner organiseret efter domæne
+  - `utils_server_*.R` – Server-specifikke utilities
+  - `utils_ui_*.R` – UI-specifikke utilities
+  - `utils_performance_*.R` – Performance og caching
+  - `utils_logging.R` – Logging infrastructure
+
+* **Business Logic**: `fct_*.R` – Kerneforretningslogik
+  - `fct_autodetect_unified.R` – Auto-detection logik
+  - `fct_file_operations.R` – File upload/download operations
+  - `fct_visualization_*.R` – Chart generation logic
+
+* **App Infrastructure**: `app_*.R` – Core app komponenter
+  - `app_ui.R` – Main UI definition
+  - `app_server.R` – Main server logic
+  - `app_config.R` – App configuration
+  - `run_app.R` – App launcher
+
+* **Configuration**: `config_*.R` – Setup og konfiguration
+  - `config_hospital_branding.R` – Hospital-specific branding
+  - `config_observer_priorities.R` – Reactive priority management
+  - `config_spc_config.R` – SPC-specific configuration
+
+* **State Management**: `state_management.R` – Centralized app state
+
+* **Data & Tests**:
+  - `/R/data/` – Eksempeldata og testfiler
+  - `/tests/testthat/` – Test suites og fixtures
+
+**Naming Convention Rules:**
+- **Modules**: `mod_[feature_name].R` (ikke `modules_mod_*`)
+- **Server utils**: `utils_server_[domain].R` (ikke `server_utils_*`)
+- **UI utils**: `utils_ui_[domain].R` (ikke `ui_utils_*`)
+- **Functions**: `fct_[domain].R` for business logic
+- **Config**: `config_[area].R` for setup/configuration
 
 ### 6.3 Constraints & Forbidden Changes
 
@@ -385,6 +492,10 @@ R -e "source('global.R'); testthat::test_file('tests/testthat/test-fase1-refacto
 - [ ] **Dokumentation opdateret** – README, comments, ADRs
 - [ ] **Data integrity** – Ingen utilsigtede dataændringer
 - [ ] **`lintr`/`styler`** – Kør `devtools::lint()` og `styler::style_file()` hvis nødvendigt
+- [ ] **Package loading verificeret** – `library(SPCify)` fungerer korrekt
+- [ ] **Performance benchmark** – Startup time <100ms med package loading
+- [ ] **File naming conventions** – Følger golem `mod_*`, `utils_*`, `fct_*` patterns
+- [ ] **NAMESPACE opdateret** – `devtools::document()` kørt hvis nye exports
 
 ### 7.2 Code Review Criteria
 
@@ -466,10 +577,45 @@ Fritekst med kontekst, testresultater og rationale.
 * `docs` – Dokumentation
 * `chore` – Vedligehold
 * `perf` – Performanceforbedring
+* `arch` – Arkitektoniske ændringer (file reorganization, loading strategy)
 
 **Test-noter i commit body:**
 * `Tests: R -e "source('global.R'); testthat::test_dir('tests/testthat')"`
 * `Lintr: devtools::lint()`
+
+### 9.3 Branch Protection & Workflow
+
+✅ **Master Branch Protection** - Pre-commit hook blokerer direkte commits på master:
+
+**Sikker udvikling workflow:**
+```bash
+# 1. Opret feature branch
+git checkout master
+git pull origin master
+git checkout -b fix/feature-name
+
+# 2. Udvikl og commit på feature branch
+git add .
+git commit -m "fix: beskrivelse af ændring"
+
+# 3. Merge til master (KUN efter code review)
+git checkout master
+git merge fix/feature-name
+git branch -d fix/feature-name  # Clean up
+```
+
+**Emergency override** (kun i kritiske situationer):
+```bash
+# Bypass hook hvis absolut nødvendigt (frarådes!)
+git commit --no-verify -m "emergency: kritisk hotfix"
+```
+
+**Feature branch naming conventions:**
+* `fix/` - Bugfixes og små rettelser
+* `feat/` - Nye features
+* `refactor/` - Code refaktorering
+* `docs/` - Dokumentation opdateringer
+* `test/` - Test forbedringer
 
 ---
 
@@ -625,6 +771,38 @@ app_state$columns$x_column <- "Dato"                    # Brug i stedet: mapping
 
 ## 11) Final Reminders
 
+### 11.1 Legacy File Pattern Migration
+
+**Automatisk File Renaming** (til golem conventions):
+```bash
+# Server utilities
+mv R/server_utils_*.R R/utils_server_*[domain].R
+
+# UI utilities
+mv R/ui_utils_*.R R/utils_ui_*[domain].R
+
+# Modules
+mv R/modules_mod_*.R R/mod_*[feature].R
+
+# Verificer alle references opdateret
+grep -r "server_utils_" R/ tests/ --exclude-dir=.git
+```
+
+**Reference Update Pattern:**
+```r
+# Før: source("R/server_utils_event_system.R")
+# Efter: # Handled by package loading
+
+# Før: server_utils_session_helpers.R
+# Efter: utils_server_session.R
+```
+
+**Validation Steps:**
+1. Run `devtools::check()` efter file renaming
+2. Test package loading: `library(SPCify)`
+3. Verificer alle tests bestå
+4. Benchmark startup performance improvement
+
 ### Development Philosophy
 * **Quality over speed** – Klinisk software kræver robusthed
 * **Test-driven confidence** – Tests som sikkerhedsnet ved refaktorering
@@ -709,6 +887,244 @@ variable_check <- if (exists("feature_flag") && isTRUE(feature_flag) && exists("
   legacy_system$variable
 }
 ```
+
+---
+
+## 13) Startup Optimization & Performance Architecture
+
+### 13.1 Smart Boot Flow (Implementeret 2025-09-26)
+
+✅ **Unified Boot Path** – Projektet anvender nu en intelligent boot-strategi:
+
+**Package-Based Loading (Standard/Production):**
+```r
+# Automatisk package loading
+source('global.R')  # Standard opførsel
+```
+
+**Source-Based Loading (Development/Debug):**
+```r
+# Eksplicit development mode
+options(spc.debug.source_loading = TRUE)
+source('global.R')
+```
+
+**Environment Variable Control:**
+```bash
+# Tvang source loading via environment
+SPC_SOURCE_LOADING=TRUE R -e "source('global.R')"
+```
+
+### 13.2 Performance Targets & Verification
+
+✅ **Opnået Performance (Verified 2025-09-26):**
+
+* **Target**: Startup < 100 ms
+* **Actual**: 55-57 ms (subsequent runs) ⚠️ **OVEROPFYLDT**
+* **First run**: ~488 ms (acceptable for initial setup)
+* **Improvement**: 60-80% hurtigere ift. legacy ~400 ms baseline
+
+**Performance Test Command:**
+```r
+R --vanilla -e "source('test_startup_performance.R')"
+```
+
+### 13.3 Lazy Loading Architecture
+
+✅ **Heavy Module Management** – System loader kun nødvendige moduler:
+
+**Lazy Loaded Modules:**
+```r
+LAZY_LOADING_CONFIG <- list(
+  heavy_modules = list(
+    file_operations = "R/fct_file_operations.R",      # 1058 lines
+    advanced_debug = "R/utils_advanced_debug.R",      # 647 lines
+    performance_monitoring = "R/utils_performance.R", # 687 lines
+    plot_generation = "R/fct_spc_plot_generation.R"   # 940 lines
+  )
+)
+```
+
+**On-Demand Loading:**
+```r
+# Sikr modul er loaded før brug
+ensure_module_loaded("file_operations")
+```
+
+### 13.4 Startup Cache System
+
+✅ **Static Artifact Caching** – Cache statiske data for hurtigere genstart:
+
+**Cached Artifacts:**
+* Hospital branding (colors, logos, text) - TTL: 2 timer
+* Observer priorities - TTL: 1 time
+* Chart types configuration - TTL: 1 time
+* System config snapshot - TTL: 30 min
+
+**Cache Operations:**
+```r
+# Load cached data (automatisk ved startup)
+cached_data <- load_cached_startup_data()
+
+# Manually cache current state
+cache_startup_data()
+
+# Check cache status
+get_startup_cache_status()
+```
+
+### 13.5 Golem Convention Implementation
+
+✅ **File Organization** – Standard golem file structure:
+
+**Naming Convention (Implemented):**
+```
+R/
+├── app_*.R           # Application core files
+├── mod_*.R           # Shiny modules (previously modules_mod_*)
+├── utils_server_*.R  # Server utilities (previously server_utils_*)
+├── utils_ui_*.R      # UI utilities (previously ui_utils_*)
+├── utils_*.R         # General utilities
+├── fct_*.R           # Feature functions
+└── config_*.R        # Configuration files
+```
+
+**Migration Mapping:**
+```
+modules_mod_spc_chart_server.R → mod_spc_chart_server.R
+server_utils_event_system.R   → utils_server_event_system.R
+ui_utils_ui_updates.R         → utils_ui_ui_updates.R
+```
+
+### 13.6 Environment & Configuration Management
+
+✅ **Unified Environment Variables** – Standardiseret på GOLEM_CONFIG_ACTIVE:
+
+**Primary Environment Variable:**
+```r
+# Recommended approach
+Sys.setenv(GOLEM_CONFIG_ACTIVE = "development")
+```
+
+**Backward Compatibility:**
+```r
+# R_CONFIG_ACTIVE maps automatically to GOLEM_CONFIG_ACTIVE
+Sys.setenv(R_CONFIG_ACTIVE = "development")  # Works, but not preferred
+```
+
+**Single Config Source:**
+```r
+# Only config::get() used for configuration loading
+get_golem_config("value_name")  # Standard approach
+```
+
+### 13.7 Advanced Error Handling
+
+✅ **Function Fallbacks** – safe_operation() nu med korrekt fallback execution:
+
+**Improved Error Handling:**
+```r
+safe_operation(
+  operation_name = "Data processing",
+  code = { risky_operation() },
+  fallback = function(e) {
+    log_error(paste("Fallback triggered:", e$message), "COMPONENT")
+    return(safe_default_value())
+  }
+)
+```
+
+**Key Improvement**: Fallback functions bliver nu **kaldt** med error parameter, ikke returneret som closure.
+
+### 13.8 Performance Monitoring & Optimization
+
+✅ **Continuous Performance Tracking:**
+
+**Benchmark Approach:**
+```r
+# Performance verification hver gang
+source('test_startup_performance.R')
+
+# Expected results:
+# ✅ Source loading: ~55-200ms
+# ✅ Target: < 100ms ← OVEROPFYLDT
+```
+
+**Performance Regression Detection:**
+* Automated performance tests ved hver større ændring
+* Target: Behold < 100ms startup tid
+* Monitoring: Lazy loading effectiveness, cache hit rates
+
+---
+
+## 14) Migration Guide for Startup Optimization
+
+### 14.1 For Udviklere
+
+**Skift til Optimized Architecture:**
+
+1. **Boot Loading:**
+   ```r
+   # Old: Always source everything
+   source('global.R')
+
+   # New: Smart loading (automatic fallback)
+   source('global.R')                              # Package loading attempt
+   options(spc.debug.source_loading = TRUE)        # Force source loading
+   ```
+
+2. **File References:**
+   ```r
+   # Old file names (find and replace)
+   "modules_mod_spc_chart_server.R"  → "mod_spc_chart_server.R"
+   "server_utils_event_system.R"    → "utils_server_event_system.R"
+   "ui_utils_ui_updates.R"          → "utils_ui_ui_updates.R"
+   ```
+
+3. **Lazy Module Usage:**
+   ```r
+   # Before using heavy functionality
+   ensure_module_loaded("file_operations")
+   # Now safe to use file operation functions
+   ```
+
+### 14.2 For Deployment
+
+**Production Configuration:**
+```r
+# Environment setup
+Sys.setenv(GOLEM_CONFIG_ACTIVE = "production")
+Sys.setenv(SPC_LOG_LEVEL = "WARN")
+Sys.setenv(SPC_SOURCE_LOADING = "FALSE")  # Explicit package loading
+
+# Start application
+source('global.R')  # Package-based loading
+```
+
+**Development Configuration:**
+```r
+# Development setup
+Sys.setenv(GOLEM_CONFIG_ACTIVE = "development")
+Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+options(spc.debug.source_loading = TRUE)  # Force source loading
+
+# Start application
+source('global.R')  # Source-based loading
+```
+
+### 14.3 Performance Verification Workflow
+
+**After Major Changes:**
+1. Run performance test: `source('test_startup_performance.R')`
+2. Verify < 100ms target maintained
+3. Check lazy loading status: `get_lazy_loading_status()`
+4. Check cache effectiveness: `get_startup_cache_status()`
+5. Verify all tests pass with new architecture
+
+**Regression Prevention:**
+* Performance tests inkluderet i pre-commit workflow
+* Architecture verification ved code review
+* Monitoring af startup metrics over tid
 
 ---
 

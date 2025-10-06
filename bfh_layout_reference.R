@@ -171,4 +171,4 @@ niveau <- gridtext::richtext_grob(
 plot <- ggdraw(spc_plot) + draw_grob(maal) + draw_grob(niveau)
 
 # return(spc_plot)
-plot
+print(plot)
