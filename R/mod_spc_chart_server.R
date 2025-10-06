@@ -345,7 +345,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           inputs$frys_hash,
           inputs$title,
           inputs$y_axis_unit,
-          inputs$kommentar_column
+          inputs$kommentar_column,
+          inputs$base_size  # FIX: Invalidér cache ved breddeændring/fuldskærm
         ),
         algo = "xxhash64"
       )
@@ -532,7 +533,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           inputs$frys_hash,
           inputs$title,
           inputs$y_axis_unit,
-          inputs$kommentar_column
+          inputs$kommentar_column,
+          inputs$base_size  # FIX: Invalidér cache ved breddeændring/fuldskærm
         )
       })
 
@@ -551,7 +553,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     }) %>%
       bindCache({
         result <- spc_results()
-        list("spc_plot", result$cache_key %||% "empty")
+        inputs <- spc_inputs()
+        list(
+          "spc_plot",
+          result$cache_key %||% "empty",
+          inputs$base_size  # FIX: Eksplicit breddeafhængig invalidering
+        )
       })
 
     # Sikr at anhoej_results også opdateres ved cache hits
