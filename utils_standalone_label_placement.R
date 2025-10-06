@@ -136,61 +136,57 @@ clamp_to_bounds <- function(x, low_bound, high_bound) {
 #'   - `limits`: c(ymin, ymax)
 #'   - `trans_name`: transformation navn (fx "identity", "log10")
 #'
-#' @examples
-#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
-#' mapper <- npc_mapper_from_plot(p)
-#' mapper$y_to_npc(20)  # Konverter 20 mpg til NPC
-#' mapper$npc_to_y(0.5) # Konverter 0.5 NPC til mpg
-npc_mapper_from_plot <- function(p, panel = 1) {
-  # Validate ggplot object
-  if (is.null(p) || !inherits(p, "ggplot")) {
-    stop("npc_mapper_from_plot: p skal være et ggplot object, modtog: ", class(p)[1])
+#' Opret NPC mapper fra et pre-built ggplot object (PERFORMANCE OPTIMIZED)
+#'
+#' Denne funktion accepterer et allerede bygget plot (ggplot_built object)
+#' og opretter samme mapper som npc_mapper_from_plot(), men uden overhead
+#' fra at bygge plottet igen.
+#'
+#' @param built_plot ggplot_built object fra ggplot2::ggplot_build()
+#' @param panel Panel index (default 1)
+#' @param original_plot Optional: Original ggplot object (kun nødvendigt for fallback scale extraction)
+#'
+#' @return List med y_to_npc og npc_to_y funktioner
+#'
+#' @keywords internal
+npc_mapper_from_built <- function(built_plot, panel = 1, original_plot = NULL) {
+  # Validate built plot object
+  if (is.null(built_plot) || !inherits(built_plot, "ggplot_built")) {
+    stop("npc_mapper_from_built: built_plot skal være et ggplot_built object")
   }
 
   # Validate panel parameter
   if (!is.numeric(panel) || length(panel) != 1 || panel < 1 || panel != floor(panel)) {
-    stop("npc_mapper_from_plot: panel skal være et positivt heltal, modtog: ", panel)
+    stop("npc_mapper_from_built: panel skal være et positivt heltal, modtog: ", panel)
   }
 
-  # Build plot med fejlhåndtering
-  b <- tryCatch({
-    ggplot2::ggplot_build(p)
-  }, error = function(e) {
-    stop("npc_mapper_from_plot: Kunne ikke bygge ggplot object. Fejl: ", e$message)
-  })
-
-  # Validate plot build structure
-  if (is.null(b) || !inherits(b, "ggplot_built")) {
-    stop("npc_mapper_from_plot: Ugyldig ggplot_build struktur")
-  }
-
-  if (is.null(b$layout) || is.null(b$layout$panel_params)) {
-    stop("npc_mapper_from_plot: Plot mangler layout information")
+  if (is.null(built_plot$layout) || is.null(built_plot$layout$panel_params)) {
+    stop("npc_mapper_from_built: Plot mangler layout information")
   }
 
   # Validate panel exists
-  if (panel > length(b$layout$panel_params)) {
+  if (panel > length(built_plot$layout$panel_params)) {
     stop(sprintf(
-      "npc_mapper_from_plot: Panel %d eksisterer ikke (plot har kun %d panels)",
-      panel, length(b$layout$panel_params)
+      "npc_mapper_from_built: Panel %d eksisterer ikke (plot har kun %d panels)",
+      panel, length(built_plot$layout$panel_params)
     ))
   }
 
   # Prøv forskellige metoder til at få panel params (robust på tværs af ggplot2 versioner)
   pp <- tryCatch({
-    b$layout$panel_params[[panel]]
+    built_plot$layout$panel_params[[panel]]
   }, error = function(e) {
     tryCatch({
-      b$layout$panel_scales_y[[panel]]
+      built_plot$layout$panel_scales_y[[panel]]
     }, error = function(e2) NULL)
   })
 
   if (is.null(pp)) {
-    stop("Kunne ikke hente panel parameters fra ggplot. Tjek ggplot2 version.")
+    stop("Kunne ikke hente panel parameters fra built plot. Tjek ggplot2 version.")
   }
 
   # Udtræk limits og transformation
-  get_scale_info <- function(pp) {
+  get_scale_info <- function(pp, original_plot) {
     lims <- NULL
     trans <- NULL
     trans_name <- "identity"
@@ -208,9 +204,9 @@ npc_mapper_from_plot <- function(p, panel = 1) {
       lims <- pp$y.range
     }
 
-    # Fallback til plot scale
-    if (is.null(lims)) {
-      y_scales <- Filter(function(s) "y" %in% s$aesthetics, p$scales$scales)
+    # Fallback til original plot scale (hvis tilgængeligt)
+    if (is.null(lims) && !is.null(original_plot)) {
+      y_scales <- Filter(function(s) "y" %in% s$aesthetics, original_plot$scales$scales)
       if (length(y_scales) > 0) {
         lims <- y_scales[[1]]$get_limits()
         trans <- y_scales[[1]]$trans
@@ -221,7 +217,7 @@ npc_mapper_from_plot <- function(p, panel = 1) {
     }
 
     if (is.null(lims) || length(lims) != 2) {
-      stop("Kunne ikke bestemme y-akse limits fra plot.")
+      stop("Kunne ikke bestemme y-akse limits fra built plot.")
     }
 
     # Trans function
@@ -241,7 +237,7 @@ npc_mapper_from_plot <- function(p, panel = 1) {
     list(lims = lims, trans = trans_fun, inv_trans = inv_trans_fun, trans_name = trans_name)
   }
 
-  info <- get_scale_info(pp)
+  info <- get_scale_info(pp, original_plot)
   ymin <- info$lims[1]
   ymax <- info$lims[2]
 
@@ -313,6 +309,33 @@ npc_mapper_from_plot <- function(p, panel = 1) {
   )
 }
 
+#' @examples
+#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+#' mapper <- npc_mapper_from_plot(p)
+#' mapper$y_to_npc(20)  # Konverter 20 mpg til NPC
+#' mapper$npc_to_y(0.5) # Konverter 0.5 NPC til mpg
+npc_mapper_from_plot <- function(p, panel = 1) {
+  # Validate ggplot object
+  if (is.null(p) || !inherits(p, "ggplot")) {
+    stop("npc_mapper_from_plot: p skal være et ggplot object, modtog: ", class(p)[1])
+  }
+
+  # Validate panel parameter
+  if (!is.numeric(panel) || length(panel) != 1 || panel < 1 || panel != floor(panel)) {
+    stop("npc_mapper_from_plot: panel skal være et positivt heltal, modtog: ", panel)
+  }
+
+  # Build plot med fejlhåndtering
+  b <- tryCatch({
+    ggplot2::ggplot_build(p)
+  }, error = function(e) {
+    stop("npc_mapper_from_plot: Kunne ikke bygge ggplot object. Fejl: ", e$message)
+  })
+
+  # Delegate til optimized version
+  npc_mapper_from_built(b, panel = panel, original_plot = p)
+}
+
 
 # ==============================================================================
 # LABEL HEIGHT ESTIMATION
@@ -370,6 +393,105 @@ get_grob_cache_stats <- function() {
 #' - Hvis en device er åben: Brug den (respekter caller's viewport)
 #' - Hvis ingen device: Åbn temp device med device_width x device_height
 #'
+#' Mål panel højde fra pre-built ggplot (PERFORMANCE OPTIMIZED)
+#'
+#' Denne funktion accepterer et pre-built plot og gtable og måler panel højden
+#' uden at bygge plottet igen.
+#'
+#' @param built_plot ggplot_built object fra ggplot2::ggplot_build()
+#' @param gtable gtable object fra ggplot2::ggplot_gtable() (optional, genereres hvis NULL)
+#' @param panel Panel index (default 1)
+#' @param device_width Device width i inches (kun hvis ingen device er åben)
+#' @param device_height Device height i inches (kun hvis ingen device er åben)
+#'
+#' @return Panel højde i inches, eller NULL hvis måling fejler
+#'
+#' @keywords internal
+measure_panel_height_from_built <- function(built_plot, gtable = NULL, panel = 1, device_width = 7, device_height = 7) {
+  tryCatch({
+    # Validate input
+    if (!inherits(built_plot, "ggplot_built")) {
+      stop("built_plot skal være et ggplot_built object")
+    }
+
+    # Build gtable hvis ikke allerede gjort
+    if (is.null(gtable)) {
+      gtable <- ggplot2::ggplot_gtable(built_plot)
+    }
+
+    # Delegate til shared implementation
+    measure_panel_height_from_gtable(gtable, panel, device_width, device_height)
+  }, error = function(e) {
+    warning("Kunne ikke måle panel højde: ", e$message)
+    return(NULL)
+  })
+}
+
+#' Mål panel højde fra gtable (SHARED IMPLEMENTATION)
+#'
+#' @keywords internal
+measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, device_height = 7) {
+  # Find panel viewport navn fra gtable layout
+  panel_layout <- gt$layout[gt$layout$name == "panel", , drop = FALSE]
+
+  if (nrow(panel_layout) == 0) {
+    stop("Kunne ikke finde panel i plot layout")
+  }
+
+  if (panel > nrow(panel_layout)) {
+    stop(sprintf("Panel %d findes ikke (plot har %d panels)", panel, nrow(panel_layout)))
+  }
+
+  # Construct panel viewport navn (typisk format: "panel.t-l-b-r")
+  panel_row <- panel_layout[panel, , drop = FALSE]
+  panel_vp_name <- sprintf("panel.%s-%s-%s-%s",
+                          panel_row$t, panel_row$l,
+                          panel_row$b, panel_row$r)
+
+  # Check om der er en aktiv device
+  # dev.cur() returnerer 1 hvis ingen device er åben (null device)
+  needs_temp_device <- (grDevices::dev.cur() == 1)
+
+  if (needs_temp_device) {
+    # Open temporary PDF device for measurement
+    # NOTE: Vi bruger PDF fordi det er deterministisk (ikke skærmafhængigt)
+    temp_file <- tempfile(fileext = ".pdf")
+    grDevices::pdf(file = temp_file, width = device_width, height = device_height)
+    on.exit({
+      grDevices::dev.off()
+      unlink(temp_file, force = TRUE)
+    }, add = TRUE)
+  }
+
+  # Render plot til device
+  grid::grid.newpage()
+  grid::grid.draw(gt)
+
+  # Force all grobs to be evaluated
+  grid::grid.force()
+
+  # Navigate til panel viewport
+  # NOTE: seekViewport() finder viewport i hele tree
+  tryCatch({
+    grid::seekViewport(panel_vp_name)
+  }, error = function(e) {
+    # Fallback: prøv generisk "panel" navn
+    grid::seekViewport("panel")
+  })
+
+  # Mål højde i current (panel) viewport
+  panel_height <- grid::convertHeight(
+    grid::unit(1, "npc"),
+    "inches",
+    valueOnly = TRUE
+  )
+
+  # Navigate tilbage til ROOT
+  grid::upViewport(0)
+
+  return(panel_height)
+}
+
 #' @examples
 #' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
 #' panel_h <- measure_panel_height_inches(p)
@@ -391,66 +513,8 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
     b <- ggplot2::ggplot_build(p)
     gt <- ggplot2::ggplot_gtable(b)
 
-    # Find panel viewport navn fra gtable layout
-    panel_layout <- gt$layout[gt$layout$name == "panel", , drop = FALSE]
-
-    if (nrow(panel_layout) == 0) {
-      stop("Kunne ikke finde panel i plot layout")
-    }
-
-    if (panel > nrow(panel_layout)) {
-      stop(sprintf("Panel %d findes ikke (plot har %d panels)", panel, nrow(panel_layout)))
-    }
-
-    # Construct panel viewport navn (typisk format: "panel.t-l-b-r")
-    panel_row <- panel_layout[panel, , drop = FALSE]
-    panel_vp_name <- sprintf("panel.%s-%s-%s-%s",
-                            panel_row$t, panel_row$l,
-                            panel_row$b, panel_row$r)
-
-    # Check om der er en aktiv device
-    # dev.cur() returnerer 1 hvis ingen device er åben (null device)
-    needs_temp_device <- (grDevices::dev.cur() == 1)
-
-    if (needs_temp_device) {
-      # Open temporary PDF device for measurement
-      # NOTE: Vi bruger PDF fordi det er deterministisk (ikke skærmafhængigt)
-      temp_file <- tempfile(fileext = ".pdf")
-      grDevices::pdf(file = temp_file, width = device_width, height = device_height)
-      on.exit({
-        grDevices::dev.off()
-        unlink(temp_file, force = TRUE)
-      }, add = TRUE)
-    }
-
-    # Render plot til device
-    grid::grid.newpage()
-    grid::grid.draw(gt)
-
-    # Force all grobs to be evaluated
-    grid::grid.force()
-
-    # Navigate til panel viewport
-    # NOTE: seekViewport() finder viewport i hele tree
-    tryCatch({
-      grid::seekViewport(panel_vp_name)
-    }, error = function(e) {
-      # Fallback: prøv generisk "panel" navn
-      grid::seekViewport("panel")
-    })
-
-    # Mål højde i current (panel) viewport
-    panel_height <- grid::convertHeight(
-      grid::unit(1, "npc"),
-      "inches",
-      valueOnly = TRUE
-    )
-
-    # Navigate tilbage til ROOT
-    grid::upViewport(0)
-
-    return(panel_height)
-
+    # Delegate til shared implementation
+    measure_panel_height_from_gtable(gt, panel, device_width, device_height)
   }, error = function(e) {
     warning("measure_panel_height_inches fejlede: ", e$message,
             " - returnerer NULL")
