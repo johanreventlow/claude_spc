@@ -42,10 +42,12 @@ LABEL_PLACEMENT_CONFIG <- list(
   # === Gap Configuration (relative til label_height_npc) ===
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
 
-  relative_gap_line = 0.4,
+  relative_gap_line = 0.0,
   # 0% - ingen gap (baseline efter fejlsøgning)
-  # Rationale: Gap mellem label og linje elimineres via placement algoritme.
-  #            Negativ gap kan bruges til kompensation hvis marquee spacing ændres.
+  # Rationale: Gap mellem label og linje minimeres. Placement algoritme bruger
+  #            over/under strategi når linjer er tætte (<label_height gap).
+  # VIGTIGT: Værdier > 0.0 kan forårsage collision når linjer er tætte.
+  #          Labels med height 7% kan ikke passe mellem linjer med 4% gap.
 
   relative_gap_labels = 0.30,
   # 30% af label højde
@@ -56,12 +58,12 @@ LABEL_PLACEMENT_CONFIG <- list(
   # === Panel Padding ===
   # Fixed NPC værdier - sikrer labels aldrig går uden for panel edges
 
-  pad_top = 0.01,
+  pad_top = 0.1,
   # 1% top padding
   # Rationale: Minimal padding for at undgå at labels klippes ved panel top.
   #            Sammenlignet med ggplot2 default expansion (5%), dette er konservativt.
 
-  pad_bot = 0.01,
+  pad_bot = 0.1,
   # 1% bottom padding
   # Rationale: Symmetrisk med pad_top for konsistent appearance.
 
@@ -106,7 +108,7 @@ LABEL_PLACEMENT_CONFIG <- list(
 
   # === Height Estimation (grob-baseret) ===
 
-  height_safety_margin = 1.0,
+  height_safety_margin = 1.00,
   # Ingen ekstra margin (ændret fra 1.05 for tæt label placering)
   # Rationale: Labels placeres præcist uden buffer.
   #            ADVARSEL: Kan medføre minimal overlap ved afrundingsfejl.
