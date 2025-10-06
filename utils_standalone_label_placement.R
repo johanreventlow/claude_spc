@@ -15,6 +15,8 @@
 # - Device-independent (NPC koordinater 0-1)
 # - Robust på tværs af ggplot2 versioner
 # - Edge case handling (sammenfaldende linjer, bounds violations)
+# - TTL-baseret cache management (forhindrer memory creep)
+# - Auto-purge strategi med configurable limits
 #
 # DEPENDENCIES:
 # - ggplot2
@@ -56,11 +58,36 @@
 # yB_data <- mapper$npc_to_y(result$yB)
 #
 # EXPORTS:
+# Core placement functions:
 # - npc_mapper_from_plot()
 # - estimate_label_height_npc()
 # - place_two_labels_npc()
 # - propose_single_label()
 # - clamp01()
+#
+# Cache management API:
+# - get_placement_cache_stats()        # Get combined cache statistics
+# - purge_expired_cache_entries()       # Manual TTL-based purge
+# - clear_all_placement_caches()        # Clear all caches (testing)
+# - configure_placement_cache()         # Configure TTL/limits globally
+#
+# CACHE CONFIGURATION:
+# Default configuration (suitable for most Shiny sessions):
+# - TTL: 300 seconds (5 minutes)
+# - Max size: 100 entries per cache (panel_height + grob_height)
+# - Purge interval: Every 50 cache operations
+# - Strategy: TTL-based expiration + FIFO when max size exceeded
+#
+# For short-lived sessions (quick interactions):
+#   configure_placement_cache(ttl_seconds = 60, max_cache_size = 50)
+#
+# For long-running sessions (persistent dashboards):
+#   configure_placement_cache(ttl_seconds = 600, max_cache_size = 200)
+#
+# Monitor cache health:
+#   stats <- get_placement_cache_stats()
+#   cat("Hit rate:", round(stats$panel_cache$hit_rate * 100, 1), "%\n")
+#   cat("Memory:", stats$total_memory_kb, "KB\n")
 #
 # ==============================================================================
 
@@ -341,69 +368,524 @@ npc_mapper_from_plot <- function(p, panel = 1) {
 # LABEL HEIGHT ESTIMATION
 # ==============================================================================
 
+# ==============================================================================
+# GROB HEIGHT CACHE - TTL-BASERET MEMORY MANAGEMENT
+# ==============================================================================
+
 # Global memoization cache for grob height measurements
 # Created once at package/script load time
 .grob_height_cache <- new.env(parent = emptyenv())
+
+# Cache configuration med TTL og size limits
+.grob_cache_config <- list(
+  ttl_seconds = 300,           # 5 minutes (layout genbruges typisk inden for få minutter)
+  max_cache_size = 100,        # Max entries før forced purge
+  purge_check_interval = 50    # Check for expired entries hver N'te operation
+)
+
+# Cache statistics tracking
+.grob_cache_stats <- list(
+  hits = 0L,
+  misses = 0L,
+  operations = 0L,
+  last_purge_time = Sys.time()
+)
 
 #' Clear grob height cache (for testing or memory management)
 #'
 #' @keywords internal
 clear_grob_height_cache <- function() {
-  rm(list = ls(.grob_height_cache), envir = .grob_height_cache)
+  # Clear all data entries (preserve metadata)
+  all_keys <- ls(.grob_height_cache)
+  data_keys <- all_keys[!grepl("^\\.", all_keys)]
+  rm(list = data_keys, envir = .grob_height_cache)
+
+  # Reset statistics
+  .grob_cache_stats$hits <<- 0L
+  .grob_cache_stats$misses <<- 0L
+  .grob_cache_stats$operations <<- 0L
+  .grob_cache_stats$last_purge_time <<- Sys.time()
+
   invisible(NULL)
 }
 
-#' Get cache statistics
+#' Get grob cache statistics
 #'
-#' @return List with cache_size and example keys
+#' @return List with cache_size, hits, misses, hit_rate, memory_estimate
 #' @keywords internal
 get_grob_cache_stats <- function() {
-  keys <- ls(.grob_height_cache)
+  all_keys <- ls(.grob_height_cache)
+  data_keys <- all_keys[!grepl("^\\.", all_keys)]
+
+  hits <- .grob_cache_stats$hits
+  misses <- .grob_cache_stats$misses
+  total_ops <- hits + misses
+
+  # Estimate memory usage (rough approximation)
+  # Each entry: ~200 bytes (key) + ~100 bytes (value) + ~50 bytes (timestamp)
+  memory_bytes <- length(data_keys) * 350
+
   list(
-    cache_size = length(keys),
-    cached_keys = if (length(keys) > 5) keys[1:5] else keys
+    cache_size = length(data_keys),
+    cache_hits = hits,
+    cache_misses = misses,
+    hit_rate = if (total_ops > 0) hits / total_ops else 0,
+    memory_estimate_kb = round(memory_bytes / 1024, 2),
+    operations_since_last_purge = .grob_cache_stats$operations,
+    last_purge_time = .grob_cache_stats$last_purge_time,
+    config = .grob_cache_config
   )
 }
+
+#' Purge expired entries from grob height cache
+#'
+#' @param force Logical: If TRUE, purge all entries regardless of TTL
+#' @return Integer: Number of entries purged
+#' @keywords internal
+purge_grob_cache_expired <- function(force = FALSE) {
+  all_keys <- ls(.grob_height_cache)
+  data_keys <- all_keys[!grepl("^\\.", all_keys)]
+
+  if (length(data_keys) == 0) {
+    return(0L)
+  }
+
+  current_time <- Sys.time()
+  ttl_seconds <- .grob_cache_config$ttl_seconds
+  purged_count <- 0L
+
+  if (force) {
+    # Force purge: Remove all entries
+    rm(list = data_keys, envir = .grob_height_cache)
+    purged_count <- length(data_keys)
+  } else {
+    # TTL-based purge: Check timestamps
+    for (key in data_keys) {
+      timestamp_key <- paste0(".", key, "_timestamp")
+
+      if (exists(timestamp_key, envir = .grob_height_cache)) {
+        timestamp <- .grob_height_cache[[timestamp_key]]
+        age_seconds <- as.numeric(difftime(current_time, timestamp, units = "secs"))
+
+        if (age_seconds > ttl_seconds) {
+          rm(list = c(key, timestamp_key), envir = .grob_height_cache)
+          purged_count <- purged_count + 1L
+        }
+      } else {
+        # No timestamp - legacy entry, remove it
+        rm(list = key, envir = .grob_height_cache)
+        purged_count <- purged_count + 1L
+      }
+    }
+  }
+
+  # Update statistics
+  .grob_cache_stats$operations <<- 0L
+  .grob_cache_stats$last_purge_time <<- current_time
+
+  return(purged_count)
+}
+
+#' Auto-purge grob cache if needed
+#'
+#' Checks if purge is needed based on:
+#' 1. Operation count (every N operations)
+#' 2. Cache size (if exceeds max_cache_size)
+#'
+#' @keywords internal
+auto_purge_grob_cache <- function() {
+  # Increment operation counter
+  .grob_cache_stats$operations <<- .grob_cache_stats$operations + 1L
+
+  all_keys <- ls(.grob_height_cache)
+  data_keys <- all_keys[!grepl("^\\.", all_keys)]
+  current_size <- length(data_keys)
+
+  # Check if max size exceeded - FORCED purge (FIFO strategy)
+  if (current_size >= .grob_cache_config$max_cache_size) {
+    # Forced purge: Remove oldest entries to bring size down to 75% of max
+    target_size <- floor(.grob_cache_config$max_cache_size * 0.75)
+    entries_to_remove <- current_size - target_size
+
+    # Get entries with timestamps and sort by age
+    entries_with_time <- list()
+    for (key in data_keys) {
+      timestamp_key <- paste0(".", key, "_timestamp")
+      if (exists(timestamp_key, envir = .grob_height_cache)) {
+        entries_with_time[[key]] <- .grob_height_cache[[timestamp_key]]
+      } else {
+        entries_with_time[[key]] <- Sys.time() - 999999  # Very old
+      }
+    }
+
+    # Sort by timestamp (oldest first)
+    sorted_keys <- names(sort(unlist(entries_with_time)))
+    keys_to_remove <- head(sorted_keys, entries_to_remove)
+
+    # Remove oldest entries
+    for (key in keys_to_remove) {
+      timestamp_key <- paste0(".", key, "_timestamp")
+      rm(list = c(key, timestamp_key), envir = .grob_height_cache, inherits = FALSE)
+    }
+
+    return(invisible(NULL))
+  }
+
+  # Check if periodic purge needed (every N operations)
+  if (.grob_cache_stats$operations >= .grob_cache_config$purge_check_interval) {
+    purge_grob_cache_expired(force = FALSE)
+  }
+
+  invisible(NULL)
+}
+
+#' Configure grob height cache TTL and limits
+#'
+#' @param ttl_seconds TTL for cache entries in seconds (default 300 = 5 min)
+#' @param max_cache_size Maximum number of cache entries (default 100)
+#' @param purge_check_interval Operations between purge checks (default 50)
+#' @return Invisible: Previous configuration
+#' @export
+configure_grob_cache <- function(
+  ttl_seconds = NULL,
+  max_cache_size = NULL,
+  purge_check_interval = NULL
+) {
+  old_config <- .grob_cache_config
+
+  if (!is.null(ttl_seconds)) {
+    if (!is.numeric(ttl_seconds) || ttl_seconds <= 0) {
+      stop("ttl_seconds skal være et positivt tal")
+    }
+    .grob_cache_config$ttl_seconds <<- ttl_seconds
+  }
+
+  if (!is.null(max_cache_size)) {
+    if (!is.numeric(max_cache_size) || max_cache_size < 10) {
+      stop("max_cache_size skal være mindst 10")
+    }
+    .grob_cache_config$max_cache_size <<- as.integer(max_cache_size)
+  }
+
+  if (!is.null(purge_check_interval)) {
+    if (!is.numeric(purge_check_interval) || purge_check_interval < 1) {
+      stop("purge_check_interval skal være mindst 1")
+    }
+    .grob_cache_config$purge_check_interval <<- as.integer(purge_check_interval)
+  }
+
+  invisible(old_config)
+}
+
+# ==============================================================================
+# PANEL HEIGHT CACHE - TTL-BASERET MEMORY MANAGEMENT
+# ==============================================================================
 
 # Global cache for panel height measurements
 # Avoids expensive grid.draw() operations for repeated measurements
 .panel_height_cache <- new.env(parent = emptyenv())
 
+# Cache configuration med TTL og size limits
+.panel_cache_config <- list(
+  ttl_seconds = 300,           # 5 minutes (samme som grob cache)
+  max_cache_size = 100,        # Max entries før forced purge
+  purge_check_interval = 50    # Check for expired entries hver N'te operation
+)
+
+# Cache statistics tracking
+.panel_cache_stats <- list(
+  hits = 0L,
+  misses = 0L,
+  operations = 0L,
+  last_purge_time = Sys.time()
+)
+
 #' Clear panel height cache (for testing or memory management)
 #'
 #' @keywords internal
 clear_panel_height_cache <- function() {
-  rm(list = ls(.panel_height_cache), envir = .panel_height_cache)
+  # Clear all data entries (preserve metadata)
+  all_keys <- ls(.panel_height_cache)
+  data_keys <- all_keys[!grepl("^\\.", all_keys)]
+  rm(list = data_keys, envir = .panel_height_cache)
+
+  # Reset statistics
+  .panel_cache_stats$hits <<- 0L
+  .panel_cache_stats$misses <<- 0L
+  .panel_cache_stats$operations <<- 0L
+  .panel_cache_stats$last_purge_time <<- Sys.time()
+
   invisible(NULL)
 }
 
 #' Get panel height cache statistics
 #'
-#' @return List with cache_size, hits, misses
+#' @return List with cache_size, hits, misses, hit_rate, memory_estimate
 #' @keywords internal
 get_panel_height_cache_stats <- function() {
   all_keys <- ls(.panel_height_cache)
-
-  # Filter out metadata keys (start with dot)
   data_keys <- all_keys[!grepl("^\\.", all_keys)]
 
-  hits <- if (exists(".cache_hits", envir = .panel_height_cache)) {
-    .panel_height_cache[[".cache_hits"]]
-  } else {
-    0L
-  }
-  misses <- if (exists(".cache_misses", envir = .panel_height_cache)) {
-    .panel_height_cache[[".cache_misses"]]
-  } else {
-    0L
-  }
+  hits <- .panel_cache_stats$hits
+  misses <- .panel_cache_stats$misses
+  total_ops <- hits + misses
+
+  # Estimate memory usage (rough approximation)
+  # Each entry: ~300 bytes (digest key) + ~50 bytes (numeric value) + ~50 bytes (timestamp)
+  memory_bytes <- length(data_keys) * 400
 
   list(
-    cache_size = length(data_keys),  # Only count actual cached values
+    cache_size = length(data_keys),
     cache_hits = hits,
     cache_misses = misses,
-    hit_rate = if (hits + misses > 0) hits / (hits + misses) else 0
+    hit_rate = if (total_ops > 0) hits / total_ops else 0,
+    memory_estimate_kb = round(memory_bytes / 1024, 2),
+    operations_since_last_purge = .panel_cache_stats$operations,
+    last_purge_time = .panel_cache_stats$last_purge_time,
+    config = .panel_cache_config
   )
+}
+
+#' Purge expired entries from panel height cache
+#'
+#' @param force Logical: If TRUE, purge all entries regardless of TTL
+#' @return Integer: Number of entries purged
+#' @keywords internal
+purge_panel_cache_expired <- function(force = FALSE) {
+  all_keys <- ls(.panel_height_cache)
+  data_keys <- all_keys[!grepl("^\\.", all_keys)]
+
+  if (length(data_keys) == 0) {
+    return(0L)
+  }
+
+  current_time <- Sys.time()
+  ttl_seconds <- .panel_cache_config$ttl_seconds
+  purged_count <- 0L
+
+  if (force) {
+    # Force purge: Remove all entries
+    rm(list = data_keys, envir = .panel_height_cache)
+    purged_count <- length(data_keys)
+  } else {
+    # TTL-based purge: Check timestamps
+    for (key in data_keys) {
+      timestamp_key <- paste0(".", key, "_timestamp")
+
+      if (exists(timestamp_key, envir = .panel_height_cache)) {
+        timestamp <- .panel_height_cache[[timestamp_key]]
+        age_seconds <- as.numeric(difftime(current_time, timestamp, units = "secs"))
+
+        if (age_seconds > ttl_seconds) {
+          rm(list = c(key, timestamp_key), envir = .panel_height_cache)
+          purged_count <- purged_count + 1L
+        }
+      } else {
+        # No timestamp - legacy entry, remove it
+        rm(list = key, envir = .panel_height_cache)
+        purged_count <- purged_count + 1L
+      }
+    }
+  }
+
+  # Update statistics
+  .panel_cache_stats$operations <<- 0L
+  .panel_cache_stats$last_purge_time <<- current_time
+
+  return(purged_count)
+}
+
+#' Auto-purge panel height cache if needed
+#'
+#' Checks if purge is needed based on:
+#' 1. Operation count (every N operations)
+#' 2. Cache size (if exceeds max_cache_size)
+#'
+#' @keywords internal
+auto_purge_panel_cache <- function() {
+  # Increment operation counter
+  .panel_cache_stats$operations <<- .panel_cache_stats$operations + 1L
+
+  all_keys <- ls(.panel_height_cache)
+  data_keys <- all_keys[!grepl("^\\.", all_keys)]
+  current_size <- length(data_keys)
+
+  # Check if max size exceeded - FORCED purge (FIFO strategy)
+  if (current_size >= .panel_cache_config$max_cache_size) {
+    # Forced purge: Remove oldest entries to bring size down to 75% of max
+    target_size <- floor(.panel_cache_config$max_cache_size * 0.75)
+    entries_to_remove <- current_size - target_size
+
+    # Get entries with timestamps and sort by age
+    entries_with_time <- list()
+    for (key in data_keys) {
+      timestamp_key <- paste0(".", key, "_timestamp")
+      if (exists(timestamp_key, envir = .panel_height_cache)) {
+        entries_with_time[[key]] <- .panel_height_cache[[timestamp_key]]
+      } else {
+        entries_with_time[[key]] <- Sys.time() - 999999  # Very old
+      }
+    }
+
+    # Sort by timestamp (oldest first)
+    sorted_keys <- names(sort(unlist(entries_with_time)))
+    keys_to_remove <- head(sorted_keys, entries_to_remove)
+
+    # Remove oldest entries
+    for (key in keys_to_remove) {
+      timestamp_key <- paste0(".", key, "_timestamp")
+      rm(list = c(key, timestamp_key), envir = .panel_height_cache, inherits = FALSE)
+    }
+
+    return(invisible(NULL))
+  }
+
+  # Check if periodic purge needed (every N operations)
+  if (.panel_cache_stats$operations >= .panel_cache_config$purge_check_interval) {
+    purge_panel_cache_expired(force = FALSE)
+  }
+
+  invisible(NULL)
+}
+
+#' Configure panel height cache TTL and limits
+#'
+#' @param ttl_seconds TTL for cache entries in seconds (default 300 = 5 min)
+#' @param max_cache_size Maximum number of cache entries (default 100)
+#' @param purge_check_interval Operations between purge checks (default 50)
+#' @return Invisible: Previous configuration
+#' @export
+configure_panel_cache <- function(
+  ttl_seconds = NULL,
+  max_cache_size = NULL,
+  purge_check_interval = NULL
+) {
+  old_config <- .panel_cache_config
+
+  if (!is.null(ttl_seconds)) {
+    if (!is.numeric(ttl_seconds) || ttl_seconds <= 0) {
+      stop("ttl_seconds skal være et positivt tal")
+    }
+    .panel_cache_config$ttl_seconds <<- ttl_seconds
+  }
+
+  if (!is.null(max_cache_size)) {
+    if (!is.numeric(max_cache_size) || max_cache_size < 10) {
+      stop("max_cache_size skal være mindst 10")
+    }
+    .panel_cache_config$max_cache_size <<- as.integer(max_cache_size)
+  }
+
+  if (!is.null(purge_check_interval)) {
+    if (!is.numeric(purge_check_interval) || purge_check_interval < 1) {
+      stop("purge_check_interval skal være mindst 1")
+    }
+    .panel_cache_config$purge_check_interval <<- as.integer(purge_check_interval)
+  }
+
+  invisible(old_config)
+}
+
+# ==============================================================================
+# UNIFIED CACHE MANAGEMENT API
+# ==============================================================================
+
+#' Get combined placement cache statistics
+#'
+#' Returns statistics from both panel height and grob height caches in a unified format.
+#'
+#' @return List with panel_cache and grob_cache statistics
+#' @export
+#'
+#' @examples
+#' stats <- get_placement_cache_stats()
+#' cat("Panel cache:", stats$panel_cache$cache_size, "entries,",
+#'     round(stats$panel_cache$hit_rate * 100, 1), "% hit rate\n")
+#' cat("Grob cache:", stats$grob_cache$cache_size, "entries,",
+#'     round(stats$grob_cache$hit_rate * 100, 1), "% hit rate\n")
+get_placement_cache_stats <- function() {
+  list(
+    panel_cache = get_panel_height_cache_stats(),
+    grob_cache = get_grob_cache_stats(),
+    total_memory_kb = get_panel_height_cache_stats()$memory_estimate_kb +
+                      get_grob_cache_stats()$memory_estimate_kb
+  )
+}
+
+#' Purge expired entries from all placement caches
+#'
+#' Runs TTL-based purge on both panel height and grob height caches.
+#'
+#' @param force Logical: If TRUE, purge all entries regardless of TTL
+#' @return Named list with purge counts for each cache
+#' @export
+#'
+#' @examples
+#' # TTL-based purge (removes only expired entries)
+#' purged <- purge_expired_cache_entries()
+#' cat("Purged", purged$panel_cache, "panel entries and",
+#'     purged$grob_cache, "grob entries\n")
+#'
+#' # Force purge (clears all caches)
+#' purged <- purge_expired_cache_entries(force = TRUE)
+purge_expired_cache_entries <- function(force = FALSE) {
+  list(
+    panel_cache = purge_panel_cache_expired(force = force),
+    grob_cache = purge_grob_cache_expired(force = force)
+  )
+}
+
+#' Clear all placement caches
+#'
+#' Removes all cached entries and resets statistics for both panel height
+#' and grob height caches. Use for testing or troubleshooting.
+#'
+#' @export
+#'
+#' @examples
+#' clear_all_placement_caches()
+clear_all_placement_caches <- function() {
+  clear_panel_height_cache()
+  clear_grob_height_cache()
+  invisible(NULL)
+}
+
+#' Configure all placement caches
+#'
+#' Sets TTL and size limits for both panel height and grob height caches.
+#' Applies same configuration to both caches for consistency.
+#'
+#' @param ttl_seconds TTL for cache entries in seconds (default 300 = 5 min)
+#' @param max_cache_size Maximum number of cache entries per cache (default 100)
+#' @param purge_check_interval Operations between purge checks (default 50)
+#' @return Invisible: Named list with previous configurations
+#' @export
+#'
+#' @examples
+#' # Configure for short-lived Shiny sessions (1 minute TTL)
+#' configure_placement_cache(ttl_seconds = 60, max_cache_size = 50)
+#'
+#' # Configure for long-running sessions (10 minutes TTL, larger cache)
+#' configure_placement_cache(ttl_seconds = 600, max_cache_size = 200)
+configure_placement_cache <- function(
+  ttl_seconds = NULL,
+  max_cache_size = NULL,
+  purge_check_interval = NULL
+) {
+  old_configs <- list(
+    panel_cache = configure_panel_cache(
+      ttl_seconds = ttl_seconds,
+      max_cache_size = max_cache_size,
+      purge_check_interval = purge_check_interval
+    ),
+    grob_cache = configure_grob_cache(
+      ttl_seconds = ttl_seconds,
+      max_cache_size = max_cache_size,
+      purge_check_interval = purge_check_interval
+    )
+  )
+
+  invisible(old_configs)
 }
 
 #' Mål faktisk panel højde fra ggplot
@@ -490,19 +972,16 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
 
     # Check cache
     if (exists(cache_key, envir = .panel_height_cache)) {
-      # Cache hit - return cached value
-      if (!exists(".cache_hits", envir = .panel_height_cache)) {
-        .panel_height_cache[[".cache_hits"]] <- 0L
-      }
-      .panel_height_cache[[".cache_hits"]] <- .panel_height_cache[[".cache_hits"]] + 1L
+      # Cache hit - update statistics and return cached value
+      .panel_cache_stats$hits <<- .panel_cache_stats$hits + 1L
       return(.panel_height_cache[[cache_key]])
     }
 
-    # Cache miss - record statistics
-    if (!exists(".cache_misses", envir = .panel_height_cache)) {
-      .panel_height_cache[[".cache_misses"]] <- 0L
-    }
-    .panel_height_cache[[".cache_misses"]] <- .panel_height_cache[[".cache_misses"]] + 1L
+    # Cache miss - update statistics
+    .panel_cache_stats$misses <<- .panel_cache_stats$misses + 1L
+
+    # Auto-purge check before adding new entry
+    auto_purge_panel_cache()
   }
 
   # Find panel viewport navn fra gtable layout
@@ -582,9 +1061,12 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
   # Navigate tilbage til ROOT
   grid::upViewport(0)
 
-  # Store in cache
+  # Store in cache with timestamp
   if (use_cache) {
     .panel_height_cache[[cache_key]] <- panel_height
+    # Store timestamp for TTL tracking
+    timestamp_key <- paste0(".", cache_key, "_timestamp")
+    .panel_height_cache[[timestamp_key]] <- Sys.time()
   }
 
   return(panel_height)
@@ -656,8 +1138,16 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
     # Check cache
     cached_result <- .grob_height_cache[[cache_key]]
     if (!is.null(cached_result)) {
+      # Cache hit - update statistics
+      .grob_cache_stats$hits <<- .grob_cache_stats$hits + 1L
       return(cached_result)
     }
+
+    # Cache miss - update statistics
+    .grob_cache_stats$misses <<- .grob_cache_stats$misses + 1L
+
+    # Auto-purge check before adding new entry
+    auto_purge_grob_cache()
   }
 
   # Create grob and measure (assumes active device exists)
@@ -728,9 +1218,12 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
     result <- as.numeric(h_npc)
   }
 
-  # Cache result
+  # Cache result with timestamp
   if (use_cache) {
     .grob_height_cache[[cache_key]] <- result
+    # Store timestamp for TTL tracking
+    timestamp_key <- paste0(".", cache_key, "_timestamp")
+    .grob_height_cache[[timestamp_key]] <- Sys.time()
   }
 
   return(result)
@@ -927,8 +1420,16 @@ estimate_label_height_npc <- function(
       # Check cache
       cached_result <- .grob_height_cache[[cache_key]]
       if (!is.null(cached_result)) {
+        # Cache hit - update statistics
+        .grob_cache_stats$hits <<- .grob_cache_stats$hits + 1L
         return(cached_result)
       }
+
+      # Cache miss - update statistics
+      .grob_cache_stats$misses <<- .grob_cache_stats$misses + 1L
+
+      # Auto-purge check before adding new entry
+      auto_purge_grob_cache()
     }
 
     # Opret marquee grob for at måle faktisk højde
@@ -1036,6 +1537,9 @@ estimate_label_height_npc <- function(
     # VIGTIGT: Cache det faktiske result (list eller numeric) ikke bare h_npc
     if (use_cache) {
       .grob_height_cache[[cache_key]] <- result
+      # Store timestamp for TTL tracking
+      timestamp_key <- paste0(".", cache_key, "_timestamp")
+      .grob_height_cache[[timestamp_key]] <- Sys.time()
     }
 
     return(result)
