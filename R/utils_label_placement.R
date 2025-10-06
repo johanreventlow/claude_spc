@@ -391,13 +391,33 @@ npc_mapper_from_plot <- function(p, panel = 1) {
   last_purge_time = Sys.time()
 )
 
-#' Clear grob height cache (for testing or memory management)
+#' Clear grob height cache
 #'
-#' @keywords internal
+#' Rydder den interne cache for label height estimationer.
+#' Nyttigt efter ændringer til label placement konfiguration
+#' (fx height_safety_margin) for at sikre at nye værdier anvendes.
+#'
+#' Denne funktion rydder cachen for både `estimate_label_height_npc()` og
+#' `.estimate_label_height_npc_internal()`, og nulstiller cache statistik.
+#'
+#' @return Invisible: antal cache entries der blev ryddet
+#'
+#' @examples
+#' \dontrun{
+#' # Efter config ændring
+#' override_label_placement_config(height_safety_margin = 1.5)
+#' clear_grob_height_cache()
+#'
+#' # Check cache status efter clear
+#' get_grob_cache_stats()  # cache_size skal være 0
+#' }
+#'
+#' @export
 clear_grob_height_cache <- function() {
   # Clear all data entries (preserve metadata)
   all_keys <- ls(.grob_height_cache)
   data_keys <- all_keys[!grepl("^\\.", all_keys)]
+  entries_cleared <- length(data_keys)
   rm(list = data_keys, envir = .grob_height_cache)
 
   # Reset statistics
@@ -406,7 +426,8 @@ clear_grob_height_cache <- function() {
   .grob_cache_stats$operations <<- 0L
   .grob_cache_stats$last_purge_time <<- Sys.time()
 
-  invisible(NULL)
+  message(sprintf("Ryddet %d cache entries for label height estimationer", entries_cleared))
+  invisible(entries_cleared)
 }
 
 #' Get grob cache statistics
@@ -1116,13 +1137,24 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
   use_cache = TRUE,
   return_details = FALSE
 ) {
-  # Generate cache key
+  # Generate cache key including height_safety_margin
   if (use_cache) {
     style_hash <- digest::digest(list(
       style$p$margin,
       style$p$align,
       style$p$lineheight
     ), algo = "xxhash32")
+
+    # Hent height_safety_margin for cache key
+    safety_margin_for_key <- if (exists("get_label_placement_config", mode = "function")) {
+      cfg <- get_label_placement_config()
+      value <- cfg[["height_safety_margin"]]
+      if (is.null(value)) 1.05 else value
+    } else if (exists("get_label_placement_param", mode = "function")) {
+      get_label_placement_param("height_safety_margin")
+    } else {
+      1.05
+    }
 
     cache_key <- digest::digest(list(
       text = text,
@@ -1132,7 +1164,8 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
       } else {
         "viewport"
       },
-      return_details = return_details
+      return_details = return_details,
+      safety_margin = round(safety_margin_for_key, 4)  # FIX: Cache invalidation ved config change
     ), algo = "xxhash32")
 
     # Check cache
