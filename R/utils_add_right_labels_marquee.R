@@ -14,7 +14,7 @@
 #' @param textA,textB character marquee markup strings
 #' @param params list of placement parameters
 #' @param gpA,gpB grid::gpar styling
-#' @param base_size numeric base font size for responsive sizing (default 14)
+#' @param label_size numeric label size for responsive sizing (default 6, legacy baseline)
 #' @param verbose logical print placement warnings
 #' @param debug_mode logical add visual debug annotations
 #' @return ggplot object med marquee labels
@@ -37,13 +37,13 @@ add_right_labels_marquee <- function(
     ),
     gpA = grid::gpar(col = "#009CE8"),
     gpB = grid::gpar(col = "#565656"),
-    base_size = 14,
+    label_size = 6,
     verbose = TRUE,
     debug_mode = FALSE
 ) {
 
-  # Beregn responsive størrelser baseret på base_size
-  scale_factor <- base_size / 14
+  # Beregn responsive størrelser baseret på label_size (baseline = 6)
+  scale_factor <- label_size / 6
 
   # PERFORMANCE: Load config ÉN gang i starten
   placement_cfg <- list()

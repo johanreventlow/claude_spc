@@ -14,7 +14,7 @@ add_right_labels_marquee(
     0.01, pad_bot = 0.01, pref_pos = c("under", "under"), priority = "A"),
   gpA = grid::gpar(col = "#009CE8"),
   gpB = grid::gpar(col = "#565656"),
-  base_size = 14,
+  label_size = 6,
   verbose = TRUE,
   debug_mode = FALSE
 )
@@ -32,7 +32,7 @@ add_right_labels_marquee(
 
 \item{gpA, gpB}{grid::gpar styling}
 
-\item{base_size}{numeric base font size for responsive sizing (default 14)}
+\item{label_size}{numeric label size for responsive sizing (default 6, legacy baseline)}
 
 \item{verbose}{logical print placement warnings}
 

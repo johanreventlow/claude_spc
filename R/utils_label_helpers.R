@@ -103,25 +103,29 @@ sanitize_marquee_text <- function(text) {
 #'
 #' @param header character header text
 #' @param value character value text
-#' @param base_size numeric base font size (default 14)
-#' @param header_pt numeric header font size ved base_size=14 (default 8)
-#' @param value_pt numeric value font size ved base_size=14 (default 24)
+#' @param label_size numeric label size parameter (default 6, som i legacy code)
+#' @param header_pt numeric header font size ved label_size=6 (default 10)
+#' @param value_pt numeric value font size ved label_size=6 (default 30)
 #' @return character marquee-formateret label string
+#'
+#' @details
+#' Funktionen bruger `label_size` semantik (baseline = 6) frem for `base_size` (baseline = 14)
+#' for at matche legacy SPC plot sizing konventioner.
 #'
 #' @examples
 #' \dontrun{
-#' create_responsive_label("MÅL", "≥90%", base_size = 14)
+#' create_responsive_label("MÅL", ">= 90%", label_size = 6)
 #' }
 #'
 #' @export
-create_responsive_label <- function(header, value, base_size = 14, header_pt = 8, value_pt = 24) {
+create_responsive_label <- function(header, value, label_size = 6, header_pt = 10, value_pt = 30) {
   # Input validation
-  if (!is.numeric(base_size) || length(base_size) != 1 || base_size <= 0) {
-    stop("base_size skal være et positivt tal, modtog: ", base_size)
+  if (!is.numeric(label_size) || length(label_size) != 1 || label_size <= 0) {
+    stop("label_size skal være et positivt tal, modtog: ", label_size)
   }
 
-  if (base_size < 8 || base_size > 48) {
-    warning("base_size uden for normalt interval (8-48), modtog: ", base_size)
+  if (label_size < 1 || label_size > 24) {
+    warning("label_size uden for normalt interval (1-24), modtog: ", label_size)
   }
 
   if (!is.numeric(header_pt) || !is.numeric(value_pt)) {
@@ -136,8 +140,8 @@ create_responsive_label <- function(header, value, base_size = 14, header_pt = 8
   header <- sanitize_marquee_text(header)
   value <- sanitize_marquee_text(value)
 
-  # Compute scaled sizes
-  scale_factor <- base_size / 14
+  # Compute scaled sizes (baseline: label_size = 6)
+  scale_factor <- label_size / 6
   header_size <- round(header_pt * scale_factor)
   value_size <- round(value_pt * scale_factor)
 

@@ -7,9 +7,9 @@
 create_responsive_label(
   header,
   value,
-  base_size = 14,
-  header_pt = 8,
-  value_pt = 24
+  label_size = 6,
+  header_pt = 10,
+  value_pt = 30
 )
 }
 \arguments{
@@ -17,11 +17,11 @@ create_responsive_label(
 
 \item{value}{character value text}
 
-\item{base_size}{numeric base font size (default 14)}
+\item{label_size}{numeric label size parameter (default 6, som i legacy code)}
 
-\item{header_pt}{numeric header font size ved base_size=14 (default 8)}
+\item{header_pt}{numeric header font size ved label_size=6 (default 10)}
 
-\item{value_pt}{numeric value font size ved base_size=14 (default 24)}
+\item{value_pt}{numeric value font size ved label_size=6 (default 30)}
 }
 \value{
 character marquee-formateret label string
@@ -29,9 +29,13 @@ character marquee-formateret label string
 \description{
 Generer responsive marquee label med skalerede font-størrelser
 }
+\details{
+Funktionen bruger \code{label_size} semantik (baseline = 6) frem for \code{base_size} (baseline = 14)
+for at matche legacy SPC plot sizing konventioner.
+}
 \examples{
 \dontrun{
-create_responsive_label("MÅL", "≥90\%", base_size = 14)
+create_responsive_label("MÅL", ">= 90\%", label_size = 6)
 }
 
 }

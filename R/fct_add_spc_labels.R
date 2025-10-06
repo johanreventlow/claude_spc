@@ -110,7 +110,7 @@ add_spc_labels <- function(
     label_cl <- create_responsive_label(
       header = "NUV. NIVEAU",
       value = formatted_cl,
-      base_size = label_size
+      label_size = label_size
     )
   }
 
@@ -122,7 +122,7 @@ add_spc_labels <- function(
     label_target <- create_responsive_label(
       header = "MÅL",
       value = paste0(størreend, formatted_target),
-      base_size = label_size
+      label_size = label_size
     )
   }
 
@@ -172,7 +172,7 @@ add_spc_labels <- function(
     ),
     gpA = grid::gpar(col = "#009CE8"),  # CL label farve (lyseblå)
     gpB = grid::gpar(col = "#565656"),  # Target label farve (grå)
-    base_size = label_size,           # Responsive sizing
+    label_size = label_size,          # Label sizing (baseline = 6)
     verbose = verbose,                # Print placement warnings
     debug_mode = debug_mode           # Visual debugging
   )
