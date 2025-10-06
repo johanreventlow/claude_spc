@@ -42,7 +42,7 @@ LABEL_PLACEMENT_CONFIG <- list(
   # === Gap Configuration (relative til label_height_npc) ===
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
 
-  relative_gap_line = 0.0,
+  relative_gap_line = 0.4,
   # 0% - ingen gap (baseline efter fejlsøgning)
   # Rationale: Gap mellem label og linje elimineres via placement algoritme.
   #            Negativ gap kan bruges til kompensation hvis marquee spacing ændres.
