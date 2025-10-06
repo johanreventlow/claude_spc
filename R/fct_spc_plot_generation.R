@@ -1220,7 +1220,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         qic_data = qic_data,
         y_axis_unit = y_axis_unit,
         label_size = label_size,
-        verbose = FALSE,
+        verbose = TRUE,  # DEBUG: Enable verbose output for label placement diagnostics
         debug_mode = FALSE
       )
 

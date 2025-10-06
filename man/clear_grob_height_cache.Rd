@@ -2,11 +2,30 @@
 % Please edit documentation in R/utils_label_placement.R
 \name{clear_grob_height_cache}
 \alias{clear_grob_height_cache}
-\title{Clear grob height cache (for testing or memory management)}
+\title{Clear grob height cache}
 \usage{
 clear_grob_height_cache()
 }
-\description{
-Clear grob height cache (for testing or memory management)
+\value{
+Invisible: antal cache entries der blev ryddet
 }
-\keyword{internal}
+\description{
+Rydder den interne cache for label height estimationer.
+Nyttigt efter ændringer til label placement konfiguration
+(fx height_safety_margin) for at sikre at nye værdier anvendes.
+}
+\details{
+Denne funktion rydder cachen for både \code{estimate_label_height_npc()} og
+\code{.estimate_label_height_npc_internal()}, og nulstiller cache statistik.
+}
+\examples{
+\dontrun{
+# Efter config ændring
+override_label_placement_config(height_safety_margin = 1.5)
+clear_grob_height_cache()
+
+# Check cache status efter clear
+get_grob_cache_stats()  # cache_size skal være 0
+}
+
+}

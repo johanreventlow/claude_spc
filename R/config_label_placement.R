@@ -42,7 +42,7 @@ LABEL_PLACEMENT_CONFIG <- list(
   # === Gap Configuration (relative til label_height_npc) ===
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
 
-  relative_gap_line = 0.05,
+  relative_gap_line = 0.25,
   # 5% af label højde - minimal visual gap
   # FIX: Reduceret fra 0.2 (20%) til 0.05 (5%) efter implementering
   # af dynamisk label skalering baseret på device height.
@@ -59,12 +59,12 @@ LABEL_PLACEMENT_CONFIG <- list(
   # === Panel Padding ===
   # Fixed NPC værdier - sikrer labels aldrig går uden for panel edges
 
-  pad_top = 0.01,
+  pad_top = 0.03,
   # 1% top padding
   # Rationale: Minimal padding for at undgå at labels klippes ved panel top.
   #            Sammenlignet med ggplot2 default expansion (5%), dette er konservativt.
 
-  pad_bot = 0.01,
+  pad_bot = 0.03,
   # 1% bottom padding
   # Rationale: Symmetrisk med pad_top for konsistent appearance.
 

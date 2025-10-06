@@ -7,7 +7,7 @@
 place_two_labels_npc(
   yA_npc,
   yB_npc,
-  label_height_npc = 0.035,
+  label_height_npc = 0.055,
   gap_line = NULL,
   gap_labels = NULL,
   pad_top = NULL,
