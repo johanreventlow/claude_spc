@@ -10,7 +10,7 @@
 #'
 #' @param plot ggplot object (SPC plot uden labels)
 #' @param qic_data data.frame fra qicharts2::qic() med columns: cl, target, part
-#' @param y_axis_unit character unit for y-akse ("count", "percent", eller andet)
+#' @param y_axis_unit character unit for y-akse ("count", "percent", "rate", "time", eller andet)
 #' @param label_size numeric base font size for responsive sizing (default 6)
 #' @param verbose logical print placement warnings (default FALSE)
 #' @param debug_mode logical add visual debug annotations (default FALSE)
@@ -58,55 +58,18 @@ add_spc_labels <- function(
     stop("qic_data skal være en data.frame")
   }
 
-  if (!y_axis_unit %in% c("count", "percent")) {
-    warning("y_axis_unit skal være 'count' eller 'percent'. Bruger 'count' som fallback.")
-    y_axis_unit <- "count"
+  # Validate y_axis_unit
+  valid_units <- c("count", "percent", "rate", "time")
+  if (!y_axis_unit %in% valid_units && verbose) {
+    message("y_axis_unit '", y_axis_unit, "' ikke standard. Understøttede: ",
+            paste(valid_units, collapse = ", "))
   }
 
-  # Hjælpefunktion til formatering af værdier PRÆCIS som y-aksen ----
-  # TODO: Denne funktion bør ekstraheres til utils_label_formatting.R
-  # så den kan genbruges i add_plot_enhancements()
-  format_y_value <- function(val, y_unit) {
-    if (is.na(val)) return(NA_character_)
-
-    if (y_unit == "percent") {
-      # Percent formatting - matcher scale_y_continuous(labels = scales::label_percent())
-      scales::label_percent()(val)
-    } else if (y_unit == "count") {
-      # Count formatting med K/M notation - matcher y-akse logik præcist
-      if (abs(val) >= 1e9) {
-        scaled <- val / 1e9
-        if (scaled == round(scaled)) {
-          paste0(round(scaled), " mia.")
-        } else {
-          paste0(format(scaled, decimal.mark = ",", nsmall = 1), " mia.")
-        }
-      } else if (abs(val) >= 1e6) {
-        scaled <- val / 1e6
-        if (scaled == round(scaled)) {
-          paste0(round(scaled), "M")
-        } else {
-          paste0(format(scaled, decimal.mark = ",", nsmall = 1), "M")
-        }
-      } else if (abs(val) >= 1e3) {
-        scaled <- val / 1e3
-        if (scaled == round(scaled)) {
-          paste0(round(scaled), "K")
-        } else {
-          paste0(format(scaled, decimal.mark = ",", nsmall = 1), "K")
-        }
-      } else {
-        # For values < 1000: show decimals only if present
-        if (val == round(val)) {
-          format(round(val), decimal.mark = ",", big.mark = ".")
-        } else {
-          format(val, decimal.mark = ",", nsmall = 1, big.mark = ".")
-        }
-      }
-    } else {
-      # Default: formatér som tal med dansk decimal notation
-      format(val, decimal.mark = ",", nsmall = 1, big.mark = ".")
-    }
+  # Beregn y_range for time formatting context
+  y_range <- if (y_axis_unit == "time" && !is.null(qic_data$y)) {
+    range(qic_data$y, na.rm = TRUE)
+  } else {
+    NULL
   }
 
   # Ekstrahér CL værdi fra seneste part ----
@@ -140,10 +103,10 @@ add_spc_labels <- function(
     return(plot)
   }
 
-  # Formatér labels ----
+  # Formatér labels med delt formatter ----
   label_cl <- NULL
   if (!is.na(cl_value)) {
-    formatted_cl <- format_y_value(cl_value, y_axis_unit)
+    formatted_cl <- format_y_value(cl_value, y_axis_unit, y_range)
     label_cl <- create_responsive_label(
       header = "NUV. NIVEAU",
       value = formatted_cl,
@@ -153,7 +116,7 @@ add_spc_labels <- function(
 
   label_target <- NULL
   if (!is.na(target_value)) {
-    formatted_target <- format_y_value(target_value, y_axis_unit)
+    formatted_target <- format_y_value(target_value, y_axis_unit, y_range)
     # Tilføj større-end tegn for target
     størreend <- "\U2265"
     label_target <- create_responsive_label(

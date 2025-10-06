@@ -18,7 +18,7 @@ add_spc_labels(
 
 \item{qic_data}{data.frame fra qicharts2::qic() med columns: cl, target, part}
 
-\item{y_axis_unit}{character unit for y-akse ("count", "percent", eller andet)}
+\item{y_axis_unit}{character unit for y-akse ("count", "percent", "rate", "time", eller andet)}
 
 \item{label_size}{numeric base font size for responsive sizing (default 6)}
 

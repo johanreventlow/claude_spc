@@ -436,88 +436,11 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
-  # Hjælpefunktion til at formatere værdier PRÆCIS som y-aksen ----
-  format_y_value <- function(val, y_unit) {
-    if (is.na(val)) return(NA_character_)
-
-    if (y_unit == "percent") {
-      # Percent formatting - matcher scale_y_continuous(labels = scales::label_percent())
-      scales::label_percent()(val)
-    } else if (y_unit == "count") {
-      # Count formatting with K/M notation - matcher y-akse logik præcist
-      if (abs(val) >= 1e9) {
-        scaled <- val / 1e9
-        if (scaled == round(scaled)) {
-          paste0(round(scaled), " mia.")
-        } else {
-          paste0(format(scaled, decimal.mark = ",", nsmall = 1), " mia.")
-        }
-      } else if (abs(val) >= 1e6) {
-        scaled <- val / 1e6
-        if (scaled == round(scaled)) {
-          paste0(round(scaled), "M")
-        } else {
-          paste0(format(scaled, decimal.mark = ",", nsmall = 1), "M")
-        }
-      } else if (abs(val) >= 1e3) {
-        scaled <- val / 1e3
-        if (scaled == round(scaled)) {
-          paste0(round(scaled), "K")
-        } else {
-          paste0(format(scaled, decimal.mark = ",", nsmall = 1), "K")
-        }
-      } else {
-        # For values < 1000: show decimals only if present
-        if (val == round(val)) {
-          format(round(val), decimal.mark = ",", big.mark = ".")
-        } else {
-          format(val, decimal.mark = ",", big.mark = ".", nsmall = 1)
-        }
-      }
-    } else if (y_unit == "rate") {
-      # Rate formatting - kun decimaler hvis tilstede
-      if (val == round(val)) {
-        format(round(val), decimal.mark = ",")
-      } else {
-        format(val, decimal.mark = ",", nsmall = 1)
-      }
-    } else if (y_unit == "time") {
-      # Time formatting (input: minutes)
-      y_range <- range(qic_data$y, na.rm = TRUE)
-      max_minutes <- max(y_range, na.rm = TRUE)
-
-      if (max_minutes < 60) {
-        # Minutes
-        if (val == round(val)) {
-          paste0(round(val), " min")
-        } else {
-          paste0(format(val, decimal.mark = ",", nsmall = 1), " min")
-        }
-      } else if (max_minutes < 1440) {
-        # Hours
-        hours <- val / 60
-        if (hours == round(hours)) {
-          paste0(round(hours), " timer")
-        } else {
-          paste0(format(hours, decimal.mark = ",", nsmall = 1), " timer")
-        }
-      } else {
-        # Days
-        days <- val / 1440
-        if (days == round(days)) {
-          paste0(round(days), " dage")
-        } else {
-          paste0(format(days, decimal.mark = ",", nsmall = 1), " dage")
-        }
-      }
-    } else {
-      # Default formatting
-      if (val == round(val)) {
-        format(round(val), decimal.mark = ",")
-      } else {
-        format(val, decimal.mark = ",", nsmall = 1)
-      }
-    }
+  # Beregn y_range for time formatting context ----
+  y_range <- if (y_axis_unit == "time" && !is.null(qic_data$y)) {
+    range(qic_data$y, na.rm = TRUE)
+  } else {
+    NULL
   }
 
   # Beregn extended x position (15% ud over sidste datapunkt) ----
