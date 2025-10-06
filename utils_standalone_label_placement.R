@@ -664,7 +664,11 @@ estimate_label_height_npc <- function(
     # Tilføj sikkerhedsmargin for at være konservativ
     # Dette sikrer at labels ikke overlapper selv med små afrundingsfejl
     # HENT FRA CONFIG for at gøre det konfigurerbart
-    safety_margin <- if (exists("get_label_placement_param", mode = "function")) {
+    safety_margin <- if (exists("get_label_placement_config", mode = "function")) {
+      cfg <- get_label_placement_config()
+      value <- cfg[["height_safety_margin"]]
+      if (is.null(value)) 1.05 else value
+    } else if (exists("get_label_placement_param", mode = "function")) {
       get_label_placement_param("height_safety_margin")
     } else {
       1.05  # Fallback hvis config ikke tilgængelig
@@ -960,12 +964,27 @@ place_two_labels_npc <- function(
   # CONFIGURATION LOADING
   # ============================================================================
 
-  # Source config hvis tilgængelig (standalone compatibility)
-  if (exists("get_label_placement_param", mode = "function")) {
-    config_available <- TRUE
+  default_cfg <- list(
+    relative_gap_line = 0.08,
+    relative_gap_labels = 0.30,
+    pad_top = 0.01,
+    pad_bot = 0.01,
+    tight_lines_threshold_factor = 0.5,
+    coincident_threshold_factor = 0.1,
+    gap_reduction_factors = c(0.5, 0.3, 0.15),
+    shelf_center_threshold = 0.5
+  )
 
-    # OPTIMIZATION: Batch load all config values at once
-    cfg <- list(
+  cfg <- default_cfg
+  config_available <- FALSE
+
+  # Source config hvis tilgængelig (standalone compatibility)
+  if (exists("get_label_placement_config", mode = "function")) {
+    config_available <- TRUE
+    loaded_cfg <- get_label_placement_config()
+  } else if (exists("get_label_placement_param", mode = "function")) {
+    config_available <- TRUE
+    loaded_cfg <- list(
       relative_gap_line = get_label_placement_param("relative_gap_line"),
       relative_gap_labels = get_label_placement_param("relative_gap_labels"),
       pad_top = get_label_placement_param("pad_top"),
@@ -976,19 +995,16 @@ place_two_labels_npc <- function(
       shelf_center_threshold = get_label_placement_param("shelf_center_threshold")
     )
   } else {
-    config_available <- FALSE
+    loaded_cfg <- NULL
+  }
 
-    # Fallback config for standalone mode
-    cfg <- list(
-      relative_gap_line = 0.08,
-      relative_gap_labels = 0.30,
-      pad_top = 0.01,
-      pad_bot = 0.01,
-      tight_lines_threshold_factor = 0.5,
-      coincident_threshold_factor = 0.1,
-      gap_reduction_factors = c(0.5, 0.3, 0.15),
-      shelf_center_threshold = 0.5
-    )
+  if (!is.null(loaded_cfg)) {
+    for (name in names(default_cfg)) {
+      value <- loaded_cfg[[name]]
+      if (!is.null(value)) {
+        cfg[[name]] <- value
+      }
+    }
   }
 
   # Beregn defaults fra config

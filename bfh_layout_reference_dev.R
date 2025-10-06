@@ -270,22 +270,34 @@ add_right_labels_marquee <- function(
   # Vi sætter KUN params hvis caller har eksplicit override.
 
   # Check om config er tilgængelig (for padding - gap håndteres automatisk)
-  config_available <- exists("get_label_placement_param", mode = "function")
+  placement_cfg <- list()
+  config_available <- FALSE
+
+  if (exists("get_label_placement_config", mode = "function")) {
+    placement_cfg <- get_label_placement_config()
+    config_available <- TRUE
+  } else if (exists("get_label_placement_param", mode = "function")) {
+    placement_cfg <- list(
+      pad_top = get_label_placement_param("pad_top"),
+      pad_bot = get_label_placement_param("pad_bot")
+    )
+    config_available <- TRUE
+  }
 
   # GAP_LINE og GAP_LABELS beregnes automatisk af place_two_labels_npc() når
   # label_height_npc er i list-format. Sæt kun hvis eksplicit override.
 
   if (is.null(params$pad_top)) {
-    if (config_available) {
-      params$pad_top <- get_label_placement_param("pad_top")
+    if (config_available && !is.null(placement_cfg$pad_top)) {
+      params$pad_top <- placement_cfg$pad_top
     } else {
       params$pad_top <- 0.01  # Fallback
     }
   }
 
   if (is.null(params$pad_bot)) {
-    if (config_available) {
-      params$pad_bot <- get_label_placement_param("pad_bot")
+    if (config_available && !is.null(placement_cfg$pad_bot)) {
+      params$pad_bot <- placement_cfg$pad_bot
     } else {
       params$pad_bot <- 0.01  # Fallback
     }
