@@ -193,20 +193,41 @@ add_right_labels_marquee <- function(
   # Reference: base_size 14 giver original størrelser
   scale_factor <- base_size / 14
 
-  # Opret right-aligned style FØRST (bruges til højdemåling)
-  # VIGTIGT: Inkludér lineheight fra config for at sikre konsistent måling/rendering
-  marquee_lineheight <- if (exists("get_label_placement_param", mode = "function")) {
-    get_label_placement_param("marquee_lineheight")
+  # PERFORMANCE: Load config ÉN gang i starten (batch loading optimization)
+  # Bruges til både style-bygning og parameter defaults
+  placement_cfg <- list()
+  config_available <- FALSE
+
+  if (exists("get_label_placement_config", mode = "function")) {
+    # OPTIMAL: Batch load alle config-værdier i ét kald
+    placement_cfg <- get_label_placement_config()
+    config_available <- TRUE
+  } else if (exists("get_label_placement_param", mode = "function")) {
+    # FALLBACK: Load alle nødvendige params (undgår gentagne miljøopslag)
+    placement_cfg <- list(
+      marquee_lineheight = get_label_placement_param("marquee_lineheight"),
+      marquee_size_factor = get_label_placement_param("marquee_size_factor"),
+      pad_top = get_label_placement_param("pad_top"),
+      pad_bot = get_label_placement_param("pad_bot")
+    )
+    config_available <- TRUE
+  }
+
+  # Hent marquee_lineheight fra loaded config
+  marquee_lineheight <- if (config_available && !is.null(placement_cfg$marquee_lineheight)) {
+    placement_cfg$marquee_lineheight
   } else {
     0.9  # Fallback
   }
 
+  # Opret right-aligned style (bruges til højdemåling)
+  # VIGTIGT: Inkludér lineheight fra config for at sikre konsistent måling/rendering
   right_aligned_style <- marquee::modify_style(
     marquee::classic_style(),
     "p",
     margin = marquee::trbl(0),
     align = "right",
-    lineheight = marquee_lineheight  # Samme værdi som bruges i rendering
+    lineheight = marquee_lineheight
   )
 
   # PERFORMANCE OPTIMIZATION: Build plot én gang og genbrugresultatet
@@ -268,21 +289,7 @@ add_right_labels_marquee <- function(
   # NOTE: Med ny API (return_details=TRUE), lader vi place_two_labels_npc()
   # beregne gap automatisk fra config baseret på absolute inches.
   # Vi sætter KUN params hvis caller har eksplicit override.
-
-  # Check om config er tilgængelig (for padding - gap håndteres automatisk)
-  placement_cfg <- list()
-  config_available <- FALSE
-
-  if (exists("get_label_placement_config", mode = "function")) {
-    placement_cfg <- get_label_placement_config()
-    config_available <- TRUE
-  } else if (exists("get_label_placement_param", mode = "function")) {
-    placement_cfg <- list(
-      pad_top = get_label_placement_param("pad_top"),
-      pad_bot = get_label_placement_param("pad_bot")
-    )
-    config_available <- TRUE
-  }
+  # Config er allerede loaded i toppen af funktionen (linje 196+)
 
   # GAP_LINE og GAP_LABELS beregnes automatisk af place_two_labels_npc() når
   # label_height_npc er i list-format. Sæt kun hvis eksplicit override.
@@ -399,9 +406,9 @@ add_right_labels_marquee <- function(
 
   # Skalerede størrelser for marquee labels
   # NOTE: right_aligned_style er allerede oprettet tidligere (bruges til højdemåling)
-  # Hent marquee_size_factor fra config
-  marquee_size_factor <- if (config_available) {
-    get_label_placement_param("marquee_size_factor")
+  # Hent marquee_size_factor fra loaded config (batch loaded i toppen)
+  marquee_size_factor <- if (config_available && !is.null(placement_cfg$marquee_size_factor)) {
+    placement_cfg$marquee_size_factor
   } else {
     6  # Fallback
   }
