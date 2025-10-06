@@ -677,40 +677,12 @@ plot <- add_right_labels_marquee(
   debug_mode = FALSE         # Sæt til TRUE for visual debugging + gap verification
 )
 
-# Gem mapper for debugging
-mapper <- npc_mapper_from_plot(spc_plot)
+# PERFORMANCE: Genbrugmapper fra tidligere for at undgå 3. ggplot_build
+# mapper allerede beregnet på linje 298 fra pre-built plot
 
 # ============================================================================
 # OUTPUT
 # ============================================================================
-
-# Print placement info for debugging
-if (FALSE) {
-  placement_info <- attr(plot, "placement_info")
-  cat("\n=== Placement Info ===\n")
-  cat("Label A (CL):\n")
-  cat("  Y-position (npc):", placement_info$yA, "\n")
-  cat("  Y-position (data):", mapper$npc_to_y(placement_info$yA), "\n")
-  cat("  Side:", placement_info$sideA, "\n")
-  cat("Label B (Target):\n")
-  cat("  Y-position (npc):", placement_info$yB, "\n")
-  cat("  Y-position (data):", mapper$npc_to_y(placement_info$yB), "\n")
-  cat("  Side:", placement_info$sideB, "\n")
-  cat("Quality:", placement_info$placement_quality, "\n")
-
-  cat("\nLine positions:\n")
-  cat("  CL line (data):", y_cl, "\n")
-  cat("  CL line (npc):", mapper$y_to_npc(y_cl), "\n")
-  cat("  Target line (data):", y_target, "\n")
-  cat("  Target line (npc):", mapper$y_to_npc(y_target), "\n")
-  cat("  Gap between lines (npc):", abs(mapper$y_to_npc(y_cl) - mapper$y_to_npc(y_target)), "\n")
-  cat("  Gap between labels (npc):", abs(placement_info$yA - placement_info$yB), "\n")
-
-  mapper_info <- attr(plot, "mapper_info")
-  cat("\nMapper Info:\n")
-  cat("  Y-limits:", mapper_info$limits, "\n")
-  cat("  Transform:", mapper_info$trans_name, "\n")
-}
 
 # Vis plot
 print(plot)
