@@ -1396,8 +1396,8 @@ estimate_label_height_npc <- function(
       )
     }
 
-    # Generate cache key from text + style signature + panel height
-    # Key parameters affecting height: margin, align, lineheight, panel_height
+    # Generate cache key from text + style signature + panel height + safety margin
+    # Key parameters affecting height: margin, align, lineheight, panel_height, safety_margin
     if (use_cache) {
       style_hash <- digest::digest(list(
         style$p$margin,
@@ -1405,9 +1405,21 @@ estimate_label_height_npc <- function(
         style$p$lineheight
       ), algo = "xxhash32")  # Fast hash algorithm
 
-      # Include panel_height AND return_details in cache key for proper cache isolation
+      # Hent height_safety_margin for cache key
+      safety_margin <- if (exists("get_label_placement_config", mode = "function")) {
+        cfg <- get_label_placement_config()
+        value <- cfg[["height_safety_margin"]]
+        if (is.null(value)) 1.05 else value
+      } else if (exists("get_label_placement_param", mode = "function")) {
+        get_label_placement_param("height_safety_margin")
+      } else {
+        1.05
+      }
+
+      # Include panel_height, return_details AND height_safety_margin in cache key
       # Different panel heights → different NPC values for same absolute height
       # Different return_details → different return formats (numeric vs list)
+      # Different safety_margin → different final heights
       cache_key <- digest::digest(list(
         text = text,
         style = style_hash,
@@ -1416,7 +1428,8 @@ estimate_label_height_npc <- function(
         } else {
           "viewport"  # Different cache entry for viewport-based measurement
         },
-        return_details = return_details  # VIGTIG: Undgå cache collision mellem formats
+        return_details = return_details,  # VIGTIG: Undgå cache collision mellem formats
+        safety_margin = round(safety_margin, 4)  # FIX: Cache invalidation ved config change
       ), algo = "xxhash32")
 
       # Check cache
