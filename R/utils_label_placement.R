@@ -1880,10 +1880,16 @@ place_two_labels_npc <- function(
     if (label_height_is_list && !is.na(label_height_inches)) {
       # Ny API: Beregn gap som fast % af absolute label højde
       gap_line_inches <- label_height_inches * cfg$relative_gap_line
+
+      # FIX: Absolut minimum gap for at undgå labels der klistrer til linjer
+      # Ved 96dpi: 0.05 inches ≈ 5 pixels
+      min_gap_inches <- 0.05
+      gap_line_inches <- max(gap_line_inches, min_gap_inches)
+
       gap_line <- gap_line_inches / panel_height_inches  # Konverter til NPC
       if (debug) {
-        message(sprintf("[DEBUG] gap_line beregnet fra config (NY API): %.4f inches × %.2f = %.4f inches = %.4f NPC",
-                        label_height_inches, cfg$relative_gap_line, gap_line_inches, gap_line))
+        message(sprintf("[DEBUG] gap_line beregnet fra config (NY API): %.4f inches × %.2f = %.4f inches (min: %.2f) = %.4f NPC",
+                        label_height_inches, cfg$relative_gap_line, gap_line_inches, min_gap_inches, gap_line))
       }
     } else {
       # Legacy API: Beregn gap som % af NPC

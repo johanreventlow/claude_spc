@@ -201,17 +201,52 @@ add_right_labels_marquee <- function(
     yB_data <- NA_real_
   }
 
-  # Hent x-koordinater
+  # Hent x-koordinater og detektér type
   x_range <- built_plot$layout$panel_params[[1]]$x.range
-  x_max <- as.POSIXct(x_range[2], origin = "1970-01-01", tz = "UTC")
+  x_max_value <- x_range[2]
 
-  # Opret label data
-  label_data <- tibble::tibble(
-    x = as.POSIXct(character()),
-    y = numeric(),
-    label = character(),
-    color = character()
-  )
+  # FIX: Detektér om x-aksen er Date/POSIXct eller numerisk
+  # PROBLEM: Tvungen POSIXct konvertering bryder numeriske x-akser
+  # hvor værdier bliver fortolket som sekunder siden 1970
+  x_is_temporal <- FALSE
+  tryCatch({
+    # Check x.range class direkte
+    if (inherits(x_max_value, c("POSIXct", "POSIXt", "Date"))) {
+      x_is_temporal <- TRUE
+    }
+    # Alternativ: check scale transformation
+    if (!x_is_temporal && !is.null(built_plot$layout$panel_params[[1]]$x.sec.range)) {
+      # Secondary axis antyder temporal data
+      x_is_temporal <- TRUE
+    }
+  }, error = function(e) {
+    # Fallback: hvis type detection fejler, brug værdien direkte (numerisk)
+    x_is_temporal <- FALSE
+  })
+
+  if (x_is_temporal) {
+    x_max <- as.POSIXct(x_max_value, origin = "1970-01-01", tz = "UTC")
+  } else {
+    # Numerisk x-akse - brug værdi direkte
+    x_max <- x_max_value
+  }
+
+  # Opret label data med korrekt x-type
+  if (x_is_temporal) {
+    label_data <- tibble::tibble(
+      x = as.POSIXct(character()),
+      y = numeric(),
+      label = character(),
+      color = character()
+    )
+  } else {
+    label_data <- tibble::tibble(
+      x = numeric(),
+      y = numeric(),
+      label = character(),
+      color = character()
+    )
+  }
 
   color_A <- if (!is.null(gpA$col)) gpA$col else "#009CE8"
   color_B <- if (!is.null(gpB$col)) gpB$col else "#565656"

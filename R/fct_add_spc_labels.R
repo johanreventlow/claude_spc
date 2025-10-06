@@ -75,14 +75,17 @@ add_spc_labels <- function(
       dev_height <- grDevices::dev.size("in")[2]
 
       # Skalér label_size proportionelt med device height
-      # Small plot (7.8"): label_size = 6.0
-      # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0
-      label_size_scaled <- label_size * (dev_height / device_height_baseline)
+      # VIGTIGT: Kun skalér opad (scale_factor >= 1.0) for at undgå under-skalering
+      # på små plots hvor labels ville blive ulæseligt små
+      # Small plot (7.8"): label_size = 6.0 (ikke skaleret ned)
+      # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0 (skaleret op)
+      scale_factor <- pmax(1.0, dev_height / device_height_baseline)
+      label_size_scaled <- label_size * scale_factor
 
       if (verbose) {
         message(sprintf(
-          "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\")",
-          label_size, label_size_scaled, dev_height
+          "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\", scale: %.2f)",
+          label_size, label_size_scaled, dev_height, scale_factor
         ))
       }
 
