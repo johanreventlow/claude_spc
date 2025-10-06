@@ -65,6 +65,36 @@ add_spc_labels <- function(
             paste(valid_units, collapse = ", "))
   }
 
+  # FIX: Auto-scale label_size baseret på device height
+  # Dette sikrer at labels skalerer proportionelt med plot størrelse
+  # Baseline: label_size = 6 for ~7.8" device height (small plot reference)
+  device_height_baseline <- 7.8  # inches (reference: 751px @ 96dpi)
+
+  tryCatch({
+    if (grDevices::dev.cur() > 1) {  # Device aktiv
+      dev_height <- grDevices::dev.size("in")[2]
+
+      # Skalér label_size proportionelt med device height
+      # Small plot (7.8"): label_size = 6.0
+      # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0
+      label_size_scaled <- label_size * (dev_height / device_height_baseline)
+
+      if (verbose) {
+        message(sprintf(
+          "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\")",
+          label_size, label_size_scaled, dev_height
+        ))
+      }
+
+      label_size <- label_size_scaled
+    }
+  }, error = function(e) {
+    # Fallback: brug original label_size hvis device detection fejler
+    if (verbose) {
+      message("Device height detection fejlede - bruger fast label_size: ", label_size)
+    }
+  })
+
   # Beregn y_range for time formatting context
   y_range <- if (y_axis_unit == "time" && !is.null(qic_data$y)) {
     range(qic_data$y, na.rm = TRUE)
