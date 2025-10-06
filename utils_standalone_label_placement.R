@@ -1271,20 +1271,22 @@ estimate_label_heights_npc <- function(
   # VIGTIGT: Brug ALTID en off-screen device for measurements
   # Dette forhindrer synlig rendering når scripts kører med aktiv device
   #
+  # FIX: Brug SVG device i stedet for PNG for præcise text målinger
+  # SVG er vektor-baseret og giver konsistente målinger uafhængigt af device størrelse
+  #
   # Gem reference til nuværende device
   current_dev <- grDevices::dev.cur()
 
-  # Open ONE off-screen device for all measurements
-  # NOTE: På macOS kan PNG ikke bruge /dev/null, så vi bruger tempfile
-  temp_png <- tempfile(fileext = ".png")
+  # Open ONE off-screen SVG device for all measurements
+  temp_svg <- tempfile(fileext = ".svg")
   suppressMessages(
-    grDevices::png(filename = temp_png, width = 480, height = 480)
+    grDevices::svg(filename = temp_svg, width = 7, height = 7)
   )
   temp_dev <- grDevices::dev.cur()
 
   # Ensure cleanup of temp file
   on.exit({
-    unlink(temp_png, force = TRUE)
+    unlink(temp_svg, force = TRUE)
   }, add = TRUE, after = FALSE)
 
   # Measure all texts with shared device

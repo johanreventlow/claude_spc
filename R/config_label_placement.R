@@ -42,9 +42,9 @@ LABEL_PLACEMENT_CONFIG <- list(
   # === Gap Configuration (relative til label_height_npc) ===
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
 
-  relative_gap_line = 0.0,
-  # 0% - ingen gap (baseline efter fejlsøgning)
-  # Rationale: Gap mellem label og linje minimeres. Placement algoritme bruger
+  relative_gap_line = 0.1,
+  # 20% af label højde (FIXED: Nu korrekt med height_safety_margin = 1.44)
+  # Rationale: Gap mellem label og linje. Placement algoritme bruger
   #            over/under strategi når linjer er tætte (<label_height gap).
   # VIGTIGT: Værdier > 0.0 kan forårsage collision når linjer er tætte.
   #          Labels med height 7% kan ikke passe mellem linjer med 4% gap.
@@ -58,12 +58,12 @@ LABEL_PLACEMENT_CONFIG <- list(
   # === Panel Padding ===
   # Fixed NPC værdier - sikrer labels aldrig går uden for panel edges
 
-  pad_top = 0.1,
+  pad_top = 0.01,
   # 1% top padding
   # Rationale: Minimal padding for at undgå at labels klippes ved panel top.
   #            Sammenlignet med ggplot2 default expansion (5%), dette er konservativt.
 
-  pad_bot = 0.1,
+  pad_bot = 0.01,
   # 1% bottom padding
   # Rationale: Symmetrisk med pad_top for konsistent appearance.
 
@@ -108,11 +108,12 @@ LABEL_PLACEMENT_CONFIG <- list(
 
   # === Height Estimation (grob-baseret) ===
 
-  height_safety_margin = 1.00,
-  # Ingen ekstra margin (ændret fra 1.05 for tæt label placering)
-  # Rationale: Labels placeres præcist uden buffer.
-  #            ADVARSEL: Kan medføre minimal overlap ved afrundingsfejl.
-  #            Brug 1.05 hvis du oplever overlap issues.
+  height_safety_margin = 1.44,
+  # FIX: Empirisk korrektion for marquee grob height under-approximation
+  # Rationale: grobHeight() for marquee labels måler ca. 70% af faktisk rendered height
+  #            Testing viste: målt 0.47 inches vs faktisk ~0.68 inches = 1.44x faktor
+  #            Denne faktor sikrer at gap calculations bruger korrekt label height
+  #            Tidligere værdi: 1.0 (ingen margin) resulterede i label overlap
 
   height_fallback_npc = 0.13
   # 13% NPC fallback
