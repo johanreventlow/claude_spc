@@ -134,13 +134,15 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
   # File upload handler
   shiny::observeEvent(input$data_file, {
     # RATE LIMITING: Prevent DoS via rapid uploads
+    # Uses RATE_LIMITS$file_upload_seconds for centralized security configuration
     last_upload_time <- shiny::isolate(app_state$session$last_upload_time)
     if (!is.null(last_upload_time)) {
       time_since_upload <- as.numeric(difftime(Sys.time(), last_upload_time, units = "secs"))
+      min_upload_interval <- RATE_LIMITS$file_upload_seconds
 
-      if (time_since_upload < 2) {
+      if (time_since_upload < min_upload_interval) {
         shiny::showNotification(
-          "Vent venligst mindst 2 sekunder mellem fil-uploads (sikkerhedsbeskyttelse)",
+          paste0("Vent venligst mindst ", min_upload_interval, " sekunder mellem fil-uploads (sikkerhedsbeskyttelse)"),
           type = "warning",
           duration = 3
         )

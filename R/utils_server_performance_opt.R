@@ -72,7 +72,7 @@ create_optimized_data_pipeline <- function(app_state, emit) {
       ready_for_plotting = TRUE,
       pipeline_timestamp = Sys.time()
     )
-  }), millis = 800) # Aggressive debouncing for performance
+  }), millis = DEBOUNCE_DELAYS$chart_update) # Aggressive debouncing for performance
 
   return(data_processing_pipeline)
 }

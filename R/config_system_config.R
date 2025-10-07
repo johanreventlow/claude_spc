@@ -85,9 +85,10 @@ OPERATION_TIMEOUTS <- list(
 #' Debounce delays for reactive operations
 #' @export
 DEBOUNCE_DELAYS <- list(
-  input_change = 300, # 300ms
-  file_select = 500, # 500ms
-  chart_update = 800 # 800ms
+  input_change = 300, # 300ms - rapid user input (dropdown, typing)
+  file_select = 500, # 500ms - file selection and complex inputs
+  chart_update = 800, # 800ms - chart rendering and expensive operations
+  table_cleanup = 2000 # 2000ms - table operation cleanup (conservative delay)
 )
 
 #' Loop protection delays for UI updates (milliseconds)
@@ -107,4 +108,19 @@ PERFORMANCE_THRESHOLDS <- list(
   memory_warning = 10, # 10MB memory change warning
   cache_timeout_default = 300, # 5 minutes default cache
   max_cache_entries = 50 # Maximum cached reactive results
+)
+
+#' Rate limiting thresholds for security
+#' @export
+RATE_LIMITS <- list(
+  file_upload_seconds = 2, # Minimum seconds between file uploads (DoS protection)
+  api_call_seconds = 1, # Minimum seconds between API calls
+  session_save_seconds = 5 # Minimum seconds between session saves
+)
+
+#' Auto-save debounce delays (milliseconds)
+#' @export
+AUTOSAVE_DELAYS <- list(
+  data_save = 2000, # 2 seconds debounce for data auto-save
+  settings_save = 1000 # 1 second debounce for settings auto-save (faster response)
 )

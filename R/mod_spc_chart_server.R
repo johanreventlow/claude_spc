@@ -293,8 +293,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     })
 
     # PERFORMANCE: Debounce chart_config to prevent redundant renders during rapid dropdown changes
-    # 300ms debounce eliminates flickering when user rapidly changes column selections
-    chart_config <- shiny::debounce(chart_config_raw, millis = 300)
+    # Uses DEBOUNCE_DELAYS$input_change (300ms) to eliminate flickering when user rapidly changes column selections
+    chart_config <- shiny::debounce(chart_config_raw, millis = DEBOUNCE_DELAYS$input_change)
 
     # Plot Generering ---------------------------------------------------------
 
@@ -343,9 +343,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     })
 
     # PERFORMANCE: Debounce spc_inputs to prevent redundant renders during rapid UI changes
-    # 500ms debounce handles window resize, title editing, and other high-frequency updates
+    # Uses DEBOUNCE_DELAYS$file_select (500ms) to handle window resize, title editing, and other high-frequency updates
     # Eliminates 60-80% of redundant plot generations during rapid user interactions
-    spc_inputs <- shiny::debounce(spc_inputs_raw, millis = 500)
+    spc_inputs <- shiny::debounce(spc_inputs_raw, millis = DEBOUNCE_DELAYS$file_select)
 
     spc_results <- shiny::reactive({
       inputs <- spc_inputs()

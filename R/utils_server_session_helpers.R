@@ -237,7 +237,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
         NULL
       }
     }),
-    millis = 2000
+    millis = AUTOSAVE_DELAYS$data_save
   )
 
   obs_data_save <- shiny::observe({
@@ -290,7 +290,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
         NULL
       }
     }),
-    millis = 1000 # Faster debounce for settings
+    millis = AUTOSAVE_DELAYS$settings_save # Faster debounce for settings
   )
 
   obs_settings_save <- shiny::observe({
@@ -335,7 +335,7 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
         NULL
       }
     }),
-    millis = 2000
+    millis = DEBOUNCE_DELAYS$table_cleanup
   )
 
   shiny::observe({
