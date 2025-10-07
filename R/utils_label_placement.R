@@ -431,6 +431,42 @@ clear_grob_height_cache <- function() {
   invisible(entries_cleared)
 }
 
+#' Safely update cache stats (handles locked bindings)
+#'
+#' @param stat_name Name of statistic to update ("hits", "misses", "operations")
+#' @param value New value or increment amount
+#' @param cache_type "grob" or "panel"
+#' @param increment If TRUE, add value to current; if FALSE, set to value
+#' @keywords internal
+safe_update_cache_stat <- function(stat_name, value, cache_type = "grob", increment = TRUE) {
+  tryCatch({
+    ns <- asNamespace("SPCify")
+    stats_name <- if (cache_type == "grob") ".grob_cache_stats" else ".panel_cache_stats"
+
+    # Ensure binding is unlocked
+    if (bindingIsLocked(stats_name, ns)) {
+      unlockBinding(stats_name, ns)
+    }
+
+    # Get stats object
+    stats_obj <- get(stats_name, envir = ns)
+
+    # Update value
+    if (increment) {
+      stats_obj[[stat_name]] <- stats_obj[[stat_name]] + value
+    } else {
+      stats_obj[[stat_name]] <- value
+    }
+
+    # Assign back
+    assign(stats_name, stats_obj, envir = ns)
+
+  }, error = function(e) {
+    # Silent failure - stats are not critical
+    NULL
+  })
+}
+
 #' Get grob cache statistics
 #'
 #' @return List with cache_size, hits, misses, hit_rate, memory_estimate
@@ -1056,12 +1092,12 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
       # Check cache
       if (exists(cache_key, envir = .panel_height_cache)) {
         # Cache hit - update statistics and return cached value
-        .panel_cache_stats$hits <<- .panel_cache_stats$hits + 1L
+        safe_update_cache_stat("hits", 1L, "panel", increment = TRUE)
         return(.panel_height_cache[[cache_key]])
       }
 
       # Cache miss - update statistics
-      .panel_cache_stats$misses <<- .panel_cache_stats$misses + 1L
+      safe_update_cache_stat("misses", 1L, "panel", increment = TRUE)
 
       # Auto-purge check before adding new entry
       auto_purge_panel_cache()
@@ -1237,12 +1273,12 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
       cached_result <- .grob_height_cache[[cache_key]]
       if (!is.null(cached_result)) {
         # Cache hit - update statistics
-        .grob_cache_stats$hits <<- .grob_cache_stats$hits + 1L
+        safe_update_cache_stat("hits", 1L, "grob", increment = TRUE)
         return(cached_result)
       }
 
       # Cache miss - update statistics
-      .grob_cache_stats$misses <<- .grob_cache_stats$misses + 1L
+      safe_update_cache_stat("misses", 1L, "grob", increment = TRUE)
 
       # Auto-purge check before adding new entry
       auto_purge_grob_cache()
@@ -1579,12 +1615,12 @@ estimate_label_height_npc <- function(
         cached_result <- .grob_height_cache[[cache_key]]
         if (!is.null(cached_result)) {
           # Cache hit - update statistics
-          .grob_cache_stats$hits <<- .grob_cache_stats$hits + 1L
+          safe_update_cache_stat("hits", 1L, "grob", increment = TRUE)
           return(cached_result)
         }
 
         # Cache miss - update statistics
-        .grob_cache_stats$misses <<- .grob_cache_stats$misses + 1L
+        safe_update_cache_stat("misses", 1L, "grob", increment = TRUE)
 
         # Auto-purge check before adding new entry
         auto_purge_grob_cache()
