@@ -18,8 +18,10 @@ Runs TTL-based purge on both panel height and grob height caches.
 \examples{
 # TTL-based purge (removes only expired entries)
 purged <- purge_expired_cache_entries()
-cat("Purged", purged$panel_cache, "panel entries and",
-    purged$grob_cache, "grob entries\n")
+cat(
+  "Purged", purged$panel_cache, "panel entries and",
+  purged$grob_cache, "grob entries\n"
+)
 
 # Force purge (clears all caches)
 purged <- purge_expired_cache_entries(force = TRUE)

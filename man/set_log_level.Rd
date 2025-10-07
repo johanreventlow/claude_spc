@@ -15,9 +15,9 @@ error messages for invalid levels.
 }
 \examples{
 \dontrun{
-set_log_level("DEBUG")    # Enable all debug messages
-set_log_level("WARN")     # Only warnings and errors
-set_log_level("invalid")  # Shows available options
+set_log_level("DEBUG") # Enable all debug messages
+set_log_level("WARN") # Only warnings and errors
+set_log_level("invalid") # Shows available options
 }
 
 }

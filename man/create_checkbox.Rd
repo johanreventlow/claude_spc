@@ -29,7 +29,8 @@ create_checkbox("enable_feature", "Aktiver feature")
 
 # Med help text
 create_checkbox("advanced", "Avancerede indstillinger",
-               help_text = "Vis ekstra konfigurationsmuligheder")
+  help_text = "Vis ekstra konfigurationsmuligheder"
+)
 }
 
 }

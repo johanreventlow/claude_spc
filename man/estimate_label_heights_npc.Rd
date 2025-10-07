@@ -8,6 +8,9 @@ estimate_label_heights_npc(
   texts,
   style = NULL,
   panel_height_inches = NULL,
+  device_width = NULL,
+  device_height = NULL,
+  marquee_size = NULL,
   fallback_npc = 0.13,
   use_cache = TRUE,
   return_details = FALSE

@@ -13,9 +13,12 @@ Implementeret som del af Fase 5: Performance & Cleanup.
 \examples{
 \dontrun{
 # Monitor reactive execution
-result <- measure_reactive_performance({
-  expensive_calculation()
-}, "calculation_name")
+result <- measure_reactive_performance(
+  {
+    expensive_calculation()
+  },
+  "calculation_name"
+)
 }
 
 }

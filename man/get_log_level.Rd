@@ -16,6 +16,8 @@ Fald tilbage til \code{INFO} ved ugyldig værdi.
 }
 \examples{
 get_log_level()
-Sys.setenv(SPC_LOG_LEVEL = "DEBUG"); get_log_level()
-Sys.setenv(SPC_LOG_LEVEL = "1");     get_log_level()
+Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+get_log_level()
+Sys.setenv(SPC_LOG_LEVEL = "1")
+get_log_level()
 }
