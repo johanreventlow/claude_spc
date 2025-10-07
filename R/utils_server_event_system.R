@@ -429,7 +429,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         error_context = error_context$context %||% "no context",
         error_details = if (!is.null(error_context$details)) paste(names(error_context$details), collapse = ", ") else "none",
         timestamp = as.character(error_context$timestamp %||% Sys.time()),
-        session_id = if (!is.null(session)) session$token else "no session",
+        session_id = if (!is.null(session)) sanitize_session_token(session$token) else "no session",
         .context = "ERROR_SYSTEM"
       )
     } else if (!is.null(error_info)) {
@@ -437,7 +437,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       log_debug_kv(
         error_type = error_info$type %||% "unknown",
         error_message = error_info$message %||% "no message",
-        session_id = if (!is.null(session)) session$token else "no session",
+        session_id = if (!is.null(session)) sanitize_session_token(session$token) else "no session",
         .context = "ERROR_SYSTEM"
       )
     }
@@ -496,7 +496,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     log_info("Error recovery completed", .context = "ERROR_SYSTEM")
     log_debug_kv(
       recovery_time = as.character(Sys.time()),
-      session_id = if (!is.null(session)) session$token else "no session",
+      session_id = if (!is.null(session)) sanitize_session_token(session$token) else "no session",
       .context = "ERROR_SYSTEM"
     )
   })

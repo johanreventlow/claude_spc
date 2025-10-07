@@ -358,6 +358,20 @@ create_emit_api <- function(app_state) {
     # Data lifecycle events (CONSOLIDATED - FASE 2.2)
     data_updated = function(context = "general") {
       shiny::isolate({
+        # INPUT VALIDATION: Sanitize context parameter
+        if (!is.character(context) || length(context) != 1) {
+          if (exists("log_warn", mode = "function")) {
+            log_warn(
+              paste("Invalid context type in emit$data_updated:", class(context)),
+              .context = "EMIT_API"
+            )
+          }
+          context <- "general"
+        }
+
+        # SANITIZATION: Remove potentially dangerous characters
+        context <- gsub("[^a-zA-Z0-9_-]", "_", context)
+
         app_state$events$data_updated <- app_state$events$data_updated + 1L
 
         # Store data update context for optimization

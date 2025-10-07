@@ -133,6 +133,26 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
 
   # File upload handler
   shiny::observeEvent(input$data_file, {
+    # RATE LIMITING: Prevent DoS via rapid uploads
+    last_upload_time <- shiny::isolate(app_state$session$last_upload_time)
+    if (!is.null(last_upload_time)) {
+      time_since_upload <- as.numeric(difftime(Sys.time(), last_upload_time, units = "secs"))
+
+      if (time_since_upload < 2) {
+        shiny::showNotification(
+          "Vent venligst mindst 2 sekunder mellem fil-uploads (sikkerhedsbeskyttelse)",
+          type = "warning",
+          duration = 3
+        )
+        log_warn(
+          paste("Upload rate limit triggered - last upload", round(time_since_upload, 1), "seconds ago"),
+          .context = "FILE_UPLOAD_SECURITY",
+          session_id = sanitize_session_token(session$token)
+        )
+        return()
+      }
+    }
+
     # Enhanced debug tracking for comprehensive testing
     # SPRINT 1 SECURITY FIX: Sanitize session token before logging
     debug_user_interaction(
@@ -246,6 +266,9 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
         # Complete workflow tracing
         upload_tracer$complete("file_upload_workflow_complete")
         debug_log("File upload workflow completed successfully", "FILE_UPLOAD_FLOW", level = "INFO", session_id = sanitize_session_token(session$token))
+
+        # Update rate limiting timestamp after successful upload
+        app_state$session$last_upload_time <- Sys.time()
       },
       error_type = "network",
       emit = emit,

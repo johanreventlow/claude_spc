@@ -1375,7 +1375,7 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
     style <- marquee::modify_style(
       style,
       "body",
-      size = marquee_size  # This should set the base font size
+      size = marquee_size # This should set the base font size
     )
   }
 
