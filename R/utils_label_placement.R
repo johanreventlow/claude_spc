@@ -1363,21 +1363,9 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
   )
 
   # Create grob and measure (assumes active device exists)
-  # FIX: Apply marquee_size scaling to style if provided
-  # marquee_grob uses style-based sizing, not explicit size parameter
-  if (!is.null(marquee_size)) {
-    # Scale all font sizes in style by marquee_size / default_size ratio
-    # Default geom_marquee size is approximately 6, so we scale from that baseline
-    size_scale <- marquee_size / 6
-
-    # Modify style to apply size scaling
-    # We need to scale all font-related attributes
-    style <- marquee::modify_style(
-      style,
-      "body",
-      size = marquee_size  # This should set the base font size
-    )
-  }
+  # NOTE: Text already contains inline font-size styles from create_responsive_label()
+  # These inline styles take precedence over style base size, so we don't modify style.
+  # The marquee_size parameter is used only for cache key differentiation.
 
   g <- marquee::marquee_grob(
     text = text,
@@ -1546,17 +1534,26 @@ estimate_label_heights_npc <- function(
   meas_width <- if (!is.null(device_width)) device_width else 8
   meas_height <- if (!is.null(device_height)) device_height else 4.5
 
-  # Open ONE off-screen SVG device for all measurements
-  temp_svg <- tempfile(fileext = ".svg")
+  # Open ONE off-screen device for all measurements
+  # FIX: Use PNG device with explicit res=96 to match screen rendering DPI
+  # SVG devices use 72 DPI equivalent, causing ~25% size mismatch
+  temp_file <- tempfile(fileext = ".png")
   suppressMessages(
-    grDevices::svg(filename = temp_svg, width = meas_width, height = meas_height)
+    grDevices::png(
+      filename = temp_file,
+      width = meas_width,
+      height = meas_height,
+      units = "in",
+      res = 96,  # Match screen DPI
+      type = "cairo"  # Use cairo for better text rendering
+    )
   )
   temp_dev <- grDevices::dev.cur()
 
   # Ensure cleanup of temp file
   on.exit(
     {
-      unlink(temp_svg, force = TRUE)
+      unlink(temp_file, force = TRUE)
     },
     add = TRUE,
     after = FALSE
