@@ -3,7 +3,8 @@
 # Fokus på edge cases, security og integration testing som ikke er dækket i test-critical-fixes.R
 
 # Setup ----------------------------------------------------------------
-source(file.path("..", "..", "global.R"))
+# Use helper.R's pkgload setup instead of sourcing global.R
+# helper.R is automatically loaded by testthat
 
 test_that("Input sanitization forhindrer SQL injection patterns", {
   # Test SQL injection prevention - kritisk sikkerhedsmål

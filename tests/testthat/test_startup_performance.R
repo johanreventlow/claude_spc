@@ -1,8 +1,12 @@
 # Startup Performance Test Script
 # Run this to measure how many times QIC calculations occur during app startup
 
-# Load required functions
-source("../../global.R")
+# Load required functions via pkgload
+if (requireNamespace("pkgload", quietly = TRUE)) {
+  pkgload::load_all(here::here(), quiet = TRUE)
+} else {
+  source("../../global.R")
+}
 
 # Function to test startup performance
 test_startup_performance <- function() {
@@ -17,7 +21,12 @@ test_startup_performance <- function() {
 
   # Start app in background with debug logging
   app_process <- callr::r_bg(function() {
-    source("../../global.R")
+    # Load via pkgload in background process
+    if (requireNamespace("pkgload", quietly = TRUE)) {
+      pkgload::load_all(here::here(), quiet = TRUE)
+    } else {
+      source("../../global.R")
+    }
     # Enable debug logging
     Sys.setenv(LOG_LEVEL = "DEBUG")
     run_app(log_level = "DEBUG", port = 4040, launch.browser = FALSE)

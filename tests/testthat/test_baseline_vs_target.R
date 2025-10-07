@@ -1,7 +1,12 @@
 # Test script til at undersøge forskelle mellem baseline og målværdi håndtering
 # Dette script sammenligner direkte hvordan parse_danish_target fungerer for begge felter
 
-source('../../global.R')
+# Load via pkgload or fall back to global.R
+if (requireNamespace("pkgload", quietly = TRUE)) {
+  pkgload::load_all(here::here(), quiet = TRUE)
+} else {
+  source('../../global.R')
+}
 
 # Test data som kan give forskellige resultater
 test_inputs <- c("80%", "0.8", "80", "68,5%", "3,14", "120")
