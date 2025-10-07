@@ -41,14 +41,13 @@
 LABEL_PLACEMENT_CONFIG <- list(
   # === Gap Configuration (relative til label_height_npc) ===
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
-
   relative_gap_line = 0.25,
-  # 5% af label højde - minimal visual gap
-  # FIX: Reduceret fra 0.2 (20%) til 0.05 (5%) efter implementering
-  # af dynamisk label skalering baseret på device height.
-  # Rationale: Med label_size auto-scaling skal gap være en lille konstant.
-  #            Større gaps giver bedre separation på store plots, men ser
-  #            overdrevent store ud på små plots hvor labels fylder mere.
+  # 25% af faktisk label højde
+  # Rationale: Gap beregnes nu fra kun synlige (non-empty) labels.
+  #            25% giver optimal visuel separation mellem label og linje.
+  #            Skalerer automatisk proportionelt med device størrelse da label_size
+  #            auto-scales baseret på device height (se fct_add_spc_labels.R).
+  #            Tidligere problem: Inkluderede empty textB fallback (0.13 NPC), nu fikseret.
 
   relative_gap_labels = 0.30,
   # 30% af label højde
@@ -109,12 +108,12 @@ LABEL_PLACEMENT_CONFIG <- list(
 
   # === Height Estimation (grob-baseret) ===
 
-  height_safety_margin = 1.44,
-  # FIX: Empirisk korrektion for marquee grob height under-approximation
-  # Rationale: grobHeight() for marquee labels måler ca. 70% af faktisk rendered height
-  #            Testing viste: målt 0.47 inches vs faktisk ~0.68 inches = 1.44x faktor
-  #            Denne faktor sikrer at gap calculations bruger korrekt label height
-  #            Tidligere værdi: 1.0 (ingen margin) resulterede i label overlap
+  height_safety_margin = 1.0,
+  # Safety margin ved grob-måling (multiplier)
+  # Rationale: Med korrekt panel-based grob målinger (via panel_height_inches)
+  #            er ingen ekstra safety margin nødvendig. Målinger er præcise.
+  #            Tidligere værdi 1.44 var en workaround for legacy fallback-baseret højde.
+  #            Nu med faktiske grob målinger: 1.0 = ingen ekstra margin
 
   height_fallback_npc = 0.13
   # 13% NPC fallback

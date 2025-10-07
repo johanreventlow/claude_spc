@@ -64,7 +64,7 @@ extract_comment_data <- function(data, kommentar_column, qic_data) {
       comment_data$comment <- sapply(comment_data$comment, function(cmt) {
         sanitize_user_input(
           input_value = cmt,
-          max_length = 100,  # Longer limit for comments before truncation
+          max_length = 100, # Longer limit for comments before truncation
           allowed_chars = "A-Za-z0-9_æøåÆØÅ .,-:!?",
           html_escape = TRUE
         )
@@ -157,9 +157,8 @@ clean_qic_call_args <- function(call_args) {
 ## Build QIC Call Arguments
 # Bygger argumenter til qicharts2::qic() kald dynamisk
 build_qic_call_arguments <- function(x_data, y_data, chart_type, title_text, ylab_text,
-                                   n_data = NULL, freeze_position = NULL,
-                                   part_positions = NULL, target_value = NULL) {
-
+                                     n_data = NULL, freeze_position = NULL,
+                                     part_positions = NULL, target_value = NULL) {
   # Byg grundlæggende qic kald argumenter dynamisk
   call_args <- list(
     x = x_data,
@@ -215,7 +214,7 @@ process_ratio_chart_data <- function(data, config, chart_type, y_axis_unit) {
 
   # Calculate Y-axis data and generate label
   y_data <- calculate_y_axis_data(chart_type, parsed_data$y_data, parsed_data$n_data)
-  n_data <- parsed_data$n_data  # Keep for qicharts2
+  n_data <- parsed_data$n_data # Keep for qicharts2
   ylab_text <- generate_y_axis_label(chart_type, y_unit_label, config$y_col, config$n_col)
 
   return(list(
@@ -244,7 +243,7 @@ process_standard_chart_data <- function(data, config, chart_type, y_axis_unit) {
   return(list(
     data = data,
     y_data = y_data,
-    n_data = NULL,  # No n_data for standard charts
+    n_data = NULL, # No n_data for standard charts
     ylab_text = ylab_text,
     y_unit_label = y_unit_label
   ))
@@ -261,11 +260,16 @@ prepare_qic_data_parameters <- function(data, config, x_validation, chart_type) 
   n_col_name <- if (chart_type_requires_denominator(chart_type)) config$n_col else NULL
 
   # Brug data fra x_validation i stedet for duplikeret logik
-  log_debug(paste("UPDATE CONDITION DEBUG:\n- x_col_name is not NULL:", !is.null(x_col_name),
-                  "\n- x_col_name in names(data):", if (!is.null(x_col_name)) x_col_name %in% names(data) else "N/A",
-                  "\n- x_validation$is_date:", x_validation$is_date,
-                  if (!is.null(x_col_name) && x_col_name %in% names(data))
-                    paste("\n- data[[x_col_name]] is character:", is.character(data[[x_col_name]])) else ""), "DATA_PROCESS")
+  log_debug(paste(
+    "UPDATE CONDITION DEBUG:\n- x_col_name is not NULL:", !is.null(x_col_name),
+    "\n- x_col_name in names(data):", if (!is.null(x_col_name)) x_col_name %in% names(data) else "N/A",
+    "\n- x_validation$is_date:", x_validation$is_date,
+    if (!is.null(x_col_name) && x_col_name %in% names(data)) {
+      paste("\n- data[[x_col_name]] is character:", is.character(data[[x_col_name]]))
+    } else {
+      ""
+    }
+  ), "DATA_PROCESS")
 
   # UPDATED CONDITION: Accept both date columns AND character columns (like "Uge tekst")
   if (!is.null(x_col_name) && x_col_name %in% names(data) &&
@@ -279,7 +283,6 @@ prepare_qic_data_parameters <- function(data, config, x_validation, chart_type) 
       if (length(x_validation$x_data) == nrow(data)) {
         data[[x_col_name]] <- x_validation$x_data
         x_col_for_qic <- x_col_name
-
       } else {
         log_debug("Length mismatch - using observation sequence as fallback", .context = "DATA_PROCESS")
         # Fallback til observation sekvens
@@ -294,7 +297,6 @@ prepare_qic_data_parameters <- function(data, config, x_validation, chart_type) 
       data[[x_col_name]] <- data[[x_col_name]] |>
         forcats::fct_inorder()
       x_col_for_qic <- x_col_name
-
     }
   } else {
     # Brug observation sekvens som fallback
@@ -302,7 +304,6 @@ prepare_qic_data_parameters <- function(data, config, x_validation, chart_type) 
       data$obs_sequence <- 1:nrow(data)
     }
     x_col_for_qic <- "obs_sequence"
-
   }
 
   # Note: obs_sequence fjernes IKKE fra data da det måske bruges af andre komponenter
@@ -321,7 +322,7 @@ prepare_qic_data_parameters <- function(data, config, x_validation, chart_type) 
 ## Build QIC Arguments with NSE
 # Bygger qicharts2::qic() argumenter med non-standard evaluation
 build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
-                               chart_type, freeze_position, part_positions, target_value = NULL, centerline_value = NULL) {
+                                chart_type, freeze_position, part_positions, target_value = NULL, centerline_value = NULL) {
   # STABLE ROW ID: Add row identifier for comment mapping resilience
   # This prevents comment misalignment when qicharts2 reorders/filters rows
   data_with_row_id <- data
@@ -399,7 +400,7 @@ execute_qic_call <- function(qic_args, chart_type, config) {
   # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
   # Feature flag check - disable benchmarking in production by default
   benchmark_enabled <- isTRUE(getOption("spc.benchmark_enabled", FALSE)) ||
-                      isTRUE(tryCatch(golem::get_golem_options("benchmark_enabled"), error = function(e) FALSE))
+    isTRUE(tryCatch(golem::get_golem_options("benchmark_enabled"), error = function(e) FALSE))
 
   if (benchmark_enabled && exists("benchmark_spc_operation") && requireNamespace("microbenchmark", quietly = TRUE)) {
     # Determine data size category for benchmarking
@@ -626,8 +627,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
     )
   }
 
-  log_debug(paste("generateSPCPlot CALL #", call_number, "at", format(current_time, "%H:%M:%S.%OS3"),
-                  "| chart_type:", chart_type, "| data:", nrow(data), "rows"), .context = "SPC_CALC_DEBUG")
+  log_debug(paste(
+    "generateSPCPlot CALL #", call_number, "at", format(current_time, "%H:%M:%S.%OS3"),
+    "| chart_type:", chart_type, "| data:", nrow(data), "rows"
+  ), .context = "SPC_CALC_DEBUG")
 
   # Input validation and configuration sanitization
   validate_spc_inputs(data, config)
@@ -819,8 +822,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       plot <- safe_operation(
         "Build custom ggplot",
         code = {
-          plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y)) 
-            
+          plot <- ggplot2::ggplot(qic_data, ggplot2::aes(x = x, y = y))
+
           # Kontrolgrænser tilføjes conditionally ----
           if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl)) && !is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
             plot <- plot +
@@ -830,21 +833,21 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           }
           # Resten af plot tilføjes ------
           plot <- plot +
-            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = target_linewidth, colour = "#565656", linetype="42", na.rm = TRUE) +
+            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = target_linewidth, colour = "#565656", linetype = "42", na.rm = TRUE) +
             ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = data_linewidth, na.rm = TRUE) +
             ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = point_size, na.rm = TRUE) +
 
             # ggplot2::geom_line(color = hospital_colors$lightgrey, linewidth = 1) +
             # ggplot2::geom_point(size = 2, color = hospital_colors$mediumgrey) +
-            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = cl_linewidth) + 
-            
-            
+            ggplot2::geom_line(ggplot2::aes(y = cl, group = part, linetype = anhoej.signal), color = hospital_colors$hospitalblue, linewidth = cl_linewidth) +
+
+
             ggplot2::labs(title = call_args$title, x = NULL, y = NULL) +
             ggplot2::scale_linetype_manual(
               values = c("FALSE" = "solid", "TRUE" = "12"),
-              guide = "none"  # Skjul legend
-            ) 
-            
+              guide = "none" # Skjul legend
+            )
+
 
           plot
         },
@@ -905,13 +908,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
         # Beregn adaptive interval size baseret på data density
         base_interval_secs <- if (interval_info$type == "weekly") {
-          7 * 24 * 60 * 60  # 7 dage i sekunder
+          7 * 24 * 60 * 60 # 7 dage i sekunder
         } else if (interval_info$type == "monthly") {
-          30 * 24 * 60 * 60  # ~30 dage i sekunder
+          30 * 24 * 60 * 60 # ~30 dage i sekunder
         } else if (interval_info$type == "daily") {
-          24 * 60 * 60  # 1 dag i sekunder
+          24 * 60 * 60 # 1 dag i sekunder
         } else {
-          NULL  # Fallback til breaks_pretty
+          NULL # Fallback til breaks_pretty
         }
 
         # Beregn adaptive interval baseret på data density
@@ -922,17 +925,17 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           if (potential_breaks > 15) {
             # Find passende multiplier baseret på interval type
             multipliers <- if (interval_info$type == "weekly") {
-              c(2, 4, 13)  # 2 uger, 4 uger (måned), 13 uger (kvartal)
+              c(2, 4, 13) # 2 uger, 4 uger (måned), 13 uger (kvartal)
             } else if (interval_info$type == "monthly") {
-              c(3, 6, 12)  # 3 måneder, 6 måneder, 12 måneder
+              c(3, 6, 12) # 3 måneder, 6 måneder, 12 måneder
             } else if (interval_info$type == "daily") {
-              c(2, 4, 8)  # 2 dage, 4 dage, 8 dage
+              c(2, 4, 8) # 2 dage, 4 dage, 8 dage
             } else {
-              c(2, 4, 8)  # Generic fallback
+              c(2, 4, 8) # Generic fallback
             }
 
             # Find første multiplier der giver <= 15 breaks
-            mult <- tail(multipliers, 1)  # Default til største
+            mult <- tail(multipliers, 1) # Default til største
             for (m in multipliers) {
               if (potential_breaks / m <= 15) {
                 mult <- m
@@ -1099,7 +1102,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             # Apply scale cuts manually using sapply for vectorization
             sapply(x, function(val) {
               # Handle NA values
-              if (is.na(val)) return(NA)
+              if (is.na(val)) {
+                return(NA)
+              }
 
               if (abs(val) >= 1e9) {
                 scaled <- val / 1e9
@@ -1139,8 +1144,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           expand = ggplot2::expansion(mult = c(.25, .25)),
           labels = function(x) {
             ifelse(x == round(x),
-                   format(round(x), decimal.mark = ","),
-                   format(x, decimal.mark = ",", nsmall = 1))
+              format(round(x), decimal.mark = ","),
+              format(x, decimal.mark = ",", nsmall = 1)
+            )
           }
         )
       } else if (y_axis_unit == "time") {
@@ -1156,7 +1162,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             labels = function(x) {
               sapply(x, function(val) {
                 # Handle NA values
-                if (is.na(val)) return(NA)
+                if (is.na(val)) {
+                  return(NA)
+                }
 
                 if (val == round(val)) {
                   paste0(round(val), " min")
@@ -1173,7 +1181,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             labels = function(x) {
               sapply(x, function(val) {
                 # Handle NA values
-                if (is.na(val)) return(NA)
+                if (is.na(val)) {
+                  return(NA)
+                }
 
                 scaled <- val / 60
                 if (scaled == round(scaled)) {
@@ -1191,7 +1201,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
             labels = function(x) {
               sapply(x, function(val) {
                 # Handle NA values
-                if (is.na(val)) return(NA)
+                if (is.na(val)) {
+                  return(NA)
+                }
 
                 scaled <- val / 1440
                 if (scaled == round(scaled)) {
@@ -1220,8 +1232,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         qic_data = qic_data,
         y_axis_unit = y_axis_unit,
         label_size = label_size,
-        verbose = TRUE,  # DEBUG: Enable verbose output for label placement diagnostics
-        debug_mode = FALSE
+        verbose = TRUE, # DEBUG: Enable verbose output for label placement diagnostics
+        debug_mode = TRUE # DEBUG: Enable detailed gap calculation logs
       )
 
       return(list(plot = plot, qic_data = qic_data))
@@ -1274,25 +1286,25 @@ applyHospitalTheme <- function(plot, base_size = 14) {
           panel.grid.major = ggplot2::element_blank(),
           panel.grid.minor = ggplot2::element_blank(),
           legend.position = "none",
-        ) + lemon::coord_capped_cart(bottom='right', gap = 0)
-        
-        
-        # ggplot2::theme_minimal() +
-        # ggplot2::theme(
-        #   plot.title = ggplot2::element_text(color = hospital_colors$primary, size = 14, face = "bold"),
-        #   plot.subtitle = ggplot2::element_text(color = hospital_colors$secondary, size = 12),
-        #   axis.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
-        #   axis.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
-        #   legend.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
-        #   legend.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
-        #   panel.grid.major = ggplot2::element_line(color = hospital_colors$light),
-        #   panel.grid.minor = ggplot2::element_line(color = hospital_colors$light),
-        #   strip.text = ggplot2::element_text(color = hospital_colors$primary, face = "bold")
-        # ) +
-        # ggplot2::labs(caption = footer_text) +
-        # ggplot2::theme(
-        #   plot.caption = ggplot2::element_text(size = 8, color = hospital_colors$secondary, hjust = 0)
-        # )
+        ) + lemon::coord_capped_cart(bottom = "right", gap = 0)
+
+
+      # ggplot2::theme_minimal() +
+      # ggplot2::theme(
+      #   plot.title = ggplot2::element_text(color = hospital_colors$primary, size = 14, face = "bold"),
+      #   plot.subtitle = ggplot2::element_text(color = hospital_colors$secondary, size = 12),
+      #   axis.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
+      #   axis.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
+      #   legend.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
+      #   legend.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
+      #   panel.grid.major = ggplot2::element_line(color = hospital_colors$light),
+      #   panel.grid.minor = ggplot2::element_line(color = hospital_colors$light),
+      #   strip.text = ggplot2::element_text(color = hospital_colors$primary, face = "bold")
+      # ) +
+      # ggplot2::labs(caption = footer_text) +
+      # ggplot2::theme(
+      #   plot.caption = ggplot2::element_text(size = 8, color = hospital_colors$secondary, hjust = 0)
+      # )
 
       return(themed_plot)
     },

@@ -27,9 +27,9 @@ add_right_labels_marquee <- function(
     textA,
     textB,
     params = list(
-      label_height_npc = NULL,  # Auto-beregnes
-      gap_line = NULL,          # Auto-beregnes
-      gap_labels = NULL,        # Auto-beregnes
+      label_height_npc = NULL, # Auto-beregnes
+      gap_line = NULL, # Auto-beregnes
+      gap_labels = NULL, # Auto-beregnes
       pad_top = 0.01,
       pad_bot = 0.01,
       pref_pos = c("under", "under"),
@@ -39,9 +39,7 @@ add_right_labels_marquee <- function(
     gpB = grid::gpar(col = "#565656"),
     label_size = 6,
     verbose = TRUE,
-    debug_mode = FALSE
-) {
-
+    debug_mode = FALSE) {
   # Beregn responsive størrelser baseret på label_size (baseline = 6)
   scale_factor <- label_size / 6
 
@@ -78,37 +76,45 @@ add_right_labels_marquee <- function(
 
   # Detektér aktiv device størrelse for korrekt panel height measurement
   # FIX: Brug faktisk device size i stedet for hardcoded 7×7 inches
-  device_size <- tryCatch({
-    if (grDevices::dev.cur() > 1) {  # Device aktiv (ikke null device)
-      dev_inches <- grDevices::dev.size("in")
-      list(width = dev_inches[1], height = dev_inches[2])
-    } else {
-      # Ingen aktiv device - brug defaults
+  device_size <- tryCatch(
+    {
+      if (grDevices::dev.cur() > 1) { # Device aktiv (ikke null device)
+        dev_inches <- grDevices::dev.size("in")
+        list(width = dev_inches[1], height = dev_inches[2])
+      } else {
+        # Ingen aktiv device - brug defaults
+        list(width = 7, height = 7)
+      }
+    },
+    error = function(e) {
+      # Fallback hvis dev.size() fejler
       list(width = 7, height = 7)
     }
-  }, error = function(e) {
-    # Fallback hvis dev.size() fejler
-    list(width = 7, height = 7)
-  })
+  )
 
   if (verbose) {
-    message(sprintf("Device size: %.2f × %.2f inches",
-                    device_size$width, device_size$height))
+    message(sprintf(
+      "Device size: %.2f × %.2f inches",
+      device_size$width, device_size$height
+    ))
   }
 
   # Mål panel højde med faktisk device størrelse
-  panel_height_inches <- tryCatch({
-    measure_panel_height_from_gtable(
-      gtable,
-      device_width = device_size$width,
-      device_height = device_size$height
-    )
-  }, error = function(e) {
-    if (verbose) {
-      message("Kunne ikke måle panel højde: ", e$message, " - bruger viewport fallback")
+  panel_height_inches <- tryCatch(
+    {
+      measure_panel_height_from_gtable(
+        gtable,
+        device_width = device_size$width,
+        device_height = device_size$height
+      )
+    },
+    error = function(e) {
+      if (verbose) {
+        message("Kunne ikke måle panel højde: ", e$message, " - bruger viewport fallback")
+      }
+      NULL
     }
-    NULL
-  })
+  )
 
   if (verbose && !is.null(panel_height_inches)) {
     message("Målt panel højde: ", round(panel_height_inches, 3), " inches")
@@ -125,16 +131,38 @@ add_right_labels_marquee <- function(
     height_A <- heights[[1]]
     height_B <- heights[[2]]
 
-    if (height_A$npc > height_B$npc) {
+    # FIX: Ignorer empty labels ved valg af højde til gap calculation
+    # Hvis textB er tom (kun CL label), brug kun height_A
+    # Dette sikrer at gap er baseret på faktisk synlig label højde
+    textA_is_empty <- is.null(textA) || nchar(trimws(textA)) == 0
+    textB_is_empty <- is.null(textB) || nchar(trimws(textB)) == 0
+
+    if (textA_is_empty && textB_is_empty) {
+      # Ingen labels - brug fallback
       params$label_height_npc <- height_A
-    } else {
+    } else if (textB_is_empty) {
+      # Kun textA - brug height_A uanset størrelse
+      params$label_height_npc <- height_A
+    } else if (textA_is_empty) {
+      # Kun textB - brug height_B uanset størrelse
       params$label_height_npc <- height_B
+    } else {
+      # Begge labels - brug max
+      if (height_A$npc > height_B$npc) {
+        params$label_height_npc <- height_A
+      } else {
+        params$label_height_npc <- height_B
+      }
     }
 
     if (verbose) {
-      message("Auto-beregnet label_height_npc: ", round(params$label_height_npc$npc, 4),
-              " (A: ", round(height_A$npc, 4), ", B: ", round(height_B$npc, 4), ")",
-              " [", round(params$label_height_npc$inches, 4), " inches]")
+      message(
+        "Auto-beregnet label_height_npc: ", round(params$label_height_npc$npc, 4),
+        " (A: ", round(height_A$npc, 4), ", B: ", round(height_B$npc, 4), ")",
+        " [", round(params$label_height_npc$inches, 4), " inches]",
+        if (textA_is_empty) " [A tom]" else "",
+        if (textB_is_empty) " [B tom]" else ""
+      )
     }
   }
 
@@ -209,20 +237,23 @@ add_right_labels_marquee <- function(
   # PROBLEM: Tvungen POSIXct konvertering bryder numeriske x-akser
   # hvor værdier bliver fortolket som sekunder siden 1970
   x_is_temporal <- FALSE
-  tryCatch({
-    # Check x.range class direkte
-    if (inherits(x_max_value, c("POSIXct", "POSIXt", "Date"))) {
-      x_is_temporal <- TRUE
+  tryCatch(
+    {
+      # Check x.range class direkte
+      if (inherits(x_max_value, c("POSIXct", "POSIXt", "Date"))) {
+        x_is_temporal <- TRUE
+      }
+      # Alternativ: check scale transformation
+      if (!x_is_temporal && !is.null(built_plot$layout$panel_params[[1]]$x.sec.range)) {
+        # Secondary axis antyder temporal data
+        x_is_temporal <- TRUE
+      }
+    },
+    error = function(e) {
+      # Fallback: hvis type detection fejler, brug værdien direkte (numerisk)
+      x_is_temporal <- FALSE
     }
-    # Alternativ: check scale transformation
-    if (!x_is_temporal && !is.null(built_plot$layout$panel_params[[1]]$x.sec.range)) {
-      # Secondary axis antyder temporal data
-      x_is_temporal <- TRUE
-    }
-  }, error = function(e) {
-    # Fallback: hvis type detection fejler, brug værdien direkte (numerisk)
-    x_is_temporal <- FALSE
-  })
+  )
 
   if (x_is_temporal) {
     x_max <- as.POSIXct(x_max_value, origin = "1970-01-01", tz = "UTC")
