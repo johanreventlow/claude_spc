@@ -41,10 +41,10 @@
 LABEL_PLACEMENT_CONFIG <- list(
   # === Gap Configuration (relative til label_height_npc) ===
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
-  relative_gap_line = 0.25,
-  # 25% af faktisk label højde
+  relative_gap_line = 0.05,
+  # 5% af faktisk label højde
   # Rationale: Gap beregnes nu fra kun synlige (non-empty) labels.
-  #            25% giver optimal visuel separation mellem label og linje.
+  #            5% giver optimal visuel separation mellem label og linje.
   #            Skalerer automatisk proportionelt med device størrelse da label_size
   #            auto-scales baseret på device height (se fct_add_spc_labels.R).
   #            Tidligere problem: Inkluderede empty textB fallback (0.13 NPC), nu fikseret.
