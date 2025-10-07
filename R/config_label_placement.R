@@ -41,7 +41,7 @@
 LABEL_PLACEMENT_CONFIG <- list(
   # === Gap Configuration (relative til label_height_npc) ===
   # Disse værdier balancerer "tæt placering" med "ingen overlap"
-  relative_gap_line = 0.05,
+  relative_gap_line = 0.25,
   # 25% af faktisk label højde
   # Rationale: Gap beregnes nu fra kun synlige (non-empty) labels.
   #            25% giver optimal visuel separation mellem label og linje.

@@ -1232,8 +1232,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         qic_data = qic_data,
         y_axis_unit = y_axis_unit,
         label_size = label_size,
-        verbose = TRUE, # DEBUG: Enable verbose output for label placement diagnostics
-        debug_mode = TRUE # DEBUG: Enable detailed gap calculation logs
+        verbose = FALSE,
+        debug_mode = FALSE
       )
 
       return(list(plot = plot, qic_data = qic_data))
