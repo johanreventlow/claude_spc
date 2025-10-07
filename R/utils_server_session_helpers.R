@@ -67,8 +67,9 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   }
 
   # UNIFIED EVENT LISTENERS: Update dataLoaded status when relevant events occur
-  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
-    # log_debug("data_loaded event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
+  # SPRINT 4: Migrated from data_loaded to consolidated data_updated event
+  shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = 1000, {
+    # log_debug("data_updated event received - updating dataLoaded status", .context = "NAVIGATION_UNIFIED")
     new_status <- evaluate_dataLoaded_status()
     app_state$session$dataLoaded_status <- new_status
     # log_debug("dataLoaded status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
@@ -122,7 +123,8 @@ setup_helper_observers <- function(input, output, session, obs_manager = NULL, a
   }
 
   # UNIFIED EVENT LISTENERS: Update has_data status when relevant events occur
-  shiny::observeEvent(app_state$events$data_loaded, ignoreInit = TRUE, priority = 1000, {
+  # SPRINT 4: Migrated from data_loaded to consolidated data_updated event
+  shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = 1000, {
     new_status <- evaluate_has_data_status()
     app_state$session$has_data_status <- new_status
     # log_debug("has_data status updated to:", new_status, .context = "NAVIGATION_UNIFIED")
