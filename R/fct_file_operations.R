@@ -96,7 +96,7 @@ sanitize_session_metadata <- function(input_value, field_type = "general", max_l
 
   # Base sanitization using existing function if available
   clean_value <- if (exists("sanitize_user_input", mode = "function")) {
-    sanitize_user_input(input_value, max_length = max_length, strict_mode = TRUE)
+    sanitize_user_input(input_value, max_length = max_length)
   } else {
     # Fallback basic sanitization
     substr(trimws(as.character(input_value)), 1, max_length)
