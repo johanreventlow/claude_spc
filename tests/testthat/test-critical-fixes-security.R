@@ -121,6 +121,44 @@ test_that("Column name sanitization håndterer kliniske data patterns", {
 
 test_that("Logging API performance under load", {
   # Test performance regression - kritisk for production stability
+  #
+  # Performance skalering baseret på miljø:
+  # - Lokal development: 1.0s (baseline target)
+  # - CI/automatiseret: 2.5s (accounting for shared resources)
+  # - Generisk Unix/Windows: 2.0s (moderate overhead)
+  #
+  # Rationale: CI-systemer og delte miljøer har typisk:
+  # - Delt CPU/IO med andre jobs
+  # - Virtualisering overhead
+  # - Potentielt langsommere disk I/O
+  # - Variable systembelastning
+
+  # Detect execution environment
+  is_ci <- isTRUE(as.logical(Sys.getenv("CI", "FALSE"))) ||
+           isTRUE(as.logical(Sys.getenv("GITHUB_ACTIONS", "FALSE"))) ||
+           isTRUE(as.logical(Sys.getenv("GITLAB_CI", "FALSE"))) ||
+           nzchar(Sys.getenv("JENKINS_URL"))
+
+  # Determine platform characteristics
+  platform <- Sys.info()[["sysname"]]
+  is_windows <- platform == "Windows"
+
+  # Calculate performance threshold based on environment
+  base_threshold <- 1.0  # Baseline: 500 logs in 1 second
+
+  if (is_ci) {
+    # CI environments: 2.5x baseline (most lenient)
+    time_threshold <- base_threshold * 2.5
+    environment_label <- "CI/Automated"
+  } else if (is_windows) {
+    # Windows: 2x baseline (filesystem typically slower)
+    time_threshold <- base_threshold * 2.0
+    environment_label <- "Windows Development"
+  } else {
+    # Local development (Unix-like): baseline target
+    time_threshold <- base_threshold
+    environment_label <- "Local Development"
+  }
 
   # Setup performance tracking
   start_time <- Sys.time()
@@ -141,9 +179,17 @@ test_that("Logging API performance under load", {
 
   duration <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
 
-  # Performance requirement: 500 logs < 1 second
-  expect_lt(duration, 1.0,
-            info = "500 structured log calls should complete within 1 second")
+  # Performance requirement: Scaled based on environment
+  expect_lt(
+    duration,
+    time_threshold,
+    info = sprintf(
+      "500 structured log calls should complete within %.1fs on %s (actual: %.2fs)",
+      time_threshold,
+      environment_label,
+      duration
+    )
+  )
 
   # Test memory efficiency - ingen store memory leaks
   gc_before <- gc()

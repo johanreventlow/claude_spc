@@ -35,40 +35,74 @@ install.packages(c(
 ```
 
 ### Start Application
+
 ```r
 # Clone repository
 git clone <repository-url>
 cd claude_spc
 
-# Production mode (recommended)
+# ═══════════════════════════════════════════════════════
+# PRODUCTION MODE (Anbefalet) - Package loading
+# ═══════════════════════════════════════════════════════
+
+# Standard production start (~50-100ms startup)
+R -e "library(SPCify); SPCify::run_app()"
+
+# Custom port
+R -e "library(SPCify); SPCify::run_app(port = 3838)"
+
+# Development mode med enhanced debugging
+R -e "GOLEM_CONFIG_ACTIVE=development library(SPCify); SPCify::run_app(port = 4040)"
+
+# ═══════════════════════════════════════════════════════
+# DEVELOPMENT MODE - Source loading (kun til debugging)
+# ═══════════════════════════════════════════════════════
+
+# Development med source loading (~400ms+ startup, nyttigt til debugging)
 R -e "source('global.R'); run_app()"
 
 # Specify custom port
-R -e "source('global.R'); run_app(port = 3838)"
-
-# Development mode med enhanced debugging
-R -e "source('global.R'); run_dev(port = 4040)"
+R -e "source('global.R'); run_app(port = 4040)"
 
 # Alternative med direct shiny launch
 R -e "source('global.R'); shiny::runApp('.', port = 4040)"
-
-# Kør via pakkefunktionen
-R -e "claudespc::run_app(port = 5050)"
 ```
 
 ### Environment-Specific Usage
 ```r
 # Development environment (auto-load test data, debug logging)
-R_CONFIG_ACTIVE=development R -e "source('global.R'); run_app()"
+GOLEM_CONFIG_ACTIVE=development R -e "library(SPCify); SPCify::run_app()"
 
 # Production environment (secure defaults)
-R_CONFIG_ACTIVE=production R -e "source('global.R'); run_app()"
+GOLEM_CONFIG_ACTIVE=production R -e "library(SPCify); SPCify::run_app()"
 
 # Testing environment (controlled conditions)
-R_CONFIG_ACTIVE=testing R -e "source('global.R'); run_app()"
+GOLEM_CONFIG_ACTIVE=testing R -e "library(SPCify); SPCify::run_app()"
 
-# Manual debug logging
-SHINY_DEBUG_MODE=TRUE SPC_LOG_LEVEL=DEBUG R -e "source('global.R'); run_app()"
+# Manual debug logging (via explicit parameter)
+R -e "library(SPCify); SPCify::run_app(log_level = 'DEBUG')"
+
+# Development med source loading og debug logs
+GOLEM_CONFIG_ACTIVE=development SPC_LOG_LEVEL=DEBUG R -e "source('global.R'); run_app()"
+```
+
+### Loading Strategy
+
+**Package Loading (Anbefalet for produktion):**
+- Hurtigere startup (~50-100ms)
+- Optimeret til deployment
+- Standard for production
+
+**Source Loading (Kun til development debugging):**
+- Langsommere startup (~400ms+)
+- Nyttigt til debugging og development
+- Automatisk aktiveret via `global.R`
+
+```r
+# Force source loading mode (kun til debugging)
+options(spc.debug.source_loading = TRUE)
+source('global.R')
+run_app()
 ```
 
 ## 📊 Usage Examples
@@ -109,15 +143,35 @@ claude_spc/
 
 ### State Management (Phase 4)
 ```r
-# Centralized app state structure
-app_state <- list(
-  data = list(current_data = NULL, file_info = NULL),
-  session = list(auto_save_enabled = TRUE, file_uploaded = FALSE),
-  ui = list(hide_anhoej_rules = FALSE)
+# Centralized app state structure (environment-based for by-reference sharing)
+app_state <- new.env(parent = emptyenv())
+
+# Event bus for reactive communication
+app_state$events <- reactiveValues(
+  data_updated = 0L,              # CONSOLIDATED: Data load/change events
+  auto_detection_completed = 0L,
+  ui_sync_requested = 0L,
+  session_reset = 0L
 )
 
-# Legacy compatibility maintained
-values <- reactiveValues(...)  # Still supported
+# Data management (reactiveValues for reactive dependencies)
+app_state$data <- reactiveValues(
+  current_data = NULL,
+  original_data = NULL,
+  file_info = NULL,
+  updating_table = FALSE
+)
+
+# Hierarchical column management
+app_state$columns <- reactiveValues(
+  auto_detect = reactiveValues(in_progress = FALSE, completed = FALSE, results = NULL),
+  mappings = reactiveValues(x_column = NULL, y_column = NULL, n_column = NULL),
+  ui_sync = reactiveValues(needed = FALSE, last_sync_time = NULL)
+)
+
+# Emit API for event-driven updates
+emit <- create_emit_api(app_state)
+emit$data_updated(context = "upload")  # Trigger events
 ```
 
 ## 🧪 Testing

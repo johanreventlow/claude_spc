@@ -48,20 +48,67 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
       # Basic error message construction
       error_msg <- paste(operation_name, "fejlede:", e$message)
 
-      # Try to use structured logging if available, fallback to basic cat
+      # Try centralized logging with multi-level fallback strategy
+      logging_succeeded <- FALSE
+
+      # LEVEL 1: Try structured log_error() if available
       if (exists("log_error", mode = "function")) {
         tryCatch(
           {
-            log_error(error_msg, paste0("ERROR_HANDLING_", toupper(error_type)))
+            log_error(
+              message = error_msg,
+              .context = paste0("ERROR_HANDLING_", toupper(error_type)),
+              details = list(
+                operation = operation_name,
+                error_class = class(e)[1],
+                error_message = e$message
+              )
+            )
+            logging_succeeded <- TRUE
           },
           error = function(log_err) {
-            # Fallback to basic R messaging if logging fails
-            cat(sprintf("[%s] ERROR: [%s] %s\n", format(Sys.time(), "%H:%M:%S"), "ERROR_HANDLING", error_msg))
+            # Fall through to next level if log_error fails
+            logging_succeeded <<- FALSE
           }
         )
-      } else {
-        # Basic fallback logging without dependencies - consistent format with main logging
-        cat(sprintf("[%s] ERROR: [%s] %s\n", format(Sys.time(), "%H:%M:%S"), "ERROR_HANDLING", error_msg))
+      }
+
+      # LEVEL 2: Try basic log_msg() if log_error failed/unavailable
+      if (!logging_succeeded && exists("log_msg", mode = "function")) {
+        tryCatch(
+          {
+            log_msg(
+              message = error_msg,
+              level = "ERROR",
+              component = paste0("ERROR_HANDLING_", toupper(error_type))
+            )
+            logging_succeeded <- TRUE
+          },
+          error = function(log_err) {
+            # Fall through to final fallback
+            logging_succeeded <<- FALSE
+          }
+        )
+      }
+
+      # LEVEL 3: Absolute fallback - minimal cat() only if all logging failed
+      if (!logging_succeeded) {
+        # Use minimal structured format matching log_msg pattern
+        # This should rarely happen in production
+        tryCatch(
+          {
+            cat(sprintf(
+              "[%s] ERROR: [ERROR_HANDLING_%s] %s\n",
+              format(Sys.time(), "%H:%M:%S"),
+              toupper(error_type),
+              error_msg
+            ))
+          },
+          error = function(final_err) {
+            # Absolute last resort - completely silent failure to avoid cascade
+            # Do nothing - error already occurred, don't make it worse
+          }
+        )
       }
 
       # User notification if session provided and requested
