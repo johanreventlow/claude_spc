@@ -158,7 +158,8 @@ if (use_source_loading) {
     "R/utils_server_server_management.R",
     "R/app_server_main.R",
     "R/utils_server_session_helpers.R",
-    "R/utils_server_event_system.R",
+    "R/utils_server_event_listeners.R", # Split from utils_server_event_system.R
+    "R/utils_ui_column_sync.R", # Split from utils_server_event_system.R
     "R/fct_visualization_server.R"
   )
 
