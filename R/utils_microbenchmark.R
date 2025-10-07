@@ -36,8 +36,8 @@ safe_eval_benchmark <- function(expr, operation_name = "unknown") {
   if (is.function(expr)) {
     expr_env <- environment(expr)
     if (!identical(expr_env, globalenv()) &&
-        !identical(expr_env, baseenv()) &&
-        !identical(expr_env, .GlobalEnv)) {
+      !identical(expr_env, baseenv()) &&
+      !identical(expr_env, .GlobalEnv)) {
       log_warn("Non-standard environment in benchmark function", .context = "[SECURITY]")
       log_debug_kv(
         operation = operation_name,
@@ -47,16 +47,19 @@ safe_eval_benchmark <- function(expr, operation_name = "unknown") {
   }
 
   # Safe execution with error handling
-  tryCatch({
-    eval(expr)
-  }, error = function(e) {
-    log_error(paste("Benchmark execution failed:", e$message), .context = "[BENCHMARK]")
-    log_debug_kv(
-      operation = operation_name,
-      .context = "[BENCHMARK]"
-    )
-    stop("Benchmark execution failed safely")
-  })
+  tryCatch(
+    {
+      eval(expr)
+    },
+    error = function(e) {
+      log_error(paste("Benchmark execution failed:", e$message), .context = "[BENCHMARK]")
+      log_debug_kv(
+        operation = operation_name,
+        .context = "[BENCHMARK]"
+      )
+      stop("Benchmark execution failed safely")
+    }
+  )
 }
 
 #' Microbenchmark Wrapper for SPC App Functions
@@ -78,24 +81,31 @@ safe_eval_benchmark <- function(expr, operation_name = "unknown") {
 #' @examples
 #' \dontrun{
 #' # Benchmark autodetect engine
-#' results <- benchmark_spc_operation({
-#'   autodetect_engine(test_data, "manual", app_state, emit)
-#' }, operation_name = "autodetect_engine")
+#' results <- benchmark_spc_operation(
+#'   {
+#'     autodetect_engine(test_data, "manual", app_state, emit)
+#'   },
+#'   operation_name = "autodetect_engine"
+#' )
 #'
 #' # Compare multiple implementations
 #' results <- benchmark_spc_operation(list(
-#'   old_implementation = { old_function() },
-#'   new_implementation = { new_function() }
+#'   old_implementation = {
+#'     old_function()
+#'   },
+#'   new_implementation = {
+#'     new_function()
+#'   }
 #' ), operation_name = "implementation_comparison")
 #' }
 benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown_operation",
-                                   log_results = TRUE, return_full_results = FALSE,
-                                   capture_result = FALSE) {
-
+                                    log_results = TRUE, return_full_results = FALSE,
+                                    capture_result = FALSE) {
   # Check if microbenchmark is available
   if (!requireNamespace("microbenchmark", quietly = TRUE)) {
     log_warn("microbenchmark package not available - falling back to basic timing",
-             .context = "MICROBENCHMARK")
+      .context = "MICROBENCHMARK"
+    )
 
     # Fallback to existing measure_reactive_performance
     if (exists("measure_reactive_performance")) {
@@ -123,71 +133,73 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
   log_debug(paste("Starting microbenchmark for:", operation_name))
 
   # Execute microbenchmark
-  tryCatch({
-    mb_results <- microbenchmark::microbenchmark(
-      expr,
-      times = times,
-      unit = "ms"
-    )
+  tryCatch(
+    {
+      mb_results <- microbenchmark::microbenchmark(
+        expr,
+        times = times,
+        unit = "ms"
+      )
 
-    # Extract summary statistics
-    summary_stats <- summary(mb_results)
+      # Extract summary statistics
+      summary_stats <- summary(mb_results)
 
-    # Create standardized results structure
-    results <- list(
-      operation = operation_name,
-      times = times,
-      min_ms = summary_stats$min,
-      q1_ms = summary_stats$lq,
-      median_ms = summary_stats$median,
-      mean_ms = summary_stats$mean,
-      q3_ms = summary_stats$uq,
-      max_ms = summary_stats$max,
-      timestamp = Sys.time(),
-      unit = "milliseconds"
-    )
+      # Create standardized results structure
+      results <- list(
+        operation = operation_name,
+        times = times,
+        min_ms = summary_stats$min,
+        q1_ms = summary_stats$lq,
+        median_ms = summary_stats$median,
+        mean_ms = summary_stats$mean,
+        q3_ms = summary_stats$uq,
+        max_ms = summary_stats$max,
+        timestamp = Sys.time(),
+        unit = "milliseconds"
+      )
 
-    # Add full results if requested
-    if (return_full_results) {
-      results$full_benchmark <- mb_results
-      results$summary_table <- summary_stats
-    }
+      # Add full results if requested
+      if (return_full_results) {
+        results$full_benchmark <- mb_results
+        results$summary_table <- summary_stats
+      }
 
-    # Capture result if requested
-    if (capture_result) {
+      # Capture result if requested
+      if (capture_result) {
+        # SECURITY: Use safe evaluation wrapper
+        results$captured_result <- safe_eval_benchmark(expr, operation_name)
+      }
+
+      # Log results if requested
+      if (log_results) {
+        log_performance_results(results)
+      }
+
+      return(results)
+    },
+    error = function(e) {
+      log_error(paste("Microbenchmark failed for", operation_name, ":", e$message))
+
+      # Fallback to basic timing
+      start_time <- Sys.time()
       # SECURITY: Use safe evaluation wrapper
-      results$captured_result <- safe_eval_benchmark(expr, operation_name)
+      result <- safe_eval_benchmark(expr, operation_name)
+      execution_time <- as.numeric(Sys.time() - start_time) * 1000 # Convert to ms
+
+      error_result <- list(
+        operation = operation_name,
+        mean_ms = execution_time,
+        error = e$message,
+        fallback = TRUE
+      )
+
+      if (capture_result) {
+        error_result$captured_result <- result
+      }
+
+      return(error_result)
     }
-
-    # Log results if requested
-    if (log_results) {
-      log_performance_results(results)
-    }
-
-    return(results)
-
-  }, error = function(e) {
-    log_error(paste("Microbenchmark failed for", operation_name, ":", e$message))
-
-    # Fallback to basic timing
-    start_time <- Sys.time()
-    # SECURITY: Use safe evaluation wrapper
-    result <- safe_eval_benchmark(expr, operation_name)
-    execution_time <- as.numeric(Sys.time() - start_time) * 1000  # Convert to ms
-
-    error_result <- list(
-      operation = operation_name,
-      mean_ms = execution_time,
-      error = e$message,
-      fallback = TRUE
-    )
-
-    if (capture_result) {
-      error_result$captured_result <- result
-    }
-
-    return(error_result)
-  })
+  )
 }
 
 #' Log Performance Results
@@ -197,11 +209,12 @@ benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown
 #' @param results Results from benchmark_spc_operation
 #' @param warn_threshold Warning threshold in milliseconds (default: 500ms)
 log_performance_results <- function(results, warn_threshold = 500) {
-
   if (is.null(results$median_ms)) {
     # Fallback format
-    log_debug(paste("BENCHMARK:", results$operation, "-",
-                   round(results$mean_ms, 2), "ms (fallback)"))
+    log_debug(paste(
+      "BENCHMARK:", results$operation, "-",
+      round(results$mean_ms, 2), "ms (fallback)"
+    ))
     return()
   }
 
@@ -218,8 +231,10 @@ log_performance_results <- function(results, warn_threshold = 500) {
   # Warning for slow operations
   if (results$median_ms > warn_threshold) {
     log_warn(
-      paste("SLOW OPERATION:", results$operation, "median:",
-            round(results$median_ms, 2), "ms"),
+      paste(
+        "SLOW OPERATION:", results$operation, "median:",
+        round(results$median_ms, 2), "ms"
+      ),
       "PERFORMANCE_WARNING"
     )
   }
@@ -227,9 +242,11 @@ log_performance_results <- function(results, warn_threshold = 500) {
   # Info level summary for important operations
   if (grepl("autodetect|qic|plot", results$operation, ignore.case = TRUE)) {
     log_info(
-      paste("BENCHMARK COMPLETE:", results$operation,
-            "median:", round(results$median_ms, 2), "ms",
-            "range:", round(results$min_ms, 2), "-", round(results$max_ms, 2), "ms"),
+      paste(
+        "BENCHMARK COMPLETE:", results$operation,
+        "median:", round(results$median_ms, 2), "ms",
+        "range:", round(results$min_ms, 2), "-", round(results$max_ms, 2), "ms"
+      ),
       "PERFORMANCE_BENCHMARK"
     )
   }
@@ -249,9 +266,8 @@ log_performance_results <- function(results, warn_threshold = 500) {
 #' @return Data frame with comparative benchmark results
 #' @export
 benchmark_autodetect_comprehensive <- function(data_list = NULL,
-                                             trigger_types = c("file_upload", "manual"),
-                                             app_state, emit, times = 10) {
-
+                                               trigger_types = c("file_upload", "manual"),
+                                               app_state, emit, times = 10) {
   # Generate test data if not provided
   if (is.null(data_list)) {
     data_list <- list(
@@ -284,12 +300,10 @@ benchmark_autodetect_comprehensive <- function(data_list = NULL,
 
   for (data_name in names(data_list)) {
     for (trigger_type in trigger_types) {
-
       operation_name <- paste0("autodetect_", data_name, "_", trigger_type)
       data <- data_list[[data_name]]
 
-      log_debug(paste("Benchmarking:", operation_name, "with", nrow(data), "rows"),
- )
+      log_debug(paste("Benchmarking:", operation_name, "with", nrow(data), "rows"), )
 
       # Reset autodetect state between tests
       if (!is.null(app_state)) {
@@ -307,13 +321,13 @@ benchmark_autodetect_comprehensive <- function(data_list = NULL,
             autodetect_engine(data, trigger_type, app_state, emit)
           } else {
             # Fallback for testing environments
-            Sys.sleep(0.001)  # Simulate minimal work
+            Sys.sleep(0.001) # Simulate minimal work
             list(x_col = "Dato", y_col = "Taeller")
           }
         },
         times = times,
         operation_name = operation_name,
-        log_results = FALSE  # We'll log manually
+        log_results = FALSE # We'll log manually
       )
 
       # Add context information
@@ -370,9 +384,8 @@ benchmark_autodetect_comprehensive <- function(data_list = NULL,
 #' @return Data frame with QIC benchmark results
 #' @export
 benchmark_qic_generation <- function(data_list = NULL,
-                                    chart_types = c("run", "p", "u"),
-                                    times = 5) {
-
+                                     chart_types = c("run", "p", "u"),
+                                     times = 5) {
   # Generate test data if not provided
   if (is.null(data_list)) {
     data_list <- list(
@@ -400,7 +413,6 @@ benchmark_qic_generation <- function(data_list = NULL,
 
   for (data_name in names(data_list)) {
     for (chart_type in chart_types) {
-
       operation_name <- paste0("qic_", chart_type, "_", data_name)
       data <- data_list[[data_name]]
 
@@ -428,8 +440,9 @@ benchmark_qic_generation <- function(data_list = NULL,
             )
           } else {
             # Fallback simulation
-            Sys.sleep(runif(1, 0.01, 0.05))  # Simulate plot generation time
-            ggplot2::ggplot() + ggplot2::geom_point()
+            Sys.sleep(runif(1, 0.01, 0.05)) # Simulate plot generation time
+            ggplot2::ggplot() +
+              ggplot2::geom_point()
           }
         },
         times = times,
@@ -480,7 +493,6 @@ benchmark_qic_generation <- function(data_list = NULL,
 #' @return List with comparison analysis
 #' @export
 analyze_performance_comparison <- function(baseline_results, current_results, regression_threshold = 1.2) {
-
   if (!is.data.frame(baseline_results) || !is.data.frame(current_results)) {
     log_warn("Performance comparison requires data frame inputs", .context = "MICROBENCHMARK")
     return(NULL)
@@ -521,9 +533,13 @@ analyze_performance_comparison <- function(baseline_results, current_results, re
     if (ratio >= regression_threshold) {
       regressions[[op]] <- comparison
       log_warn(
-        paste("PERFORMANCE REGRESSION:", op,
-              sprintf("%.1f%% slower (%.2f -> %.2f ms)",
-                     comparison$change_percent, baseline_median, current_median)),
+        paste(
+          "PERFORMANCE REGRESSION:", op,
+          sprintf(
+            "%.1f%% slower (%.2f -> %.2f ms)",
+            comparison$change_percent, baseline_median, current_median
+          )
+        ),
       )
     }
 
@@ -531,9 +547,13 @@ analyze_performance_comparison <- function(baseline_results, current_results, re
     if (ratio <= 0.9) {
       improvements[[op]] <- comparison
       log_info(
-        paste("PERFORMANCE IMPROVEMENT:", op,
-              sprintf("%.1f%% faster (%.2f -> %.2f ms)",
-                     abs(comparison$change_percent), baseline_median, current_median)),
+        paste(
+          "PERFORMANCE IMPROVEMENT:", op,
+          sprintf(
+            "%.1f%% faster (%.2f -> %.2f ms)",
+            abs(comparison$change_percent), baseline_median, current_median
+          )
+        ),
       )
     }
   }
@@ -546,10 +566,12 @@ analyze_performance_comparison <- function(baseline_results, current_results, re
   )
 
   log_info(
-    paste("Performance comparison complete:",
-          summary_stats$total_comparisons, "operations,",
-          summary_stats$regressions_count, "regressions,",
-          summary_stats$improvements_count, "improvements"),
+    paste(
+      "Performance comparison complete:",
+      summary_stats$total_comparisons, "operations,",
+      summary_stats$regressions_count, "regressions,",
+      summary_stats$improvements_count, "improvements"
+    ),
   )
 
   return(list(
@@ -571,7 +593,6 @@ analyze_performance_comparison <- function(baseline_results, current_results, re
 #' @return Path to exported file
 #' @export
 export_benchmark_results <- function(results, filename = NULL, include_metadata = TRUE) {
-
   if (is.null(filename)) {
     timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
     filename <- paste0("benchmark_results_", timestamp, ".csv")
@@ -606,18 +627,20 @@ export_benchmark_results <- function(results, filename = NULL, include_metadata 
   }
 
   # Export to CSV
-  tryCatch({
-    if (requireNamespace("readr", quietly = TRUE)) {
-      readr::write_csv(results_df, filename)
-    } else {
-      write.csv(results_df, filename, row.names = FALSE)
+  tryCatch(
+    {
+      if (requireNamespace("readr", quietly = TRUE)) {
+        readr::write_csv(results_df, filename)
+      } else {
+        write.csv(results_df, filename, row.names = FALSE)
+      }
+
+      log_info(paste("Benchmark results exported to:", filename))
+      return(filename)
+    },
+    error = function(e) {
+      log_error(paste("Failed to export benchmark results:", e$message))
+      return(NULL)
     }
-
-    log_info(paste("Benchmark results exported to:", filename))
-    return(filename)
-
-  }, error = function(e) {
-    log_error(paste("Failed to export benchmark results:", e$message))
-    return(NULL)
-  })
+  )
 }

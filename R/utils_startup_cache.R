@@ -18,7 +18,7 @@
 STARTUP_CACHE_CONFIG <- list(
   cache_dir = file.path(tempdir(), "spc_startup_cache"),
   cache_ttl_seconds = 3600, # 1 hour
-  max_cache_size_mb = 10,   # Maximum cache size
+  max_cache_size_mb = 10, # Maximum cache size
 
   # Artifacts to cache
   artifacts = list(
@@ -104,7 +104,7 @@ cleanup_old_cache <- function() {
         # Check if file is too old
         artifact_name <- tools::file_path_sans_ext(basename(file_path))
         ttl <- STARTUP_CACHE_CONFIG$artifacts[[artifact_name]]$ttl_seconds %||%
-               STARTUP_CACHE_CONFIG$cache_ttl_seconds
+          STARTUP_CACHE_CONFIG$cache_ttl_seconds
 
         if (file_age_seconds > ttl) {
           unlink(file_path)

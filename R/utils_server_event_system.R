@@ -100,11 +100,9 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         if (!is.null(app_state$data$current_data)) {
           emit$auto_detection_started()
         }
-
       } else if (is_table_cells_edit) {
         emit$navigation_changed()
-        emit$visualization_update_needed()  # SPRINT 1: Trigger atomic visualization update
-
+        emit$visualization_update_needed() # SPRINT 1: Trigger atomic visualization update
       } else if (is_change_context) {
         # Data change path - update column choices AND trigger plot regeneration
         safe_operation(
@@ -116,8 +114,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
         # Trigger plot regeneration when data is edited in table
         emit$navigation_changed()
-        emit$visualization_update_needed()  # SPRINT 1: Trigger atomic visualization update
-
+        emit$visualization_update_needed() # SPRINT 1: Trigger atomic visualization update
       } else {
         # General data update - NO autodetect (only update choices)
         safe_operation(
@@ -162,7 +159,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
           # Use unified autodetect engine - data available, so full analysis
           autodetect_engine(
             data = app_state$data$current_data,
-            trigger_type = "file_upload",  # This event is triggered by data uploads
+            trigger_type = "file_upload", # This event is triggered by data uploads
             app_state = app_state,
             emit = emit
           )
@@ -190,7 +187,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   shiny::observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-
     # Update state
     app_state$columns$auto_detect$in_progress <- FALSE
     app_state$columns$auto_detect$completed <- TRUE
@@ -206,7 +202,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # UI SYNCHRONIZATION EVENTS (CONSOLIDATED)
   shiny::observeEvent(app_state$events$ui_sync_requested, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
-
     # Add extra debugging
 
     safe_operation(
@@ -232,7 +227,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   shiny::observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
-
     # Update timestamp
     app_state$columns$ui_sync$last_sync_time <- Sys.time()
 
@@ -281,7 +275,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # NAVIGATION EVENTS
   shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
-
     # Increment navigation trigger to update all eventReactive components
     app_state$navigation$trigger <- app_state$navigation$trigger + 1L
   })
@@ -320,7 +313,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
       # Trigger the debounced reactive immediately to start the delay
       debounced_test_mode_trigger()
-
     } else if (autodetect_completed) {
       # Autodetect already completed, trigger UI sync
       emit$ui_sync_needed()
@@ -370,12 +362,11 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # SESSION LIFECYCLE EVENTS
   shiny::observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-
     # Session start logic
     if (is.null(app_state$data$current_data) || nrow(app_state$data$current_data) == 0) {
       # FASE 3: Session start trigger for name-only detection
       autodetect_engine(
-        data = NULL,  # No data available at session start
+        data = NULL, # No data available at session start
         trigger_type = "session_start",
         app_state = app_state,
         emit = emit
@@ -386,18 +377,16 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   shiny::observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
-
     # FASE 3: Manual trigger always runs, bypassing frozen state
     autodetect_engine(
       data = app_state$data$current_data,
-      trigger_type = "manual",  # This bypasses frozen state check
+      trigger_type = "manual", # This bypasses frozen state check
       app_state = app_state,
       emit = emit
     )
   })
 
   shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
-
     # SPRINT 3: Clear all caches on session reset
     if (exists("clear_performance_cache") && is.function(clear_performance_cache)) {
       safe_operation(
@@ -418,7 +407,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     # FASE 3: Reset frozen state
     app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
     app_state$columns$auto_detect$last_run <- NULL
-
   })
 
   # ERROR HANDLING EVENTS (CONSOLIDATED - FASE 2.1) ========================
@@ -439,9 +427,9 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       log_debug_kv(
         error_type = error_context$type %||% "unknown",
         error_context = error_context$context %||% "no context",
-        error_details = if(!is.null(error_context$details)) paste(names(error_context$details), collapse = ", ") else "none",
+        error_details = if (!is.null(error_context$details)) paste(names(error_context$details), collapse = ", ") else "none",
         timestamp = as.character(error_context$timestamp %||% Sys.time()),
-        session_id = if(!is.null(session)) session$token else "no session",
+        session_id = if (!is.null(session)) session$token else "no session",
         .context = "ERROR_SYSTEM"
       )
     } else if (!is.null(error_info)) {
@@ -449,7 +437,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       log_debug_kv(
         error_type = error_info$type %||% "unknown",
         error_message = error_info$message %||% "no message",
-        session_id = if(!is.null(session)) session$token else "no session",
+        session_id = if (!is.null(session)) session$token else "no session",
         .context = "ERROR_SYSTEM"
       )
     }
@@ -467,22 +455,18 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         if (!is.null(error_context$context) && grepl("data|processing|convert|qic", error_context$context, ignore.case = TRUE)) {
           log_debug("Processing error detected - may need data validation", .context = "ERROR_SYSTEM")
         }
-
       } else if (error_type == "validation") {
         # For validation errors, clear problematic state and increment recovery attempts
         app_state$errors$recovery_attempts <- app_state$errors$recovery_attempts + 1L
         log_debug("Validation error detected - clearing validation state", .context = "ERROR_SYSTEM")
-
       } else if (error_type == "network") {
         # For network/file errors, log context for retry logic
         if (!is.null(error_context$context) && grepl("file|upload|download|io", error_context$context, ignore.case = TRUE)) {
           log_debug("Network/File I/O error detected", .context = "ERROR_SYSTEM")
         }
-
       } else if (error_type == "ui") {
         # For UI errors, may need UI sync
         log_debug("UI error detected - may need UI synchronization", .context = "ERROR_SYSTEM")
-
       } else {
         # General error handling
         log_debug(paste("General error of type:", error_type), "ERROR_SYSTEM")
@@ -493,8 +477,8 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     if (!is.null(app_state$errors)) {
       app_state$errors$error_count <- app_state$errors$error_count + 1L
       app_state$errors$last_error <- list(
-        type = if(!is.null(error_context)) error_context$type else (if(!is.null(error_info)) error_info$type else "unknown"),
-        context = if(!is.null(error_context)) error_context$context else "consolidated_handler",
+        type = if (!is.null(error_context)) error_context$type else (if (!is.null(error_info)) error_info$type else "unknown"),
+        context = if (!is.null(error_context)) error_context$context else "consolidated_handler",
         timestamp = Sys.time()
       )
     }
@@ -512,7 +496,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     log_info("Error recovery completed", .context = "ERROR_SYSTEM")
     log_debug_kv(
       recovery_time = as.character(Sys.time()),
-      session_id = if(!is.null(session)) session$token else "no session",
+      session_id = if (!is.null(session)) session$token else "no session",
       .context = "ERROR_SYSTEM"
     )
   })
@@ -524,7 +508,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # Form reset needed event listener
   shiny::observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
-
     if (!is.null(ui_service)) {
       ui_service$reset_form_fields()
     } else {
@@ -533,7 +516,6 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # Form restore needed event listener
   shiny::observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
-
     # For form restore, we need metadata from app_state
     # This could be triggered by session restore events
     if (!is.null(ui_service) && !is.null(app_state$session$restore_metadata)) {
@@ -572,119 +554,228 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   }
 
   for (col in columns_to_observe) {
-    shiny::observeEvent(input[[col]], {
-      input_received_time <- Sys.time()
-      new_value <- input[[col]]
+    shiny::observeEvent(input[[col]],
+      {
+        input_received_time <- Sys.time()
+        new_value <- input[[col]]
 
-      # DROPDOWN DEBUGGING: Log input change details
-      old_value <- shiny::isolate(app_state$columns[[col]]) %||% ""
-      #               "to", paste0("'", new_value, "'")), "DROPDOWN_DEBUG")
+        # DROPDOWN DEBUGGING: Log input change details
+        old_value <- shiny::isolate(app_state$columns[[col]]) %||% ""
+        #               "to", paste0("'", new_value, "'")), "DROPDOWN_DEBUG")
 
-      # TIMING LOGGING: Calculate time since last programmatic update
-      last_update_time <- shiny::isolate(app_state$ui$last_programmatic_update)
-      time_since_update <- if (!is.null(last_update_time)) {
-        as.numeric(difftime(input_received_time, last_update_time, units = "secs")) * 1000
-      } else { NA }
+        # TIMING LOGGING: Calculate time since last programmatic update
+        last_update_time <- shiny::isolate(app_state$ui$last_programmatic_update)
+        time_since_update <- if (!is.null(last_update_time)) {
+          as.numeric(difftime(input_received_time, last_update_time, units = "secs")) * 1000
+        } else {
+          NA
+        }
 
-      #               if (!is.na(time_since_update)) paste("(", round(time_since_update, 2), "ms after last update)") else ""),
-      #         .context = "LOOP_PROTECTION")
+        #               if (!is.na(time_since_update)) paste("(", round(time_since_update, 2), "ms after last update)") else ""),
+        #         .context = "LOOP_PROTECTION")
 
-      # FREEZE-AWARE LOGGING: Observe freeze state without modification
-      freeze_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
+        # FREEZE-AWARE LOGGING: Observe freeze state without modification
+        freeze_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
 
-      #               ", autodetect frozen =", freeze_state), "DROPDOWN_DEBUG")
+        #               ", autodetect frozen =", freeze_state), "DROPDOWN_DEBUG")
 
-      # TOKEN CONSUMPTION: Primary and only loop protection mechanism
-      # Check for pending programmatic input tokens
-      pending_token <- app_state$ui$pending_programmatic_inputs[[col]]
+        # TOKEN CONSUMPTION: Primary and only loop protection mechanism
+        # Check for pending programmatic input tokens
+        pending_token <- app_state$ui$pending_programmatic_inputs[[col]]
 
-      if (!is.null(pending_token) && pending_token$value == new_value) {
-        # CONSUME TOKEN: This is a programmatic input, don't emit event
-        app_state$ui$pending_programmatic_inputs[[col]] <- NULL
-        app_state$columns[[col]] <- normalize_column_input(new_value)
+        if (!is.null(pending_token) && pending_token$value == new_value) {
+          # CONSUME TOKEN: This is a programmatic input, don't emit event
+          app_state$ui$pending_programmatic_inputs[[col]] <- NULL
+          app_state$columns[[col]] <- normalize_column_input(new_value)
 
-        # PERFORMANCE METRICS: Track token consumption for monitoring
-        shiny::isolate({
-          app_state$ui$performance_metrics$tokens_consumed <- app_state$ui$performance_metrics$tokens_consumed + 1L
-        })
+          # PERFORMANCE METRICS: Track token consumption for monitoring
+          shiny::isolate({
+            app_state$ui$performance_metrics$tokens_consumed <- app_state$ui$performance_metrics$tokens_consumed + 1L
+          })
 
-      #               "- no event emitted"), "TOKEN_DEBUG")
-        return()
-      }
+          #               "- no event emitted"), "TOKEN_DEBUG")
+          return()
+        }
 
-      # Update app_state to keep it synchronized with UI
-      normalized_value <- normalize_column_input(new_value)
+        # Update app_state to keep it synchronized with UI
+        normalized_value <- normalize_column_input(new_value)
 
-      app_state$columns[[col]] <- normalized_value
+        app_state$columns[[col]] <- normalized_value
 
-      cache_key <- paste0(col, "_input")
-      if (!is.null(app_state$ui_cache)) {
-        app_state$ui_cache[[cache_key]] <- normalized_value
-      }
+        cache_key <- paste0(col, "_input")
+        if (!is.null(app_state$ui_cache)) {
+          app_state$ui_cache[[cache_key]] <- normalized_value
+        }
 
-      # Only emit events for user-driven changes (not programmatic updates)
-      if (exists("column_choices_changed", envir = as.environment(emit))) {
-        emit$column_choices_changed()
-      }
-
-    }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$MEDIUM)
+        # Only emit events for user-driven changes (not programmatic updates)
+        if (exists("column_choices_changed", envir = as.environment(emit))) {
+          emit$column_choices_changed()
+        }
+      },
+      ignoreInit = TRUE,
+      priority = OBSERVER_PRIORITIES$MEDIUM
+    )
   }
 
   # OBSERVER: Toggle N (n_column) enabled state based on chart_type selection
-  shiny::observeEvent(input$chart_type, {
-    safe_operation(
-      "Toggle n_column enabled state by chart type",
-      code = {
-        ct <- input$chart_type %||% "run"
-        enabled <- chart_type_requires_denominator(ct)
+  shiny::observeEvent(input$chart_type,
+    {
+      safe_operation(
+        "Toggle n_column enabled state by chart type",
+        code = {
+          ct <- input$chart_type %||% "run"
+          enabled <- chart_type_requires_denominator(ct)
 
-        if (enabled) {
-          shinyjs::enable("n_column")
-          shinyjs::hide("n_column_hint")
-          shinyjs::hide("n_column_ignore_tt")
-        } else {
-          shinyjs::disable("n_column")
-          shinyjs::show("n_column_hint")
-          shinyjs::show("n_column_ignore_tt")
-        }
-
-        log_debug_kv(
-          message = "Updated n_column enabled state",
-          chart_type = ct,
-          n_enabled = enabled,
-          .context = "[UI_SYNC]"
-        )
-
-        # Hvis brugeren vælger en anden diagramtype end run, så sæt passende Y-akse UI-type
-        # Ignorér programmatisk ændringer (token-baseret) hvis muligt
-        pending_token <- app_state$ui$pending_programmatic_inputs[["chart_type"]]
-        if (!is.null(pending_token) && identical(pending_token$value, input$chart_type)) {
-          app_state$ui$pending_programmatic_inputs[["chart_type"]] <- NULL
-        } else {
-          qic_ct <- get_qic_chart_type(ct)
-          if (!identical(qic_ct, "run")) {
-            desired_ui <- chart_type_to_ui_type(qic_ct)
-            current_ui <- input$y_axis_unit %||% "count"
-            if (!identical(current_ui, desired_ui)) {
-              safe_programmatic_ui_update(session, app_state, function() {
-                shiny::updateSelectizeInput(session, "y_axis_unit", selected = desired_ui)
-              })
-            }
-            log_debug_kv(
-              message = "Chart type changed; updated y-axis UI type",
-              chart_type = qic_ct,
-              y_axis_unit = desired_ui,
-              .context = "[Y_AXIS_UI]"
-            )
+          if (enabled) {
+            shinyjs::enable("n_column")
+            shinyjs::hide("n_column_hint")
+            shinyjs::hide("n_column_ignore_tt")
           } else {
-            # Hvis brugeren skifter tilbage til RUN og der findes en nævner, sæt Y-akse til percent
-            columns_state <- shiny::isolate(app_state$columns)
-            n_val <- tryCatch(shiny::isolate(columns_state$n_column), error = function(...) NULL)
-            if (is.null(n_val)) {
-              n_val <- tryCatch(shiny::isolate(columns_state$mappings$n_column), error = function(...) NULL)
+            shinyjs::disable("n_column")
+            shinyjs::show("n_column_hint")
+            shinyjs::show("n_column_ignore_tt")
+          }
+
+          log_debug_kv(
+            message = "Updated n_column enabled state",
+            chart_type = ct,
+            n_enabled = enabled,
+            .context = "[UI_SYNC]"
+          )
+
+          # Hvis brugeren vælger en anden diagramtype end run, så sæt passende Y-akse UI-type
+          # Ignorér programmatisk ændringer (token-baseret) hvis muligt
+          pending_token <- app_state$ui$pending_programmatic_inputs[["chart_type"]]
+          if (!is.null(pending_token) && identical(pending_token$value, input$chart_type)) {
+            app_state$ui$pending_programmatic_inputs[["chart_type"]] <- NULL
+          } else {
+            qic_ct <- get_qic_chart_type(ct)
+            if (!identical(qic_ct, "run")) {
+              desired_ui <- chart_type_to_ui_type(qic_ct)
+              current_ui <- input$y_axis_unit %||% "count"
+              if (!identical(current_ui, desired_ui)) {
+                safe_programmatic_ui_update(session, app_state, function() {
+                  shiny::updateSelectizeInput(session, "y_axis_unit", selected = desired_ui)
+                })
+              }
+              log_debug_kv(
+                message = "Chart type changed; updated y-axis UI type",
+                chart_type = qic_ct,
+                y_axis_unit = desired_ui,
+                .context = "[Y_AXIS_UI]"
+              )
+            } else {
+              # Hvis brugeren skifter tilbage til RUN og der findes en nævner, sæt Y-akse til percent
+              columns_state <- shiny::isolate(app_state$columns)
+              n_val <- tryCatch(shiny::isolate(columns_state$n_column), error = function(...) NULL)
+              if (is.null(n_val)) {
+                n_val <- tryCatch(shiny::isolate(columns_state$mappings$n_column), error = function(...) NULL)
+              }
+              n_present <- !is.null(n_val) && nzchar(n_val)
+              if (n_present) {
+                current_ui <- input$y_axis_unit %||% "count"
+                if (!identical(current_ui, "percent")) {
+                  safe_programmatic_ui_update(session, app_state, function() {
+                    shiny::updateSelectizeInput(session, "y_axis_unit", selected = "percent")
+                  })
+                }
+                log_debug_kv(
+                  message = "Chart type changed to run; updated y-axis UI to percent due to denominator",
+                  n_present = TRUE,
+                  .context = "[Y_AXIS_UI]"
+                )
+              }
             }
-            n_present <- !is.null(n_val) && nzchar(n_val)
-            if (n_present) {
+          }
+        },
+        fallback = NULL,
+        session = session,
+        error_type = "processing"
+      )
+    },
+    ignoreInit = FALSE,
+    priority = OBSERVER_PRIORITIES$UI_SYNC
+  )
+
+  # OBSERVER: Auto-vælg korttype baseret på Y-akse UI-type
+  shiny::observeEvent(input$y_axis_unit,
+    {
+      safe_operation(
+        "Auto-select chart type from y-axis UI type",
+        code = {
+          # Consumér programmatic token hvis dette stammer fra updateSelectizeInput
+          pending_token <- app_state$ui$pending_programmatic_inputs[["y_axis_unit"]]
+          if (!is.null(pending_token) && identical(pending_token$value, input$y_axis_unit)) {
+            app_state$ui$pending_programmatic_inputs[["y_axis_unit"]] <- NULL
+            return(invisible(NULL))
+          }
+          ui_type <- input$y_axis_unit %||% "count"
+
+          # Find y-data og N-tilgængelighed
+          y_col <- shiny::isolate(app_state$columns$y_column)
+          data <- shiny::isolate(app_state$data$current_data)
+          n_points <- if (!is.null(data)) nrow(data) else NA_integer_
+          n_present <- !is.null(input$n_column) && nzchar(input$n_column)
+
+          y_vals <- if (!is.null(y_col) && !is.null(data) && y_col %in% names(data)) data[[y_col]] else NULL
+
+          internal_class <- determine_internal_class(ui_type, y_vals, n_present = n_present)
+          suggested <- suggest_chart_type(internal_class, n_present = n_present, n_points = n_points)
+          # Behold run chart som standard – ændr ikke diagramtype automatisk
+          log_debug_kv(
+            message = "Y-axis UI type changed; keeping current chart type",
+            ui_type = ui_type,
+            internal_class = internal_class,
+            suggested_chart = suggested,
+            current_chart = input$chart_type %||% "run",
+            .context = "[Y_AXIS_UI]"
+          )
+
+          # Ekstra: vis hjælp hvis PROCENT/RATE uden N
+          if (ui_type %in% c("percent", "rate") && !n_present) {
+            log_warn("N-kolonne kræves for valgt Y-akse-type", .context = "[Y_AXIS_UI]")
+          }
+        },
+        fallback = NULL,
+        session = session,
+        error_type = "processing"
+      )
+    },
+    ignoreInit = TRUE,
+    priority = OBSERVER_PRIORITIES$UI_SYNC
+  )
+
+  # OBSERVER: Når RUN chart og nævner ændres
+  shiny::observeEvent(input$n_column,
+    {
+      safe_operation(
+        "Adjust y-axis when denominator changed in run chart",
+        code = {
+          # Ignorér programmatisk ændring af n_column
+          pending_token <- app_state$ui$pending_programmatic_inputs[["n_column"]]
+          if (!is.null(pending_token) && identical(pending_token$value, input$n_column)) {
+            app_state$ui$pending_programmatic_inputs[["n_column"]] <- NULL
+            return(invisible(NULL))
+          }
+
+          ct <- get_qic_chart_type(input$chart_type %||% "run")
+          if (identical(ct, "run")) {
+            n_present <- !is.null(input$n_column) && nzchar(input$n_column)
+            if (!n_present) {
+              current_ui <- input$y_axis_unit %||% "count"
+              if (!identical(current_ui, "count")) {
+                safe_programmatic_ui_update(session, app_state, function() {
+                  shiny::updateSelectizeInput(session, "y_axis_unit", selected = "count")
+                })
+              }
+
+              log_debug_kv(
+                message = "Denominator cleared in run chart; set y-axis to count",
+                chart_type = ct,
+                .context = "[Y_AXIS_UI]"
+              )
+            } else {
+              # Nævner valgt i RUN chart → sæt Y-akse til percent som standard
               current_ui <- input$y_axis_unit %||% "count"
               if (!identical(current_ui, "percent")) {
                 safe_programmatic_ui_update(session, app_state, function() {
@@ -692,113 +783,21 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
                 })
               }
               log_debug_kv(
-                message = "Chart type changed to run; updated y-axis UI to percent due to denominator",
-                n_present = TRUE,
+                message = "Denominator selected in run chart; set y-axis to percent",
+                chart_type = ct,
                 .context = "[Y_AXIS_UI]"
               )
             }
           }
-        }
-      },
-      fallback = NULL,
-      session = session,
-      error_type = "processing"
-    )
-  }, ignoreInit = FALSE, priority = OBSERVER_PRIORITIES$UI_SYNC)
-
-  # OBSERVER: Auto-vælg korttype baseret på Y-akse UI-type
-  shiny::observeEvent(input$y_axis_unit, {
-    safe_operation(
-      "Auto-select chart type from y-axis UI type",
-      code = {
-        # Consumér programmatic token hvis dette stammer fra updateSelectizeInput
-        pending_token <- app_state$ui$pending_programmatic_inputs[["y_axis_unit"]]
-        if (!is.null(pending_token) && identical(pending_token$value, input$y_axis_unit)) {
-          app_state$ui$pending_programmatic_inputs[["y_axis_unit"]] <- NULL
-          return(invisible(NULL))
-        }
-        ui_type <- input$y_axis_unit %||% "count"
-
-        # Find y-data og N-tilgængelighed
-        y_col <- shiny::isolate(app_state$columns$y_column)
-        data <- shiny::isolate(app_state$data$current_data)
-        n_points <- if (!is.null(data)) nrow(data) else NA_integer_
-        n_present <- !is.null(input$n_column) && nzchar(input$n_column)
-
-        y_vals <- if (!is.null(y_col) && !is.null(data) && y_col %in% names(data)) data[[y_col]] else NULL
-
-        internal_class <- determine_internal_class(ui_type, y_vals, n_present = n_present)
-        suggested <- suggest_chart_type(internal_class, n_present = n_present, n_points = n_points)
-        # Behold run chart som standard – ændr ikke diagramtype automatisk
-        log_debug_kv(
-          message = "Y-axis UI type changed; keeping current chart type",
-          ui_type = ui_type,
-          internal_class = internal_class,
-          suggested_chart = suggested,
-          current_chart = input$chart_type %||% "run",
-          .context = "[Y_AXIS_UI]"
-        )
-
-        # Ekstra: vis hjælp hvis PROCENT/RATE uden N
-        if (ui_type %in% c("percent", "rate") && !n_present) {
-          log_warn("N-kolonne kræves for valgt Y-akse-type", .context = "[Y_AXIS_UI]")
-        }
-      },
-      fallback = NULL,
-      session = session,
-      error_type = "processing"
-    )
-  }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC)
-
-  # OBSERVER: Når RUN chart og nævner ændres
-  shiny::observeEvent(input$n_column, {
-    safe_operation(
-      "Adjust y-axis when denominator changed in run chart",
-      code = {
-        # Ignorér programmatisk ændring af n_column
-        pending_token <- app_state$ui$pending_programmatic_inputs[["n_column"]]
-        if (!is.null(pending_token) && identical(pending_token$value, input$n_column)) {
-          app_state$ui$pending_programmatic_inputs[["n_column"]] <- NULL
-          return(invisible(NULL))
-        }
-
-        ct <- get_qic_chart_type(input$chart_type %||% "run")
-        if (identical(ct, "run")) {
-          n_present <- !is.null(input$n_column) && nzchar(input$n_column)
-          if (!n_present) {
-            current_ui <- input$y_axis_unit %||% "count"
-            if (!identical(current_ui, "count")) {
-              safe_programmatic_ui_update(session, app_state, function() {
-                shiny::updateSelectizeInput(session, "y_axis_unit", selected = "count")
-              })
-            }
-
-            log_debug_kv(
-              message = "Denominator cleared in run chart; set y-axis to count",
-              chart_type = ct,
-              .context = "[Y_AXIS_UI]"
-            )
-          } else {
-            # Nævner valgt i RUN chart → sæt Y-akse til percent som standard
-            current_ui <- input$y_axis_unit %||% "count"
-            if (!identical(current_ui, "percent")) {
-              safe_programmatic_ui_update(session, app_state, function() {
-                shiny::updateSelectizeInput(session, "y_axis_unit", selected = "percent")
-              })
-            }
-            log_debug_kv(
-              message = "Denominator selected in run chart; set y-axis to percent",
-              chart_type = ct,
-              .context = "[Y_AXIS_UI]"
-            )
-          }
-        }
-      },
-      fallback = NULL,
-      session = session,
-      error_type = "processing"
-    )
-  }, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC)
+        },
+        fallback = NULL,
+        session = session,
+        error_type = "processing"
+      )
+    },
+    ignoreInit = TRUE,
+    priority = OBSERVER_PRIORITIES$UI_SYNC
+  )
 
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
   # This observer tracks timing metrics for optimization without emitting events
@@ -813,13 +812,14 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
         autodetect_in_progress <- if (!is.null(app_state$columns)) {
           shiny::isolate(app_state$columns$auto_detect$in_progress) %||% FALSE
-        } else { FALSE }
+        } else {
+          FALSE
+        }
 
-      #               ", autodetect active:", autodetect_in_progress), .context = "TIMING_MONITOR")
+        #               ", autodetect active:", autodetect_in_progress), .context = "TIMING_MONITOR")
       }
     })
   }
-
 }
 
 # NOTE: Duplikeret sync_ui_with_columns_unified funktion fjernet
@@ -995,22 +995,28 @@ update_column_choices_unified <- function(app_state, input, output, session, ui_
 
     for (col in columns_to_update) {
       if (identical(reason, "edit")) {
-        tryCatch({
-          shiny::freezeReactiveValue(input, col)
-        }, error = function(...) NULL)
+        tryCatch(
+          {
+            shiny::freezeReactiveValue(input, col)
+          },
+          error = function(...) NULL
+        )
       }
 
       input_val <- tryCatch(input[[col]], error = function(...) NULL)
       normalized_input <- normalize_selection_value(input_val)
 
       cache_key <- paste0(col, "_input")
-      cache_val_raw <- tryCatch({
-        if (!is.null(app_state$ui_cache)) {
-          shiny::isolate(app_state$ui_cache[[cache_key]])
-        } else {
-          NULL
-        }
-      }, error = function(...) NULL)
+      cache_val_raw <- tryCatch(
+        {
+          if (!is.null(app_state$ui_cache)) {
+            shiny::isolate(app_state$ui_cache[[cache_key]])
+          } else {
+            NULL
+          }
+        },
+        error = function(...) NULL
+      )
       cache_val <- normalize_selection_value(cache_val_raw)
 
       state_val_raw <- tryCatch(shiny::isolate(app_state$columns[[col]]), error = function(...) NULL)

@@ -200,13 +200,19 @@ npc_mapper_from_built <- function(built_plot, panel = 1, original_plot = NULL) {
   }
 
   # Prøv forskellige metoder til at få panel params (robust på tværs af ggplot2 versioner)
-  pp <- tryCatch({
-    built_plot$layout$panel_params[[panel]]
-  }, error = function(e) {
-    tryCatch({
-      built_plot$layout$panel_scales_y[[panel]]
-    }, error = function(e2) NULL)
-  })
+  pp <- tryCatch(
+    {
+      built_plot$layout$panel_params[[panel]]
+    },
+    error = function(e) {
+      tryCatch(
+        {
+          built_plot$layout$panel_scales_y[[panel]]
+        },
+        error = function(e2) NULL
+      )
+    }
+  )
 
   if (is.null(pp)) {
     stop("Kunne ikke hente panel parameters fra built plot. Tjek ggplot2 version.")
@@ -337,9 +343,10 @@ npc_mapper_from_built <- function(built_plot, panel = 1, original_plot = NULL) {
 }
 
 #' @examples
-#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+#' p <- ggplot(mtcars, aes(wt, mpg)) +
+#'   geom_point()
 #' mapper <- npc_mapper_from_plot(p)
-#' mapper$y_to_npc(20)  # Konverter 20 mpg til NPC
+#' mapper$y_to_npc(20) # Konverter 20 mpg til NPC
 #' mapper$npc_to_y(0.5) # Konverter 0.5 NPC til mpg
 npc_mapper_from_plot <- function(p, panel = 1) {
   # Validate ggplot object
@@ -353,11 +360,14 @@ npc_mapper_from_plot <- function(p, panel = 1) {
   }
 
   # Build plot med fejlhåndtering
-  b <- tryCatch({
-    ggplot2::ggplot_build(p)
-  }, error = function(e) {
-    stop("npc_mapper_from_plot: Kunne ikke bygge ggplot object. Fejl: ", e$message)
-  })
+  b <- tryCatch(
+    {
+      ggplot2::ggplot_build(p)
+    },
+    error = function(e) {
+      stop("npc_mapper_from_plot: Kunne ikke bygge ggplot object. Fejl: ", e$message)
+    }
+  )
 
   # Delegate til optimized version
   npc_mapper_from_built(b, panel = panel, original_plot = p)
@@ -378,10 +388,10 @@ npc_mapper_from_plot <- function(p, panel = 1) {
 
 # Cache configuration med TTL og size limits
 .grob_cache_config <- list(
-  enabled = TRUE,              # Master switch: Set to FALSE to disable cache completely
-  ttl_seconds = 300,           # 5 minutes (layout genbruges typisk inden for få minutter)
-  max_cache_size = 100,        # Max entries før forced purge
-  purge_check_interval = 50    # Check for expired entries hver N'te operation
+  enabled = TRUE, # Master switch: Set to FALSE to disable cache completely
+  ttl_seconds = 300, # 5 minutes (layout genbruges typisk inden for få minutter)
+  max_cache_size = 100, # Max entries før forced purge
+  purge_check_interval = 50 # Check for expired entries hver N'te operation
 )
 
 # Cache statistics tracking
@@ -410,7 +420,7 @@ npc_mapper_from_plot <- function(p, panel = 1) {
 #' clear_grob_height_cache()
 #'
 #' # Check cache status efter clear
-#' get_grob_cache_stats()  # cache_size skal være 0
+#' get_grob_cache_stats() # cache_size skal være 0
 #' }
 #'
 #' @export
@@ -439,32 +449,34 @@ clear_grob_height_cache <- function() {
 #' @param increment If TRUE, add value to current; if FALSE, set to value
 #' @keywords internal
 safe_update_cache_stat <- function(stat_name, value, cache_type = "grob", increment = TRUE) {
-  tryCatch({
-    ns <- asNamespace("SPCify")
-    stats_name <- if (cache_type == "grob") ".grob_cache_stats" else ".panel_cache_stats"
+  tryCatch(
+    {
+      ns <- asNamespace("SPCify")
+      stats_name <- if (cache_type == "grob") ".grob_cache_stats" else ".panel_cache_stats"
 
-    # Ensure binding is unlocked
-    if (bindingIsLocked(stats_name, ns)) {
-      unlockBinding(stats_name, ns)
+      # Ensure binding is unlocked
+      if (bindingIsLocked(stats_name, ns)) {
+        unlockBinding(stats_name, ns)
+      }
+
+      # Get stats object
+      stats_obj <- get(stats_name, envir = ns)
+
+      # Update value
+      if (increment) {
+        stats_obj[[stat_name]] <- stats_obj[[stat_name]] + value
+      } else {
+        stats_obj[[stat_name]] <- value
+      }
+
+      # Assign back
+      assign(stats_name, stats_obj, envir = ns)
+    },
+    error = function(e) {
+      # Silent failure - stats are not critical
+      NULL
     }
-
-    # Get stats object
-    stats_obj <- get(stats_name, envir = ns)
-
-    # Update value
-    if (increment) {
-      stats_obj[[stat_name]] <- stats_obj[[stat_name]] + value
-    } else {
-      stats_obj[[stat_name]] <- value
-    }
-
-    # Assign back
-    assign(stats_name, stats_obj, envir = ns)
-
-  }, error = function(e) {
-    # Silent failure - stats are not critical
-    NULL
-  })
+  )
 }
 
 #' Get grob cache statistics
@@ -572,7 +584,7 @@ auto_purge_grob_cache <- function() {
       if (exists(timestamp_key, envir = .grob_height_cache)) {
         entries_with_time[[key]] <- .grob_height_cache[[timestamp_key]]
       } else {
-        entries_with_time[[key]] <- Sys.time() - 999999  # Very old
+        entries_with_time[[key]] <- Sys.time() - 999999 # Very old
       }
     }
 
@@ -605,11 +617,10 @@ auto_purge_grob_cache <- function() {
 #' @return Invisible: Previous configuration
 #' @export
 configure_grob_cache <- function(
-  enabled = NULL,
-  ttl_seconds = NULL,
-  max_cache_size = NULL,
-  purge_check_interval = NULL
-) {
+    enabled = NULL,
+    ttl_seconds = NULL,
+    max_cache_size = NULL,
+    purge_check_interval = NULL) {
   old_config <- .grob_cache_config
 
   if (!is.null(enabled)) {
@@ -653,10 +664,10 @@ configure_grob_cache <- function(
 
 # Cache configuration med TTL og size limits
 .panel_cache_config <- list(
-  enabled = TRUE,              # Master switch: Set to FALSE to disable cache completely
-  ttl_seconds = 300,           # 5 minutes (samme som grob cache)
-  max_cache_size = 100,        # Max entries før forced purge
-  purge_check_interval = 50    # Check for expired entries hver N'te operation
+  enabled = TRUE, # Master switch: Set to FALSE to disable cache completely
+  ttl_seconds = 300, # 5 minutes (samme som grob cache)
+  max_cache_size = 100, # Max entries før forced purge
+  purge_check_interval = 50 # Check for expired entries hver N'te operation
 )
 
 # Cache statistics tracking
@@ -790,7 +801,7 @@ auto_purge_panel_cache <- function() {
       if (exists(timestamp_key, envir = .panel_height_cache)) {
         entries_with_time[[key]] <- .panel_height_cache[[timestamp_key]]
       } else {
-        entries_with_time[[key]] <- Sys.time() - 999999  # Very old
+        entries_with_time[[key]] <- Sys.time() - 999999 # Very old
       }
     }
 
@@ -824,11 +835,10 @@ auto_purge_panel_cache <- function() {
 #' @return Invisible: Previous configuration
 #' @export
 configure_panel_cache <- function(
-  enabled = NULL,
-  ttl_seconds = NULL,
-  max_cache_size = NULL,
-  purge_check_interval = NULL
-) {
+    enabled = NULL,
+    ttl_seconds = NULL,
+    max_cache_size = NULL,
+    purge_check_interval = NULL) {
   old_config <- .panel_cache_config
 
   if (!is.null(enabled)) {
@@ -883,26 +893,29 @@ unlock_placement_cache_bindings <- function() {
   ns <- asNamespace("SPCify")
 
   success <- TRUE
-  tryCatch({
-    # Unlock stats
-    if (exists(".panel_cache_stats", envir = ns, inherits = FALSE)) {
-      unlockBinding(".panel_cache_stats", ns)
-    }
-    if (exists(".grob_cache_stats", envir = ns, inherits = FALSE)) {
-      unlockBinding(".grob_cache_stats", ns)
-    }
+  tryCatch(
+    {
+      # Unlock stats
+      if (exists(".panel_cache_stats", envir = ns, inherits = FALSE)) {
+        unlockBinding(".panel_cache_stats", ns)
+      }
+      if (exists(".grob_cache_stats", envir = ns, inherits = FALSE)) {
+        unlockBinding(".grob_cache_stats", ns)
+      }
 
-    # Unlock configs
-    if (exists(".panel_cache_config", envir = ns, inherits = FALSE)) {
-      unlockBinding(".panel_cache_config", ns)
+      # Unlock configs
+      if (exists(".panel_cache_config", envir = ns, inherits = FALSE)) {
+        unlockBinding(".panel_cache_config", ns)
+      }
+      if (exists(".grob_cache_config", envir = ns, inherits = FALSE)) {
+        unlockBinding(".grob_cache_config", ns)
+      }
+    },
+    error = function(e) {
+      warning("Failed to unlock cache bindings: ", e$message)
+      success <<- FALSE
     }
-    if (exists(".grob_cache_config", envir = ns, inherits = FALSE)) {
-      unlockBinding(".grob_cache_config", ns)
-    }
-  }, error = function(e) {
-    warning("Failed to unlock cache bindings: ", e$message)
-    success <<- FALSE
-  })
+  )
 
   invisible(success)
 }
@@ -916,16 +929,20 @@ unlock_placement_cache_bindings <- function() {
 #'
 #' @examples
 #' stats <- get_placement_cache_stats()
-#' cat("Panel cache:", stats$panel_cache$cache_size, "entries,",
-#'     round(stats$panel_cache$hit_rate * 100, 1), "% hit rate\n")
-#' cat("Grob cache:", stats$grob_cache$cache_size, "entries,",
-#'     round(stats$grob_cache$hit_rate * 100, 1), "% hit rate\n")
+#' cat(
+#'   "Panel cache:", stats$panel_cache$cache_size, "entries,",
+#'   round(stats$panel_cache$hit_rate * 100, 1), "% hit rate\n"
+#' )
+#' cat(
+#'   "Grob cache:", stats$grob_cache$cache_size, "entries,",
+#'   round(stats$grob_cache$hit_rate * 100, 1), "% hit rate\n"
+#' )
 get_placement_cache_stats <- function() {
   list(
     panel_cache = get_panel_height_cache_stats(),
     grob_cache = get_grob_cache_stats(),
     total_memory_kb = get_panel_height_cache_stats()$memory_estimate_kb +
-                      get_grob_cache_stats()$memory_estimate_kb
+      get_grob_cache_stats()$memory_estimate_kb
   )
 }
 
@@ -940,8 +957,10 @@ get_placement_cache_stats <- function() {
 #' @examples
 #' # TTL-based purge (removes only expired entries)
 #' purged <- purge_expired_cache_entries()
-#' cat("Purged", purged$panel_cache, "panel entries and",
-#'     purged$grob_cache, "grob entries\n")
+#' cat(
+#'   "Purged", purged$panel_cache, "panel entries and",
+#'   purged$grob_cache, "grob entries\n"
+#' )
 #'
 #' # Force purge (clears all caches)
 #' purged <- purge_expired_cache_entries(force = TRUE)
@@ -985,10 +1004,9 @@ clear_all_placement_caches <- function() {
 #' # Configure for long-running sessions (10 minutes TTL, larger cache)
 #' configure_placement_cache(ttl_seconds = 600, max_cache_size = 200)
 configure_placement_cache <- function(
-  ttl_seconds = NULL,
-  max_cache_size = NULL,
-  purge_check_interval = NULL
-) {
+    ttl_seconds = NULL,
+    max_cache_size = NULL,
+    purge_check_interval = NULL) {
   old_configs <- list(
     panel_cache = configure_panel_cache(
       ttl_seconds = ttl_seconds,
@@ -1048,23 +1066,26 @@ configure_placement_cache <- function(
 #'
 #' @keywords internal
 measure_panel_height_from_built <- function(built_plot, gtable = NULL, panel = 1, device_width = 7, device_height = 7, use_cache = TRUE) {
-  tryCatch({
-    # Validate input
-    if (!inherits(built_plot, "ggplot_built")) {
-      stop("built_plot skal være et ggplot_built object")
-    }
+  tryCatch(
+    {
+      # Validate input
+      if (!inherits(built_plot, "ggplot_built")) {
+        stop("built_plot skal være et ggplot_built object")
+      }
 
-    # Build gtable hvis ikke allerede gjort
-    if (is.null(gtable)) {
-      gtable <- ggplot2::ggplot_gtable(built_plot)
-    }
+      # Build gtable hvis ikke allerede gjort
+      if (is.null(gtable)) {
+        gtable <- ggplot2::ggplot_gtable(built_plot)
+      }
 
-    # Delegate til shared implementation
-    measure_panel_height_from_gtable(gtable, panel, device_width, device_height, use_cache)
-  }, error = function(e) {
-    warning("Kunne ikke måle panel højde: ", e$message)
-    return(NULL)
-  })
+      # Delegate til shared implementation
+      measure_panel_height_from_gtable(gtable, panel, device_width, device_height, use_cache)
+    },
+    error = function(e) {
+      warning("Kunne ikke måle panel højde: ", e$message)
+      return(NULL)
+    }
+  )
 }
 
 #' Mål panel højde fra gtable (SHARED IMPLEMENTATION)
@@ -1117,9 +1138,11 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
 
   # Construct panel viewport navn (typisk format: "panel.t-l-b-r")
   panel_row <- panel_layout[panel, , drop = FALSE]
-  panel_vp_name <- sprintf("panel.%s-%s-%s-%s",
-                          panel_row$t, panel_row$l,
-                          panel_row$b, panel_row$r)
+  panel_vp_name <- sprintf(
+    "panel.%s-%s-%s-%s",
+    panel_row$t, panel_row$l,
+    panel_row$b, panel_row$r
+  )
 
   # VIGTIGT: Brug ALTID en off-screen PDF device for measurements
   # Dette forhindrer synlig rendering når scripts kører med aktiv device
@@ -1133,27 +1156,33 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
   grDevices::pdf(file = temp_file, width = device_width, height = device_height)
   temp_dev <- grDevices::dev.cur()
 
-  on.exit({
-    # Luk vores temp device hvis den stadig er aktiv
-    if (grDevices::dev.cur() == temp_dev) {
-      grDevices::dev.off()
-    }
-
-    # Vend tilbage til oprindelig device hvis den var reel (ikke null og ikke vores temp)
-    # Vi ignorerer device 2 hvis current_dev var 1, da ggplot_build() ofte åbner en temp device
-    if (current_dev > 1 && current_dev != temp_dev) {
-      if (current_dev %in% grDevices::dev.list()) {
-        tryCatch({
-          grDevices::dev.set(current_dev)
-        }, error = function(e) {
-          # Ignorer hvis device ikke findes
-        })
+  on.exit(
+    {
+      # Luk vores temp device hvis den stadig er aktiv
+      if (grDevices::dev.cur() == temp_dev) {
+        grDevices::dev.off()
       }
-    }
 
-    # Slet temp fil
-    unlink(temp_file, force = TRUE)
-  }, add = TRUE)
+      # Vend tilbage til oprindelig device hvis den var reel (ikke null og ikke vores temp)
+      # Vi ignorerer device 2 hvis current_dev var 1, da ggplot_build() ofte åbner en temp device
+      if (current_dev > 1 && current_dev != temp_dev) {
+        if (current_dev %in% grDevices::dev.list()) {
+          tryCatch(
+            {
+              grDevices::dev.set(current_dev)
+            },
+            error = function(e) {
+              # Ignorer hvis device ikke findes
+            }
+          )
+        }
+      }
+
+      # Slet temp fil
+      unlink(temp_file, force = TRUE)
+    },
+    add = TRUE
+  )
 
   # Render plot til device
   grid::grid.newpage()
@@ -1164,12 +1193,15 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
 
   # Navigate til panel viewport
   # NOTE: seekViewport() finder viewport i hele tree
-  tryCatch({
-    grid::seekViewport(panel_vp_name)
-  }, error = function(e) {
-    # Fallback: prøv generisk "panel" navn
-    grid::seekViewport("panel")
-  })
+  tryCatch(
+    {
+      grid::seekViewport(panel_vp_name)
+    },
+    error = function(e) {
+      # Fallback: prøv generisk "panel" navn
+      grid::seekViewport("panel")
+    }
+  )
 
   # Mål højde i current (panel) viewport
   panel_height <- grid::convertHeight(
@@ -1193,33 +1225,39 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
 }
 
 #' @examples
-#' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
+#' p <- ggplot(mtcars, aes(wt, mpg)) +
+#'   geom_point()
 #' panel_h <- measure_panel_height_inches(p)
 #' # Returns ca. 6.48 inches for standard 7x7 device (minus margener)
 #'
 #' # Med custom device size
 #' pdf("test.pdf", width = 12, height = 4)
-#' panel_h <- measure_panel_height_inches(p)  # Uses current 12x4 device
+#' panel_h <- measure_panel_height_inches(p) # Uses current 12x4 device
 #' # Returns ca. 3.6 inches (4 inches minus margener)
 #' dev.off()
 measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_height = 7, use_cache = TRUE) {
-  tryCatch({
-    # Validate input
-    if (!inherits(p, "ggplot")) {
-      stop("p skal være et ggplot object")
+  tryCatch(
+    {
+      # Validate input
+      if (!inherits(p, "ggplot")) {
+        stop("p skal være et ggplot object")
+      }
+
+      # Build plot structure
+      b <- ggplot2::ggplot_build(p)
+      gt <- ggplot2::ggplot_gtable(b)
+
+      # Delegate til shared implementation
+      measure_panel_height_from_gtable(gt, panel, device_width, device_height, use_cache)
+    },
+    error = function(e) {
+      warning(
+        "measure_panel_height_inches fejlede: ", e$message,
+        " - returnerer NULL"
+      )
+      return(NULL)
     }
-
-    # Build plot structure
-    b <- ggplot2::ggplot_build(p)
-    gt <- ggplot2::ggplot_gtable(b)
-
-    # Delegate til shared implementation
-    measure_panel_height_from_gtable(gt, panel, device_width, device_height, use_cache)
-  }, error = function(e) {
-    warning("measure_panel_height_inches fejlede: ", e$message,
-            " - returnerer NULL")
-    return(NULL)
-  })
+  )
 }
 
 #' INTERN: Mål label højde med aktiv device (ingen device management)
@@ -1229,13 +1267,15 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
 #'
 #' @keywords internal
 .estimate_label_height_npc_internal <- function(
-  text,
-  style,
-  panel_height_inches = NULL,
-  fallback_npc = 0.13,
-  use_cache = TRUE,
-  return_details = FALSE
-) {
+    text,
+    style,
+    panel_height_inches = NULL,
+    device_width = NULL,
+    device_height = NULL,
+    marquee_size = NULL,
+    fallback_npc = 0.13,
+    use_cache = TRUE,
+    return_details = FALSE) {
   # Generate cache key including height_safety_margin
   if (use_cache) {
     style_hash <- digest::digest(list(
@@ -1263,8 +1303,23 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
       } else {
         "viewport"
       },
+      device_width = if (!is.null(device_width)) {
+        round(device_width, 2)
+      } else {
+        "default"
+      },
+      device_height = if (!is.null(device_height)) {
+        round(device_height, 2)
+      } else {
+        "default"
+      },
+      marquee_size = if (!is.null(marquee_size)) {
+        round(marquee_size, 2)
+      } else {
+        "default"
+      },
       return_details = return_details,
-      safety_margin = round(safety_margin_for_key, 4)  # FIX: Cache invalidation ved config change
+      safety_margin = round(safety_margin_for_key, 4) # FIX: Cache invalidation ved config change
     ), algo = "xxhash32")
 
     # Check if cache is enabled (PHASE 0 DIAGNOSTIC)
@@ -1294,17 +1349,36 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
   )
 
   # PHASE 1 DIAGNOSTIC: Capture viewport state
-  vp_info <- tryCatch({
-    list(
-      current_vp = grid::current.vpPath(),
-      vp_width = as.numeric(grid::convertWidth(grid::unit(1, "npc"), "inches", valueOnly = TRUE)),
-      vp_height = as.numeric(grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE))
-    )
-  }, error = function(e) {
-    list(current_vp = "ERROR", vp_width = NA, vp_height = NA, error = e$message)
-  })
+  vp_info <- tryCatch(
+    {
+      list(
+        current_vp = grid::current.vpPath(),
+        vp_width = as.numeric(grid::convertWidth(grid::unit(1, "npc"), "inches", valueOnly = TRUE)),
+        vp_height = as.numeric(grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE))
+      )
+    },
+    error = function(e) {
+      list(current_vp = "ERROR", vp_width = NA, vp_height = NA, error = e$message)
+    }
+  )
 
   # Create grob and measure (assumes active device exists)
+  # FIX: Apply marquee_size scaling to style if provided
+  # marquee_grob uses style-based sizing, not explicit size parameter
+  if (!is.null(marquee_size)) {
+    # Scale all font sizes in style by marquee_size / default_size ratio
+    # Default geom_marquee size is approximately 6, so we scale from that baseline
+    size_scale <- marquee_size / 6
+
+    # Modify style to apply size scaling
+    # We need to scale all font-related attributes
+    style <- marquee::modify_style(
+      style,
+      "body",
+      size = marquee_size  # This should set the base font size
+    )
+  }
+
   g <- marquee::marquee_grob(
     text = text,
     x = 0.5,
@@ -1314,36 +1388,47 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
 
   # CRITICAL FIX: Force grob rendering by calling makeContent
   # Marquee grobs use lazy evaluation and may not have dimensions until rendered
-  tryCatch({
-    g_rendered <- grid::makeContent(g)
-    h_native <- grid::grobHeight(g_rendered)
-  }, error = function(e) {
-    # Fallback to direct measurement if makeContent fails
-    h_native <<- grid::grobHeight(g)
-  })
+  tryCatch(
+    {
+      g_rendered <- grid::makeContent(g)
+      h_native <- grid::grobHeight(g_rendered)
+    },
+    error = function(e) {
+      # Fallback to direct measurement if makeContent fails
+      h_native <<- grid::grobHeight(g)
+    }
+  )
 
   # PHASE 1 DIAGNOSTIC: Print comprehensive debug info
   h_native_value <- as.numeric(h_native)
   h_native_unit <- attr(h_native, "unit")
   text_preview <- substring(gsub("\n", " ", text), 1, 30)
 
-  message(sprintf("[GROB_DEBUG] Text: '%s...' | Native: %s (%.6f %s)",
-                  text_preview, as.character(h_native), h_native_value, h_native_unit))
-  message(sprintf("[DEVICE_DEBUG] Device: #%d | Size: %.3f × %.3f inches | Viewport: %s (%.3f × %.3f in)",
-                  dev_info$dev_cur, dev_info$dev_size[1], dev_info$dev_size[2],
-                  as.character(vp_info$current_vp), vp_info$vp_width, vp_info$vp_height))
+  message(sprintf(
+    "[GROB_DEBUG] Text: '%s...' | Native: %s (%.6f %s)",
+    text_preview, as.character(h_native), h_native_value, h_native_unit
+  ))
+  message(sprintf(
+    "[DEVICE_DEBUG] Device: #%d | Size: %.3f × %.3f inches | Viewport: %s (%.3f × %.3f in)",
+    dev_info$dev_cur, dev_info$dev_size[1], dev_info$dev_size[2],
+    as.character(vp_info$current_vp), vp_info$vp_width, vp_info$vp_height
+  ))
 
   # Convert to NPC
   if (!is.null(panel_height_inches)) {
     h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
     h_npc <- h_inches / panel_height_inches
-    message(sprintf("[GROB_DEBUG] Panel-based: h_inches=%.4f (from native %.6f), panel_height=%.4f, h_npc=%.4f",
-                    h_inches, h_native_value, panel_height_inches, h_npc))
+    message(sprintf(
+      "[GROB_DEBUG] Panel-based: h_inches=%.4f (from native %.6f), panel_height=%.4f, h_npc=%.4f",
+      h_inches, h_native_value, panel_height_inches, h_npc
+    ))
   } else {
     h_npc <- grid::convertHeight(h_native, "npc", valueOnly = TRUE)
     h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
-    message(sprintf("[GROB_DEBUG] Viewport-based: h_npc=%.4f, h_inches=%.4f (from native %.6f)",
-                    h_npc, h_inches, h_native_value))
+    message(sprintf(
+      "[GROB_DEBUG] Viewport-based: h_npc=%.4f, h_inches=%.4f (from native %.6f)",
+      h_npc, h_inches, h_native_value
+    ))
   }
 
   # Safety margin from config
@@ -1428,13 +1513,15 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
 #'
 #' @keywords internal
 estimate_label_heights_npc <- function(
-  texts,
-  style = NULL,
-  panel_height_inches = NULL,
-  fallback_npc = 0.13,
-  use_cache = TRUE,
-  return_details = FALSE
-) {
+    texts,
+    style = NULL,
+    panel_height_inches = NULL,
+    device_width = NULL,
+    device_height = NULL,
+    marquee_size = NULL,
+    fallback_npc = 0.13,
+    use_cache = TRUE,
+    return_details = FALSE) {
   # Default style hvis ikke angivet
   if (is.null(style)) {
     style <- marquee::modify_style(
@@ -1448,46 +1535,61 @@ estimate_label_heights_npc <- function(
   # VIGTIGT: Brug ALTID en off-screen device for measurements
   # Dette forhindrer synlig rendering når scripts kører med aktiv device
   #
-  # FIX: Brug SVG device i stedet for PNG for præcise text målinger
-  # SVG er vektor-baseret og giver konsistente målinger uafhængigt af device størrelse
+  # FIX: Brug faktisk device størrelse til målinger for korrekt scaling
+  # Hvis device_width/height er angivet, brug dem. Ellers fallback til 16:9 format (8×4.5")
   #
   # Gem reference til nuværende device
   current_dev <- grDevices::dev.cur()
 
+  # Bestem device størrelse til målinger
+  # Fallback: 8×4.5 inches (16:9 aspect ratio) matcher typiske SPC plot dimensioner
+  meas_width <- if (!is.null(device_width)) device_width else 8
+  meas_height <- if (!is.null(device_height)) device_height else 4.5
+
   # Open ONE off-screen SVG device for all measurements
   temp_svg <- tempfile(fileext = ".svg")
   suppressMessages(
-    grDevices::svg(filename = temp_svg, width = 7, height = 7)
+    grDevices::svg(filename = temp_svg, width = meas_width, height = meas_height)
   )
   temp_dev <- grDevices::dev.cur()
 
   # Ensure cleanup of temp file
-  on.exit({
-    unlink(temp_svg, force = TRUE)
-  }, add = TRUE, after = FALSE)
+  on.exit(
+    {
+      unlink(temp_svg, force = TRUE)
+    },
+    add = TRUE,
+    after = FALSE
+  )
 
   # Measure all texts with shared device
   results <- lapply(texts, function(text) {
-    tryCatch({
-      .estimate_label_height_npc_internal(
-        text = text,
-        style = style,
-        panel_height_inches = panel_height_inches,
-        fallback_npc = fallback_npc,
-        use_cache = use_cache,
-        return_details = return_details
-      )
-    }, error = function(e) {
-      warning(
-        "Grob-baseret højdemåling fejlede: ", e$message,
-        " - bruger fallback"
-      )
-      if (return_details) {
-        list(npc = fallback_npc, inches = NA_real_, panel_height_inches = panel_height_inches)
-      } else {
-        fallback_npc
+    tryCatch(
+      {
+        .estimate_label_height_npc_internal(
+          text = text,
+          style = style,
+          panel_height_inches = panel_height_inches,
+          device_width = device_width,
+          device_height = device_height,
+          marquee_size = marquee_size,
+          fallback_npc = fallback_npc,
+          use_cache = use_cache,
+          return_details = return_details
+        )
+      },
+      error = function(e) {
+        warning(
+          "Grob-baseret højdemåling fejlede: ", e$message,
+          " - bruger fallback"
+        )
+        if (return_details) {
+          list(npc = fallback_npc, inches = NA_real_, panel_height_inches = panel_height_inches)
+        } else {
+          fallback_npc
+        }
       }
-    })
+    )
   })
 
   # Luk off-screen device hvis den stadig er aktiv
@@ -1498,11 +1600,14 @@ estimate_label_heights_npc <- function(
   # Vend tilbage til oprindelig device hvis den var reel (ikke null og ikke vores temp)
   if (current_dev > 1 && current_dev != temp_dev) {
     if (current_dev %in% grDevices::dev.list()) {
-      tryCatch({
-        grDevices::dev.set(current_dev)
-      }, error = function(e) {
-        # Ignorer hvis device ikke findes
-      })
+      tryCatch(
+        {
+          grDevices::dev.set(current_dev)
+        },
+        error = function(e) {
+          # Ignorer hvis device ikke findes
+        }
+      )
     }
   }
 
@@ -1552,37 +1657,128 @@ estimate_label_heights_npc <- function(
 #' height_details <- estimate_label_height_npc(label, style = style, return_details = TRUE)
 #' # Returns list(npc = 0.12, inches = 0.5, panel_height_inches = 4.2)
 estimate_label_height_npc <- function(
-  text,
-  style = NULL,
-  panel_height_inches = NULL,
-  fallback_npc = 0.13,
-  use_cache = TRUE,
-  return_details = FALSE
-) {
+    text,
+    style = NULL,
+    panel_height_inches = NULL,
+    fallback_npc = 0.13,
+    use_cache = TRUE,
+    return_details = FALSE) {
+  tryCatch(
+    {
+      # Default style hvis ikke angivet
+      # NOTE: marquee_grob accepterer kun 'style' parameter, ikke separate
+      # size/lineheight/family. Disse skal specificeres gennem style-objektet.
+      if (is.null(style)) {
+        style <- marquee::modify_style(
+          marquee::classic_style(),
+          "p",
+          margin = marquee::trbl(0),
+          align = "right"
+        )
+      }
 
-  tryCatch({
-    # Default style hvis ikke angivet
-    # NOTE: marquee_grob accepterer kun 'style' parameter, ikke separate
-    # size/lineheight/family. Disse skal specificeres gennem style-objektet.
-    if (is.null(style)) {
-      style <- marquee::modify_style(
-        marquee::classic_style(),
-        "p",
-        margin = marquee::trbl(0),
-        align = "right"
+      # Generate cache key from text + style signature + panel height + safety margin
+      # Key parameters affecting height: margin, align, lineheight, panel_height, safety_margin
+      if (use_cache) {
+        style_hash <- digest::digest(list(
+          style$p$margin,
+          style$p$align,
+          style$p$lineheight
+        ), algo = "xxhash32") # Fast hash algorithm
+
+        # Hent height_safety_margin for cache key
+        safety_margin <- if (exists("get_label_placement_config", mode = "function")) {
+          cfg <- get_label_placement_config()
+          value <- cfg[["height_safety_margin"]]
+          if (is.null(value)) 1.05 else value
+        } else if (exists("get_label_placement_param", mode = "function")) {
+          get_label_placement_param("height_safety_margin")
+        } else {
+          1.05
+        }
+
+        # Include panel_height, return_details AND height_safety_margin in cache key
+        # Different panel heights → different NPC values for same absolute height
+        # Different return_details → different return formats (numeric vs list)
+        # Different safety_margin → different final heights
+        cache_key <- digest::digest(list(
+          text = text,
+          style = style_hash,
+          panel_height = if (!is.null(panel_height_inches)) {
+            round(panel_height_inches, 4) # Round to avoid float precision issues
+          } else {
+            "viewport" # Different cache entry for viewport-based measurement
+          },
+          return_details = return_details, # VIGTIG: Undgå cache collision mellem formats
+          safety_margin = round(safety_margin, 4) # FIX: Cache invalidation ved config change
+        ), algo = "xxhash32")
+
+        # Check if cache is enabled (PHASE 0 DIAGNOSTIC)
+        if (.grob_cache_config$enabled) {
+          # Check cache
+          cached_result <- .grob_height_cache[[cache_key]]
+          if (!is.null(cached_result)) {
+            # Cache hit - update statistics
+            safe_update_cache_stat("hits", 1L, "grob", increment = TRUE)
+            return(cached_result)
+          }
+
+          # Cache miss - update statistics
+          safe_update_cache_stat("misses", 1L, "grob", increment = TRUE)
+
+          # Auto-purge check before adding new entry
+          auto_purge_grob_cache()
+        }
+      }
+
+      # Opret marquee grob for at måle faktisk højde
+      # NOTE: marquee_grob() bruger default size fra style
+      # For at måle korrekt skal vi bruge samme setup som ved rendering
+
+      # VIGTIGT: Sikr at der er en aktiv device for at undgå Rplots.pdf
+      # Grob operationer kræver en graphics device, men vi vil ikke skabe filer
+      device_was_open <- grDevices::dev.cur() != 1
+
+      if (!device_was_open) {
+        # Åbn en usynlig device uden fil output
+        # Vi SKAL åbne device før nogen grid operationer for at undgå Rplots.pdf
+        # Brug png med /dev/null på Unix eller NUL på Windows
+        null_file <- if (.Platform$OS.type == "windows") "NUL" else "/dev/null"
+        suppressMessages(
+          grDevices::png(filename = null_file, width = 480, height = 480)
+        )
+      }
+
+      g <- marquee::marquee_grob(
+        text = text,
+        x = 0.5,
+        y = 0.5,
+        style = style
       )
-    }
 
-    # Generate cache key from text + style signature + panel height + safety margin
-    # Key parameters affecting height: margin, align, lineheight, panel_height, safety_margin
-    if (use_cache) {
-      style_hash <- digest::digest(list(
-        style$p$margin,
-        style$p$align,
-        style$p$lineheight
-      ), algo = "xxhash32")  # Fast hash algorithm
+      # Mål højde i native units
+      h_native <- grid::grobHeight(g)
 
-      # Hent height_safety_margin for cache key
+      # Luk midlertidig device hvis vi åbnede en
+      if (!device_was_open) {
+        grDevices::dev.off()
+      }
+
+      # Konverter til NPC
+      # Hvis panel_height kendt, brug den; ellers brug current viewport
+      if (!is.null(panel_height_inches)) {
+        h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
+        h_npc <- h_inches / panel_height_inches
+      } else {
+        # Auto-detect fra current viewport
+        h_npc <- grid::convertHeight(h_native, "npc", valueOnly = TRUE)
+        # Beregn også inches for details-return
+        h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
+      }
+
+      # Tilføj sikkerhedsmargin for at være konservativ
+      # Dette sikrer at labels ikke overlapper selv med små afrundingsfejl
+      # HENT FRA CONFIG for at gøre det konfigurerbart
       safety_margin <- if (exists("get_label_placement_config", mode = "function")) {
         cfg <- get_label_placement_config()
         value <- cfg[["height_safety_margin"]]
@@ -1590,111 +1786,67 @@ estimate_label_height_npc <- function(
       } else if (exists("get_label_placement_param", mode = "function")) {
         get_label_placement_param("height_safety_margin")
       } else {
-        1.05
+        1.05 # Fallback hvis config ikke tilgængelig
       }
+      h_npc <- h_npc * safety_margin
+      h_inches_with_margin <- h_inches * safety_margin
 
-      # Include panel_height, return_details AND height_safety_margin in cache key
-      # Different panel heights → different NPC values for same absolute height
-      # Different return_details → different return formats (numeric vs list)
-      # Different safety_margin → different final heights
-      cache_key <- digest::digest(list(
-        text = text,
-        style = style_hash,
-        panel_height = if (!is.null(panel_height_inches)) {
-          round(panel_height_inches, 4)  # Round to avoid float precision issues
-        } else {
-          "viewport"  # Different cache entry for viewport-based measurement
-        },
-        return_details = return_details,  # VIGTIG: Undgå cache collision mellem formats
-        safety_margin = round(safety_margin, 4)  # FIX: Cache invalidation ved config change
-      ), algo = "xxhash32")
-
-      # Check if cache is enabled (PHASE 0 DIAGNOSTIC)
-      if (.grob_cache_config$enabled) {
-        # Check cache
-        cached_result <- .grob_height_cache[[cache_key]]
-        if (!is.null(cached_result)) {
-          # Cache hit - update statistics
-          safe_update_cache_stat("hits", 1L, "grob", increment = TRUE)
-          return(cached_result)
+      # Sanity check: Verificer at målingen er rimelig
+      # VIGTIGT: Fra 2025-01-05 - Tillad store labels (>50%) på små paneler
+      # Dette er nødvendigt for facets og lave viewports
+      if (!is.finite(h_npc) || h_npc <= 0) {
+        # FATAL error - return fallback
+        warning(
+          "Grob-måling gav invalid værdi (", round(h_npc, 4), "), bruger fallback. ",
+          "Dette kan skyldes manglende viewport eller ugyldigt marquee markup."
+        )
+        if (return_details) {
+          return(list(
+            npc = fallback_npc,
+            inches = NA_real_,
+            panel_height_inches = panel_height_inches
+          ))
         }
-
-        # Cache miss - update statistics
-        safe_update_cache_stat("misses", 1L, "grob", increment = TRUE)
-
-        # Auto-purge check before adding new entry
-        auto_purge_grob_cache()
+        return(fallback_npc)
       }
-    }
 
-    # Opret marquee grob for at måle faktisk højde
-    # NOTE: marquee_grob() bruger default size fra style
-    # For at måle korrekt skal vi bruge samme setup som ved rendering
+      # Warn hvis label er meget stor relativt til panel (men tillad det)
+      if (h_npc > 0.5) {
+        warning(
+          sprintf(
+            "Label optager %.1f%% af panel højde (%.2f inches). ",
+            h_npc * 100, panel_height_inches
+          ),
+          "Dette kan indikere et meget lille panel eller en fejlmåling."
+        )
+      }
 
-    # VIGTIGT: Sikr at der er en aktiv device for at undgå Rplots.pdf
-    # Grob operationer kræver en graphics device, men vi vil ikke skabe filer
-    device_was_open <- grDevices::dev.cur() != 1
+      # Prepare return value based on return_details flag
+      if (return_details) {
+        result <- list(
+          npc = as.numeric(h_npc),
+          inches = as.numeric(h_inches_with_margin),
+          panel_height_inches = panel_height_inches
+        )
+      } else {
+        result <- as.numeric(h_npc)
+      }
 
-    if (!device_was_open) {
-      # Åbn en usynlig device uden fil output
-      # Vi SKAL åbne device før nogen grid operationer for at undgå Rplots.pdf
-      # Brug png med /dev/null på Unix eller NUL på Windows
-      null_file <- if (.Platform$OS.type == "windows") "NUL" else "/dev/null"
-      suppressMessages(
-        grDevices::png(filename = null_file, width = 480, height = 480)
-      )
-    }
+      # Store in cache for future reuse (only if cache is enabled)
+      # VIGTIGT: Cache det faktiske result (list eller numeric) ikke bare h_npc
+      if (use_cache && .grob_cache_config$enabled) {
+        .grob_height_cache[[cache_key]] <- result
+        # Store timestamp for TTL tracking
+        timestamp_key <- paste0(".", cache_key, "_timestamp")
+        .grob_height_cache[[timestamp_key]] <- Sys.time()
+      }
 
-    g <- marquee::marquee_grob(
-      text = text,
-      x = 0.5,
-      y = 0.5,
-      style = style
-    )
-
-    # Mål højde i native units
-    h_native <- grid::grobHeight(g)
-
-    # Luk midlertidig device hvis vi åbnede en
-    if (!device_was_open) {
-      grDevices::dev.off()
-    }
-
-    # Konverter til NPC
-    # Hvis panel_height kendt, brug den; ellers brug current viewport
-    if (!is.null(panel_height_inches)) {
-      h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
-      h_npc <- h_inches / panel_height_inches
-    } else {
-      # Auto-detect fra current viewport
-      h_npc <- grid::convertHeight(h_native, "npc", valueOnly = TRUE)
-      # Beregn også inches for details-return
-      h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
-    }
-
-    # Tilføj sikkerhedsmargin for at være konservativ
-    # Dette sikrer at labels ikke overlapper selv med små afrundingsfejl
-    # HENT FRA CONFIG for at gøre det konfigurerbart
-    safety_margin <- if (exists("get_label_placement_config", mode = "function")) {
-      cfg <- get_label_placement_config()
-      value <- cfg[["height_safety_margin"]]
-      if (is.null(value)) 1.05 else value
-    } else if (exists("get_label_placement_param", mode = "function")) {
-      get_label_placement_param("height_safety_margin")
-    } else {
-      1.05  # Fallback hvis config ikke tilgængelig
-    }
-    h_npc <- h_npc * safety_margin
-    h_inches_with_margin <- h_inches * safety_margin
-
-    # Sanity check: Verificer at målingen er rimelig
-    # VIGTIGT: Fra 2025-01-05 - Tillad store labels (>50%) på små paneler
-    # Dette er nødvendigt for facets og lave viewports
-    if (!is.finite(h_npc) || h_npc <= 0) {
-      # FATAL error - return fallback
+      return(result)
+    },
+    error = function(e) {
       warning(
-        "Grob-måling gav invalid værdi (", round(h_npc, 4), "), bruger fallback. ",
-        "Dette kan skyldes manglende viewport eller ugyldigt marquee markup."
+        "Grob-baseret højdemåling fejlede: ", e$message,
+        " - bruger fallback: ", fallback_npc
       )
       if (return_details) {
         return(list(
@@ -1705,54 +1857,7 @@ estimate_label_height_npc <- function(
       }
       return(fallback_npc)
     }
-
-    # Warn hvis label er meget stor relativt til panel (men tillad det)
-    if (h_npc > 0.5) {
-      warning(
-        sprintf(
-          "Label optager %.1f%% af panel højde (%.2f inches). ",
-          h_npc * 100, panel_height_inches
-        ),
-        "Dette kan indikere et meget lille panel eller en fejlmåling."
-      )
-    }
-
-    # Prepare return value based on return_details flag
-    if (return_details) {
-      result <- list(
-        npc = as.numeric(h_npc),
-        inches = as.numeric(h_inches_with_margin),
-        panel_height_inches = panel_height_inches
-      )
-    } else {
-      result <- as.numeric(h_npc)
-    }
-
-    # Store in cache for future reuse (only if cache is enabled)
-    # VIGTIGT: Cache det faktiske result (list eller numeric) ikke bare h_npc
-    if (use_cache && .grob_cache_config$enabled) {
-      .grob_height_cache[[cache_key]] <- result
-      # Store timestamp for TTL tracking
-      timestamp_key <- paste0(".", cache_key, "_timestamp")
-      .grob_height_cache[[timestamp_key]] <- Sys.time()
-    }
-
-    return(result)
-
-  }, error = function(e) {
-    warning(
-      "Grob-baseret højdemåling fejlede: ", e$message,
-      " - bruger fallback: ", fallback_npc
-    )
-    if (return_details) {
-      return(list(
-        npc = fallback_npc,
-        inches = NA_real_,
-        panel_height_inches = panel_height_inches
-      ))
-    }
-    return(fallback_npc)
-  })
+  )
 }
 
 
@@ -1777,7 +1882,7 @@ estimate_label_height_npc <- function(
 #'   - `side`: Faktisk side ("under" eller "over")
 propose_single_label <- function(y_line_npc, pref_side, label_h, gap, pad_top, pad_bot) {
   half <- label_h / 2
-  low_bound  <- pad_bot + half
+  low_bound <- pad_bot + half
   high_bound <- 1 - pad_top - half
 
   # Prøv foretrukket side først
@@ -1852,14 +1957,14 @@ propose_single_label <- function(y_line_npc, pref_side, label_h, gap, pad_top, p
 #' result <- place_two_labels_npc(
 #'   yA_npc = 0.4,
 #'   yB_npc = 0.6,
-#'   label_height_npc = height_details  # List med npc/inches/panel_height
+#'   label_height_npc = height_details # List med npc/inches/panel_height
 #' )
 #' # Gap vil nu være fast % af label's faktiske højde
 #'
 #' # Coincident lines (target = CL)
 #' result <- place_two_labels_npc(
 #'   yA_npc = 0.5,
-#'   yB_npc = 0.5,  # Samme værdi
+#'   yB_npc = 0.5, # Samme værdi
 #'   label_height_npc = 0.13,
 #'   pref_pos = c("under", "under")
 #' )
@@ -1869,15 +1974,13 @@ place_two_labels_npc <- function(
     yB_npc,
     # label_height_npc = 0.035,
     label_height_npc = 0.114,
-    gap_line = NULL,      # NU: Auto-beregnes fra config
-    gap_labels = NULL,    # NU: Auto-beregnes fra config
-    pad_top = NULL,       # NU: Hentes fra config
-    pad_bot = NULL,       # NU: Hentes fra config
+    gap_line = NULL, # NU: Auto-beregnes fra config
+    gap_labels = NULL, # NU: Auto-beregnes fra config
+    pad_top = NULL, # NU: Hentes fra config
+    pad_bot = NULL, # NU: Hentes fra config
     priority = c("A", "B")[1],
     pref_pos = c("under", "under"),
-    debug = FALSE
-) {
-
+    debug = FALSE) {
   # ============================================================================
   # INPUT VALIDATION & PARSING
   # ============================================================================
@@ -1910,7 +2013,9 @@ place_two_labels_npc <- function(
 
   # Helper function for NPC parameter validation
   validate_npc_param <- function(value, name, allow_na = TRUE) {
-    if (is.null(value)) return(invisible(NULL))
+    if (is.null(value)) {
+      return(invisible(NULL))
+    }
 
     if (!is.numeric(value)) {
       stop(sprintf("%s skal være numerisk, modtog: %s", name, class(value)[1]))
@@ -2030,21 +2135,26 @@ place_two_labels_npc <- function(
       gap_line_inches <- label_height_inches * cfg$relative_gap_line
 
       # FIX: Absolut minimum gap for at undgå labels der klistrer til linjer
-      # Ved 96dpi: 0.05 inches ≈ 5 pixels
-      min_gap_inches <- 0.05
+      # Reduceret til 0.01 inches (~1 pixel @ 96dpi) for at tillade små gaps
+      # når relative_gap_line er lille (fx 0.05 = 5%)
+      min_gap_inches <- 0.01
       gap_line_inches <- max(gap_line_inches, min_gap_inches)
 
-      gap_line <- gap_line_inches / panel_height_inches  # Konverter til NPC
+      gap_line <- gap_line_inches / panel_height_inches # Konverter til NPC
       if (debug) {
-        message(sprintf("[DEBUG] gap_line beregnet fra config (NY API): %.4f inches × %.2f = %.4f inches (min: %.2f) = %.4f NPC",
-                        label_height_inches, cfg$relative_gap_line, gap_line_inches, min_gap_inches, gap_line))
+        message(sprintf(
+          "[DEBUG] gap_line beregnet fra config (NY API): %.4f inches × %.2f = %.4f inches (min: %.2f) = %.4f NPC",
+          label_height_inches, cfg$relative_gap_line, gap_line_inches, min_gap_inches, gap_line
+        ))
       }
     } else {
       # Legacy API: Beregn gap som % af NPC
       gap_line <- label_height_npc_value * cfg$relative_gap_line
       if (debug) {
-        message(sprintf("[DEBUG] gap_line beregnet fra config (LEGACY API): %.4f NPC × %.2f = %.4f NPC",
-                        label_height_npc_value, cfg$relative_gap_line, gap_line))
+        message(sprintf(
+          "[DEBUG] gap_line beregnet fra config (LEGACY API): %.4f NPC × %.2f = %.4f NPC",
+          label_height_npc_value, cfg$relative_gap_line, gap_line
+        ))
       }
     }
   } else {
@@ -2057,7 +2167,7 @@ place_two_labels_npc <- function(
     if (label_height_is_list && !is.na(label_height_inches)) {
       # Ny API: Beregn gap som fast % af absolute label højde
       gap_labels_inches <- label_height_inches * cfg$relative_gap_labels
-      gap_labels <- gap_labels_inches / panel_height_inches  # Konverter til NPC
+      gap_labels <- gap_labels_inches / panel_height_inches # Konverter til NPC
     } else {
       # Legacy API: Beregn gap som % af NPC
       gap_labels <- label_height_npc_value * cfg$relative_gap_labels
@@ -2124,7 +2234,7 @@ place_two_labels_npc <- function(
 
   # Begge linjer er valid - fuld placeringsalgoritme
   half <- label_height_npc_value / 2
-  low_bound  <- pad_bot + half
+  low_bound <- pad_bot + half
   high_bound <- 1 - pad_top - half
 
   pref_pos <- rep_len(pref_pos, 2)
@@ -2143,12 +2253,12 @@ place_two_labels_npc <- function(
     # Placer den øverste linje's label OVER, den nederste UNDER
     if (yA_npc > yB_npc) {
       # A er højere
-      pref_pos[1] <- "over"   # A over
-      pref_pos[2] <- "under"  # B under
+      pref_pos[1] <- "over" # A over
+      pref_pos[2] <- "under" # B under
     } else {
       # B er højere
-      pref_pos[1] <- "under"  # A under
-      pref_pos[2] <- "over"   # B over
+      pref_pos[1] <- "under" # A under
+      pref_pos[2] <- "over" # B over
     }
   }
 
@@ -2320,8 +2430,10 @@ place_two_labels_npc <- function(
 
         if (abs(proposed_yA - proposed_yB) >= reduced_min_gap) {
           # Success! Vi kan bruge line-gap enforcement med reduceret label-gap
-          warnings <- c(warnings, paste0("NIVEAU 1: Reduceret label gap til ",
-                                         round(reduction_factor * 100), "% - line-gaps overholdt"))
+          warnings <- c(warnings, paste0(
+            "NIVEAU 1: Reduceret label gap til ",
+            round(reduction_factor * 100), "% - line-gaps overholdt"
+          ))
           yA <- clamp01(proposed_yA)
           yB <- clamp01(proposed_yB)
           reduced_gap_successful <- TRUE
@@ -2342,7 +2454,7 @@ place_two_labels_npc <- function(
         test_yA <- if (verifyA_flipped$violated) verifyA_flipped$y else propA_flipped$center
 
         # Check om flip A løser problemet
-        if (abs(test_yA - proposed_yB) >= label_height_npc_value) {  # Minimum: labels må ikke overlappe
+        if (abs(test_yA - proposed_yB) >= label_height_npc_value) { # Minimum: labels må ikke overlappe
           yA <- clamp01(test_yA)
           yB <- clamp01(proposed_yB)
           sideA <- propA_flipped$side
@@ -2388,14 +2500,13 @@ place_two_labels_npc <- function(
         # Prioriter den vigtigste label tættest på sin linje
         if (priority == "A") {
           yA <- clamp01(proposed_yA)
-          yB <- if (yA < shelf_threshold) high_bound else low_bound  # Modsatte shelf
+          yB <- if (yA < shelf_threshold) high_bound else low_bound # Modsatte shelf
         } else {
           yB <- clamp01(proposed_yB)
           yA <- if (yB < shelf_threshold) high_bound else low_bound
         }
         placement_quality <- "degraded"
       }
-
     } else {
       # Sikkert at enforce line-gaps uden collision
       if (verifyA$violated) {
@@ -2416,12 +2527,16 @@ place_two_labels_npc <- function(
     sideB = sideB,
     warnings = warnings,
     placement_quality = placement_quality,
-    debug_info = if (debug) list(
-      yA_npc = yA_npc,
-      yB_npc = yB_npc,
-      propA = propA,
-      propB = propB,
-      bounds = c(low_bound, high_bound)
-    ) else NULL
+    debug_info = if (debug) {
+      list(
+        yA_npc = yA_npc,
+        yB_npc = yB_npc,
+        propA = propA,
+        propB = propB,
+        bounds = c(low_bound, high_bound)
+      )
+    } else {
+      NULL
+    }
   )
 }

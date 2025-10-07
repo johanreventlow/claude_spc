@@ -79,8 +79,8 @@ sanitize_marquee_text <- function(text) {
 
   # Escape marquee special characters
   # Note: Marquee bruger {} til markup, ** bevar vi da det skal være bold i output
-  text <- gsub("\\{", "&#123;", text)    # Escape {
-  text <- gsub("\\}", "&#125;", text)    # Escape }
+  text <- gsub("\\{", "&#123;", text) # Escape {
+  text <- gsub("\\}", "&#125;", text) # Escape }
 
   # Fjern kontroltegn (men bevar \n for linjeskift)
   text <- gsub("[[:cntrl:]&&[^\n]]", "", text)

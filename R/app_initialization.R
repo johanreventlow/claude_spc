@@ -13,7 +13,6 @@
 #' @return List containing initialization results
 #' @export
 initialize_app <- function(force_reload = FALSE, config_override = NULL) {
-
   log_debug("Starting package-based app initialization", .context = "APP_INIT")
 
   init_results <- list()
@@ -58,15 +57,14 @@ initialize_app <- function(force_reload = FALSE, config_override = NULL) {
 #'
 #' @return List with verification results
 verify_package_functions <- function() {
-
   # Essential functions that should be available via package loading
   essential_functions <- c(
-    "create_app_state",           # State management
-    "create_emit_api",           # Event system
-    "get_hospital_name",         # Branding (internal)
-    "get_bootstrap_theme",       # Branding (internal)
-    "app_ui",                    # UI function
-    "app_server"                 # Server function
+    "create_app_state", # State management
+    "create_emit_api", # Event system
+    "get_hospital_name", # Branding (internal)
+    "get_bootstrap_theme", # Branding (internal)
+    "app_ui", # UI function
+    "app_server" # Server function
   )
 
   results <- list(
@@ -85,9 +83,11 @@ verify_package_functions <- function() {
     }
   })[["elapsed"]]
 
-  log_debug(paste("Package functions verified:",
-                   length(results$available_functions), "available,",
-                   length(results$missing_functions), "missing"), .context = "PACKAGE_VERIFICATION")
+  log_debug(paste(
+    "Package functions verified:",
+    length(results$available_functions), "available,",
+    length(results$missing_functions), "missing"
+  ), .context = "PACKAGE_VERIFICATION")
 
   return(results)
 }
@@ -99,7 +99,6 @@ verify_package_functions <- function() {
 #'
 #' @return List with branding verification results
 verify_branding_setup <- function() {
-
   results <- list(
     hospital_name_available = FALSE,
     theme_available = FALSE,
@@ -154,7 +153,6 @@ verify_branding_setup <- function() {
 #' @return List with optimization results
 #' @export
 setup_performance_optimizations <- function(config) {
-
   optimizations <- list()
 
   # Setup configuration variables in package environment (not .GlobalEnv)
@@ -189,14 +187,13 @@ setup_performance_optimizations <- function(config) {
 #'
 #' @return List with verification results
 verify_initialization_completeness <- function() {
-
   verification <- list()
 
   # Check critical functions are available via package loading
   critical_functions <- c(
-    "app_ui", "app_server", "run_app",           # Main app functions (from package)
-    "create_app_state",                          # State management (from package)
-    "autodetect_engine"                          # Autodetect functionality (from package)
+    "app_ui", "app_server", "run_app", # Main app functions (from package)
+    "create_app_state", # State management (from package)
+    "autodetect_engine" # Autodetect functionality (from package)
   )
 
   verification$missing_functions <- c()
@@ -208,7 +205,7 @@ verify_initialization_completeness <- function() {
 
   # Check critical global variables (for backward compatibility)
   critical_globals <- c(
-    "HOSPITAL_NAME", "my_theme"   # Branding (set by .onLoad)
+    "HOSPITAL_NAME", "my_theme" # Branding (set by .onLoad)
   )
 
   verification$missing_globals <- c()
@@ -221,15 +218,17 @@ verify_initialization_completeness <- function() {
   # Summary
   verification$complete <- (
     length(verification$missing_functions) == 0 &&
-    length(verification$missing_globals) == 0
+      length(verification$missing_globals) == 0
   )
 
   if (verification$complete) {
     log_debug("Initialization verification PASSED", .context = "VERIFICATION")
   } else {
-    log_debug(paste("Initialization verification FAILED:",
-                  length(verification$missing_functions), "missing functions,",
-                  length(verification$missing_globals), "missing globals"), .context = "VERIFICATION")
+    log_debug(paste(
+      "Initialization verification FAILED:",
+      length(verification$missing_functions), "missing functions,",
+      length(verification$missing_globals), "missing globals"
+    ), .context = "VERIFICATION")
   }
 
   return(verification)
@@ -266,8 +265,10 @@ get_initialization_status_report <- function(init_results) {
         details <- if (component_data$complete) {
           "All components verified"
         } else {
-          paste("Issues:", length(component_data$missing_functions %||% c()), "missing functions,",
-                length(component_data$missing_globals %||% c()), "missing globals")
+          paste(
+            "Issues:", length(component_data$missing_functions %||% c()), "missing functions,",
+            length(component_data$missing_globals %||% c()), "missing globals"
+          )
         }
       } else {
         status <- "success"

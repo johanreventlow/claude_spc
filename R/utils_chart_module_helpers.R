@@ -11,7 +11,6 @@
 #' @return List med state management funktioner
 #' @export
 create_chart_state_manager <- function(app_state) {
-
   # Initialize visualization state if not present
   if (is.null(app_state$visualization)) {
     app_state$visualization <- shiny::reactiveValues(
@@ -103,8 +102,8 @@ create_chart_state_manager <- function(app_state) {
         "Check plot readiness",
         code = {
           !is.null(app_state$visualization$plot_object) &&
-          isTRUE(app_state$visualization$plot_ready) &&
-          !isTRUE(app_state$visualization$is_computing)
+            isTRUE(app_state$visualization$plot_ready) &&
+            !isTRUE(app_state$visualization$is_computing)
         },
         fallback = FALSE,
         error_type = "state_check"
@@ -122,7 +121,6 @@ create_chart_state_manager <- function(app_state) {
 #' @return List med data management funktioner
 #' @export
 create_module_data_manager <- function(app_state) {
-
   list(
     #' Get module data with reactive safety
     #'
@@ -212,7 +210,6 @@ create_module_data_manager <- function(app_state) {
 #'
 #' @export
 create_spc_results_processor <- function() {
-
   list(
     #' Extract QIC results from plot data
     #'
@@ -321,9 +318,9 @@ create_spc_results_processor <- function() {
     #' @param kommentar_col Comment column
     #' @return List med plot object og QIC data
     generate_plot_safely = function(data, config, chart_type, target_value = NULL,
-                                  centerline_value = NULL, skift_config = NULL,
-                                  frys_column = NULL, chart_title_reactive = NULL,
-                                  y_unit = "count", kommentar_col = NULL) {
+                                    centerline_value = NULL, skift_config = NULL,
+                                    frys_column = NULL, chart_title_reactive = NULL,
+                                    y_unit = "count", kommentar_col = NULL) {
       safe_operation(
         "Generate SPC plot with safety wrapper",
         code = {
@@ -373,7 +370,6 @@ create_spc_results_processor <- function() {
 #'
 #' @export
 create_chart_validator <- function() {
-
   list(
     #' Validate data and configuration for chart generation
     #'
@@ -400,7 +396,7 @@ create_chart_validator <- function() {
 
           # Check for ratio charts
           if (chart_type %in% c("p", "pp", "u", "up") &&
-              (is.null(config$n_col) || !config$n_col %in% names(data))) {
+            (is.null(config$n_col) || !config$n_col %in% names(data))) {
             warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne (N)"))
           }
 

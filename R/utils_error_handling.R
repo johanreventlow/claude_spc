@@ -22,61 +22,74 @@
 #' # Basic usage
 #' result <- safe_operation(
 #'   "Data processing",
-#'   code = { process_data(input_data) },
+#'   code = {
+#'     process_data(input_data)
+#'   },
 #'   fallback = empty_data()
 #' )
 #'
 #' # With session and user notification
 #' result <- safe_operation(
 #'   "File upload",
-#'   code = { read.csv(file_path) },
+#'   code = {
+#'     read.csv(file_path)
+#'   },
 #'   fallback = NULL,
 #'   session = session,
 #'   show_user = TRUE
 #' )
 #' }
 safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE, error_type = "general", ...) {
-  tryCatch({
-    force(code)
-  }, error = function(e) {
-    # Basic error message construction
-    error_msg <- paste(operation_name, "fejlede:", e$message)
+  tryCatch(
+    {
+      force(code)
+    },
+    error = function(e) {
+      # Basic error message construction
+      error_msg <- paste(operation_name, "fejlede:", e$message)
 
-    # Try to use structured logging if available, fallback to basic cat
-    if (exists("log_error", mode = "function")) {
-      tryCatch({
-        log_error(error_msg, paste0("ERROR_HANDLING_", toupper(error_type)))
-      }, error = function(log_err) {
-        # Fallback to basic R messaging if logging fails
-        cat(sprintf("[%s] ERROR: [%s] %s\n", format(Sys.time(), "%H:%M:%S"), "ERROR_HANDLING", error_msg))
-      })
-    } else {
-      # Basic fallback logging without dependencies - consistent format with main logging
-      cat(sprintf("[%s] ERROR: [%s] %s\n", format(Sys.time(), "%H:%M:%S"), "ERROR_HANDLING", error_msg))
-    }
-
-    # User notification if session provided and requested
-    if (!is.null(session) && show_user) {
-      tryCatch({
-        shiny::showNotification(
-          paste("Fejl:", operation_name),
-          type = "error",
-          duration = 5
+      # Try to use structured logging if available, fallback to basic cat
+      if (exists("log_error", mode = "function")) {
+        tryCatch(
+          {
+            log_error(error_msg, paste0("ERROR_HANDLING_", toupper(error_type)))
+          },
+          error = function(log_err) {
+            # Fallback to basic R messaging if logging fails
+            cat(sprintf("[%s] ERROR: [%s] %s\n", format(Sys.time(), "%H:%M:%S"), "ERROR_HANDLING", error_msg))
+          }
         )
-      }, error = function(notification_err) {
-        # Silent failure for notifications to avoid cascading errors
-      })
-    }
+      } else {
+        # Basic fallback logging without dependencies - consistent format with main logging
+        cat(sprintf("[%s] ERROR: [%s] %s\n", format(Sys.time(), "%H:%M:%S"), "ERROR_HANDLING", error_msg))
+      }
 
-    # Handle fallback execution based on type
-    if (is.function(fallback)) {
-      # Call fallback function with error parameter
-      return(fallback(e))
-    } else {
-      # Return fallback value directly
-      return(fallback)
+      # User notification if session provided and requested
+      if (!is.null(session) && show_user) {
+        tryCatch(
+          {
+            shiny::showNotification(
+              paste("Fejl:", operation_name),
+              type = "error",
+              duration = 5
+            )
+          },
+          error = function(notification_err) {
+            # Silent failure for notifications to avoid cascading errors
+          }
+        )
+      }
+
+      # Handle fallback execution based on type
+      if (is.function(fallback)) {
+        # Call fallback function with error parameter
+        return(fallback(e))
+      } else {
+        # Return fallback value directly
+        return(fallback)
+      }
     }
-  })
+  )
 }
 
 #' Validate required objects exist before operation
@@ -136,13 +149,17 @@ safe_getenv <- function(var_name, default = "", type = "character") {
         "character" = as.character(value),
         "logical" = {
           if (is.logical(default)) {
-            if (value == "") return(default)
+            if (value == "") {
+              return(default)
+            }
             return(as.logical(value))
           }
           as.character(value)
         },
         "numeric" = {
-          if (value == "") return(default)
+          if (value == "") {
+            return(default)
+          }
           as.numeric(value)
         },
         as.character(value)

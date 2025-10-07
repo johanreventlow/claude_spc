@@ -12,24 +12,24 @@ if (!requireNamespace("digest", quietly = TRUE)) {
 
 ## Debug Log Categories
 DEBUG_CATEGORIES <- list(
-  SESSION_LIFECYCLE = "SESSION_LIFECYCLE",    # Session init/cleanup
-  FILE_UPLOAD_FLOW = "FILE_UPLOAD_FLOW",      # Upload → processing → storage
-  AUTO_DETECT_FLOW = "AUTO_DETECT_FLOW",      # Detection → UI sync
-  STATE_TRANSITION = "STATE_TRANSITION",      # State changes
-  UI_SYNC_FLOW = "UI_SYNC_FLOW",             # UI update operations
-  NAVIGATION_FLOW = "NAVIGATION_FLOW",        # Welcome → main app
-  PERFORMANCE = "PERFORMANCE",                # Timing metrics
-  ERROR_HANDLING = "ERROR_HANDLING",          # Error context
-  WORKFLOW_TRACE = "WORKFLOW_TRACE"           # End-to-end operation tracking
+  SESSION_LIFECYCLE = "SESSION_LIFECYCLE", # Session init/cleanup
+  FILE_UPLOAD_FLOW = "FILE_UPLOAD_FLOW", # Upload → processing → storage
+  AUTO_DETECT_FLOW = "AUTO_DETECT_FLOW", # Detection → UI sync
+  STATE_TRANSITION = "STATE_TRANSITION", # State changes
+  UI_SYNC_FLOW = "UI_SYNC_FLOW", # UI update operations
+  NAVIGATION_FLOW = "NAVIGATION_FLOW", # Welcome → main app
+  PERFORMANCE = "PERFORMANCE", # Timing metrics
+  ERROR_HANDLING = "ERROR_HANDLING", # Error context
+  WORKFLOW_TRACE = "WORKFLOW_TRACE" # End-to-end operation tracking
 )
 
 ## Debug Levels
 DEBUG_LEVELS <- list(
-  TRACE = 1,     # Detailed step-by-step operations
-  DEBUG = 2,     # General debug information
-  INFO = 3,      # Important state changes
-  WARN = 4,      # Potential issues
-  ERROR = 5      # Error conditions
+  TRACE = 1, # Detailed step-by-step operations
+  DEBUG = 2, # General debug information
+  INFO = 3, # Important state changes
+  WARN = 4, # Potential issues
+  ERROR = 5 # Error conditions
 )
 
 # CORE DEBUG UTILITIES ========================================================
@@ -47,11 +47,12 @@ DEBUG_LEVELS <- list(
 #'
 #' @examples
 #' debug_log("File upload started", "FILE_UPLOAD_FLOW", level = "INFO")
-#' debug_log("Auto-detect failed", "AUTO_DETECT_FLOW", level = "ERROR",
-#'           context = list(file_size = 1024, columns = c("A", "B")))
+#' debug_log("Auto-detect failed", "AUTO_DETECT_FLOW",
+#'   level = "ERROR",
+#'   context = list(file_size = 1024, columns = c("A", "B"))
+#' )
 debug_log <- function(message, category, level = "DEBUG", context = NULL,
                       session_id = NULL, timestamp = NULL) {
-
   # Validate inputs
   if (!category %in% unlist(DEBUG_CATEGORIES)) {
     category <- "UNKNOWN"
@@ -116,15 +117,17 @@ debug_log <- function(message, category, level = "DEBUG", context = NULL,
 
   # Store in global debug history if enabled
   if (exists("GLOBAL_DEBUG_HISTORY", envir = .GlobalEnv)) {
-    .GlobalEnv$GLOBAL_DEBUG_HISTORY <- append(.GlobalEnv$GLOBAL_DEBUG_HISTORY,
-                                               list(list(
-                                                 timestamp = timestamp,
-                                                 level = level,
-                                                 category = category,
-                                                 message = message,
-                                                 context = context,
-                                                 session_id = session_id
-                                               )))
+    .GlobalEnv$GLOBAL_DEBUG_HISTORY <- append(
+      .GlobalEnv$GLOBAL_DEBUG_HISTORY,
+      list(list(
+        timestamp = timestamp,
+        level = level,
+        category = category,
+        message = message,
+        context = context,
+        session_id = session_id
+      ))
+    )
   }
 }
 
@@ -144,10 +147,11 @@ debug_log <- function(message, category, level = "DEBUG", context = NULL,
 #' snapshot <- debug_state_snapshot("before_upload", app_state)
 #' debug_state_snapshot("after_upload", app_state)
 debug_state_snapshot <- function(checkpoint_name, app_state, include_hash = TRUE,
-                                  include_data_summary = TRUE, session_id = NULL) {
-
+                                 include_data_summary = TRUE, session_id = NULL) {
   debug_log(paste("Taking state snapshot:", checkpoint_name),
-            "STATE_TRANSITION", level = "TRACE", session_id = session_id)
+    "STATE_TRANSITION",
+    level = "TRACE", session_id = session_id
+  )
 
   snapshot <- list(
     checkpoint = checkpoint_name,
@@ -299,11 +303,12 @@ debug_state_snapshot <- function(checkpoint_name, app_state, include_hash = TRUE
       )
       snapshot$ui_state <- ui_state
     }
-
   } else {
     snapshot$state_available <- FALSE
     debug_log("State snapshot warning: app_state is NULL",
-              "STATE_TRANSITION", level = "WARN", session_id = session_id)
+      "STATE_TRANSITION",
+      level = "WARN", session_id = session_id
+    )
   }
 
   # Log snapshot summary
@@ -316,8 +321,10 @@ debug_state_snapshot <- function(checkpoint_name, app_state, include_hash = TRUE
     context$state_hash <- substr(snapshot$state_hash, 1, 8)
   }
 
-  debug_log("State snapshot completed", "STATE_TRANSITION", level = "TRACE",
-            context = context, session_id = session_id)
+  debug_log("State snapshot completed", "STATE_TRANSITION",
+    level = "TRACE",
+    context = context, session_id = session_id
+  )
 
   return(snapshot)
 }
@@ -338,12 +345,13 @@ debug_state_snapshot <- function(checkpoint_name, app_state, include_hash = TRUE
 #' # ... processing operations ...
 #' timer$complete("workflow_complete")
 debug_performance_timer <- function(operation_name, session_id = NULL) {
-
   start_time <- Sys.time()
   checkpoints <- list()
 
   debug_log(paste("Performance timer started:", operation_name),
-            "PERFORMANCE", level = "TRACE", session_id = session_id)
+    "PERFORMANCE",
+    level = "TRACE", session_id = session_id
+  )
 
   timer <- list(
     operation = operation_name,
@@ -361,9 +369,10 @@ debug_performance_timer <- function(operation_name, session_id = NULL) {
       )
 
       debug_log(paste("Checkpoint:", checkpoint_name), "PERFORMANCE",
-                level = "TRACE",
-                context = list(elapsed_seconds = round(elapsed, 3)),
-                session_id = session_id)
+        level = "TRACE",
+        context = list(elapsed_seconds = round(elapsed, 3)),
+        session_id = session_id
+      )
 
       return(elapsed)
     },
@@ -386,8 +395,10 @@ debug_performance_timer <- function(operation_name, session_id = NULL) {
       )
 
       debug_log(paste("Performance timer completed:", operation_name),
-                "PERFORMANCE", level = "INFO", context = context,
-                session_id = session_id)
+        "PERFORMANCE",
+        level = "INFO", context = context,
+        session_id = session_id
+      )
 
       return(list(
         operation = operation_name,
@@ -426,13 +437,14 @@ debug_performance_timer <- function(operation_name, session_id = NULL) {
 #' # ... auto-detect operations ...
 #' tracer$complete("visualization_ready")
 debug_workflow_tracer <- function(workflow_name, app_state = NULL, session_id = NULL) {
-
   start_time <- Sys.time()
   steps <- list()
   snapshots <- list()
 
   debug_log(paste("Workflow trace started:", workflow_name),
-            "WORKFLOW_TRACE", level = "INFO", session_id = session_id)
+    "WORKFLOW_TRACE",
+    level = "INFO", session_id = session_id
+  )
 
   # Take initial snapshot
   if (!is.null(app_state)) {
@@ -474,9 +486,10 @@ debug_workflow_tracer <- function(workflow_name, app_state = NULL, session_id = 
       }
 
       debug_log(paste("Workflow step:", step_name), "WORKFLOW_TRACE",
-                level = "TRACE",
-                context = list(elapsed_seconds = round(elapsed, 3)),
-                session_id = session_id)
+        level = "TRACE",
+        context = list(elapsed_seconds = round(elapsed, 3)),
+        session_id = session_id
+      )
 
       return(elapsed)
     },
@@ -515,8 +528,10 @@ debug_workflow_tracer <- function(workflow_name, app_state = NULL, session_id = 
         )
 
         debug_log(paste("Workflow trace completed:", workflow_name),
-                  "WORKFLOW_TRACE", level = "INFO", context = context,
-                  session_id = session_id)
+          "WORKFLOW_TRACE",
+          level = "INFO", context = context,
+          session_id = session_id
+        )
       }
 
       return(list(
@@ -556,12 +571,12 @@ debug_workflow_tracer <- function(workflow_name, app_state = NULL, session_id = 
 #'
 #' @return Session debugger object
 debug_session_lifecycle <- function(session_id, session_object = NULL) {
-
   lifecycle_start <- Sys.time()
   events <- list()
 
   debug_log("Session lifecycle debugging started", "SESSION_LIFECYCLE",
-            level = "INFO", session_id = session_id)
+    level = "INFO", session_id = session_id
+  )
 
   debugger <- list(
     session_id = session_id,
@@ -582,9 +597,10 @@ debug_session_lifecycle <- function(session_id, session_object = NULL) {
       events[[event_name]] <<- event_info
 
       debug_log(paste("Session event:", event_name), "SESSION_LIFECYCLE",
-                level = "TRACE",
-                context = list(elapsed_seconds = round(elapsed, 3)),
-                session_id = session_id)
+        level = "TRACE",
+        context = list(elapsed_seconds = round(elapsed, 3)),
+        session_id = session_id
+      )
     },
 
     # Complete lifecycle debugging
@@ -598,7 +614,8 @@ debug_session_lifecycle <- function(session_id, session_object = NULL) {
       )
 
       debug_log("Session lifecycle debugging completed", "SESSION_LIFECYCLE",
-                level = "INFO", context = context, session_id = session_id)
+        level = "INFO", context = context, session_id = session_id
+      )
 
       return(list(
         session_id = session_id,
@@ -623,7 +640,6 @@ debug_session_lifecycle <- function(session_id, session_object = NULL) {
 #' @param enable_history Enable global debug history storage (default: TRUE)
 #' @param max_history_entries Maximum number of debug entries to store (default: 1000)
 initialize_advanced_debug <- function(enable_history = TRUE, max_history_entries = 1000) {
-
   if (enable_history) {
     .GlobalEnv$GLOBAL_DEBUG_HISTORY <- list()
     .GlobalEnv$DEBUG_MAX_HISTORY <- max_history_entries

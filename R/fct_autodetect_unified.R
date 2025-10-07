@@ -18,7 +18,6 @@ autodetect_engine <- function(data = NULL,
                               trigger_type = c("session_start", "file_upload", "manual"),
                               app_state,
                               emit) {
-
   # Input validation
   trigger_type <- match.arg(trigger_type)
   if (is.null(app_state)) {
@@ -92,12 +91,15 @@ autodetect_engine <- function(data = NULL,
   shiny::isolate(app_state$columns$auto_detect$in_progress <- TRUE)
   shiny::isolate(app_state$columns$auto_detect$last_trigger_type <- trigger_type)
   # ROBUST EXIT HANDLER: Always reset state, even on early returns or errors
-  on.exit({
-    shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
-    # TEST FIX: Don't overwrite last_run here - it's set properly in main logic at line 192
-    # Removed: app_state$columns$auto_detect$last_run <- Sys.time()
-    log_debug("Autodetect engine cleanup completed", .context = "UNIFIED_AUTODETECT")
-  }, add = TRUE)
+  on.exit(
+    {
+      shiny::isolate(app_state$columns$auto_detect$in_progress <- FALSE)
+      # TEST FIX: Don't overwrite last_run here - it's set properly in main logic at line 192
+      # Removed: app_state$columns$auto_detect$last_run <- Sys.time()
+      log_debug("Autodetect engine cleanup completed", .context = "UNIFIED_AUTODETECT")
+    },
+    add = TRUE
+  )
 
   # 1. TRIGGER VALIDATION - smart unfreezing when data is available
   frozen_state <- shiny::isolate(app_state$columns$auto_detect$frozen_until_next_trigger) %||% FALSE
@@ -149,7 +151,7 @@ autodetect_engine <- function(data = NULL,
       if (exists("benchmark_spc_operation") && length(col_names) > 0) {
         benchmark_result <- benchmark_spc_operation(
           expr = detect_columns_name_based(col_names, app_state),
-          times = 10,  # Lightweight - 10 iterations
+          times = 10, # Lightweight - 10 iterations
           operation_name = paste0("autodetect_name_based_", length(col_names), "_cols"),
           log_results = TRUE
         )
@@ -171,7 +173,7 @@ autodetect_engine <- function(data = NULL,
       if (exists("benchmark_spc_operation")) {
         benchmark_result <- benchmark_spc_operation(
           expr = detect_columns_full_analysis(data, app_state),
-          times = if (nrow(data) < 1000) 5 else 3,  # Fewer iterations for large datasets
+          times = if (nrow(data) < 1000) 5 else 3, # Fewer iterations for large datasets
           operation_name = paste0("autodetect_full_analysis_", data_size_category, "_", nrow(data), "_rows"),
           log_results = TRUE
         )
@@ -191,17 +193,17 @@ autodetect_engine <- function(data = NULL,
   shiny::isolate({
     app_state$columns$auto_detect$frozen_until_next_trigger <- TRUE
     app_state$columns$auto_detect$last_run <- list(
-    trigger = trigger_type,
-    timestamp = Sys.time(),
-    data_rows = if (!is.null(data)) nrow(data) else 0,
-    data_cols = if (!is.null(data)) ncol(data) else 0,
-    results_summary = list(
-      x_column = results$x_col,
-      y_column = results$y_col,
-      n_column = results$n_col,
-      cl_column = results$cl_col
+      trigger = trigger_type,
+      timestamp = Sys.time(),
+      data_rows = if (!is.null(data)) nrow(data) else 0,
+      data_cols = if (!is.null(data)) ncol(data) else 0,
+      results_summary = list(
+        x_column = results$x_col,
+        y_column = results$y_col,
+        n_column = results$n_col,
+        cl_column = results$cl_col
+      )
     )
-  )
   })
 
   log_debug_kv(
@@ -247,8 +249,8 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
 
   # Initialize results
   x_col <- NULL
-  y_col <- NULL  # Changed from taeller_col for consistency
-  n_col <- NULL  # Changed from naevner_col for consistency
+  y_col <- NULL # Changed from taeller_col for consistency
+  n_col <- NULL # Changed from naevner_col for consistency
   skift_col <- NULL
   frys_col <- NULL
   kommentar_col <- NULL
@@ -273,10 +275,12 @@ detect_columns_name_based <- function(col_names, app_state = NULL) {
   }
 
   # X-column (date/time detection) - Enhanced time-specific patterns
-  dato_patterns <- c("dato", "date", "tid", "time", "år", "year", "måned", "month",
-                     "uge", "week", "dag", "day", "periode", "period", "kvartal", "quarter",
-                     "jan", "feb", "mar", "apr", "maj", "jun",
-                     "jul", "aug", "sep", "okt", "nov", "dec")
+  dato_patterns <- c(
+    "dato", "date", "tid", "time", "år", "year", "måned", "month",
+    "uge", "week", "dag", "day", "periode", "period", "kvartal", "quarter",
+    "jan", "feb", "mar", "apr", "maj", "jun",
+    "jul", "aug", "sep", "okt", "nov", "dec"
+  )
   x_col <- find_column_by_patterns(dato_patterns, col_names, col_names_lower)
 
   # Y-column (count patterns)
@@ -369,7 +373,7 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
     x_col = best_date_col %||% name_based_results$x_col,
     y_col = if (length(y_candidates) > 0) names(y_candidates)[1] else name_based_results$y_col,
     n_col = if (length(n_candidates) > 0) names(n_candidates)[1] else name_based_results$n_col,
-    skift_col = name_based_results$skift_col,  # These remain name-based
+    skift_col = name_based_results$skift_col, # These remain name-based
     frys_col = name_based_results$frys_col,
     kommentar_col = name_based_results$kommentar_col
   )

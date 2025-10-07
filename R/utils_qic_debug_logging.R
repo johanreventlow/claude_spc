@@ -14,7 +14,9 @@
 #' @return invisible(NULL)
 #' @export
 log_qic_inputs <- function(qic_args, call_context = "UNKNOWN", call_number = NULL) {
-  if (!.should_log("DEBUG")) return(invisible(NULL))
+  if (!.should_log("DEBUG")) {
+    return(invisible(NULL))
+  }
 
   log_debug_block("QIC_INPUT", paste("QIC INPUT LOGGING - Context:", call_context))
 
@@ -42,7 +44,8 @@ log_qic_inputs <- function(qic_args, call_context = "UNKNOWN", call_number = NUL
     # Column names if data provided
     if (is.data.frame(qic_args$data)) {
       log_debug(paste("Column names:", paste(names(qic_args$data), collapse = ", ")),
-                .context = "QIC_INPUT")
+        .context = "QIC_INPUT"
+      )
     }
   }
 
@@ -93,7 +96,6 @@ log_qic_inputs <- function(qic_args, call_context = "UNKNOWN", call_number = NUL
     "Log sample data values",
     code = {
       if (!is.null(qic_args$data) && is.data.frame(qic_args$data)) {
-
         # Y values sample
         if (!is.null(qic_args$y)) {
           y_col_name <- if (is.name(qic_args$y)) as.character(qic_args$y) else as.character(qic_args$y)
@@ -102,7 +104,8 @@ log_qic_inputs <- function(qic_args, call_context = "UNKNOWN", call_number = NUL
             if (length(y_values) > 0) {
               sample_y <- head(y_values, 5)
               log_debug(paste("Y sample values:", paste(sample_y, collapse = ", ")),
-                        .context = "QIC_INPUT")
+                .context = "QIC_INPUT"
+              )
             }
           }
         }
@@ -115,7 +118,8 @@ log_qic_inputs <- function(qic_args, call_context = "UNKNOWN", call_number = NUL
             if (length(n_values) > 0) {
               sample_n <- head(n_values, 5)
               log_debug(paste("N sample values:", paste(sample_n, collapse = ", ")),
-                        .context = "QIC_INPUT")
+                .context = "QIC_INPUT"
+              )
             }
           }
         }
@@ -143,7 +147,9 @@ log_qic_inputs <- function(qic_args, call_context = "UNKNOWN", call_number = NUL
 #' @return invisible(NULL)
 #' @export
 log_qic_results <- function(qic_result, call_context = "UNKNOWN", call_number = NULL, success = TRUE) {
-  if (!.should_log("DEBUG")) return(invisible(NULL))
+  if (!.should_log("DEBUG")) {
+    return(invisible(NULL))
+  }
 
   log_debug_block("QIC_RESULT", paste("QIC RESULT LOGGING - Context:", call_context))
 
@@ -196,16 +202,19 @@ log_qic_results <- function(qic_result, call_context = "UNKNOWN", call_number = 
   if (!is.null(qic_data) && is.data.frame(qic_data)) {
     # Basic data structure
     log_debug(paste("Result rows:", nrow(qic_data), "| cols:", ncol(qic_data)),
-              .context = "QIC_RESULT")
+      .context = "QIC_RESULT"
+    )
     log_debug(paste("Column names:", paste(names(qic_data), collapse = ", ")),
-              .context = "QIC_RESULT")
+      .context = "QIC_RESULT"
+    )
 
     # Core QIC columns
     qic_columns <- c("y", "cl", "ucl", "lcl")
     available_qic_cols <- intersect(qic_columns, names(qic_data))
     if (length(available_qic_cols) > 0) {
       log_debug(paste("QIC columns present:", paste(available_qic_cols, collapse = ", ")),
-                .context = "QIC_RESULT")
+        .context = "QIC_RESULT"
+      )
 
       # Sample values from core columns
       for (col in available_qic_cols) {
@@ -213,9 +222,13 @@ log_qic_results <- function(qic_result, call_context = "UNKNOWN", call_number = 
         if (length(col_values) > 0) {
           sample_vals <- head(col_values, 5)
           na_count <- sum(is.na(col_values))
-          log_debug(paste(col, "sample:", paste(sample_vals, collapse = ", "),
-                         "| NA count:", na_count, "/", length(col_values)),
-                    .context = "QIC_RESULT")
+          log_debug(
+            paste(
+              col, "sample:", paste(sample_vals, collapse = ", "),
+              "| NA count:", na_count, "/", length(col_values)
+            ),
+            .context = "QIC_RESULT"
+          )
         }
       }
     }
@@ -227,7 +240,8 @@ log_qic_results <- function(qic_result, call_context = "UNKNOWN", call_number = 
     if (length(available_anhoej_cols) > 0) {
       log_debug("=== ANHOEJ RULES ANALYSIS ===", .context = "QIC_RESULT")
       log_debug(paste("Anhoej columns present:", paste(available_anhoej_cols, collapse = ", ")),
-                .context = "QIC_RESULT")
+        .context = "QIC_RESULT"
+      )
 
       for (col in available_anhoej_cols) {
         col_values <- qic_data[[col]]
@@ -238,18 +252,27 @@ log_qic_results <- function(qic_result, call_context = "UNKNOWN", call_number = 
           if (length(non_na_values) > 0) {
             if (col %in% c("longest.run", "n.crossings", "n.runs")) {
               # Numeric anhoej columns
-              log_debug(paste(col, "- NA count:", na_count, "/", length(col_values),
-                             "| Non-NA values:", paste(head(non_na_values, 10), collapse = ", ")),
-                        .context = "QIC_RESULT")
+              log_debug(
+                paste(
+                  col, "- NA count:", na_count, "/", length(col_values),
+                  "| Non-NA values:", paste(head(non_na_values, 10), collapse = ", ")
+                ),
+                .context = "QIC_RESULT"
+              )
             } else {
               # Logical/other anhoej columns
-              log_debug(paste(col, "- NA count:", na_count, "/", length(col_values),
-                             "| Unique values:", paste(unique(head(non_na_values, 10)), collapse = ", ")),
-                        .context = "QIC_RESULT")
+              log_debug(
+                paste(
+                  col, "- NA count:", na_count, "/", length(col_values),
+                  "| Unique values:", paste(unique(head(non_na_values, 10)), collapse = ", ")
+                ),
+                .context = "QIC_RESULT"
+              )
             }
           } else {
             log_debug(paste(col, "- ALL VALUES ARE NA (", na_count, "/", length(col_values), ")"),
-                      .context = "QIC_RESULT")
+              .context = "QIC_RESULT"
+            )
           }
         }
       }
@@ -291,7 +314,6 @@ log_qic_results <- function(qic_result, call_context = "UNKNOWN", call_number = 
     } else {
       log_debug("Row ID tracking: Missing (.original_row_id column not found)", .context = "QIC_RESULT")
     }
-
   } else {
     log_debug("No data.frame available in qic result for detailed analysis", .context = "QIC_RESULT")
   }
@@ -361,7 +383,9 @@ log_qic_call_wrapper <- function(qic_args, call_context = "UNKNOWN", call_number
 #' @export
 log_anhoej_comparison <- function(qic_data, expected_longest_run = NULL,
                                   expected_n_crossings = NULL, context = "COMPARISON") {
-  if (!.should_log("DEBUG") || is.null(qic_data)) return(invisible(NULL))
+  if (!.should_log("DEBUG") || is.null(qic_data)) {
+    return(invisible(NULL))
+  }
 
   log_debug_block("ANHOEJ_COMPARISON", paste("Anhoej rules comparison -", context))
 
@@ -369,20 +393,28 @@ log_anhoej_comparison <- function(qic_data, expected_longest_run = NULL,
     actual_longest <- qic_data$longest.run[!is.na(qic_data$longest.run)]
     actual_final <- if (length(actual_longest) > 0) actual_longest[length(actual_longest)] else NA
 
-    log_debug(paste("Longest run - Expected:", expected_longest_run,
-                   "| Actual:", actual_final,
-                   "| Match:", identical(expected_longest_run, actual_final)),
-              .context = "ANHOEJ_COMPARISON")
+    log_debug(
+      paste(
+        "Longest run - Expected:", expected_longest_run,
+        "| Actual:", actual_final,
+        "| Match:", identical(expected_longest_run, actual_final)
+      ),
+      .context = "ANHOEJ_COMPARISON"
+    )
   }
 
   if ("n.crossings" %in% names(qic_data)) {
     actual_crossings <- qic_data$n.crossings[!is.na(qic_data$n.crossings)]
     actual_final <- if (length(actual_crossings) > 0) actual_crossings[length(actual_crossings)] else NA
 
-    log_debug(paste("N crossings - Expected:", expected_n_crossings,
-                   "| Actual:", actual_final,
-                   "| Match:", identical(expected_n_crossings, actual_final)),
-              .context = "ANHOEJ_COMPARISON")
+    log_debug(
+      paste(
+        "N crossings - Expected:", expected_n_crossings,
+        "| Actual:", actual_final,
+        "| Match:", identical(expected_n_crossings, actual_final)
+      ),
+      .context = "ANHOEJ_COMPARISON"
+    )
   }
 
   log_debug_block("ANHOEJ_COMPARISON", "Anhoej comparison completed", type = "stop")

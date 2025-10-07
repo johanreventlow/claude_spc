@@ -66,20 +66,20 @@ create_config_registry <- function() {
         # Package-baseret loading - system constants hardcoded
         observer_priorities <- list(
           # Generic priorities (for compatibility)
-          highest = 2000,    # Critical state management
-          high = 1500,       # Data processing
-          medium = 1000,     # Auto-detection
-          low = 500,         # UI sync and updates
-          lowest = 100,      # Cleanup operations
+          highest = 2000, # Critical state management
+          high = 1500, # Data processing
+          medium = 1000, # Auto-detection
+          low = 500, # UI sync and updates
+          lowest = 100, # Cleanup operations
 
           # Specific named priorities used in event system
-          STATE_MANAGEMENT = 1800,   # Data loading and state changes
-          DATA_PROCESSING = 1500,    # Data transformation and processing
-          AUTO_DETECT = 1200,        # Auto-detection operations
-          UI_SYNC = 800,             # UI synchronization
-          STATUS_UPDATES = 600,      # Status and navigation updates
-          CLEANUP = 200,             # Cleanup operations
-          MEDIUM = 1000              # Used in new input observers
+          STATE_MANAGEMENT = 1800, # Data loading and state changes
+          DATA_PROCESSING = 1500, # Data transformation and processing
+          AUTO_DETECT = 1200, # Auto-detection operations
+          UI_SYNC = 800, # UI synchronization
+          STATUS_UPDATES = 600, # Status and navigation updates
+          CLEANUP = 200, # Cleanup operations
+          MEDIUM = 1000 # Used in new input observers
         )
 
         system_settings <- list(
@@ -97,28 +97,28 @@ create_config_registry <- function() {
             period = "."
           ),
           OPERATION_TIMEOUTS = list(
-            file_read = 30000,      # 30 sekunder
-            chart_render = 10000,   # 10 sekunder
-            auto_detect = 5000,     # 5 sekunder
-            ui_update = 2000        # 2 sekunder
+            file_read = 30000, # 30 sekunder
+            chart_render = 10000, # 10 sekunder
+            auto_detect = 5000, # 5 sekunder
+            ui_update = 2000 # 2 sekunder
           ),
           DEBOUNCE_DELAYS = list(
-            input_change = 300,     # 300ms
-            file_select = 500,      # 500ms
-            chart_update = 800      # 800ms
+            input_change = 300, # 300ms
+            file_select = 500, # 500ms
+            chart_update = 800 # 800ms
           ),
           LOOP_PROTECTION_DELAYS = list(
-            default = 500,              # Standard delay for programmatic UI updates
-            conservative = 800,         # Conservative delay for slower browsers
-            minimal = 200,              # Minimal delay for fast responses
-            onFlushed_fallback = 1000   # Fallback delay if session$onFlushed not available
+            default = 500, # Standard delay for programmatic UI updates
+            conservative = 800, # Conservative delay for slower browsers
+            minimal = 200, # Minimal delay for fast responses
+            onFlushed_fallback = 1000 # Fallback delay if session$onFlushed not available
           ),
           PERFORMANCE_THRESHOLDS = list(
-            reactive_warning = 0.5,    # 500ms for reactive expressions
-            debounce_warning = 1.0,    # 1 second for debounced operations
-            memory_warning = 10,       # 10MB memory change warning
+            reactive_warning = 0.5, # 500ms for reactive expressions
+            debounce_warning = 1.0, # 1 second for debounced operations
+            memory_warning = 10, # 10MB memory change warning
             cache_timeout_default = 300, # 5 minutes default cache
-            max_cache_entries = 50     # Maximum cached reactive results
+            max_cache_entries = 50 # Maximum cached reactive results
           ),
           LOG_COMPONENTS = list(
             DATA_PROC = "DATA_PROC",
@@ -181,11 +181,11 @@ create_config_registry <- function() {
         )
 
         ui_layout_proportions <- list(
-          half = 1/2,
-          third = 1/3,
-          quarter = 1/4,
-          two_thirds = 2/3,
-          three_quarters = 3/4
+          half = 1 / 2,
+          third = 1 / 3,
+          quarter = 1 / 4,
+          two_thirds = 2 / 3,
+          three_quarters = 3 / 4
         )
 
         list(
@@ -249,19 +249,19 @@ create_config_registry <- function() {
 
         spc_colors <- list(
           # Target linjer
-          target_line = "#2E8B57",        # SeaGreen for målværdi linjer
-          control_line = "#FF6B6B",       # Coral for kontrolgrænser
+          target_line = "#2E8B57", # SeaGreen for målværdi linjer
+          control_line = "#FF6B6B", # Coral for kontrolgrænser
           # Data punkter
-          normal_point = "#4A90E2",       # Blå for normale datapunkter
-          special_cause = "#FF4444",      # Rød for special cause punkter
+          normal_point = "#4A90E2", # Blå for normale datapunkter
+          special_cause = "#FF4444", # Rød for special cause punkter
           # Chart baggrund
-          chart_bg = "#FFFFFF",           # Hvid baggrund
-          grid_line = "#E8E8E8",          # Lys grå for grid
+          chart_bg = "#FFFFFF", # Hvid baggrund
+          grid_line = "#E8E8E8", # Lys grå for grid
           # UI elementer
-          success = "#28A745",            # Grøn for success states
-          warning = "#FFC107",            # Gul for warnings
-          error = "#DC3545",              # Rød for errors
-          info = "#17A2B8"                # Blå for info
+          success = "#28A745", # Grøn for success states
+          warning = "#FFC107", # Gul for warnings
+          error = "#DC3545", # Rød for errors
+          info = "#17A2B8" # Blå for info
         )
 
         spc_settings <- list(

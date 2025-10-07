@@ -40,14 +40,18 @@ and provide graceful degradation.
 # Basic usage
 result <- safe_operation(
   "Data processing",
-  code = { process_data(input_data) },
+  code = {
+    process_data(input_data)
+  },
   fallback = empty_data()
 )
 
 # With session and user notification
 result <- safe_operation(
   "File upload",
-  code = { read.csv(file_path) },
+  code = {
+    read.csv(file_path)
+  },
   fallback = NULL,
   session = session,
   show_user = TRUE

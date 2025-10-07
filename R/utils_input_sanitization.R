@@ -29,10 +29,9 @@ NULL
 #'
 #' @export
 sanitize_user_input <- function(input_value,
-                               max_length = 255,
-                               allowed_chars = "A-Za-z0-9_æøåÆØÅ .-",
-                               html_escape = TRUE) {
-
+                                max_length = 255,
+                                allowed_chars = "A-Za-z0-9_æøåÆØÅ .-",
+                                html_escape = TRUE) {
   # Håndter NULL og missing values
   if (is.null(input_value) || length(input_value) == 0) {
     return("")
@@ -84,15 +83,15 @@ sanitize_user_input <- function(input_value,
 #' @return Sanitized column name suitable for R data.frame operations
 #'
 #' @examples
-#' sanitize_column_name("Dato & tid")  # Returns "Dato  tid"
-#' sanitize_column_name("Y-værdi_1")  # Returns "Y-værdi_1"
+#' sanitize_column_name("Dato & tid") # Returns "Dato  tid"
+#' sanitize_column_name("Y-værdi_1") # Returns "Y-værdi_1"
 #'
 #' @export
 sanitize_column_name <- function(column_name) {
   sanitize_user_input(
     input_value = column_name,
-    max_length = 100,  # Kortere for kolonne navne
-    allowed_chars = "A-Za-z0-9_æøåÆØÅ .-",  # Tillad danske karakterer og common patterns
+    max_length = 100, # Kortere for kolonne navne
+    allowed_chars = "A-Za-z0-9_æøåÆØÅ .-", # Tillad danske karakterer og common patterns
     html_escape = TRUE
   )
 }
@@ -107,13 +106,12 @@ sanitize_column_name <- function(column_name) {
 #' @return TRUE hvis valid, FALSE hvis invalid eller potentielt malicious
 #'
 #' @examples
-#' validate_file_extension("csv")     # TRUE
-#' validate_file_extension(".xlsx")   # TRUE
-#' validate_file_extension("exe")     # FALSE
+#' validate_file_extension("csv") # TRUE
+#' validate_file_extension(".xlsx") # TRUE
+#' validate_file_extension("exe") # FALSE
 #'
 #' @export
 validate_file_extension <- function(file_ext, allowed_extensions = c("csv", "xlsx", "xls")) {
-
   if (is.null(file_ext) || length(file_ext) == 0) {
     return(FALSE)
   }
@@ -164,7 +162,6 @@ validate_file_extension <- function(file_ext, allowed_extensions = c("csv", "xls
 #'
 #' @export
 create_security_warning <- function(field_name, issue_type, additional_info = NULL) {
-
   # Sanitize field_name først for at undgå XSS i error messages
   safe_field_name <- sanitize_user_input(field_name, max_length = 50)
 
@@ -173,7 +170,7 @@ create_security_warning <- function(field_name, issue_type, additional_info = NU
     "too_long" = paste0(safe_field_name, " er for langt"),
     "invalid_format" = paste0(safe_field_name, " har ugyldigt format"),
     "security_violation" = paste0("Sikkerhedsproblem med ", safe_field_name),
-    paste0("Validation fejl i ", safe_field_name)  # Default fallback
+    paste0("Validation fejl i ", safe_field_name) # Default fallback
   )
 
   # Tilføj additional info hvis givet

@@ -41,7 +41,7 @@ filter_latest_part <- function(qic_data, show_phases = FALSE) {
 #' @return list. Opdateret `anhoej_results`
 #' @keywords internal
 update_anhoej_results <- function(previous, qic_results, centerline_changed = FALSE,
-                                   qic_data = NULL, show_phases = FALSE) {
+                                  qic_data = NULL, show_phases = FALSE) {
   # Defensive input checks
   if (is.null(qic_results) || !is.list(qic_results)) {
     return(previous)
@@ -85,7 +85,7 @@ update_anhoej_results <- function(previous, qic_results, centerline_changed = FA
   }
 
   has_metrics <- (!is.null(qic_results$longest_run) && !is.na(qic_results$longest_run)) ||
-                 (!is.null(qic_results$n_crossings) && !is.na(qic_results$n_crossings))
+    (!is.null(qic_results$n_crossings) && !is.na(qic_results$n_crossings))
 
   # 1) Gyldige metrics → altid opdater
   if (isTRUE(has_metrics)) {
@@ -114,4 +114,3 @@ update_anhoej_results <- function(previous, qic_results, centerline_changed = FA
   }
   return(qic_results)
 }
-

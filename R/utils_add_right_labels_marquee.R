@@ -70,6 +70,14 @@ add_right_labels_marquee <- function(
   # PERFORMANCE: Hent cached right-aligned style
   right_aligned_style <- get_right_aligned_marquee_style(lineheight = marquee_lineheight)
 
+  # Beregn marquee_size tidligt, så vi kan bruge den til målinger
+  marquee_size_factor <- if (config_available && !is.null(placement_cfg$marquee_size_factor)) {
+    placement_cfg$marquee_size_factor
+  } else {
+    6
+  }
+  marquee_size <- marquee_size_factor * scale_factor
+
   # PERFORMANCE: Build plot én gang
   built_plot <- ggplot2::ggplot_build(p)
   gtable <- ggplot2::ggplot_gtable(built_plot)
@@ -126,6 +134,9 @@ add_right_labels_marquee <- function(
       texts = c(textA, textB),
       style = right_aligned_style,
       panel_height_inches = panel_height_inches,
+      device_width = device_size$width,
+      device_height = device_size$height,
+      marquee_size = marquee_size,
       return_details = TRUE
     )
     height_A <- heights[[1]]
@@ -304,15 +315,7 @@ add_right_labels_marquee <- function(
       ))
   }
 
-  # Skalerede størrelser
-  marquee_size_factor <- if (config_available && !is.null(placement_cfg$marquee_size_factor)) {
-    placement_cfg$marquee_size_factor
-  } else {
-    6
-  }
-  marquee_size <- marquee_size_factor * scale_factor
-
-  # Tilføj labels
+  # Tilføj labels (marquee_size already calculated above)
   result <- p
   if (nrow(label_data) > 0) {
     result <- result +

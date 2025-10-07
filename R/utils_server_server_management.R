@@ -195,7 +195,7 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
     # Set navigation flags for file upload flow
     # Use unified state management
     app_state$session$user_started_session <- TRUE
-    app_state$session$file_uploaded <- FALSE  # Will be set to TRUE by actual file upload handler
+    app_state$session$file_uploaded <- FALSE # Will be set to TRUE by actual file upload handler
 
     shiny::removeModal()
   })
@@ -222,7 +222,6 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
 
 # Helper functions for session management
 restore_metadata <- function(session, metadata, ui_service = NULL) {
-
   shiny::isolate({
     if (!is.null(ui_service)) {
       # Use centralized UI service for metadata restoration
@@ -326,7 +325,7 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
   log_debug_kv(
     session_reset_started = TRUE,
     centralized_state_available = use_centralized_state,
-    app_state_hash_before = if(!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL",
+    app_state_hash_before = if (!is.null(app_state)) digest::digest(app_state$data$current_data) else "NULL",
     .context = "SESSION_RESET"
   )
   clearDataLocally(session)
@@ -390,7 +389,7 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
         # Replaces 6 individual updateSelectizeInput calls
         ui_service$update_all_columns(
           choices = col_choices,
-          selected = list()  # Clear all selections
+          selected = list() # Clear all selections
         )
       } else {
         # Fallback til tomme choices - also uses centralized helper
@@ -419,7 +418,7 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
     # Dette sikrer konsistent event-logik og unified state management
     autodetect_result <- autodetect_engine(
       data = new_data,
-      trigger_type = "session_start",  # Session reset behandles som ny session start
+      trigger_type = "session_start", # Session reset behandles som ny session start
       app_state = app_state,
       emit = emit
     )
@@ -515,10 +514,8 @@ show_clear_confirmation_modal <- function(has_data, has_settings, app_state) {
 ## Hovedfunktion for velkomstside
 # Opsætter alle handlers for velkomstside interaktioner
 setup_welcome_page_handlers <- function(input, output, session, app_state, emit, ui_service = NULL) {
-
   # Håndtér "Start ny analyse" knap fra velkomstsiden
   shiny::observeEvent(input$start_new_session, {
-
     if (is.null(app_state)) {
       log_error("app_state is NULL - navigation will not work properly", .context = "WELCOME_PAGE")
       return()

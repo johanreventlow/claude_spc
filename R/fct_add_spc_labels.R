@@ -41,14 +41,12 @@
 #'
 #' @export
 add_spc_labels <- function(
-  plot,
-  qic_data,
-  y_axis_unit = "count",
-  label_size = 6,
-  verbose = FALSE,
-  debug_mode = FALSE
-) {
-
+    plot,
+    qic_data,
+    y_axis_unit = "count",
+    label_size = 6,
+    verbose = FALSE,
+    debug_mode = FALSE) {
   # Input validation ----
   if (!inherits(plot, "gg")) {
     stop("plot skal være et ggplot object")
@@ -61,42 +59,47 @@ add_spc_labels <- function(
   # Validate y_axis_unit
   valid_units <- c("count", "percent", "rate", "time")
   if (!y_axis_unit %in% valid_units && verbose) {
-    message("y_axis_unit '", y_axis_unit, "' ikke standard. Understøttede: ",
-            paste(valid_units, collapse = ", "))
+    message(
+      "y_axis_unit '", y_axis_unit, "' ikke standard. Understøttede: ",
+      paste(valid_units, collapse = ", ")
+    )
   }
 
   # FIX: Auto-scale label_size baseret på device height
   # Dette sikrer at labels skalerer proportionelt med plot størrelse
   # Baseline: label_size = 6 for ~7.8" device height (small plot reference)
-  device_height_baseline <- 7.8  # inches (reference: 751px @ 96dpi)
+  device_height_baseline <- 7.8 # inches (reference: 751px @ 96dpi)
 
-  tryCatch({
-    if (grDevices::dev.cur() > 1) {  # Device aktiv
-      dev_height <- grDevices::dev.size("in")[2]
+  tryCatch(
+    {
+      if (grDevices::dev.cur() > 1) { # Device aktiv
+        dev_height <- grDevices::dev.size("in")[2]
 
-      # Skalér label_size proportionelt med device height
-      # VIGTIGT: Kun skalér opad (scale_factor >= 1.0) for at undgå under-skalering
-      # på små plots hvor labels ville blive ulæseligt små
-      # Small plot (7.8"): label_size = 6.0 (ikke skaleret ned)
-      # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0 (skaleret op)
-      scale_factor <- pmax(1.0, dev_height / device_height_baseline)
-      label_size_scaled <- label_size * scale_factor
+        # Skalér label_size proportionelt med device height
+        # VIGTIGT: Kun skalér opad (scale_factor >= 1.0) for at undgå under-skalering
+        # på små plots hvor labels ville blive ulæseligt små
+        # Small plot (7.8"): label_size = 6.0 (ikke skaleret ned)
+        # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0 (skaleret op)
+        scale_factor <- pmax(1.0, dev_height / device_height_baseline)
+        label_size_scaled <- label_size * scale_factor
 
-      if (verbose) {
-        message(sprintf(
-          "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\", scale: %.2f)",
-          label_size, label_size_scaled, dev_height, scale_factor
-        ))
+        if (verbose) {
+          message(sprintf(
+            "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\", scale: %.2f)",
+            label_size, label_size_scaled, dev_height, scale_factor
+          ))
+        }
+
+        label_size <- label_size_scaled
       }
-
-      label_size <- label_size_scaled
+    },
+    error = function(e) {
+      # Fallback: brug original label_size hvis device detection fejler
+      if (verbose) {
+        message("Device height detection fejlede - bruger fast label_size: ", label_size)
+      }
     }
-  }, error = function(e) {
-    # Fallback: brug original label_size hvis device detection fejler
-    if (verbose) {
-      message("Device height detection fejlede - bruger fast label_size: ", label_size)
-    }
-  })
+  )
 
   # Beregn y_range for time formatting context
   y_range <- if (y_axis_unit == "time" && !is.null(qic_data$y)) {
@@ -198,16 +201,16 @@ add_spc_labels <- function(
       # label_height_npc - AUTO-BEREGNES fra font sizes
       # gap_line - AUTO: fra config (relative_gap_line)
       # gap_labels - AUTO: fra config (relative_gap_labels)
-      pad_top = 0.01,               # Top padding
-      pad_bot = 0.01,               # Bottom padding
+      pad_top = 0.01, # Top padding
+      pad_bot = 0.01, # Bottom padding
       pref_pos = c("under", "under"), # Default: placer under linjer
-      priority = "A"                # Beskyt CL label ved konflikter
+      priority = "A" # Beskyt CL label ved konflikter
     ),
-    gpA = grid::gpar(col = "#009CE8"),  # CL label farve (lyseblå)
-    gpB = grid::gpar(col = "#565656"),  # Target label farve (grå)
-    label_size = label_size,          # Label sizing (baseline = 6)
-    verbose = verbose,                # Print placement warnings
-    debug_mode = debug_mode           # Visual debugging
+    gpA = grid::gpar(col = "#009CE8"), # CL label farve (lyseblå)
+    gpB = grid::gpar(col = "#565656"), # Target label farve (grå)
+    label_size = label_size, # Label sizing (baseline = 6)
+    verbose = verbose, # Print placement warnings
+    debug_mode = debug_mode # Visual debugging
   )
 
   return(plot_with_labels)

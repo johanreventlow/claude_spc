@@ -26,6 +26,6 @@ unintended reactive dependencies.
 \examples{
 \dontrun{
 emit <- create_emit_api(app_state)
-emit$data_loaded()  # Triggers shiny::observeEvent(app_state$events$data_loaded, ...)
+emit$data_loaded() # Triggers shiny::observeEvent(app_state$events$data_loaded, ...)
 }
 }

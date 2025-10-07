@@ -51,7 +51,7 @@ Centraliseret state structure:
 app_state <- create_app_state()
 
 # Tjek state struktur
-names(app_state)  # "data", "columns", "test_mode", "session", "ui"
+names(app_state) # "data", "columns", "test_mode", "session", "ui"
 
 # Opdater data
 app_state$data$current_data <- data.frame(Dato = Sys.Date(), Værdi = 10)

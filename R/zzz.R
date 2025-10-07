@@ -90,7 +90,6 @@ get_test_mode_file_path <- function() {
   get_package_config("TEST_MODE_FILE_PATH", default = NULL)
 }
 .onLoad <- function(libname, pkgname) {
-
   # Initialize package-level configuration
   initialize_package_globals()
 
@@ -118,7 +117,6 @@ get_test_mode_file_path <- function() {
 #'
 #' @noRd
 initialize_package_globals <- function() {
-
   # Initialize branding configuration using safe getters
   initialize_branding()
 
@@ -207,30 +205,33 @@ unlock_cache_statistics <- function() {
   ns <- asNamespace("SPCify")
 
   # Unlock cache statistics bindings if they exist
-  tryCatch({
-    if (exists(".panel_cache_stats", envir = ns, inherits = FALSE)) {
-      unlockBinding(".panel_cache_stats", ns)
-      message("[CACHE_INIT] Unlocked .panel_cache_stats binding for runtime updates")
-    }
+  tryCatch(
+    {
+      if (exists(".panel_cache_stats", envir = ns, inherits = FALSE)) {
+        unlockBinding(".panel_cache_stats", ns)
+        message("[CACHE_INIT] Unlocked .panel_cache_stats binding for runtime updates")
+      }
 
-    if (exists(".grob_cache_stats", envir = ns, inherits = FALSE)) {
-      unlockBinding(".grob_cache_stats", ns)
-      message("[CACHE_INIT] Unlocked .grob_cache_stats binding for runtime updates")
-    }
+      if (exists(".grob_cache_stats", envir = ns, inherits = FALSE)) {
+        unlockBinding(".grob_cache_stats", ns)
+        message("[CACHE_INIT] Unlocked .grob_cache_stats binding for runtime updates")
+      }
 
-    # Also unlock config bindings to allow dynamic configuration
-    if (exists(".panel_cache_config", envir = ns, inherits = FALSE)) {
-      unlockBinding(".panel_cache_config", ns)
-      message("[CACHE_INIT] Unlocked .panel_cache_config binding for runtime updates")
-    }
+      # Also unlock config bindings to allow dynamic configuration
+      if (exists(".panel_cache_config", envir = ns, inherits = FALSE)) {
+        unlockBinding(".panel_cache_config", ns)
+        message("[CACHE_INIT] Unlocked .panel_cache_config binding for runtime updates")
+      }
 
-    if (exists(".grob_cache_config", envir = ns, inherits = FALSE)) {
-      unlockBinding(".grob_cache_config", ns)
-      message("[CACHE_INIT] Unlocked .grob_cache_config binding for runtime updates")
+      if (exists(".grob_cache_config", envir = ns, inherits = FALSE)) {
+        unlockBinding(".grob_cache_config", ns)
+        message("[CACHE_INIT] Unlocked .grob_cache_config binding for runtime updates")
+      }
+    },
+    error = function(e) {
+      warning("Failed to unlock cache bindings: ", e$message)
     }
-  }, error = function(e) {
-    warning("Failed to unlock cache bindings: ", e$message)
-  })
+  )
 
   invisible()
 }

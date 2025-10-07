@@ -69,13 +69,16 @@ load_brand_config <- function() {
     ))
   }
 
-  tryCatch({
-    yaml::read_yaml(brand_path)
-  }, error = function(e) {
-    warning(paste("Failed to read brand configuration:", e$message, ". Using defaults."))
-    # Return default config on error
-    load_brand_config()  # Recursive call will return defaults
-  })
+  tryCatch(
+    {
+      yaml::read_yaml(brand_path)
+    },
+    error = function(e) {
+      warning(paste("Failed to read brand configuration:", e$message, ". Using defaults."))
+      # Return default config on error
+      load_brand_config() # Recursive call will return defaults
+    }
+  )
 }
 
 #' Create Bootstrap Theme from Brand Configuration
@@ -92,16 +95,19 @@ create_brand_theme <- function() {
     ))
   }
 
-  tryCatch({
-    # Use bslib's brand parameter with the config file
-    bslib::bs_theme(brand = brand_path)
-  }, error = function(e) {
-    warning(paste("Failed to create theme from brand file:", e$message, ". Using default theme."))
-    bslib::bs_theme(
-      version = 5,
-      preset = "flatly"
-    )
-  })
+  tryCatch(
+    {
+      # Use bslib's brand parameter with the config file
+      bslib::bs_theme(brand = brand_path)
+    },
+    error = function(e) {
+      warning(paste("Failed to create theme from brand file:", e$message, ". Using default theme."))
+      bslib::bs_theme(
+        version = 5,
+        preset = "flatly"
+      )
+    }
+  )
 }
 
 #' Initialize Branding Configuration

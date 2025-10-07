@@ -35,8 +35,8 @@ parse_danish_number <- function(x) {
   # - Remove % and ‰ symbols (but keep the numeric value)
   # - Remove thousand separators (spaces or dots in specific patterns)
   x_cleaned <- x
-  x_cleaned <- gsub("[%‰]", "", x_cleaned)  # Remove percent and permille symbols
-  x_cleaned <- gsub("\\s+", "", x_cleaned)  # Remove spaces
+  x_cleaned <- gsub("[%‰]", "", x_cleaned) # Remove percent and permille symbols
+  x_cleaned <- gsub("\\s+", "", x_cleaned) # Remove spaces
   x_cleaned <- trimws(x_cleaned)
 
   # Replace comma with dot for decimal separation
@@ -222,7 +222,7 @@ detect_y_axis_scale <- function(y_data) {
   if (max_val <= 1.0) {
     # Tjek om det virkelig er decimal format (ikke bare tilfældigt små tal)
     has_decimals <- any(y_clean != floor(y_clean))
-    small_values <- sum(y_clean <= 1) / length(y_clean) >= 0.8  # 80% af værdier ≤ 1
+    small_values <- sum(y_clean <= 1) / length(y_clean) >= 0.8 # 80% af værdier ≤ 1
 
     if (has_decimals || small_values) {
       return("decimal")

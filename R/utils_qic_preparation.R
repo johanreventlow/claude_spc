@@ -18,7 +18,6 @@
 #' @return List with prepared qic inputs and normalization function
 #' @export
 prepare_qic_inputs <- function(y_raw, n_raw = NULL, chart_type, user_unit = NULL) {
-
   internal_unit <- determine_internal_unit_by_chart_type(chart_type)
 
   log_debug("Preparing QIC inputs for chart type:", chart_type, "internal unit:", internal_unit, .context = "QIC_PREPARATION")
@@ -28,33 +27,29 @@ prepare_qic_inputs <- function(y_raw, n_raw = NULL, chart_type, user_unit = NULL
     normalize_axis_value(
       x = x,
       user_unit = user_unit,
-      chart_type = chart_type  # This will determine internal_unit automatically
+      chart_type = chart_type # This will determine internal_unit automatically
     )
   }
 
   # Prepare Y data based on chart type and internal unit
   if (internal_unit == "proportion") {
-
     if (!is.null(n_raw) && chart_type %in% c("p", "pp")) {
       # P-charts with denominators: Use counts + n (let qicharts2 calculate proportions)
-      y_prepared <- y_raw  # Keep as counts
-      n_prepared <- n_raw  # Keep denominators
+      y_prepared <- y_raw # Keep as counts
+      n_prepared <- n_raw # Keep denominators
       log_debug("P-chart with denominators: using counts+n approach", .context = "QIC_PREPARATION")
-
     } else {
       # Run charts with rates, or P-charts without denominators: Convert to [0,1]
       y_sample <- parse_danish_number(y_raw)
       y_prepared <- normalize_proportions_to_internal(y_raw, y_sample, user_unit)
-      n_prepared <- NULL  # No denominators
+      n_prepared <- NULL # No denominators
       log_debug("Proportion chart without denominators: converting to [0,1]", .context = "QIC_PREPARATION")
     }
-
   } else if (internal_unit == "absolute") {
     # Absolute charts (c, u, i, mr, g): Use raw values, no scaling
-    y_prepared <- parse_danish_number(y_raw)  # Parse but don't scale
-    n_prepared <- n_raw  # Keep denominators if any
+    y_prepared <- parse_danish_number(y_raw) # Parse but don't scale
+    n_prepared <- n_raw # Keep denominators if any
     log_debug("Absolute chart: using raw values without scaling", .context = "QIC_PREPARATION")
-
   } else {
     log_error(paste("Unknown internal unit:", internal_unit), "QIC_PREPARATION")
     stop("Unknown internal unit: ", internal_unit)
@@ -79,19 +74,16 @@ prepare_qic_inputs <- function(y_raw, n_raw = NULL, chart_type, user_unit = NULL
 #' @return Numeric vector in [0,1] scale
 #' @keywords internal
 normalize_proportions_to_internal <- function(y_raw, y_sample, user_unit) {
-
   # Determine if data is already in [0,1] or needs conversion
   scale_type <- detect_unit_from_data(y_sample)
 
   if (scale_type == "proportion") {
     # Already in [0,1], parse and return
     return(parse_danish_number(y_raw))
-
   } else if (scale_type == "percent") {
     # Convert from percent scale to [0,1]
     parsed_values <- parse_danish_number(y_raw)
     return(parsed_values / 100)
-
   } else {
     # Unknown scale - use user unit to guide conversion
     if (!is.null(user_unit) && user_unit == "percent") {
@@ -129,7 +121,6 @@ normalize_proportions_to_internal <- function(y_raw, y_sample, user_unit) {
 create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
                                  user_unit = NULL, target_input = NULL,
                                  centerline_input = NULL, title = NULL, ...) {
-
   # Extract data
   x_data <- data[[x_col]]
   y_data <- data[[y_col]]
@@ -169,7 +160,9 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
 
   # Log the prepared inputs for debugging
   log_debug("QIC call prepared:", "chart_type:", chart_type, "internal_unit:", qic_inputs$internal_unit,
-           "target:", target_value, "centerline:", centerline_value, .context = "QIC_PREPARATION")
+    "target:", target_value, "centerline:", centerline_value,
+    .context = "QIC_PREPARATION"
+  )
 
   # PERFORMANCE MONITORING: Track actual qic() function calls
   if (!exists("actual_qic_call_counter", envir = .GlobalEnv)) {
@@ -183,18 +176,21 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
 
   # Enhanced tracking - track this QIC call with context
   if (exists("track_qic_call", mode = "function")) {
-    safe_operation("Track QIC call", {
-      track_qic_call(
-        context = "create_qic_plot_safe",
-        details = list(
-          chart_type = chart_type,
-          has_target = !is.null(target_value),
-          has_centerline = !is.null(centerline_value),
-          internal_unit = qic_inputs$internal_unit,
-          call_number = qic_call_number
+    safe_operation("Track QIC call",
+      {
+        track_qic_call(
+          context = "create_qic_plot_safe",
+          details = list(
+            chart_type = chart_type,
+            has_target = !is.null(target_value),
+            has_centerline = !is.null(centerline_value),
+            internal_unit = qic_inputs$internal_unit,
+            call_number = qic_call_number
+          )
         )
-      )
-    }, fallback = NULL)
+      },
+      fallback = NULL
+    )
   }
 
   # Call qicharts2::qic() with prepared inputs and debug logging
@@ -215,14 +211,13 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
 #' @return List with validation results and warnings
 #' @keywords internal
 validate_qic_inputs <- function(y, n = NULL, target = NULL, centerline = NULL, internal_unit) {
-
   warnings <- character(0)
   valid <- TRUE
 
   if (internal_unit == "proportion") {
     # Check Y data is in [0,1] range
     if (!is.null(y) && (any(y < 0, na.rm = TRUE) || any(y > 1, na.rm = TRUE))) {
-      if (is.null(n)) {  # Only warn if not using counts+n
+      if (is.null(n)) { # Only warn if not using counts+n
         warnings <- c(warnings, paste("Y data outside [0,1] range for proportion chart"))
         valid <- FALSE
       }

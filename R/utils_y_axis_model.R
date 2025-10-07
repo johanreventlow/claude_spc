@@ -56,12 +56,24 @@ suggest_chart_type <- function(internal_class, n_present = FALSE, n_points = NA_
   }
 
   ic <- toupper(internal_class %||% "MEASUREMENT")
-  if (ic == INTERNAL_CLASSES$MEASUREMENT) return("i")
-  if (ic == INTERNAL_CLASSES$COUNT)       return("c")
-  if (ic == INTERNAL_CLASSES$PROPORTION)  return("p")
-  if (ic == INTERNAL_CLASSES$RATE_INTERNAL) return("u")
-  if (ic == INTERNAL_CLASSES$TIME_BETWEEN)  return("t")
-  if (ic == INTERNAL_CLASSES$COUNT_BETWEEN) return("g")
+  if (ic == INTERNAL_CLASSES$MEASUREMENT) {
+    return("i")
+  }
+  if (ic == INTERNAL_CLASSES$COUNT) {
+    return("c")
+  }
+  if (ic == INTERNAL_CLASSES$PROPORTION) {
+    return("p")
+  }
+  if (ic == INTERNAL_CLASSES$RATE_INTERNAL) {
+    return("u")
+  }
+  if (ic == INTERNAL_CLASSES$TIME_BETWEEN) {
+    return("t")
+  }
+  if (ic == INTERNAL_CLASSES$COUNT_BETWEEN) {
+    return("g")
+  }
   return("run")
 }
 
@@ -78,7 +90,9 @@ suggest_chart_type <- function(internal_class, n_present = FALSE, n_points = NA_
 #' @export
 decide_default_y_axis_ui_type <- function(chart_type, n_present) {
   ct <- get_qic_chart_type(chart_type)
-  if (identical(ct, "run") && isTRUE(n_present)) return("percent")
+  if (identical(ct, "run") && isTRUE(n_present)) {
+    return("percent")
+  }
   return("count")
 }
 
@@ -89,9 +103,15 @@ decide_default_y_axis_ui_type <- function(chart_type, n_present) {
 #' @export
 chart_type_to_ui_type <- function(chart_type) {
   ct <- get_qic_chart_type(chart_type)
-  if (ct %in% c("p", "pp")) return("percent")
-  if (ct %in% c("u", "up")) return("rate")
-  if (ct == "t") return("time")
+  if (ct %in% c("p", "pp")) {
+    return("percent")
+  }
+  if (ct %in% c("u", "up")) {
+    return("rate")
+  }
+  if (ct == "t") {
+    return("time")
+  }
   # i, mr, c, g og fallback
   return("count")
 }

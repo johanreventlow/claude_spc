@@ -71,7 +71,7 @@ load_core_packages <- function() {
     )
   )
 
-  results <- purrr::imap(core_packages, ~safe_load_package(
+  results <- purrr::imap(core_packages, ~ safe_load_package(
     .x$package,
     .x$min_version,
     .x$reason,
@@ -108,7 +108,6 @@ load_feature_packages <- function(config) {
       reason = "CSV reading - read_csv functions",
       required = TRUE
     ),
-
     readxl = list(
       package = "readxl",
       min_version = "1.4.0",
@@ -124,7 +123,6 @@ load_feature_packages <- function(config) {
       reason = "Plot formatting - percent, comma, date_format",
       required = TRUE
     ),
-
     lubridate = list(
       package = "lubridate",
       min_version = "1.9.0",
@@ -141,7 +139,7 @@ load_feature_packages <- function(config) {
     )
   )
 
-  results <- purrr::imap(feature_packages, ~safe_load_package(
+  results <- purrr::imap(feature_packages, ~ safe_load_package(
     .x$package,
     .x$min_version,
     .x$reason,
@@ -171,7 +169,7 @@ load_development_packages <- function(config) {
     # Currently no dev-only packages identified
   )
 
-  results <- purrr::imap(dev_packages, ~safe_load_package(
+  results <- purrr::imap(dev_packages, ~ safe_load_package(
     .x$package,
     .x$min_version,
     .x$reason,
@@ -197,13 +195,16 @@ setup_performance_packages <- function(config) {
   if (requireNamespace("data.table", quietly = TRUE)) {
     # Set appropriate number of threads
     threads <- if (config$environment$is_production) 2 else 4
-    optimizations$data_table_threads <- tryCatch({
-      data.table::setDTthreads(threads)
-      threads
-    }, error = function(e) {
-      # Dependency operation completed
-      NULL
-    })
+    optimizations$data_table_threads <- tryCatch(
+      {
+        data.table::setDTthreads(threads)
+        threads
+      },
+      error = function(e) {
+        # Dependency operation completed
+        NULL
+      }
+    )
   }
 
   # Configure readr threading
@@ -234,41 +235,45 @@ safe_load_package <- function(package_name, min_version = NULL, reason = "", req
     required = required
   )
 
-  tryCatch({
-    # Check if package is available
-    if (!requireNamespace(package_name, quietly = TRUE)) {
-      stop(paste("Package", package_name, "is not available"))
-    }
+  tryCatch(
+    {
+      # Check if package is available
+      if (!requireNamespace(package_name, quietly = TRUE)) {
+        stop(paste("Package", package_name, "is not available"))
+      }
 
-    # Load the package
-    library(package_name, character.only = TRUE) # nolint
+      # Load the package
+      library(package_name, character.only = TRUE) # nolint
 
-    # Get version information
-    result$version <- as.character(packageVersion(package_name))
+      # Get version information
+      result$version <- as.character(packageVersion(package_name))
 
-    # Check minimum version if specified
-    if (!is.null(min_version)) {
-      if (compareVersion(result$version, min_version) < 0) {
-        warning(paste("Package", package_name, "version", result$version,
-                     "is below minimum required version", min_version))
+      # Check minimum version if specified
+      if (!is.null(min_version)) {
+        if (compareVersion(result$version, min_version) < 0) {
+          warning(paste(
+            "Package", package_name, "version", result$version,
+            "is below minimum required version", min_version
+          ))
+        }
+      }
+
+      result$loaded <- TRUE
+      # Dependency operation completed
+    },
+    error = function(e) {
+      result$error <<- e$message
+      log_error(paste("Failed to load package", package_name, ":", e$message), "PACKAGE_LOADER")
+
+      if (required) {
+        # For required packages, this is a critical error
+        stop(paste("Critical dependency", package_name, "could not be loaded:", e$message))
+      } else {
+        # For optional packages, log and continue
+        # Dependency operation completed
       }
     }
-
-    result$loaded <- TRUE
-    # Dependency operation completed
-
-  }, error = function(e) {
-    result$error <<- e$message
-    log_error(paste("Failed to load package", package_name, ":", e$message), "PACKAGE_LOADER")
-
-    if (required) {
-      # For required packages, this is a critical error
-      stop(paste("Critical dependency", package_name, "could not be loaded:", e$message))
-    } else {
-      # For optional packages, log and continue
-      # Dependency operation completed
-    }
-  })
+  )
 
   return(result)
 }
@@ -292,8 +297,8 @@ verify_critical_dependencies <- function() {
     dplyr = c("case_when")
   )
 
-  missing_functions <- purrr::imap(critical_functions, ~{
-    purrr::map(.x, ~if (!exists(.x, mode = "function")) paste0(.y, "::", .x) else NULL)
+  missing_functions <- purrr::imap(critical_functions, ~ {
+    purrr::map(.x, ~ if (!exists(.x, mode = "function")) paste0(.y, "::", .x) else NULL)
   }) %>%
     purrr::flatten() %>%
     purrr::discard(is.null) %>%

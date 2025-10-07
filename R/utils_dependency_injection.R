@@ -34,7 +34,6 @@
 #' @family dependency_injection
 #' @export
 create_dependency_container <- function(config = NULL, test_mode = FALSE) {
-
   # Default config hvis ikke angivet
   if (is.null(config)) {
     config <- list(
@@ -79,7 +78,6 @@ create_dependency_container <- function(config = NULL, test_mode = FALSE) {
 #'
 #' @family dependency_injection
 create_services_layer <- function(test_mode = FALSE) {
-
   if (test_mode) {
     # Mock services til testing
     list(
@@ -108,7 +106,6 @@ create_services_layer <- function(test_mode = FALSE) {
 #'
 #' @family dependency_injection
 create_repository_layer <- function(test_mode = FALSE) {
-
   if (test_mode) {
     # Mock repositories til testing
     list(
@@ -207,8 +204,8 @@ create_column_detection_service <- function() {
       autodetect_engine(
         data = dummy_data,
         trigger_type = "session_start",
-        app_state = NULL,  # Should be injected in real usage
-        emit = NULL        # Should be injected in real usage
+        app_state = NULL, # Should be injected in real usage
+        emit = NULL # Should be injected in real usage
       )
     },
     detect_by_data = function(data) detect_columns_with_data(data),
@@ -268,9 +265,9 @@ create_file_repository <- function() {
 
 create_session_repository <- function() {
   list(
-    save_session = function(session_data, id) NULL,  # Implement session persistence
-    load_session = function(id) NULL,                # Implement session loading
-    delete_session = function(id) NULL               # Implement session cleanup
+    save_session = function(session_data, id) NULL, # Implement session persistence
+    load_session = function(id) NULL, # Implement session loading
+    delete_session = function(id) NULL # Implement session cleanup
   )
 }
 
@@ -303,7 +300,7 @@ create_data_validator <- function() {
 create_file_validator <- function() {
   list(
     validate_extension = function(path) grepl("\\.(csv|xlsx)$", path),
-    validate_size = function(path) file.size(path) < 50 * 1024 * 1024,  # 50MB limit
+    validate_size = function(path) file.size(path) < 50 * 1024 * 1024, # 50MB limit
     validate_encoding = function(path) TRUE
   )
 }

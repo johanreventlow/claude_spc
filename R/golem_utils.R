@@ -103,7 +103,7 @@ is_dev_mode <- function() {
   # Check explicit option first
   explicit_dev <- get_app_option("production_mode", NULL)
   if (!is.null(explicit_dev)) {
-    return(!explicit_dev)  # dev mode is opposite of production mode
+    return(!explicit_dev) # dev mode is opposite of production mode
   }
 
   # Fall back to environment detection
@@ -163,7 +163,6 @@ run_dev <- function(port = 4040,
                     reload = FALSE,
                     debug_level = "DEBUG",
                     ...) {
-
   log_debug("Starting development mode application", .context = "DEV_MODE")
 
   # Set development-specific options
@@ -188,7 +187,7 @@ run_dev <- function(port = 4040,
   # Run app with development settings
   app_result <- run_app(
     port = port,
-    launch_browser = NULL,  # Will use environment-aware detection
+    launch_browser = NULL, # Will use environment-aware detection
     options = dev_options,
     ...
   )
@@ -208,7 +207,6 @@ run_dev <- function(port = 4040,
 run_prod <- function(port = NULL,
                      host = "0.0.0.0",
                      ...) {
-
   log_debug("Starting production mode application", .context = "PROD_MODE")
 
   # Set production-specific options
@@ -229,7 +227,7 @@ run_prod <- function(port = NULL,
   # Run app with production settings
   app_result <- run_app(
     port = port,
-    launch_browser = TRUE,  # Always launch browser in production
+    launch_browser = TRUE, # Always launch browser in production
     options = prod_options,
     ...
   )
@@ -245,16 +243,19 @@ run_prod <- function(port = NULL,
 #' @export
 get_app_info <- function() {
   # Try to get version from DESCRIPTION file or default
-  version <- tryCatch({
-    if (file.exists("DESCRIPTION")) {
-      desc <- read.dcf("DESCRIPTION")
-      desc[1, "Version"]
-    } else {
-      "0.1.0"  # Default version
+  version <- tryCatch(
+    {
+      if (file.exists("DESCRIPTION")) {
+        desc <- read.dcf("DESCRIPTION")
+        desc[1, "Version"]
+      } else {
+        "0.1.0" # Default version
+      }
+    },
+    error = function(e) {
+      "0.1.0" # Fallback version
     }
-  }, error = function(e) {
-    "0.1.0"  # Fallback version
-  })
+  )
 
   info <- list(
     package_name = "SPCify",
@@ -330,20 +331,23 @@ add_resource_path <- function(path = "www", prefix = "www") {
 
   if (dir.exists(path)) {
     # Additional validation for shiny::addResourcePath requirements
-    tryCatch({
-      shiny::addResourcePath(prefix, path)
-      if (exists("log_debug")) {
-        log_debug(paste("Added resource path:", prefix, "->", path), "RESOURCE_PATHS")
+    tryCatch(
+      {
+        shiny::addResourcePath(prefix, path)
+        if (exists("log_debug")) {
+          log_debug(paste("Added resource path:", prefix, "->", path), "RESOURCE_PATHS")
+        }
+        return(invisible(TRUE))
+      },
+      error = function(e) {
+        if (exists("log_warn")) {
+          log_warn(paste("Failed to add resource path:", e$message), "RESOURCE_PATHS")
+        } else {
+          warning(paste("Failed to add resource path:", e$message))
+        }
+        return(invisible(FALSE))
       }
-      return(invisible(TRUE))
-    }, error = function(e) {
-      if (exists("log_warn")) {
-        log_warn(paste("Failed to add resource path:", e$message), "RESOURCE_PATHS")
-      } else {
-        warning(paste("Failed to add resource path:", e$message))
-      }
-      return(invisible(FALSE))
-    })
+    )
   } else {
     if (exists("log_debug")) {
       log_debug(paste("Resource path not found:", path), "RESOURCE_PATHS")
@@ -366,7 +370,7 @@ favicon <- function(path = "www/favicon.ico") {
       favicon_path <- file.path("inst", "app", "www", "favicon.ico")
     }
     if (file.exists(favicon_path)) {
-      path <- "www/favicon.ico"  # Keep relative path for href
+      path <- "www/favicon.ico" # Keep relative path for href
     }
   }
 
@@ -398,7 +402,7 @@ detect_golem_environment <- function() {
       "prod" = "production",
       "testing" = "testing",
       "test" = "testing",
-      "default"  # Fallback
+      "default" # Fallback
     )
     log_debug(paste("Environment detected from GOLEM_CONFIG_ACTIVE:", mapped_env), .context = "GOLEM_ENV")
     return(mapped_env)
@@ -414,7 +418,7 @@ detect_golem_environment <- function() {
       "prod" = "production",
       "testing" = "testing",
       "test" = "testing",
-      "default"  # Fallback
+      "default" # Fallback
     )
     # Set GOLEM_CONFIG_ACTIVE based on R_CONFIG_ACTIVE for consistency
     Sys.setenv(GOLEM_CONFIG_ACTIVE = mapped_env)
@@ -460,24 +464,20 @@ get_fallback_golem_config <- function(env) {
     golem_name = "claudeSPC",
     golem_version = "1.0.0",
     app_prod = FALSE,
-
     environment = list(
       type = env,
       is_development = (env == "development"),
       is_production = (env == "production"),
       is_testing = (env == "testing")
     ),
-
     logging = list(
       level = "INFO",
       enable_debug_mode = (env %in% c("development", "testing"))
     ),
-
     testing = list(
       auto_load_test_data = (env == "development"),
       test_data_file = if (env == "development") "inst/extdata/spc_exampledata.csv" else NULL
     ),
-
     session = list(
       auto_restore_session = (env == "production")
     )

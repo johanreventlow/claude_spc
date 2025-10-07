@@ -358,7 +358,6 @@ get_optimal_formatting <- function(interval_info, debug = TRUE) {
 #' @param config Chart configuration with y_col
 #' @return Character string with processed title
 process_chart_title <- function(chart_title_reactive, config) {
-
   custom_title <- safe_operation(
     "Process chart title reactive",
     code = {
@@ -461,7 +460,7 @@ validate_data_structure <- function(data) {
       if (!all(is.na(.x))) {
         char_data <- as.character(.x)[!is.na(.x)]
         if (length(char_data) > 0 &&
-            any(grepl("\\d{4}-\\d{2}-\\d{2}|\\d{2}/\\d{2}/\\d{4}|\\d{2}-\\d{2}-\\d{4}", char_data))) {
+          any(grepl("\\d{4}-\\d{2}-\\d{2}|\\d{2}/\\d{2}/\\d{4}|\\d{2}-\\d{2}-\\d{4}", char_data))) {
           return(.y)
         }
       }
@@ -474,7 +473,7 @@ validate_data_structure <- function(data) {
     purrr::imap_chr(~ {
       if (!all(is.na(.x))) {
         if (is.numeric(.x) ||
-            sum(!is.na(parse_danish_number(.x))) > length(.x) * MIN_NUMERIC_PERCENT) {
+          sum(!is.na(parse_danish_number(.x))) > length(.x) * MIN_NUMERIC_PERCENT) {
           return(.y)
         }
       }
@@ -525,7 +524,6 @@ validate_data_structure <- function(data) {
 #' @param frys_column Column name for baseline freeze
 #' @return List with part_positions and freeze_position
 process_phase_freeze_config <- function(data, show_phases, skift_column, frys_column) {
-
   part_positions <- NULL
   if (show_phases && !is.null(skift_column)) {
     # DEFENSIVE: Check for character(0) before using %in%

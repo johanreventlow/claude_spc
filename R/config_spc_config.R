@@ -67,22 +67,22 @@ Y_AXIS_UI_TYPES_DA <- list(
 #' @export
 SPC_COLORS <- list(
   # Target linjer
-  target_line = "#2E8B57",        # SeaGreen for målværdi linjer
-  control_line = "#FF6B6B",       # Coral for kontrolgrænser
+  target_line = "#2E8B57", # SeaGreen for målværdi linjer
+  control_line = "#FF6B6B", # Coral for kontrolgrænser
 
   # Data punkter
-  normal_point = "#4A90E2",       # Blå for normale datapunkter
-  special_cause = "#FF4444",      # Rød for special cause punkter
+  normal_point = "#4A90E2", # Blå for normale datapunkter
+  special_cause = "#FF4444", # Rød for special cause punkter
 
   # Chart baggrund
-  chart_bg = "#FFFFFF",           # Hvid baggrund
-  grid_line = "#E8E8E8",          # Lys grå for grid
+  chart_bg = "#FFFFFF", # Hvid baggrund
+  grid_line = "#E8E8E8", # Lys grå for grid
 
   # UI elementer
-  success = "#28A745",            # Grøn for success states
-  warning = "#FFC107",            # Gul for warnings
-  error = "#DC3545",              # Rød for errors
-  info = "#17A2B8"                # Blå for info
+  success = "#28A745", # Grøn for success states
+  warning = "#FFC107", # Gul for warnings
+  error = "#DC3545", # Rød for errors
+  info = "#17A2B8" # Blå for info
 )
 
 #' Alpha værdier for gennemsigtighed

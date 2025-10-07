@@ -19,8 +19,10 @@ configure_logging_from_yaml <- function(log_level = NULL) {
       message(sprintf("[LOG_CONFIG] Explicit log level set to %s", log_level))
       return()
     } else {
-      message(sprintf("[LOG_CONFIG] Invalid log level '%s'. Valid: %s",
-                     log_level, paste(valid_levels, collapse = ", ")))
+      message(sprintf(
+        "[LOG_CONFIG] Invalid log level '%s'. Valid: %s",
+        log_level, paste(valid_levels, collapse = ", ")
+      ))
       # Continue to YAML-based config
     }
   }
@@ -29,28 +31,35 @@ configure_logging_from_yaml <- function(log_level = NULL) {
   current_config <- Sys.getenv("GOLEM_CONFIG_ACTIVE", "default")
 
   # Read logging level from YAML
-  tryCatch({
-    if (exists("get_golem_config", mode = "function")) {
-      yaml_log_level <- get_golem_config("logging")$level
+  tryCatch(
+    {
+      if (exists("get_golem_config", mode = "function")) {
+        yaml_log_level <- get_golem_config("logging")$level
 
-      if (!is.null(yaml_log_level) && yaml_log_level != "") {
-        Sys.setenv(SPC_LOG_LEVEL = yaml_log_level)
-        message(sprintf("[LOG_CONFIG] Log level '%s' from YAML config '%s'",
-                       yaml_log_level, current_config))
-        return()
+        if (!is.null(yaml_log_level) && yaml_log_level != "") {
+          Sys.setenv(SPC_LOG_LEVEL = yaml_log_level)
+          message(sprintf(
+            "[LOG_CONFIG] Log level '%s' from YAML config '%s'",
+            yaml_log_level, current_config
+          ))
+          return()
+        }
       }
+    },
+    error = function(e) {
+      message(sprintf("[LOG_CONFIG] Could not read YAML config: %s", e$message))
     }
-  }, error = function(e) {
-    message(sprintf("[LOG_CONFIG] Could not read YAML config: %s", e$message))
-  })
+  )
 
   # Fallback to environment-based defaults
   default_level <- if (current_config %in% c("development", "testing")) "DEBUG" else "WARN"
 
   if (Sys.getenv("SPC_LOG_LEVEL", "") == "") {
     Sys.setenv(SPC_LOG_LEVEL = default_level)
-    message(sprintf("[LOG_CONFIG] Fallback log level '%s' for config '%s'",
-                   default_level, current_config))
+    message(sprintf(
+      "[LOG_CONFIG] Fallback log level '%s' for config '%s'",
+      default_level, current_config
+    ))
   }
 }
 
@@ -94,25 +103,28 @@ configure_app_environment <- function(enable_test_mode = NULL, golem_options = l
   # Apply configuration via golem config instead of direct env vars
   if (enable_test_mode) {
     # Use golem config values for test mode
-    tryCatch({
-      if (exists("golem::get_golem_config", mode = "function")) {
-        test_config <- golem::get_golem_config("testing", config = config_profile)
-        if (!is.null(test_config$auto_load_test_data)) {
-          Sys.setenv(TEST_MODE_AUTO_LOAD = ifelse(test_config$auto_load_test_data, "TRUE", "FALSE"))
+    tryCatch(
+      {
+        if (exists("golem::get_golem_config", mode = "function")) {
+          test_config <- golem::get_golem_config("testing", config = config_profile)
+          if (!is.null(test_config$auto_load_test_data)) {
+            Sys.setenv(TEST_MODE_AUTO_LOAD = ifelse(test_config$auto_load_test_data, "TRUE", "FALSE"))
+          }
+          if (!is.null(test_config$test_data_file)) {
+            Sys.setenv(TEST_MODE_FILE_PATH = test_config$test_data_file)
+          }
+        } else {
+          # Fallback to direct settings if golem config not available
+          Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
+          Sys.setenv(TEST_MODE_FILE_PATH = "inst/extdata/spc_exampledata.csv")
         }
-        if (!is.null(test_config$test_data_file)) {
-          Sys.setenv(TEST_MODE_FILE_PATH = test_config$test_data_file)
-        }
-      } else {
-        # Fallback to direct settings if golem config not available
+      },
+      error = function(e) {
+        # Fallback configuration
         Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
         Sys.setenv(TEST_MODE_FILE_PATH = "inst/extdata/spc_exampledata.csv")
       }
-    }, error = function(e) {
-      # Fallback configuration
-      Sys.setenv(TEST_MODE_AUTO_LOAD = "TRUE")
-      Sys.setenv(TEST_MODE_FILE_PATH = "inst/extdata/spc_exampledata.csv")
-    })
+    )
   } else {
     Sys.setenv(TEST_MODE_AUTO_LOAD = "FALSE")
     Sys.unsetenv("TEST_MODE_FILE_PATH")
@@ -142,8 +154,7 @@ initialize_startup_performance_optimizations <- function() {
     code = {
       # Initialize startup cache system if available
       if (exists("load_cached_startup_data", mode = "function") &&
-          exists("cache_startup_data", mode = "function")) {
-
+        exists("cache_startup_data", mode = "function")) {
         # Load cached static data if available
         cached_data <- load_cached_startup_data()
         if (length(cached_data) > 0) {
@@ -246,7 +257,6 @@ run_app <- function(port = NULL,
                     enable_test_mode = NULL,
                     log_level = NULL,
                     ...) {
-
   # Initialize startup performance optimizations early
   initialize_startup_performance_optimizations()
 
@@ -291,4 +301,3 @@ run_app <- function(port = NULL,
     )
   }
 }
-

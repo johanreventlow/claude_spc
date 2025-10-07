@@ -55,9 +55,9 @@ UI_INPUT_WIDTHS <- list(
 #' Layout proportions for consistent UI
 #' @export
 UI_LAYOUT_PROPORTIONS <- list(
-  half = 1/2,
-  third = 1/3,
-  quarter = 1/4,
-  two_thirds = 2/3,
-  three_quarters = 3/4
+  half = 1 / 2,
+  third = 1 / 3,
+  quarter = 1 / 4,
+  two_thirds = 2 / 3,
+  three_quarters = 3 / 4
 )

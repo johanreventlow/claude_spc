@@ -49,12 +49,15 @@ process_chart_title <- function(chart_title_reactive, config) {
 
       if (is.function(chart_title_reactive)) {
         # Handle reactive values safely
-        tryCatch({
-          title_text <- chart_title_reactive()
-        }, error = function(e) {
-          log_warn("Could not get reactive title, using fallback", .context = "TITLE_PROCESSING")
-          title_text <- paste("SPC Chart -", config$y_col %||% "Data")
-        })
+        tryCatch(
+          {
+            title_text <- chart_title_reactive()
+          },
+          error = function(e) {
+            log_warn("Could not get reactive title, using fallback", .context = "TITLE_PROCESSING")
+            title_text <- paste("SPC Chart -", config$y_col %||% "Data")
+          }
+        )
       } else if (is.character(chart_title_reactive) && length(chart_title_reactive) > 0) {
         title_text <- chart_title_reactive
       } else {
@@ -97,8 +100,8 @@ filter_complete_spc_data <- function(data, y_col, n_col = NULL, x_col = NULL) {
         naevner_raw <- data[[n_col]]
 
         complete_rows <- !is.na(taeller_raw) & !is.na(naevner_raw) &
-                        trimws(as.character(taeller_raw)) != "" &
-                        trimws(as.character(naevner_raw)) != ""
+          trimws(as.character(taeller_raw)) != "" &
+          trimws(as.character(naevner_raw)) != ""
 
         if (!any(complete_rows)) {
           stop("Ingen komplette datarækker fundet. Tjek at både tæller og nævner kolonner har gyldige værdier.")
@@ -118,8 +121,7 @@ filter_complete_spc_data <- function(data, y_col, n_col = NULL, x_col = NULL) {
       # PRESERVE POSIXct/Date formats
       if (!is.null(x_col) && x_col %in% names(data) && !is.null(original_x_class)) {
         if (inherits(data[[x_col]], c("POSIXct", "POSIXt", "Date")) &&
-            !inherits(data_filtered[[x_col]], c("POSIXct", "POSIXt", "Date"))) {
-
+          !inherits(data_filtered[[x_col]], c("POSIXct", "POSIXt", "Date"))) {
           # Restore the original class attributes
           data_filtered[[x_col]] <- data[[x_col]][complete_rows]
           class(data_filtered[[x_col]]) <- original_x_class
@@ -200,11 +202,11 @@ calculate_y_axis_data <- function(chart_type, y_data, n_data = NULL) {
       if (!is.null(n_data)) {
         # Charts with numerator/denominator
         if (chart_type == "run") {
-          return(y_data)  # Let qic handle ratio calculation for run charts
+          return(y_data) # Let qic handle ratio calculation for run charts
         } else if (chart_type %in% c("p", "pp", "u", "up")) {
-          return(y_data)  # Use raw numerator for proportion/rate charts
+          return(y_data) # Use raw numerator for proportion/rate charts
         } else {
-          return((y_data / n_data) * 100)  # Default to percentage
+          return((y_data / n_data) * 100) # Default to percentage
         }
       } else {
         # Standard numeric data

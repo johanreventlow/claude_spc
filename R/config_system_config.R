@@ -76,35 +76,35 @@ LOG_COMPONENTS <- list(
 #' Timeout værdier for forskellige operationer (millisekunder)
 #' @export
 OPERATION_TIMEOUTS <- list(
-  file_read = 30000,      # 30 sekunder
-  chart_render = 10000,   # 10 sekunder
-  auto_detect = 5000,     # 5 sekunder
-  ui_update = 2000        # 2 sekunder
+  file_read = 30000, # 30 sekunder
+  chart_render = 10000, # 10 sekunder
+  auto_detect = 5000, # 5 sekunder
+  ui_update = 2000 # 2 sekunder
 )
 
 #' Debounce delays for reactive operations
 #' @export
 DEBOUNCE_DELAYS <- list(
-  input_change = 300,     # 300ms
-  file_select = 500,      # 500ms
-  chart_update = 800      # 800ms
+  input_change = 300, # 300ms
+  file_select = 500, # 500ms
+  chart_update = 800 # 800ms
 )
 
 #' Loop protection delays for UI updates (milliseconds)
 #' @export
 LOOP_PROTECTION_DELAYS <- list(
-  default = 500,              # Standard delay for programmatic UI updates
-  conservative = 800,         # Conservative delay for slower browsers
-  minimal = 200,              # Minimal delay for fast responses
-  onFlushed_fallback = 1000   # Fallback delay if session$onFlushed not available
+  default = 500, # Standard delay for programmatic UI updates
+  conservative = 800, # Conservative delay for slower browsers
+  minimal = 200, # Minimal delay for fast responses
+  onFlushed_fallback = 1000 # Fallback delay if session$onFlushed not available
 )
 
 #' Performance monitoring thresholds
 #' @export
 PERFORMANCE_THRESHOLDS <- list(
-  reactive_warning = 0.5,    # 500ms for reactive expressions
-  debounce_warning = 1.0,    # 1 second for debounced operations
-  memory_warning = 10,       # 10MB memory change warning
+  reactive_warning = 0.5, # 500ms for reactive expressions
+  debounce_warning = 1.0, # 1 second for debounced operations
+  memory_warning = 10, # 10MB memory change warning
   cache_timeout_default = 300, # 5 minutes default cache
-  max_cache_entries = 50     # Maximum cached reactive results
+  max_cache_entries = 50 # Maximum cached reactive results
 )

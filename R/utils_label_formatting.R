@@ -36,7 +36,9 @@
 #' @export
 format_y_value <- function(val, y_unit, y_range = NULL) {
   # Input validation
-  if (is.na(val)) return(NA_character_)
+  if (is.na(val)) {
+    return(NA_character_)
+  }
 
   if (!is.numeric(val)) {
     warning("format_y_value: val skal være numerisk, modtog: ", class(val))

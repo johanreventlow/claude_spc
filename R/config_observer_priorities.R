@@ -8,33 +8,33 @@
 # Enhanced with wider gaps to prevent race conditions
 OBSERVER_PRIORITIES <- list(
   # Høj prioritet - kritisk state management
-  STATE_MANAGEMENT = 2000,    # Critical state operations
+  STATE_MANAGEMENT = 2000, # Critical state operations
 
   # Medium prioritet - data processing
-  AUTO_DETECT = 1500,         # Auto-detection logic
-  DATA_PROCESSING = 1250,     # Data operations
+  AUTO_DETECT = 1500, # Auto-detection logic
+  DATA_PROCESSING = 1250, # Data operations
 
   # Lav prioritet - UI updates og visuel feedback
-  UI_SYNC = 750,              # UI synchronization
-  PLOT_GENERATION = 600,      # Plot rendering
-  STATUS_UPDATES = 500,       # Status indicators
+  UI_SYNC = 750, # UI synchronization
+  PLOT_GENERATION = 600, # Plot rendering
+  STATUS_UPDATES = 500, # Status indicators
 
   # Meget lav prioritet - cleanup og logging
-  CLEANUP = 200,              # Cleanup operations
-  LOGGING = 100,              # Monitoring and logging
+  CLEANUP = 200, # Cleanup operations
+  LOGGING = 100, # Monitoring and logging
 
   # Compatibility aliases for legacy code
-  HIGH = 2000,                # Maps to STATE_MANAGEMENT
-  MEDIUM = 1250,              # Maps to DATA_PROCESSING
-  LOW = 750,                  # Maps to UI_SYNC
-  LOWEST = 200,               # Maps to CLEANUP
+  HIGH = 2000, # Maps to STATE_MANAGEMENT
+  MEDIUM = 1250, # Maps to DATA_PROCESSING
+  LOW = 750, # Maps to UI_SYNC
+  LOWEST = 200, # Maps to CLEANUP
 
   # Legacy aliases (deprecated but supported for backward compatibility)
-  highest = 2000,             # Use HIGH instead
-  high = 1500,                # Use AUTO_DETECT instead
-  medium = 1000,              # Use MEDIUM instead
-  low = 500,                  # Use LOW instead
-  lowest = 100                # Use LOWEST instead
+  highest = 2000, # Use HIGH instead
+  high = 1500, # Use AUTO_DETECT instead
+  medium = 1000, # Use MEDIUM instead
+  low = 500, # Use LOW instead
+  lowest = 100 # Use LOWEST instead
 )
 
 ## Observer Priority Helpers -----

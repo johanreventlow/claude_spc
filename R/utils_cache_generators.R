@@ -197,7 +197,7 @@ get_system_config_snapshot <- function() {
       config$runtime_flags <- list(
         interactive_session = interactive(),
         package_mode = !"SPC_SOURCE_LOADING" %in% names(Sys.getenv()) ||
-                      Sys.getenv("SPC_SOURCE_LOADING", "FALSE") == "FALSE"
+          Sys.getenv("SPC_SOURCE_LOADING", "FALSE") == "FALSE"
       )
 
       config$generated_at <- Sys.time()

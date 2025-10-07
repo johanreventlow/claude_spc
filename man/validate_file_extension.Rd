@@ -18,8 +18,8 @@ TRUE hvis valid, FALSE hvis invalid eller potentielt malicious
 Sikker validation af file extensions med whitelist approach.
 }
 \examples{
-validate_file_extension("csv")     # TRUE
-validate_file_extension(".xlsx")   # TRUE
-validate_file_extension("exe")     # FALSE
+validate_file_extension("csv") # TRUE
+validate_file_extension(".xlsx") # TRUE
+validate_file_extension("exe") # FALSE
 
 }

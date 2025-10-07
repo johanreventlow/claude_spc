@@ -24,18 +24,25 @@ NULL
 #'
 #' @examples
 #' # Auto-detection caching
-#' cached_autodetect <- create_cached_reactive({
-#'   detect_columns_full_analysis(data, app_state)
-#' }, "autodetect", cache_timeout = 600)
+#' cached_autodetect <- create_cached_reactive(
+#'   {
+#'     detect_columns_full_analysis(data, app_state)
+#'   },
+#'   "autodetect",
+#'   cache_timeout = 600
+#' )
 #'
 #' # Data-specific caching
-#' cached_processing <- create_cached_reactive({
-#'   expensive_data_processing(data)
-#' }, function() paste0("processing_", digest::digest(data)), 300)
+#' cached_processing <- create_cached_reactive(
+#'   {
+#'     expensive_data_processing(data)
+#'   },
+#'   function() paste0("processing_", digest::digest(data)),
+#'   300
+#' )
 #'
 #' @export
 create_cached_reactive <- function(reactive_expr, cache_key, cache_timeout = 300, cache_size_limit = 50) {
-
   # Convert cache_key to function if it's a string
   key_func <- if (is.function(cache_key)) {
     cache_key
@@ -155,7 +162,6 @@ generate_data_cache_key <- function(data, prefix = "data", include_names = FALSE
 #'
 #' @export
 cache_auto_detection_results <- function(data, app_state, force_refresh = FALSE) {
-
   # Generate comprehensive cache key for auto-detection
   cache_key <- generate_data_cache_key(data, "autodetect", include_names = TRUE)
 
@@ -314,8 +320,8 @@ manage_cache_size <- function(max_entries) {
 #' @param pattern Optional regex pattern til at rydde specific keys
 #'
 #' @examples
-#' clear_performance_cache()  # Clear alt
-#' clear_performance_cache("autodetect_.*")  # Clear kun autodetect cache
+#' clear_performance_cache() # Clear alt
+#' clear_performance_cache("autodetect_.*") # Clear kun autodetect cache
 #'
 #' @export
 clear_performance_cache <- function(pattern = NULL) {
@@ -397,7 +403,9 @@ get_cache_stats <- function() {
 #'
 #' @examples
 #' optimized_reactive <- create_performance_debounced(
-#'   reactive({ expensive_computation(input$data) }),
+#'   reactive({
+#'     expensive_computation(input$data)
+#'   }),
 #'   "computation",
 #'   millis = 500,
 #'   cache_timeout = 300
@@ -405,7 +413,6 @@ get_cache_stats <- function() {
 #'
 #' @export
 create_performance_debounced <- function(reactive_expr, cache_key, debounce_millis = 500, cache_timeout = 300) {
-
   # First apply caching
   cached_reactive <- create_cached_reactive(reactive_expr, cache_key, cache_timeout)
 

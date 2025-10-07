@@ -14,7 +14,7 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
   log_debug_block("DATE_DETECT", "Starting robust date detection")
 
   if (is.null(data) || ncol(data) == 0) {
-  # log_debug("No data for date detection", .context = "DATE_DETECT")
+    # log_debug("No data for date detection", .context = "DATE_DETECT")
     return(list())
   }
 
@@ -23,16 +23,16 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
   # Danish date formats - prioritized for SPC context with comprehensive coverage
   danish_formats <- c(
     "dmy", "dmY", "d/m/Y", "d-m-Y", "d.m.Y", "d m Y",
-    "d/m/y", "d-m-y", "d.m.y",  # Two-digit years
-    "dby", "dbY",  # Month names: "01 jan 2024"
-    "d B Y", "d b Y"  # Full month names: "1 Januar 2024"
+    "d/m/y", "d-m-y", "d.m.y", # Two-digit years
+    "dby", "dbY", # Month names: "01 jan 2024"
+    "d B Y", "d b Y" # Full month names: "1 Januar 2024"
   )
 
   # International formats - fallback with comprehensive coverage
   intl_formats <- c(
     "ymd", "mdy", "Ymd", "mdY", "Y-m-d", "m/d/Y",
-    "y-m-d", "m/d/y",  # Two-digit years
-    "Ymd HMS", "ymd HMS"  # With time components
+    "y-m-d", "m/d/y", # Two-digit years
+    "Ymd HMS", "ymd HMS" # With time components
   )
 
   log_debug_kv(
@@ -148,7 +148,9 @@ detect_date_columns_robust <- function(data, success_threshold = 0.8) {
 #' @param format Lubridate format string (e.g., "dmy", "ymd")
 #' @return Success rate (0-1)
 test_date_parsing_format <- function(test_sample, format) {
-  if (length(test_sample) == 0) return(0)
+  if (length(test_sample) == 0) {
+    return(0)
+  }
 
   safe_operation(
     "Test date parsing format",
@@ -318,10 +320,10 @@ score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
   # Handle legacy type parameter and default role
   if (!is.null(type)) {
     role <- switch(type,
-      "x" = "x_column",  # Date columns
-      "y" = "y_column",  # Count/numerator columns
-      "n" = "n_column",  # Denominator columns
-      "y_column"  # Default fallback
+      "x" = "x_column", # Date columns
+      "y" = "y_column", # Count/numerator columns
+      "n" = "n_column", # Denominator columns
+      "y_column" # Default fallback
     )
   }
 
@@ -336,7 +338,7 @@ score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
     x_patterns <- c("dato", "date", "tid", "time", "observation", "periode", "month", "år", "year")
     for (pattern in x_patterns) {
       if (grepl(pattern, col_lower)) {
-        return(1.0)  # Perfect match
+        return(1.0) # Perfect match
       }
     }
 
@@ -344,7 +346,7 @@ score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
     partial_patterns <- c("day", "dag", "uge", "week", "kvartal", "quarter")
     for (pattern in partial_patterns) {
       if (grepl(pattern, col_lower)) {
-        return(0.8)  # High match
+        return(0.8) # High match
       }
     }
   } else if (role == "y_column") {
@@ -352,7 +354,7 @@ score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
     y_patterns <- c("tæller", "tael", "count", "num", "antal", "værdi", "value")
     for (pattern in y_patterns) {
       if (grepl(pattern, col_lower)) {
-        return(1.0)  # Perfect match
+        return(1.0) # Perfect match
       }
     }
 
@@ -360,7 +362,7 @@ score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
     rate_patterns <- c("rate", "procent", "pct", "%", "andel", "del_af", "per_100", "per_1000", "ratio")
     for (pattern in rate_patterns) {
       if (grepl(pattern, col_lower)) {
-        return(0.8)  # High match for rate data
+        return(0.8) # High match for rate data
       }
     }
 
@@ -368,7 +370,7 @@ score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
     partial_patterns <- c("sum", "total")
     for (pattern in partial_patterns) {
       if (grepl(pattern, col_lower)) {
-        return(0.7)  # Good match
+        return(0.7) # Good match
       }
     }
   } else if (role == "n_column") {
@@ -376,7 +378,7 @@ score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
     n_patterns <- c("nævner", "naev", "denom", "total", "samlet")
     for (pattern in n_patterns) {
       if (grepl(pattern, col_lower)) {
-        return(1.0)  # Perfect match
+        return(1.0) # Perfect match
       }
     }
 
@@ -384,12 +386,12 @@ score_by_name_patterns <- function(col_name, role = NULL, type = NULL) {
     partial_patterns <- c("sum", "basis", "base")
     for (pattern in partial_patterns) {
       if (grepl(pattern, col_lower)) {
-        return(0.7)  # Good match
+        return(0.7) # Good match
       }
     }
   }
 
-  return(0.0)  # No pattern match
+  return(0.0) # No pattern match
 }
 
 #' Score Data Characteristics
@@ -405,10 +407,10 @@ score_by_data_characteristics <- function(col_data, role = NULL, type = NULL) {
   # Handle legacy type parameter and default role
   if (!is.null(type)) {
     role <- switch(type,
-      "x" = "x_column",  # Date columns
-      "y" = "y_column",  # Count/numerator columns
-      "n" = "n_column",  # Denominator columns
-      "y_column"  # Default fallback
+      "x" = "x_column", # Date columns
+      "y" = "y_column", # Count/numerator columns
+      "n" = "n_column", # Denominator columns
+      "y_column" # Default fallback
     )
   }
 
@@ -418,13 +420,17 @@ score_by_data_characteristics <- function(col_data, role = NULL, type = NULL) {
   }
   # Remove missing values
   clean_data <- col_data[!is.na(col_data)]
-  if (length(clean_data) == 0) return(0)
+  if (length(clean_data) == 0) {
+    return(0)
+  }
 
   # Convert to numeric if needed
   if (!is.numeric(clean_data)) {
     clean_data <- suppressWarnings(as.numeric(as.character(clean_data)))
     clean_data <- clean_data[!is.na(clean_data)]
-    if (length(clean_data) == 0) return(0)
+    if (length(clean_data) == 0) {
+      return(0)
+    }
   }
 
   score <- 0
@@ -441,7 +447,7 @@ score_by_data_characteristics <- function(col_data, role = NULL, type = NULL) {
 
   # Reasonable range (not too extreme)
   data_range <- max(clean_data) - min(clean_data)
-  if (data_range > 0 && data_range < 10000) {  # Reasonable for most SPC contexts
+  if (data_range > 0 && data_range < 10000) { # Reasonable for most SPC contexts
     score <- score + 0.3
   }
 
@@ -457,15 +463,15 @@ score_by_data_characteristics <- function(col_data, role = NULL, type = NULL) {
     mean_val <- mean(clean_data, na.rm = TRUE)
     sd_val <- sd(clean_data, na.rm = TRUE)
 
-    if (!is.na(mean_val) && !is.na(sd_val) && mean_val > 0) {  # Prevent division by zero and NA
+    if (!is.na(mean_val) && !is.na(sd_val) && mean_val > 0) { # Prevent division by zero and NA
       cv <- sd_val / mean_val
-      if (!is.na(cv) && cv < 0.5) {  # Lower coefficient of variation (also check CV is not NA)
+      if (!is.na(cv) && cv < 0.5) { # Lower coefficient of variation (also check CV is not NA)
         score <- score + 0.2
       }
     }
   }
 
-  return(min(score, 1.0))  # Cap at 1.0
+  return(min(score, 1.0)) # Cap at 1.0
 }
 
 #' Score Statistical Properties
@@ -481,10 +487,10 @@ score_by_statistical_properties <- function(col_data, role = NULL, type = NULL) 
   # Handle legacy type parameter and default role
   if (!is.null(type)) {
     role <- switch(type,
-      "x" = "x_column",  # Date columns
-      "y" = "y_column",  # Count/numerator columns
-      "n" = "n_column",  # Denominator columns
-      "y_column"  # Default fallback
+      "x" = "x_column", # Date columns
+      "y" = "y_column", # Count/numerator columns
+      "n" = "n_column", # Denominator columns
+      "y_column" # Default fallback
     )
   }
 
@@ -494,13 +500,17 @@ score_by_statistical_properties <- function(col_data, role = NULL, type = NULL) 
   }
   # Remove missing values
   clean_data <- col_data[!is.na(col_data)]
-  if (length(clean_data) < 2) return(0)
+  if (length(clean_data) < 2) {
+    return(0)
+  }
 
   # Convert to numeric if needed
   if (!is.numeric(clean_data)) {
     clean_data <- suppressWarnings(as.numeric(as.character(clean_data)))
     clean_data <- clean_data[!is.na(clean_data)]
-    if (length(clean_data) < 2) return(0)
+    if (length(clean_data) < 2) {
+      return(0)
+    }
   }
 
   score <- 0
@@ -514,10 +524,10 @@ score_by_statistical_properties <- function(col_data, role = NULL, type = NULL) 
   if (sd_val > 0) score <- score + 0.2
 
   # Reasonable distribution (not too skewed)
-  if (length(clean_data) >= 5 && sd_val > 0) {  # FASE 4: Prevent division by zero
+  if (length(clean_data) >= 5 && sd_val > 0) { # FASE 4: Prevent division by zero
     # Simple skewness check
     median_val <- median(clean_data)
-    if (abs(mean_val - median_val) / sd_val < 1) {  # Not too skewed
+    if (abs(mean_val - median_val) / sd_val < 1) { # Not too skewed
       score <- score + 0.3
     }
   }
@@ -526,20 +536,20 @@ score_by_statistical_properties <- function(col_data, role = NULL, type = NULL) 
   if (role == "y_column") {
     # Y columns should have some variability for meaningful SPC
     # FASE 4: Fix CV division-by-zero bug
-    if (mean_val > 0) {  # Prevent division by zero
+    if (mean_val > 0) { # Prevent division by zero
       cv <- sd_val / mean_val
-      if (cv > 0.1 && cv < 2) {  # Reasonable coefficient of variation
+      if (cv > 0.1 && cv < 2) { # Reasonable coefficient of variation
         score <- score + 0.3
       }
     }
   } else if (role == "n_column") {
     # N columns often larger than Y columns (for rates)
-    if (mean_val >= 10) {  # Reasonable denominator size
+    if (mean_val >= 10) { # Reasonable denominator size
       score <- score + 0.3
     }
   }
 
-  return(min(score, 1.0))  # Cap at 1.0
+  return(min(score, 1.0)) # Cap at 1.0
 }
 
 #' Find Best Date Format for Data Sample
@@ -552,7 +562,9 @@ score_by_statistical_properties <- function(col_data, role = NULL, type = NULL) 
 #' @param intl_formats Character vector of international date formats to test
 #' @return Best format string, or NULL if none work well
 find_best_format <- function(data_sample, danish_formats, intl_formats) {
-  if (length(data_sample) == 0) return(NULL)
+  if (length(data_sample) == 0) {
+    return(NULL)
+  }
 
   best_score <- 0
   best_format <- NULL
@@ -599,7 +611,9 @@ find_best_format <- function(data_sample, danish_formats, intl_formats) {
 #' @param format Format string to attempt
 #' @return Parsed dates or NA for failures
 parse_danish_dates <- function(date_strings, format) {
-  if (length(date_strings) == 0) return(as.Date(character(0)))
+  if (length(date_strings) == 0) {
+    return(as.Date(character(0)))
+  }
 
   # Preprocess strings for Danish month names
   processed_strings <- date_strings

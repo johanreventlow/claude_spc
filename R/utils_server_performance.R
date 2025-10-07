@@ -10,15 +10,21 @@
 #'
 appears_numeric <- function(x) {
   # TEST FIX: Accept numeric columns as numeric
-  if (is.numeric(x)) return(TRUE)
+  if (is.numeric(x)) {
+    return(TRUE)
+  }
 
-  if (!is.character(x)) return(FALSE)
+  if (!is.character(x)) {
+    return(FALSE)
+  }
 
   # Sample a few values for efficiency
   sample_size <- min(10, length(x))
   sample_data <- x[!is.na(x)][1:sample_size]
 
-  if (length(sample_data) == 0) return(FALSE)
+  if (length(sample_data) == 0) {
+    return(FALSE)
+  }
 
   # Check if values can be converted to numeric
   suppressWarnings({
@@ -26,7 +32,7 @@ appears_numeric <- function(x) {
     success_rate <- sum(!is.na(converted)) / length(sample_data)
   })
 
-  return(success_rate > 0.7)  # 70% success rate threshold
+  return(success_rate > 0.7) # 70% success rate threshold
 }
 
 #' Appears Date
@@ -37,20 +43,24 @@ appears_numeric <- function(x) {
 #' @return Logical indicating if data appears to be dates
 #'
 appears_date <- function(x) {
-  if (!is.character(x)) return(FALSE)
+  if (!is.character(x)) {
+    return(FALSE)
+  }
 
   # Sample a few values for efficiency
   sample_size <- min(10, length(x))
   sample_data <- x[!is.na(x)][1:sample_size]
 
-  if (length(sample_data) == 0) return(FALSE)
+  if (length(sample_data) == 0) {
+    return(FALSE)
+  }
 
   # Common date patterns
   date_patterns <- c(
-    "\\d{4}-\\d{2}-\\d{2}",  # YYYY-MM-DD
-    "\\d{2}-\\d{2}-\\d{4}",  # DD-MM-YYYY
-    "\\d{2}/\\d{2}/\\d{4}",  # DD/MM/YYYY
-    "\\d{4}/\\d{2}/\\d{2}"   # YYYY/MM/DD
+    "\\d{4}-\\d{2}-\\d{2}", # YYYY-MM-DD
+    "\\d{2}-\\d{2}-\\d{4}", # DD-MM-YYYY
+    "\\d{2}/\\d{2}/\\d{4}", # DD/MM/YYYY
+    "\\d{4}/\\d{2}/\\d{2}" # YYYY/MM/DD
   )
 
   # Check pattern matches
@@ -63,15 +73,18 @@ appears_date <- function(x) {
 
   # TEST FIX: Try actual date parsing with tryCatch to handle errors
   parse_success_rate <- 0
-  tryCatch({
-    suppressWarnings({
-      parsed_dates <- as.Date(sample_data)
-      parse_success_rate <- sum(!is.na(parsed_dates)) / length(sample_data)
-    })
-  }, error = function(e) {
-    # If parsing fails completely, treat as non-date
-    parse_success_rate <<- 0
-  })
+  tryCatch(
+    {
+      suppressWarnings({
+        parsed_dates <- as.Date(sample_data)
+        parse_success_rate <- sum(!is.na(parsed_dates)) / length(sample_data)
+      })
+    },
+    error = function(e) {
+      # If parsing fails completely, treat as non-date
+      parse_success_rate <<- 0
+    }
+  )
 
   return(pattern_matches > 0 || parse_success_rate > 0.5)
 }
@@ -84,7 +97,9 @@ appears_date <- function(x) {
 #' @return Numeric vector
 #'
 parse_danish_number_vectorized <- function(x) {
-  if (!is.character(x)) return(as.numeric(x))
+  if (!is.character(x)) {
+    return(as.numeric(x))
+  }
 
   # Vectorized cleaning and conversion
   # Replace Danish decimal comma with period
@@ -103,21 +118,23 @@ parse_danish_number_vectorized <- function(x) {
 #' @return Date vector
 #'
 parse_danish_date_vectorized <- function(x) {
-  if (!is.character(x)) return(as.Date(x))
+  if (!is.character(x)) {
+    return(as.Date(x))
+  }
 
   # Try multiple date formats common in Danish data
   date_formats <- c(
-    "%d-%m-%Y",    # DD-MM-YYYY
-    "%d/%m/%Y",    # DD/MM/YYYY
-    "%Y-%m-%d",    # YYYY-MM-DD
-    "%Y/%m/%d",    # YYYY/MM/DD
-    "%d.%m.%Y"     # DD.MM.YYYY
+    "%d-%m-%Y", # DD-MM-YYYY
+    "%d/%m/%Y", # DD/MM/YYYY
+    "%Y-%m-%d", # YYYY-MM-DD
+    "%Y/%m/%d", # YYYY/MM/DD
+    "%d.%m.%Y" # DD.MM.YYYY
   )
 
   result <- rep(as.Date(NA), length(x))
 
   for (format in date_formats) {
-    if (all(!is.na(result))) break  # All dates parsed successfully
+    if (all(!is.na(result))) break # All dates parsed successfully
 
     missing_indices <- is.na(result)
     if (any(missing_indices)) {
@@ -140,7 +157,9 @@ parse_danish_date_vectorized <- function(x) {
 #' @return Standardized data frame
 #' @export
 ensure_standard_columns <- function(data) {
-  if (is.null(data) || nrow(data) == 0) return(data)
+  if (is.null(data) || nrow(data) == 0) {
+    return(data)
+  }
 
   # NOTE: Removed automatic empty column removal as empty columns can be meaningful
   # Empty columns are preserved to allow users to work with their data structure as intended
@@ -170,14 +189,18 @@ validate_numeric_column <- function(data, column_name) {
   }
 
   # Try to convert to numeric
-  tryCatch({
-    as.numeric(column_data)
-    return(NULL)
-  }, error = function(e) {
-    return(paste("Column", column_name, "cannot be converted to numeric"))
-  }, warning = function(w) {
-    return(NULL) # Warnings (like NAs) are acceptable
-  })
+  tryCatch(
+    {
+      as.numeric(column_data)
+      return(NULL)
+    },
+    error = function(e) {
+      return(paste("Column", column_name, "cannot be converted to numeric"))
+    },
+    warning = function(w) {
+      return(NULL) # Warnings (like NAs) are acceptable
+    }
+  )
 }
 
 #' Safe Date Parse
@@ -194,31 +217,37 @@ safe_date_parse <- function(date_vector) {
 
   # Common Danish date formats
   formats <- c(
-    "%d-%m-%Y",    # DD-MM-YYYY
-    "%d/%m/%Y",    # DD/MM/YYYY
-    "%Y-%m-%d",    # YYYY-MM-DD
-    "%d.%m.%Y",    # DD.MM.YYYY
-    "%d-%m-%y",    # DD-MM-YY
-    "%d/%m/%y"     # DD/MM/YY
+    "%d-%m-%Y", # DD-MM-YYYY
+    "%d/%m/%Y", # DD/MM/YYYY
+    "%Y-%m-%d", # YYYY-MM-DD
+    "%d.%m.%Y", # DD.MM.YYYY
+    "%d-%m-%y", # DD-MM-YY
+    "%d/%m/%y" # DD/MM/YY
   )
 
   for (fmt in formats) {
-    tryCatch({
-      parsed <- as.Date(date_vector, format = fmt)
-      if (sum(!is.na(parsed)) > 0) {
-        return(parsed)
+    tryCatch(
+      {
+        parsed <- as.Date(date_vector, format = fmt)
+        if (sum(!is.na(parsed)) > 0) {
+          return(parsed)
+        }
+      },
+      error = function(e) {
+        # Continue to next format
       }
-    }, error = function(e) {
-      # Continue to next format
-    })
+    )
   }
 
   # If all formats fail, try automatic parsing
-  tryCatch({
-    return(as.Date(date_vector))
-  }, error = function(e) {
-    return(date_vector) # Return original if all parsing fails
-  })
+  tryCatch(
+    {
+      return(as.Date(date_vector))
+    },
+    error = function(e) {
+      return(date_vector) # Return original if all parsing fails
+    }
+  )
 }
 
 #' Validate SPC Requirements
@@ -334,7 +363,7 @@ add_comments_optimized <- function(plot, data, kommentar_column, qic_data) {
 should_gc <- function() {
   # Check memory usage
   mem_info <- gc(verbose = FALSE)
-  total_mb <- sum(mem_info[, "used"]) * 1.048576  # Convert to MB
+  total_mb <- sum(mem_info[, "used"]) * 1.048576 # Convert to MB
 
   # Run GC if memory usage is high (> 500MB) or every 10th call
   static_gc_counter <- get("gc_counter", envir = .GlobalEnv, inherits = FALSE)

@@ -44,7 +44,7 @@
 #' app_state <- create_app_state()
 #'
 #' # Tjek state struktur
-#' names(app_state)  # "data", "columns", "test_mode", "session", "ui"
+#' names(app_state) # "data", "columns", "test_mode", "session", "ui"
 #'
 #' # Opdater data
 #' app_state$data$current_data <- data.frame(Dato = Sys.Date(), Værdi = 10)
@@ -65,7 +65,7 @@ create_app_state <- function() {
   # STREAMLINED EVENT-BUS: Reduced noise, consolidated events
   app_state$events <- shiny::reactiveValues(
     # DATA-LIVSCYKLUS (CONSOLIDATED - FASE 2.2) ---------------------------
-    data_updated = 0L,                 # CONSOLIDATED: Replaces data_loaded + data_changed
+    data_updated = 0L, # CONSOLIDATED: Replaces data_loaded + data_changed
     # SPRINT 4: Legacy event reactiveValues removed (observers deleted, emit functions map to data_updated)
 
     # KOLONNEDETEKTION -----------------------------------------------------
@@ -73,8 +73,8 @@ create_app_state <- function() {
     auto_detection_completed = 0L,
 
     # UI SYNKRONISERING (CONSOLIDATED) -------------------------------------
-    ui_sync_requested = 0L,  # Consolidates: ui_sync_needed + ui_update_needed + form_update_needed
-    ui_sync_completed = 0L,  # Remains: completion tracking
+    ui_sync_requested = 0L, # Consolidates: ui_sync_needed + ui_update_needed + form_update_needed
+    ui_sync_completed = 0L, # Remains: completion tracking
     column_choices_changed = 0L,
     navigation_changed = 0L,
 
@@ -89,8 +89,8 @@ create_app_state <- function() {
     test_mode_debounced_autodetect = 0L,
 
     # FEJL- OG GENOPRETTELSESHÅNDTERING (CONSOLIDATED) -------------------
-    error_occurred = 0L,        # Consolidated: all error types with context
-    recovery_completed = 0L,     # Remains: recovery tracking
+    error_occurred = 0L, # Consolidated: all error types with context
+    recovery_completed = 0L, # Remains: recovery tracking
 
     # FORM- OG STATEHÅNDTERING --------------------------------------------
     form_reset_needed = 0L,
@@ -189,10 +189,10 @@ create_app_state <- function() {
     data_loaded = FALSE,
 
     # Phase 3: Startup optimization for test mode
-    startup_phase = "initializing",  # initializing -> data_ready -> ui_ready -> complete
+    startup_phase = "initializing", # initializing -> data_ready -> ui_ready -> complete
     lazy_plot_generation = TRUE,
     startup_events_queued = list(),
-    debounce_delay = 500,  # ms delay for auto-detection
+    debounce_delay = 500, # ms delay for auto-detection
     race_prevention_active = FALSE,
 
     # PR #12: Prevent duplicate autoloads
@@ -202,32 +202,32 @@ create_app_state <- function() {
   # UI State - Convert to reactiveValues for consistency
   app_state$ui <- shiny::reactiveValues(
     hide_anhoej_rules = FALSE,
-    updating_programmatically = FALSE,    # LOOP PROTECTION: Flag to prevent circular events during UI updates
-    last_programmatic_update = NULL,      # LOOP PROTECTION: Timestamp of last programmatic update
-    flag_reset_scheduled = FALSE,         # LOOP PROTECTION: Single-reset guarantee flag
+    updating_programmatically = FALSE, # LOOP PROTECTION: Flag to prevent circular events during UI updates
+    last_programmatic_update = NULL, # LOOP PROTECTION: Timestamp of last programmatic update
+    flag_reset_scheduled = FALSE, # LOOP PROTECTION: Single-reset guarantee flag
 
     # TOKEN-BASED TRACKING: Advanced loop protection infrastructure
     pending_programmatic_inputs = list(), # TOKEN TRACKING: Map of inputId -> {token, value, timestamp}
-    programmatic_token_counter = 0L,      # TOKEN GENERATION: Counter for unique token generation
-    queued_updates = list(),              # QUEUE SYSTEM: Queued UI updates for overlapping calls
-    queue_processing = FALSE,             # QUEUE SYSTEM: Flag to prevent multiple processors
+    programmatic_token_counter = 0L, # TOKEN GENERATION: Counter for unique token generation
+    queued_updates = list(), # QUEUE SYSTEM: Queued UI updates for overlapping calls
+    queue_processing = FALSE, # QUEUE SYSTEM: Flag to prevent multiple processors
 
     # FASE 3: PERFORMANCE MONITORING - Track system performance metrics
     performance_metrics = list(
-      total_updates = 0L,                 # METRIC: Total UI updates processed
-      queued_updates = 0L,                # METRIC: Total updates that were queued
-      tokens_consumed = 0L,               # METRIC: Total tokens consumed
-      queue_max_size = 0L,                # METRIC: Maximum queue size reached
-      avg_update_duration_ms = 0.0,       # METRIC: Average UI update duration
+      total_updates = 0L, # METRIC: Total UI updates processed
+      queued_updates = 0L, # METRIC: Total updates that were queued
+      tokens_consumed = 0L, # METRIC: Total tokens consumed
+      queue_max_size = 0L, # METRIC: Maximum queue size reached
+      avg_update_duration_ms = 0.0, # METRIC: Average UI update duration
       last_performance_reset = Sys.time() # METRIC: When metrics were last reset
     ),
 
     # FASE 3: MEMORY MANAGEMENT - Control memory usage and cleanup
     memory_limits = list(
-      max_queue_size = 50L,               # LIMIT: Maximum queue entries allowed
-      max_pending_tokens = 100L,          # LIMIT: Maximum pending tokens
-      token_cleanup_interval_sec = 300L,  # CLEANUP: Clean tokens every 5 minutes
-      performance_reset_interval_sec = 3600L  # RESET: Reset metrics every hour
+      max_queue_size = 50L, # LIMIT: Maximum queue entries allowed
+      max_pending_tokens = 100L, # LIMIT: Maximum pending tokens
+      token_cleanup_interval_sec = 300L, # CLEANUP: Clean tokens every 5 minutes
+      performance_reset_interval_sec = 3600L # RESET: Reset metrics every hour
     ),
 
     # AUTODEFAULT FLAGS
@@ -242,7 +242,7 @@ create_app_state <- function() {
 
   # Navigation State - For eventReactive patterns
   app_state$navigation <- shiny::reactiveValues(
-    trigger = 0  # Counter for triggering navigation-dependent reactives
+    trigger = 0 # Counter for triggering navigation-dependent reactives
   )
 
   # Visualization State - Convert to reactiveValues for consistency
@@ -260,7 +260,7 @@ create_app_state <- function() {
       crossings_signal = FALSE,
       any_signal = FALSE,
       message = "Afventer data",
-      has_valid_data = FALSE  # Track if we ever had valid data
+      has_valid_data = FALSE # Track if we ever had valid data
     ),
     is_computing = FALSE,
     plot_object = NULL,
@@ -272,7 +272,7 @@ create_app_state <- function() {
 
     # Race condition prevention guards
     cache_updating = FALSE,
-    plot_generation_in_progress = FALSE,  # Circuit breaker for overlapping plot generations
+    plot_generation_in_progress = FALSE, # Circuit breaker for overlapping plot generations
     # plot_cache_key removed - using Posit bindCache() instead
 
     # Configuration caching (migrated from reactiveVal)
@@ -281,20 +281,20 @@ create_app_state <- function() {
 
   # Error State - Convert to reactiveValues for consistency
   app_state$errors <- shiny::reactiveValues(
-    last_error = NULL,           # Last error details
-    error_count = 0L,           # Total error count
-    error_history = list(),     # Recent error history (max 10)
-    recovery_attempts = 0L,     # Number of recovery attempts
-    last_recovery_time = NULL   # Timestamp of last recovery
+    last_error = NULL, # Last error details
+    error_count = 0L, # Total error count
+    error_history = list(), # Recent error history (max 10)
+    recovery_attempts = 0L, # Number of recovery attempts
+    last_recovery_time = NULL # Timestamp of last recovery
   )
 
   # Infrastructure Management - Non-reactive system state for background tasks
   # NOTE: Using regular environment instead of reactiveValues for infrastructure
   # flags that need to be accessed from later::later() callbacks without reactive context
   app_state$infrastructure <- new.env(parent = emptyenv())
-  app_state$infrastructure$event_listeners_setup <- FALSE     # Prevent double registration of event listeners
-  app_state$infrastructure$session_active <- TRUE            # Session lifecycle tracking
-  app_state$infrastructure$background_tasks_active <- TRUE   # Background task control
+  app_state$infrastructure$event_listeners_setup <- FALSE # Prevent double registration of event listeners
+  app_state$infrastructure$session_active <- TRUE # Session lifecycle tracking
+  app_state$infrastructure$background_tasks_active <- TRUE # Background task control
 
   return(app_state)
 }
@@ -312,7 +312,7 @@ create_app_state <- function() {
 set_current_data <- function(app_state, value) {
   shiny::isolate({
     app_state$data$current_data <- value
-  # log_debug(paste("Data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
+    # log_debug(paste("Data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
   })
 }
 
@@ -320,7 +320,7 @@ set_current_data <- function(app_state, value) {
 set_original_data <- function(app_state, value) {
   shiny::isolate({
     app_state$data$original_data <- value
-  # log_debug(paste("Original data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
+    # log_debug(paste("Original data set with", if(is.null(value)) "NULL" else paste(nrow(value), "rows")), "STATE_MANAGEMENT")
   })
 }
 
@@ -350,7 +350,7 @@ get_current_data <- function(app_state) {
 #' @examples
 #' \dontrun{
 #' emit <- create_emit_api(app_state)
-#' emit$data_loaded()  # Triggers shiny::observeEvent(app_state$events$data_loaded, ...)
+#' emit$data_loaded() # Triggers shiny::observeEvent(app_state$events$data_loaded, ...)
 #' }
 #' @export
 create_emit_api <- function(app_state) {
@@ -382,12 +382,11 @@ create_emit_api <- function(app_state) {
           app_state$last_data_update_context <- list()
         }
         app_state$last_data_update_context <- list(
-          context = "data_loaded",  # SPRINT 4: Removed "legacy_" prefix
+          context = "data_loaded", # SPRINT 4: Removed "legacy_" prefix
           timestamp = Sys.time()
         )
       })
     },
-
     data_changed = function() {
       shiny::isolate({
         # Fire consolidated event only (legacy event firing removed)
@@ -398,7 +397,7 @@ create_emit_api <- function(app_state) {
           app_state$last_data_update_context <- list()
         }
         app_state$last_data_update_context <- list(
-          context = "data_changed",  # SPRINT 4: Removed "legacy_" prefix
+          context = "data_changed", # SPRINT 4: Removed "legacy_" prefix
           timestamp = Sys.time()
         )
       })
@@ -410,7 +409,6 @@ create_emit_api <- function(app_state) {
         app_state$events$auto_detection_started <- app_state$events$auto_detection_started + 1L
       })
     },
-
     auto_detection_completed = function() {
       shiny::isolate({
         app_state$events$auto_detection_completed <- app_state$events$auto_detection_completed + 1L
@@ -424,7 +422,6 @@ create_emit_api <- function(app_state) {
         app_state$events$ui_sync_requested <- app_state$events$ui_sync_requested + 1L
       })
     },
-
     ui_sync_completed = function() {
       shiny::isolate({
         app_state$events$ui_sync_completed <- app_state$events$ui_sync_completed + 1L
@@ -458,19 +455,16 @@ create_emit_api <- function(app_state) {
         app_state$events$session_started <- app_state$events$session_started + 1L
       })
     },
-
     session_reset = function() {
       shiny::isolate({
         app_state$events$session_reset <- app_state$events$session_reset + 1L
       })
     },
-
     manual_autodetect_button = function() {
       shiny::isolate({
         app_state$events$manual_autodetect_button <- app_state$events$manual_autodetect_button + 1L
       })
     },
-
     test_mode_ready = function() {
       shiny::isolate({
         app_state$events$test_mode_ready <- app_state$events$test_mode_ready + 1L
@@ -486,7 +480,6 @@ create_emit_api <- function(app_state) {
         app_state$events$test_mode_startup_phase_changed <- app_state$events$test_mode_startup_phase_changed + 1L
       })
     },
-
     test_mode_debounced_autodetect = function() {
       shiny::isolate({
         app_state$events$test_mode_debounced_autodetect <- app_state$events$test_mode_debounced_autodetect + 1L
@@ -523,7 +516,6 @@ create_emit_api <- function(app_state) {
         )
       })
     },
-
     processing_error = function() {
       shiny::isolate({
         app_state$events$error_occurred <- app_state$events$error_occurred + 1L
@@ -534,7 +526,6 @@ create_emit_api <- function(app_state) {
         )
       })
     },
-
     network_error = function() {
       shiny::isolate({
         app_state$events$error_occurred <- app_state$events$error_occurred + 1L
@@ -545,7 +536,6 @@ create_emit_api <- function(app_state) {
         )
       })
     },
-
     recovery_completed = function() {
       shiny::isolate({
         app_state$events$recovery_completed <- app_state$events$recovery_completed + 1L
@@ -558,19 +548,16 @@ create_emit_api <- function(app_state) {
         app_state$events$ui_sync_requested <- app_state$events$ui_sync_requested + 1L
       })
     },
-
     column_choices_changed = function() {
       shiny::isolate({
         app_state$events$column_choices_changed <- app_state$events$column_choices_changed + 1L
       })
     },
-
     form_reset_needed = function() {
       shiny::isolate({
         app_state$events$form_reset_needed <- app_state$events$form_reset_needed + 1L
       })
     },
-
     form_restore_needed = function() {
       shiny::isolate({
         app_state$events$form_restore_needed <- app_state$events$form_restore_needed + 1L

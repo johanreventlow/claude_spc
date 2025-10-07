@@ -122,7 +122,7 @@ setup_visualization <- function(input, output, session, app_state) {
   # Operation completed
   visualization <- visualizationModuleServer(
     "visualization",
-    data_reactive = NULL,  # Module uses its own event-driven data access
+    data_reactive = NULL, # Module uses its own event-driven data access
     column_config_reactive = column_config,
     chart_type_reactive = chart_type_reactive,
     target_value_reactive = shiny::debounce(shiny::reactive({
@@ -131,7 +131,7 @@ setup_visualization <- function(input, output, session, app_state) {
       }
 
       # Use unified axis value processing with chart-type awareness
-      chart_type <- chart_type_reactive()  # Get chart type from reactive
+      chart_type <- chart_type_reactive() # Get chart type from reactive
       y_unit <- if (is.null(input$y_axis_unit) || input$y_axis_unit == "") NULL else input$y_axis_unit
 
       # Get Y sample data for heuristics (if no explicit user unit)
@@ -149,18 +149,18 @@ setup_visualization <- function(input, output, session, app_state) {
       return(normalize_axis_value(
         x = input$target_value,
         user_unit = y_unit,
-        col_unit = NULL,  # Could be added if we have column metadata
+        col_unit = NULL, # Could be added if we have column metadata
         y_sample = y_sample,
-        chart_type = chart_type  # This determines internal_unit automatically
+        chart_type = chart_type # This determines internal_unit automatically
       ))
-    }), millis = 800),  # Debounce input changes to prevent excessive plot regeneration
+    }), millis = 800), # Debounce input changes to prevent excessive plot regeneration
     centerline_value_reactive = shiny::debounce(shiny::reactive({
       if (is.null(input$centerline_value) || input$centerline_value == "") {
         return(NULL)
       }
 
       # Use identical processing as target_value_reactive for consistency
-      chart_type <- chart_type_reactive()  # Get chart type from reactive
+      chart_type <- chart_type_reactive() # Get chart type from reactive
       y_unit <- if (is.null(input$y_axis_unit) || input$y_axis_unit == "") NULL else input$y_axis_unit
 
       # Get Y sample data for heuristics (if no explicit user unit)
@@ -178,11 +178,11 @@ setup_visualization <- function(input, output, session, app_state) {
       return(normalize_axis_value(
         x = input$centerline_value,
         user_unit = y_unit,
-        col_unit = NULL,  # Could be added if we have column metadata
+        col_unit = NULL, # Could be added if we have column metadata
         y_sample = y_sample,
-        chart_type = chart_type  # This determines internal_unit automatically
+        chart_type = chart_type # This determines internal_unit automatically
       ))
-    }), millis = 800),  # Debounce input changes to prevent excessive plot regeneration
+    }), millis = 800), # Debounce input changes to prevent excessive plot regeneration
     skift_config_reactive = shiny::reactive({
       # Bestem om vi skal vise faser baseret på Skift kolonne valg og data
       data <- app_state$data$current_data

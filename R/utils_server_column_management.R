@@ -78,7 +78,7 @@ setup_column_management <- function(input, output, session, app_state, emit) {
     safe_operation(
       "Manual auto-detection trigger",
       code = {
-        emit$manual_autodetect_button()  # This triggers the event listener with frozen state bypass
+        emit$manual_autodetect_button() # This triggers the event listener with frozen state bypass
       },
       fallback = NULL,
       session = session,
@@ -348,7 +348,7 @@ setup_data_table <- function(input, output, session, app_state, emit) {
     current_data_check <- app_state$data$current_data
     shiny::req(current_data_check)
 
-  # log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
+    # log_debug("Rendering table with data dimensions:", paste(dim(current_data_check), collapse = "x"), .context = "DATA_TABLE")
 
     # Inkluder table_version for at tvinge re-render efter gendannelse
     # Use unified state management

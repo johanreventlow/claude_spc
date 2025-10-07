@@ -19,12 +19,11 @@
 #' - Intelligent debouncing for user interactions
 #'
 create_optimized_data_pipeline <- function(app_state, emit) {
-
   # Consolidated data processing reactive with debouncing
   data_processing_pipeline <- shiny::debounce(shiny::reactive({
     shiny::req(app_state$data$current_data)
 
-  # log_debug("Starting optimized data processing pipeline", .context = "PERFORMANCE_OPT")
+    # log_debug("Starting optimized data processing pipeline", .context = "PERFORMANCE_OPT")
 
     # Batch all data operations together
     raw_data <- app_state$data$current_data
@@ -64,7 +63,7 @@ create_optimized_data_pipeline <- function(app_state, emit) {
     # Prepare UI updates
     ui_updates <- prepare_batch_ui_updates(autodetect_results)
 
-  # log_debug("Optimized data processing pipeline completed", .context = "PERFORMANCE_OPT")
+    # log_debug("Optimized data processing pipeline completed", .context = "PERFORMANCE_OPT")
 
     list(
       processed_data = processed_data,
@@ -73,7 +72,7 @@ create_optimized_data_pipeline <- function(app_state, emit) {
       ready_for_plotting = TRUE,
       pipeline_timestamp = Sys.time()
     )
-  }), millis = 800)  # Aggressive debouncing for performance
+  }), millis = 800) # Aggressive debouncing for performance
 
   return(data_processing_pipeline)
 }
@@ -95,7 +94,7 @@ detect_columns_with_cache <- function(data, app_state = NULL) {
   cached_result <- get_cache_value(cache_key)
 
   if (!is.null(cached_result)) {
-  # log_debug("Using cached auto-detection result", .context = "PERFORMANCE_OPT")
+    # log_debug("Using cached auto-detection result", .context = "PERFORMANCE_OPT")
     return(cached_result)
   }
 
@@ -115,7 +114,7 @@ detect_columns_with_cache <- function(data, app_state = NULL) {
   # log_debug("Performing fresh auto-detection", .context = "PERFORMANCE_OPT")
   autodetect_result <- autodetect_engine(
     data = data,
-    trigger_type = "manual",  # Use manual trigger for cache scenarios
+    trigger_type = "manual", # Use manual trigger for cache scenarios
     app_state = app_state,
     emit = minimal_emit
   )
@@ -189,7 +188,7 @@ detect_and_convert_types_batch <- function(data) {
   columns_to_convert <- identify_conversion_candidates(data)
 
   if (length(columns_to_convert) == 0) {
-  # log_debug("No columns need type conversion", .context = "PERFORMANCE_OPT")
+    # log_debug("No columns need type conversion", .context = "PERFORMANCE_OPT")
     return(data)
   }
 
@@ -206,7 +205,7 @@ detect_and_convert_types_batch <- function(data) {
           data[[col_name]] <- parse_danish_date_vectorized(data[[col_name]])
         }
       },
-      fallback = NULL  # Keep original on error
+      fallback = NULL # Keep original on error
     )
   }
 
@@ -294,7 +293,7 @@ setup_optimized_event_listeners <- function(app_state, emit, session) {
 
   # Single consolidated observer for data changes - migrated to data_updated
   shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = get_priority("STATE_MANAGEMENT"), {
-  # log_debug("Optimized data_updated handler triggered", .context = "PERFORMANCE_OPT")
+    # log_debug("Optimized data_updated handler triggered", .context = "PERFORMANCE_OPT")
 
     # Process through optimized pipeline
     result <- data_pipeline()
@@ -312,7 +311,7 @@ setup_optimized_event_listeners <- function(app_state, emit, session) {
       emit$auto_detection_completed()
       emit$ui_sync_completed()
 
-  # log_debug("Optimized pipeline completed successfully", .context = "PERFORMANCE_OPT")
+      # log_debug("Optimized pipeline completed successfully", .context = "PERFORMANCE_OPT")
     }
   })
 
@@ -327,13 +326,15 @@ setup_optimized_event_listeners <- function(app_state, emit, session) {
 #' @param updates List of UI updates to apply
 #'
 apply_batch_ui_updates <- function(session, updates) {
-  if (length(updates) == 0) return()
+  if (length(updates) == 0) {
+    return()
+  }
 
   # log_debug(paste("Applying", length(updates), "UI updates in batch"), "PERFORMANCE_OPT")
 
   # Use session$onFlushed to ensure updates are applied together
   session$onFlushed(function() {
-  # log_debug("Batch UI updates completed", .context = "PERFORMANCE_OPT")
+    # log_debug("Batch UI updates completed", .context = "PERFORMANCE_OPT")
   })
 
   # Apply all updates

@@ -22,10 +22,9 @@
 #' - Export af logs til forskellige formater
 #'
 setup_shinylogs <- function(enable_tracking = TRUE,
-                           enable_errors = TRUE,
-                           enable_performances = TRUE,
-                           log_directory = "logs/") {
-
+                            enable_errors = TRUE,
+                            enable_performances = TRUE,
+                            log_directory = "logs/") {
   # log_info will be available when this is called from app_server
 
   # Ensure log directory exists
@@ -43,15 +42,15 @@ setup_shinylogs <- function(enable_tracking = TRUE,
     shinylogs.save_performances = enable_performances,
 
     # Storage configuration
-    shinylogs.storage_mode = "file",  # Can be "file" or "database"
+    shinylogs.storage_mode = "file", # Can be "file" or "database"
     shinylogs.log_dir = log_directory,
 
     # Performance thresholds
-    shinylogs.performance_threshold = 0.5,  # 500ms threshold for slow operations
+    shinylogs.performance_threshold = 0.5, # 500ms threshold for slow operations
 
     # Additional tracking
-    shinylogs.max_entries = 10000,  # Maximum log entries to keep
-    shinylogs.compress = TRUE       # Compress old log files
+    shinylogs.max_entries = 10000, # Maximum log entries to keep
+    shinylogs.compress = TRUE # Compress old log files
   )
 
   # Configuration completed - logging will be available when called from app_server
@@ -69,9 +68,8 @@ setup_shinylogs <- function(enable_tracking = TRUE,
 #' @param app_name Navn på applikationen (default: "SPC_APP")
 #'
 initialize_shinylogs_tracking <- function(session,
-                                        app_name = "SPC_APP",
-                                        log_directory = "logs/") {
-
+                                          app_name = "SPC_APP",
+                                          log_directory = "logs/") {
   # Initializing shinylogs tracking
 
   # Start tracking with correct API
@@ -167,12 +165,11 @@ shinylogs_dashboard_ui <- function(id, title = "Application Logs") {
 #'
 shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
   shiny::moduleServer(id, function(input, output, session) {
-
     # Starting shinylogs dashboard server
 
     # Reactive log data
     log_data <- shiny::reactive({
-      shiny::invalidateLater(5000, session)  # Update every 5 seconds
+      shiny::invalidateLater(5000, session) # Update every 5 seconds
 
       safe_operation(
         "Read shinylogs database",
@@ -225,8 +222,8 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
 
       if (nrow(perf_logs) == 0) {
         return(ggplot() +
-               ggplot2::labs(title = "No performance data available") +
-               ggplot2::theme_minimal())
+          ggplot2::labs(title = "No performance data available") +
+          ggplot2::theme_minimal())
       }
 
       ggplot(perf_logs, aes(x = as.POSIXct(timestamp), y = duration)) +
@@ -279,7 +276,6 @@ shinylogs_dashboard_server <- function(id, log_directory = "logs/") {
 #' @param session Shiny session for tracking
 #'
 integrate_shinylogs_with_logging <- function(session) {
-
   # Integrating shinylogs with existing logging system
 
   # Store original log functions
@@ -383,7 +379,7 @@ integrate_shinylogs_with_logging <- function(session) {
 #' Tjekker environment variable for at kontrollere shinylogs funktioner
 #'
 should_enable_shinylogs <- function() {
-  enable_flag <- Sys.getenv("ENABLE_SHINYLOGS", "TRUE")  # Default enabled
+  enable_flag <- Sys.getenv("ENABLE_SHINYLOGS", "TRUE") # Default enabled
   return(toupper(enable_flag) %in% c("TRUE", "1", "YES", "ON"))
 }
 

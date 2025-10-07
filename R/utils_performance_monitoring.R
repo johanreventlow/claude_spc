@@ -44,9 +44,11 @@ get_qic_call_counts <- function() {
     actual_qic_calls = actual_qic_calls
   )
 
-  log_debug(paste("Current QIC call counts:",
-                  "generateSPCPlot:", generateSPCPlot_calls,
-                  "actual qic():", actual_qic_calls), "PERFORMANCE_MONITOR")
+  log_debug(paste(
+    "Current QIC call counts:",
+    "generateSPCPlot:", generateSPCPlot_calls,
+    "actual qic():", actual_qic_calls
+  ), "PERFORMANCE_MONITOR")
 
   return(result)
 }
@@ -87,12 +89,14 @@ monitor_startup_performance <- function(timeout_seconds = 30) {
     calls_per_second_actual_qic = (final_counts$actual_qic_calls - initial_counts$actual_qic_calls) / duration
   )
 
-  log_info(paste("Startup performance results:",
-                 "Duration:", round(duration, 2), "sec",
-                 "generateSPCPlot calls:", result$total_generateSPCPlot_calls,
-                 "Actual qic() calls:", result$total_actual_qic_calls,
-                 "Rate:", round(result$calls_per_second_generateSPCPlot, 2), "generateSPCPlot/sec,",
-                 round(result$calls_per_second_actual_qic, 2), "qic()/sec"), "PERFORMANCE_MONITOR")
+  log_info(paste(
+    "Startup performance results:",
+    "Duration:", round(duration, 2), "sec",
+    "generateSPCPlot calls:", result$total_generateSPCPlot_calls,
+    "Actual qic() calls:", result$total_actual_qic_calls,
+    "Rate:", round(result$calls_per_second_generateSPCPlot, 2), "generateSPCPlot/sec,",
+    round(result$calls_per_second_actual_qic, 2), "qic()/sec"
+  ), "PERFORMANCE_MONITOR")
 
   return(result)
 }
@@ -150,7 +154,8 @@ track_memory_usage <- function(context = "unknown") {
   .startup_metrics$memory_snapshots[[length(.startup_metrics$memory_snapshots) + 1]] <- memory_info
 
   log_debug(paste("Memory tracked:", context, "-", current_memory_mb, "MB"),
-           .context = "PERFORMANCE_MONITORING")
+    .context = "PERFORMANCE_MONITORING"
+  )
 }
 
 #' Track QIC function call with context
@@ -179,8 +184,10 @@ track_qic_call <- function(context = "unknown", details = list()) {
 
   .startup_metrics$qic_call_details[[length(.startup_metrics$qic_call_details) + 1]] <- call_info
 
-  log_debug(paste("QIC call", .startup_metrics$qic_calls, "tracked - context:", context),
-           "PERFORMANCE_MONITORING")
+  log_debug(
+    paste("QIC call", .startup_metrics$qic_calls, "tracked - context:", context),
+    "PERFORMANCE_MONITORING"
+  )
 }
 
 #' Track generateSPCPlot function call
@@ -209,8 +216,10 @@ track_generateSPCPlot_call <- function(context = "unknown", details = list()) {
 
   .startup_metrics$generateSPCPlot_call_details[[length(.startup_metrics$generateSPCPlot_call_details) + 1]] <- call_info
 
-  log_debug(paste("generateSPCPlot call", .startup_metrics$generateSPCPlot_calls, "tracked - context:", context),
-           "PERFORMANCE_MONITORING")
+  log_debug(
+    paste("generateSPCPlot call", .startup_metrics$generateSPCPlot_calls, "tracked - context:", context),
+    "PERFORMANCE_MONITORING"
+  )
 }
 
 #' Track event firing
@@ -266,8 +275,10 @@ set_startup_phase <- function(phase) {
 
   .startup_metrics$startup_phase <- phase
 
-  log_debug(paste("Startup phase set to:", phase, "at", round(time_since_start, 3), "seconds"),
-           "PERFORMANCE_MONITORING")
+  log_debug(
+    paste("Startup phase set to:", phase, "at", round(time_since_start, 3), "seconds"),
+    "PERFORMANCE_MONITORING"
+  )
 }
 
 #' Get enhanced startup metrics
@@ -305,8 +316,8 @@ get_enhanced_startup_metrics <- function() {
     phase_times = .startup_metrics$phase_times,
 
     # Detailed call info
-    qic_call_details = if(exists("qic_call_details", envir = .startup_metrics)) .startup_metrics$qic_call_details else list(),
-    generateSPCPlot_call_details = if(exists("generateSPCPlot_call_details", envir = .startup_metrics)) .startup_metrics$generateSPCPlot_call_details else list()
+    qic_call_details = if (exists("qic_call_details", envir = .startup_metrics)) .startup_metrics$qic_call_details else list(),
+    generateSPCPlot_call_details = if (exists("generateSPCPlot_call_details", envir = .startup_metrics)) .startup_metrics$generateSPCPlot_call_details else list()
   )
 
   return(result)
@@ -353,8 +364,10 @@ print_enhanced_startup_summary <- function() {
   if (length(metrics$event_sequence) > 0) {
     for (i in seq_along(metrics$event_sequence)) {
       event <- metrics$event_sequence[[i]]
-      cat(sprintf("  %2d. %s (%.3fs) - %s\n",
-                  i, event$event, event$time_since_start, event$context))
+      cat(sprintf(
+        "  %2d. %s (%.3fs) - %s\n",
+        i, event$event, event$time_since_start, event$context
+      ))
     }
   } else {
     cat("  No event sequence recorded\n")

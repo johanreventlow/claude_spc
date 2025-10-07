@@ -40,7 +40,8 @@ main_app_server <- function(input, output, session) {
   log_debug(paste("Server starting - Session ID:", hashed_token), .context = "APP_SERVER")
 
   debug_log("SPC App server initialization started", "SESSION_LIFECYCLE",
-            level = "INFO", session_id = hashed_token)
+    level = "INFO", session_id = hashed_token
+  )
 
   # Server components now loaded globally in global.R for better performance
 
@@ -99,7 +100,7 @@ main_app_server <- function(input, output, session) {
     "Setup event listeners",
     code = {
       setup_event_listeners(app_state, emit, input, output, session, ui_service)
-      app_state$infrastructure$event_listeners_setup <- TRUE  # SUCCESS: Mark as completed
+      app_state$infrastructure$event_listeners_setup <- TRUE # SUCCESS: Mark as completed
     },
     fallback = function(e) {
       log_error(paste("ERROR in setup_event_listeners:", e$message), .context = "APP_SERVER")
@@ -111,11 +112,16 @@ main_app_server <- function(input, output, session) {
   # Emergency observer removed - event listeners setup now reliable
 
   # Take initial state snapshot - delay to avoid reactive context issues
-  shiny::observeEvent(shiny::reactive(TRUE), {
-    shiny::isolate({
-      initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = hashed_token)
-    })
-  }, once = TRUE, priority = OBSERVER_PRIORITIES$LOW, ignoreInit = FALSE)
+  shiny::observeEvent(shiny::reactive(TRUE),
+    {
+      shiny::isolate({
+        initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = hashed_token)
+      })
+    },
+    once = TRUE,
+    priority = OBSERVER_PRIORITIES$LOW,
+    ignoreInit = FALSE
+  )
 
   # FASE 5: Memory management setup
   log_debug("Line 150 executed - about to setup memory management", .context = "DEBUG")
@@ -133,38 +139,38 @@ main_app_server <- function(input, output, session) {
       shiny::withReactiveDomain(session, {
         # Recursive cleanup scheduler
         schedule_periodic_cleanup <- function() {
-        # Check if session is still active before continuing
-        session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
-        if (session_check) {
-          log_debug("Stopping periodic cleanup - session ended", .context = "BACKGROUND_CLEANUP")
-          return()
-        }
+          # Check if session is still active before continuing
+          session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
+          if (session_check) {
+            log_debug("Stopping periodic cleanup - session ended", .context = "BACKGROUND_CLEANUP")
+            return()
+          }
 
-        log_debug("Running scheduled comprehensive system cleanup", .context = "BACKGROUND_CLEANUP")
-        safe_operation(
-          "Scheduled system cleanup",
-          code = {
-            comprehensive_system_cleanup(app_state)
-            log_debug("Scheduled cleanup completed successfully", .context = "BACKGROUND_CLEANUP")
-          },
-          fallback = NULL,
-          session = session,
-          error_type = "processing",
-          emit = emit,
-          app_state = app_state
-        )
+          log_debug("Running scheduled comprehensive system cleanup", .context = "BACKGROUND_CLEANUP")
+          safe_operation(
+            "Scheduled system cleanup",
+            code = {
+              comprehensive_system_cleanup(app_state)
+              log_debug("Scheduled cleanup completed successfully", .context = "BACKGROUND_CLEANUP")
+            },
+            fallback = NULL,
+            session = session,
+            error_type = "processing",
+            emit = emit,
+            app_state = app_state
+          )
 
-        # Schedule next cleanup only if session is still active
-        should_continue <- app_state$infrastructure$session_active && app_state$infrastructure$background_tasks_active
-        if (should_continue) {
-          later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
+          # Schedule next cleanup only if session is still active
+          should_continue <- app_state$infrastructure$session_active && app_state$infrastructure$background_tasks_active
+          if (should_continue) {
+            later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
+          }
         }
-      }
 
         # Start the periodic cleanup cycle
         schedule_periodic_cleanup()
       })
-    }, delay = cleanup_interval_minutes * 60)  # Initial delay
+    }, delay = cleanup_interval_minutes * 60) # Initial delay
 
     log_debug(paste("Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), .context = "APP_SERVER")
   } else {
@@ -178,40 +184,40 @@ main_app_server <- function(input, output, session) {
       shiny::withReactiveDomain(session, {
         # Recursive performance reporting
         schedule_periodic_reporting <- function() {
-        # Check if session is still active before continuing
-        session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
-        if (session_check) {
-          return()
-        }
-        safe_operation(
-          "Performance report generation",
-          code = {
-            report <- get_performance_report(app_state)
-            log_debug(report$formatted_text, .context = "PERFORMANCE_MONITOR")
+          # Check if session is still active before continuing
+          session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
+          if (session_check) {
+            return()
+          }
+          safe_operation(
+            "Performance report generation",
+            code = {
+              report <- get_performance_report(app_state)
+              log_debug(report$formatted_text, .context = "PERFORMANCE_MONITOR")
 
-            # Check if system needs attention
-            if (report$health_status == "WARNING") {
-              log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), .context = "PERFORMANCE_MONITOR")
-            }
-          },
-          fallback = NULL,
-          session = session,
-          error_type = "processing",
-          emit = emit,
-          app_state = app_state
-        )
+              # Check if system needs attention
+              if (report$health_status == "WARNING") {
+                log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), .context = "PERFORMANCE_MONITOR")
+              }
+            },
+            fallback = NULL,
+            session = session,
+            error_type = "processing",
+            emit = emit,
+            app_state = app_state
+          )
 
-        # Schedule next report only if session is still active
-        should_continue <- app_state$infrastructure$session_active && app_state$infrastructure$background_tasks_active
-        if (should_continue) {
-          later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
+          # Schedule next report only if session is still active
+          should_continue <- app_state$infrastructure$session_active && app_state$infrastructure$background_tasks_active
+          if (should_continue) {
+            later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
+          }
         }
-      }
 
         # Start the periodic reporting cycle
         schedule_periodic_reporting()
       })
-    }, delay = report_interval_minutes * 60)  # Initial delay
+    }, delay = report_interval_minutes * 60) # Initial delay
 
     log_debug(paste("Performance monitoring scheduled every", report_interval_minutes, "minutes"), .context = "APP_SERVER")
   }
@@ -220,11 +226,13 @@ main_app_server <- function(input, output, session) {
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
   test_mode_auto_load <- get_test_mode_auto_load()
 
-  debug_log("Checking TEST_MODE configuration", "SESSION_LIFECYCLE", level = "TRACE",
-            context = list(
-              TEST_MODE_AUTO_LOAD = test_mode_auto_load
-            ),
-            session_id = hashed_token)
+  debug_log("Checking TEST_MODE configuration", "SESSION_LIFECYCLE",
+    level = "TRACE",
+    context = list(
+      TEST_MODE_AUTO_LOAD = test_mode_auto_load
+    ),
+    session_id = hashed_token
+  )
 
   if (test_mode_auto_load) {
     # Phase 3: Initialize test mode optimization settings
@@ -384,9 +392,13 @@ main_app_server <- function(input, output, session) {
   debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = hashed_token)
 
   # FASE 3: Emit session_started event for name-only detection
-  shiny::observeEvent(shiny::reactive(TRUE), {
-    emit$session_started()
-  }, once = TRUE, ignoreInit = FALSE)
+  shiny::observeEvent(shiny::reactive(TRUE),
+    {
+      emit$session_started()
+    },
+    once = TRUE,
+    ignoreInit = FALSE
+  )
 
   # TEST MODE: Emit test_mode_ready event AFTER all observers are set up
   if (test_mode_auto_load) {
@@ -397,10 +409,14 @@ main_app_server <- function(input, output, session) {
       if (!is.null(current_data_check)) {
         emit$test_mode_ready()
       }
-    }) |> bindEvent({
-      # Unified state: Use centralized state for reactive triggers
-      app_state$data$current_data
-    }, once = TRUE, ignoreNULL = TRUE)
+    }) |> bindEvent(
+      {
+        # Unified state: Use centralized state for reactive triggers
+        app_state$data$current_data
+      },
+      once = TRUE,
+      ignoreNULL = TRUE
+    )
   }
 
   # Initial UI Setup --------------------------------------------------------
@@ -448,11 +464,13 @@ main_app_server <- function(input, output, session) {
 
     # Log session statistics
     log_info(paste("Session ended - Observer count:", obs_manager$count()), .context = "APP_SERVER")
-    debug_log("Session ended successfully", "SESSION_LIFECYCLE", level = "INFO",
-              context = list(
-                session_duration = round(session_lifecycle_result$total_duration, 3),
-                events_tracked = length(session_lifecycle_result$events)
-              ),
-              session_id = hashed_token)
+    debug_log("Session ended successfully", "SESSION_LIFECYCLE",
+      level = "INFO",
+      context = list(
+        session_duration = round(session_lifecycle_result$total_duration, 3),
+        events_tracked = length(session_lifecycle_result$events)
+      ),
+      session_id = hashed_token
+    )
   })
 }

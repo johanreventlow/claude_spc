@@ -11,7 +11,6 @@
 #' @return List med form update funktioner
 #' @export
 create_form_update_service <- function(session) {
-
   #' Update individual form field based on type
   #'
   #' @param field_id Field identifier
@@ -150,7 +149,6 @@ create_form_update_service <- function(session) {
 #' @return List med visibility control funktioner
 #' @export
 create_ui_visibility_service <- function(session) {
-
   list(
     #' Toggle single UI element visibility
     #'
@@ -222,7 +220,6 @@ create_ui_visibility_service <- function(session) {
 #' @return List med column choice update funktioner
 #' @export
 create_column_choice_service <- function(session, app_state) {
-
   # Standard column input IDs
   .standard_columns <- c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
 
@@ -321,7 +318,9 @@ create_column_choice_service <- function(session, app_state) {
     #'
     #' @param detection_results Auto-detection results from app_state
     update_from_detection = function(detection_results) {
-      if (is.null(detection_results)) return()
+      if (is.null(detection_results)) {
+        return()
+      }
 
       safe_operation(
         "Update column choices from auto-detection",

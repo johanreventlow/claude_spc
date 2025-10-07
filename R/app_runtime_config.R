@@ -30,7 +30,6 @@ initialize_runtime_config <- function(override_options = list(), use_environment
 
     # Convert profile to legacy format for backward compatibility
     config <- convert_profile_to_legacy_config(profile)
-
   } else {
     # log_debug( "Using legacy configuration approach", .context = "RUNTIME_CONFIG")
 
@@ -168,24 +167,27 @@ setup_testing_config <- function(override_options = list()) {
   )
 
   # Phase 3: Test mode optimization settings
-  testing_golem_config <- tryCatch({
-    # Skip golem config during package loading to avoid freeze
-    if (exists("SPCify") && "package:SPCify" %in% search()) {
-      # Use our custom get_golem_config when package is loaded
-      if (exists("get_golem_config", mode = "function")) {
-        golem_config <- get_golem_config("testing")
-        golem_config %||% list()
+  testing_golem_config <- tryCatch(
+    {
+      # Skip golem config during package loading to avoid freeze
+      if (exists("SPCify") && "package:SPCify" %in% search()) {
+        # Use our custom get_golem_config when package is loaded
+        if (exists("get_golem_config", mode = "function")) {
+          golem_config <- get_golem_config("testing")
+          golem_config %||% list()
+        } else {
+          list()
+        }
       } else {
+        # During package loading, skip golem config to avoid freeze
         list()
       }
-    } else {
-      # During package loading, skip golem config to avoid freeze
+    },
+    error = function(e) {
+      # Fallback if golem config is not available
       list()
     }
-  }, error = function(e) {
-    # Fallback if golem config is not available
-    list()
-  })
+  )
 
   testing_config$startup_debounce_ms <- testing_golem_config$startup_debounce_ms %||% 500
   testing_config$lazy_plot_generation <- testing_golem_config$lazy_plot_generation %||% TRUE
@@ -222,12 +224,12 @@ setup_performance_config <- function(override_options = list()) {
 
   if (env_type == "production") {
     # Production: More conservative timeouts
-    perf_config$debounce$input_change <- 500  # Slower for stability
-    perf_config$thresholds$reactive_warning <- 1.0  # More tolerance
+    perf_config$debounce$input_change <- 500 # Slower for stability
+    perf_config$thresholds$reactive_warning <- 1.0 # More tolerance
   } else if (env_type == "development") {
     # Development: Faster response for productivity
-    perf_config$debounce$input_change <- 200  # Faster feedback
-    perf_config$thresholds$reactive_warning <- 0.3  # Stricter monitoring
+    perf_config$debounce$input_change <- 200 # Faster feedback
+    perf_config$thresholds$reactive_warning <- 0.3 # Stricter monitoring
   }
 
   return(perf_config)
@@ -311,11 +313,11 @@ determine_auto_restore_setting <- function(override_options) {
 
   # Environment-based defaults
   if (exists("is_prod_mode", mode = "function") && is_prod_mode()) {
-    return(TRUE)   # Enable in production for user convenience
+    return(TRUE) # Enable in production for user convenience
   } else if (exists("is_dev_mode", mode = "function") && is_dev_mode()) {
-    return(FALSE)  # Disable in development for clean testing
+    return(FALSE) # Disable in development for clean testing
   } else {
-    return(FALSE)  # Safe default
+    return(FALSE) # Safe default
   }
 }
 
@@ -345,11 +347,11 @@ determine_test_mode_setting <- function(override_options) {
 
   # Fallback to environment-based logic
   if (exists("is_prod_mode", mode = "function") && is_prod_mode()) {
-    return(FALSE)  # Safe default for production
+    return(FALSE) # Safe default for production
   } else if (exists("is_dev_mode", mode = "function") && is_dev_mode()) {
-    return(TRUE)   # Convenient default for development
+    return(TRUE) # Convenient default for development
   } else {
-    return(FALSE)  # Safe default for unknown contexts
+    return(FALSE) # Safe default for unknown contexts
   }
 }
 
@@ -374,9 +376,9 @@ determine_debug_mode_setting <- function(override_options) {
 
   # Environment-based defaults
   if (exists("is_dev_mode", mode = "function")) {
-    return(is_dev_mode())  # Enable in development by default
+    return(is_dev_mode()) # Enable in development by default
   } else {
-    return(interactive())  # Fallback to interactive session detection
+    return(interactive()) # Fallback to interactive session detection
   }
 }
 
@@ -401,11 +403,11 @@ determine_log_level <- function(override_options) {
 
   # Environment-based defaults
   if (exists("is_prod_mode", mode = "function") && is_prod_mode()) {
-    return("ERROR")  # Minimal logging in production
+    return("ERROR") # Minimal logging in production
   } else if (exists("is_dev_mode", mode = "function") && is_dev_mode()) {
-    return("DEBUG")  # Verbose logging in development
+    return("DEBUG") # Verbose logging in development
   } else {
-    return("INFO")   # Moderate logging for unknown contexts
+    return("INFO") # Moderate logging for unknown contexts
   }
 }
 
@@ -462,7 +464,7 @@ convert_profile_to_legacy_config <- function(profile) {
     # Development configuration
     development = list(
       auto_restore_enabled = profile$session$auto_restore_session,
-      default_port = 3838,  # Default value
+      default_port = 3838, # Default value
       hot_reload_enabled = profile$ui$enable_hot_reload,
       enhanced_debugging = profile$logging$enable_debug_mode
     ),

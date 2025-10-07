@@ -48,16 +48,15 @@ app_ui <- function(request) {
 #' @importFrom golem add_resource_path activate_js favicon bundle_resources
 #' @noRd
 golem_add_external_resources <- function() {
-
   golem::add_resource_path(
-    'www', app_sys('app/www')
+    "www", app_sys("app/www")
   )
 
   shiny::tags$head(
     golem::favicon(),
     golem::bundle_resources(
-      path = app_sys('app/www'),
-      app_title = 'SPCify'
+      path = app_sys("app/www"),
+      app_title = "SPCify"
     )
     # Add here other external resources
     # for example, you can add shinyalert::useShinyalert()
@@ -117,13 +116,12 @@ app_sys <- function(...) {
 #'
 #' @noRd
 get_golem_config <- function(
-  value,
-  config = Sys.getenv(
-    "GOLEM_CONFIG_ACTIVE",
-    "default"
-  ),
-  use_parent = TRUE
-) {
+    value,
+    config = Sys.getenv(
+      "GOLEM_CONFIG_ACTIVE",
+      "default"
+    ),
+    use_parent = TRUE) {
   # Avoid app_sys during package loading to prevent freeze
   config_file <- "inst/golem-config.yml"
   if (!file.exists(config_file)) {
