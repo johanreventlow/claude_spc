@@ -1191,15 +1191,34 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
     style = style
   )
 
-  h_native <- grid::grobHeight(g)
+  # CRITICAL FIX: Force grob rendering by calling makeContent
+  # Marquee grobs use lazy evaluation and may not have dimensions until rendered
+  tryCatch({
+    g_rendered <- grid::makeContent(g)
+    h_native <- grid::grobHeight(g_rendered)
+  }, error = function(e) {
+    # Fallback to direct measurement if makeContent fails
+    h_native <<- grid::grobHeight(g)
+  })
+
+  # DEBUG: Print native grob height
+  h_native_value <- as.numeric(h_native)
+  h_native_unit <- attr(h_native, "unit")
+  text_preview <- substring(gsub("\n", " ", text), 1, 30)
+  message(sprintf("[GROB_DEBUG] Text: '%s...' | Native: %s (%.6f %s)",
+                  text_preview, as.character(h_native), h_native_value, h_native_unit))
 
   # Convert to NPC
   if (!is.null(panel_height_inches)) {
     h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
     h_npc <- h_inches / panel_height_inches
+    message(sprintf("[GROB_DEBUG] Panel-based: h_inches=%.4f (from native %.6f), panel_height=%.4f, h_npc=%.4f",
+                    h_inches, h_native_value, panel_height_inches, h_npc))
   } else {
     h_npc <- grid::convertHeight(h_native, "npc", valueOnly = TRUE)
     h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
+    message(sprintf("[GROB_DEBUG] Viewport-based: h_npc=%.4f, h_inches=%.4f (from native %.6f)",
+                    h_npc, h_inches, h_native_value))
   }
 
   # Safety margin from config

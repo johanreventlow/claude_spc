@@ -106,6 +106,11 @@ get_test_mode_file_path <- function() {
   # Set up resource paths for static files
   setup_resource_paths()
 
+  # Unlock cache statistics bindings for runtime modification
+  # CRITICAL FIX: Package loading locks these bindings, preventing cache stats updates
+  # This causes panel height measurement to fail with "cannot change value of locked binding"
+  unlock_cache_statistics()
+
   invisible()
 }
 
@@ -184,6 +189,47 @@ setup_package_runtime_config <- function() {
 setup_resource_paths <- function() {
   # Resource paths will be set up in golem_add_external_resources()
   # when the app starts
+  invisible()
+}
+
+#' Unlock cache statistics bindings for runtime modification
+#'
+#' When package is loaded, R locks all bindings in the namespace.
+#' Cache statistics (.panel_cache_stats, .grob_cache_stats) need to be
+#' updated at runtime, so we unlock these specific bindings.
+#'
+#' CRITICAL: Without this, panel height measurement fails with:
+#' "cannot change value of locked binding for '.panel_cache_stats'"
+#'
+#' @noRd
+unlock_cache_statistics <- function() {
+  # Get package namespace
+  ns <- asNamespace("SPCify")
+
+  # Unlock cache statistics bindings if they exist
+  tryCatch({
+    if (exists(".panel_cache_stats", envir = ns, inherits = FALSE)) {
+      unlockBinding(".panel_cache_stats", ns)
+      message("[CACHE_INIT] Unlocked .panel_cache_stats binding for runtime updates")
+    }
+
+    if (exists(".grob_cache_stats", envir = ns, inherits = FALSE)) {
+      unlockBinding(".grob_cache_stats", ns)
+      message("[CACHE_INIT] Unlocked .grob_cache_stats binding for runtime updates")
+    }
+
+    # Also unlock config bindings to allow dynamic configuration
+    if (exists(".panel_cache_config", envir = ns, inherits = FALSE)) {
+      unlockBinding(".panel_cache_config", ns)
+    }
+
+    if (exists(".grob_cache_config", envir = ns, inherits = FALSE)) {
+      unlockBinding(".grob_cache_config", ns)
+    }
+  }, error = function(e) {
+    warning("Failed to unlock cache bindings: ", e$message)
+  })
+
   invisible()
 }
 
