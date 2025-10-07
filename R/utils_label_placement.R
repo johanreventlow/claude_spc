@@ -378,6 +378,7 @@ npc_mapper_from_plot <- function(p, panel = 1) {
 
 # Cache configuration med TTL og size limits
 .grob_cache_config <- list(
+  enabled = TRUE,              # Master switch: Set to FALSE to disable cache completely
   ttl_seconds = 300,           # 5 minutes (layout genbruges typisk inden for få minutter)
   max_cache_size = 100,        # Max entries før forced purge
   purge_check_interval = 50    # Check for expired entries hver N'te operation
@@ -568,11 +569,19 @@ auto_purge_grob_cache <- function() {
 #' @return Invisible: Previous configuration
 #' @export
 configure_grob_cache <- function(
+  enabled = NULL,
   ttl_seconds = NULL,
   max_cache_size = NULL,
   purge_check_interval = NULL
 ) {
   old_config <- .grob_cache_config
+
+  if (!is.null(enabled)) {
+    if (!is.logical(enabled)) {
+      stop("enabled skal være TRUE eller FALSE")
+    }
+    .grob_cache_config$enabled <<- enabled
+  }
 
   if (!is.null(ttl_seconds)) {
     if (!is.numeric(ttl_seconds) || ttl_seconds <= 0) {
@@ -608,6 +617,7 @@ configure_grob_cache <- function(
 
 # Cache configuration med TTL og size limits
 .panel_cache_config <- list(
+  enabled = TRUE,              # Master switch: Set to FALSE to disable cache completely
   ttl_seconds = 300,           # 5 minutes (samme som grob cache)
   max_cache_size = 100,        # Max entries før forced purge
   purge_check_interval = 50    # Check for expired entries hver N'te operation
@@ -771,17 +781,26 @@ auto_purge_panel_cache <- function() {
 
 #' Configure panel height cache TTL and limits
 #'
+#' @param enabled Enable or disable panel cache completely (default TRUE)
 #' @param ttl_seconds TTL for cache entries in seconds (default 300 = 5 min)
 #' @param max_cache_size Maximum number of cache entries (default 100)
 #' @param purge_check_interval Operations between purge checks (default 50)
 #' @return Invisible: Previous configuration
 #' @export
 configure_panel_cache <- function(
+  enabled = NULL,
   ttl_seconds = NULL,
   max_cache_size = NULL,
   purge_check_interval = NULL
 ) {
   old_config <- .panel_cache_config
+
+  if (!is.null(enabled)) {
+    if (!is.logical(enabled)) {
+      stop("enabled skal være TRUE eller FALSE")
+    }
+    .panel_cache_config$enabled <<- enabled
+  }
 
   if (!is.null(ttl_seconds)) {
     if (!is.numeric(ttl_seconds) || ttl_seconds <= 0) {
@@ -810,6 +829,47 @@ configure_panel_cache <- function(
 # ==============================================================================
 # UNIFIED CACHE MANAGEMENT API
 # ==============================================================================
+
+#' Unlock cache bindings for runtime modification (test helper)
+#'
+#' Explicitly unlocks cache config and stats bindings to allow runtime modification.
+#' Useful in test contexts where .onLoad() may not have run or when bindings
+#' get re-locked.
+#'
+#' @return Invisible: TRUE if successful, FALSE otherwise
+#' @export
+#'
+#' @examples
+#' # In tests:
+#' unlock_placement_cache_bindings()
+#' configure_panel_cache(enabled = FALSE)
+unlock_placement_cache_bindings <- function() {
+  ns <- asNamespace("SPCify")
+
+  success <- TRUE
+  tryCatch({
+    # Unlock stats
+    if (exists(".panel_cache_stats", envir = ns, inherits = FALSE)) {
+      unlockBinding(".panel_cache_stats", ns)
+    }
+    if (exists(".grob_cache_stats", envir = ns, inherits = FALSE)) {
+      unlockBinding(".grob_cache_stats", ns)
+    }
+
+    # Unlock configs
+    if (exists(".panel_cache_config", envir = ns, inherits = FALSE)) {
+      unlockBinding(".panel_cache_config", ns)
+    }
+    if (exists(".grob_cache_config", envir = ns, inherits = FALSE)) {
+      unlockBinding(".grob_cache_config", ns)
+    }
+  }, error = function(e) {
+    warning("Failed to unlock cache bindings: ", e$message)
+    success <<- FALSE
+  })
+
+  invisible(success)
+}
 
 #' Get combined placement cache statistics
 #'
@@ -991,18 +1051,21 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
 
     cache_key <- paste0("panel_height_", layout_digest)
 
-    # Check cache
-    if (exists(cache_key, envir = .panel_height_cache)) {
-      # Cache hit - update statistics and return cached value
-      .panel_cache_stats$hits <<- .panel_cache_stats$hits + 1L
-      return(.panel_height_cache[[cache_key]])
+    # Check if cache is enabled (PHASE 0 DIAGNOSTIC)
+    if (.panel_cache_config$enabled) {
+      # Check cache
+      if (exists(cache_key, envir = .panel_height_cache)) {
+        # Cache hit - update statistics and return cached value
+        .panel_cache_stats$hits <<- .panel_cache_stats$hits + 1L
+        return(.panel_height_cache[[cache_key]])
+      }
+
+      # Cache miss - update statistics
+      .panel_cache_stats$misses <<- .panel_cache_stats$misses + 1L
+
+      # Auto-purge check before adding new entry
+      auto_purge_panel_cache()
     }
-
-    # Cache miss - update statistics
-    .panel_cache_stats$misses <<- .panel_cache_stats$misses + 1L
-
-    # Auto-purge check before adding new entry
-    auto_purge_panel_cache()
   }
 
   # Find panel viewport navn fra gtable layout
@@ -1082,8 +1145,8 @@ measure_panel_height_from_gtable <- function(gt, panel = 1, device_width = 7, de
   # Navigate tilbage til ROOT
   grid::upViewport(0)
 
-  # Store in cache with timestamp
-  if (use_cache) {
+  # Store in cache with timestamp (only if cache is enabled)
+  if (use_cache && .panel_cache_config$enabled) {
     .panel_height_cache[[cache_key]] <- panel_height
     # Store timestamp for TTL tracking
     timestamp_key <- paste0(".", cache_key, "_timestamp")
@@ -1168,20 +1231,42 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
       safety_margin = round(safety_margin_for_key, 4)  # FIX: Cache invalidation ved config change
     ), algo = "xxhash32")
 
-    # Check cache
-    cached_result <- .grob_height_cache[[cache_key]]
-    if (!is.null(cached_result)) {
-      # Cache hit - update statistics
-      .grob_cache_stats$hits <<- .grob_cache_stats$hits + 1L
-      return(cached_result)
+    # Check if cache is enabled (PHASE 0 DIAGNOSTIC)
+    if (.grob_cache_config$enabled) {
+      # Check cache
+      cached_result <- .grob_height_cache[[cache_key]]
+      if (!is.null(cached_result)) {
+        # Cache hit - update statistics
+        .grob_cache_stats$hits <<- .grob_cache_stats$hits + 1L
+        return(cached_result)
+      }
+
+      # Cache miss - update statistics
+      .grob_cache_stats$misses <<- .grob_cache_stats$misses + 1L
+
+      # Auto-purge check before adding new entry
+      auto_purge_grob_cache()
     }
-
-    # Cache miss - update statistics
-    .grob_cache_stats$misses <<- .grob_cache_stats$misses + 1L
-
-    # Auto-purge check before adding new entry
-    auto_purge_grob_cache()
   }
+
+  # PHASE 1 DIAGNOSTIC: Capture device context before measurement
+  dev_info <- list(
+    dev_cur = grDevices::dev.cur(),
+    dev_size = grDevices::dev.size(),
+    dev_size_px = grDevices::dev.size("px"),
+    timestamp = Sys.time()
+  )
+
+  # PHASE 1 DIAGNOSTIC: Capture viewport state
+  vp_info <- tryCatch({
+    list(
+      current_vp = grid::current.vpPath(),
+      vp_width = as.numeric(grid::convertWidth(grid::unit(1, "npc"), "inches", valueOnly = TRUE)),
+      vp_height = as.numeric(grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE))
+    )
+  }, error = function(e) {
+    list(current_vp = "ERROR", vp_width = NA, vp_height = NA, error = e$message)
+  })
 
   # Create grob and measure (assumes active device exists)
   g <- marquee::marquee_grob(
@@ -1201,12 +1286,16 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
     h_native <<- grid::grobHeight(g)
   })
 
-  # DEBUG: Print native grob height
+  # PHASE 1 DIAGNOSTIC: Print comprehensive debug info
   h_native_value <- as.numeric(h_native)
   h_native_unit <- attr(h_native, "unit")
   text_preview <- substring(gsub("\n", " ", text), 1, 30)
+
   message(sprintf("[GROB_DEBUG] Text: '%s...' | Native: %s (%.6f %s)",
                   text_preview, as.character(h_native), h_native_value, h_native_unit))
+  message(sprintf("[DEVICE_DEBUG] Device: #%d | Size: %.3f × %.3f inches | Viewport: %s (%.3f × %.3f in)",
+                  dev_info$dev_cur, dev_info$dev_size[1], dev_info$dev_size[2],
+                  as.character(vp_info$current_vp), vp_info$vp_width, vp_info$vp_height))
 
   # Convert to NPC
   if (!is.null(panel_height_inches)) {
@@ -1270,8 +1359,8 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
     result <- as.numeric(h_npc)
   }
 
-  # Cache result with timestamp
-  if (use_cache) {
+  # Cache result with timestamp (only if cache is enabled)
+  if (use_cache && .grob_cache_config$enabled) {
     .grob_height_cache[[cache_key]] <- result
     # Store timestamp for TTL tracking
     timestamp_key <- paste0(".", cache_key, "_timestamp")
@@ -1484,19 +1573,22 @@ estimate_label_height_npc <- function(
         safety_margin = round(safety_margin, 4)  # FIX: Cache invalidation ved config change
       ), algo = "xxhash32")
 
-      # Check cache
-      cached_result <- .grob_height_cache[[cache_key]]
-      if (!is.null(cached_result)) {
-        # Cache hit - update statistics
-        .grob_cache_stats$hits <<- .grob_cache_stats$hits + 1L
-        return(cached_result)
+      # Check if cache is enabled (PHASE 0 DIAGNOSTIC)
+      if (.grob_cache_config$enabled) {
+        # Check cache
+        cached_result <- .grob_height_cache[[cache_key]]
+        if (!is.null(cached_result)) {
+          # Cache hit - update statistics
+          .grob_cache_stats$hits <<- .grob_cache_stats$hits + 1L
+          return(cached_result)
+        }
+
+        # Cache miss - update statistics
+        .grob_cache_stats$misses <<- .grob_cache_stats$misses + 1L
+
+        # Auto-purge check before adding new entry
+        auto_purge_grob_cache()
       }
-
-      # Cache miss - update statistics
-      .grob_cache_stats$misses <<- .grob_cache_stats$misses + 1L
-
-      # Auto-purge check before adding new entry
-      auto_purge_grob_cache()
     }
 
     # Opret marquee grob for at måle faktisk højde
@@ -1600,9 +1692,9 @@ estimate_label_height_npc <- function(
       result <- as.numeric(h_npc)
     }
 
-    # Store in cache for future reuse (if caching enabled)
+    # Store in cache for future reuse (only if cache is enabled)
     # VIGTIGT: Cache det faktiske result (list eller numeric) ikke bare h_npc
-    if (use_cache) {
+    if (use_cache && .grob_cache_config$enabled) {
       .grob_height_cache[[cache_key]] <- result
       # Store timestamp for TTL tracking
       timestamp_key <- paste0(".", cache_key, "_timestamp")

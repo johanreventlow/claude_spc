@@ -5,6 +5,7 @@
 \title{Configure grob height cache TTL and limits}
 \usage{
 configure_grob_cache(
+  enabled = NULL,
   ttl_seconds = NULL,
   max_cache_size = NULL,
   purge_check_interval = NULL

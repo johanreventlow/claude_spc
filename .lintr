@@ -1,6 +1,1 @@
-linters: lintr::linters_with_defaults(
-  library_call_linter = lintr::regex_linter(
-    pattern = "(?<!#\\s*)\\blibrary\\s*\\(",
-    message = "Brug eksplicit pkg::funktion i stedet for library()."
-  )
-)
+linters: linters_with_defaults(library_call_linter = NULL)

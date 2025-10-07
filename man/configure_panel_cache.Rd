@@ -5,12 +5,15 @@
 \title{Configure panel height cache TTL and limits}
 \usage{
 configure_panel_cache(
+  enabled = NULL,
   ttl_seconds = NULL,
   max_cache_size = NULL,
   purge_check_interval = NULL
 )
 }
 \arguments{
+\item{enabled}{Enable or disable panel cache completely (default TRUE)}
+
 \item{ttl_seconds}{TTL for cache entries in seconds (default 300 = 5 min)}
 
 \item{max_cache_size}{Maximum number of cache entries (default 100)}

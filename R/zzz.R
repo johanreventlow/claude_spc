@@ -221,10 +221,12 @@ unlock_cache_statistics <- function() {
     # Also unlock config bindings to allow dynamic configuration
     if (exists(".panel_cache_config", envir = ns, inherits = FALSE)) {
       unlockBinding(".panel_cache_config", ns)
+      message("[CACHE_INIT] Unlocked .panel_cache_config binding for runtime updates")
     }
 
     if (exists(".grob_cache_config", envir = ns, inherits = FALSE)) {
       unlockBinding(".grob_cache_config", ns)
+      message("[CACHE_INIT] Unlocked .grob_cache_config binding for runtime updates")
     }
   }, error = function(e) {
     warning("Failed to unlock cache bindings: ", e$message)
