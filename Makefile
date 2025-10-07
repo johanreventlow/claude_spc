@@ -2,7 +2,7 @@
 # Provides build pipeline for package development and deployment
 
 # Variables
-PACKAGE_NAME = claudespc
+PACKAGE_NAME = SPCify
 VERSION = $(shell grep '^Version:' DESCRIPTION | sed 's/Version: //')
 TARBALL = $(PACKAGE_NAME)_$(VERSION).tar.gz
 
@@ -50,11 +50,23 @@ test:
 	@echo "Running tests..."
 	Rscript -e "devtools::test()"
 
-# Run tests with coverage
+# Run tests with coverage (detailed report)
 .PHONY: coverage
 coverage:
-	@echo "Running test coverage..."
+	@echo "Running test coverage report..."
+	Rscript -e "source('tests/coverage.R'); run_coverage_report()"
+
+# Run tests with coverage (basic covr output)
+.PHONY: coverage-simple
+coverage-simple:
+	@echo "Running basic test coverage..."
 	Rscript -e "covr::package_coverage()"
+
+# Generate HTML coverage report and open in browser
+.PHONY: coverage-html
+coverage-html:
+	@echo "Generating HTML coverage report..."
+	Rscript -e "source('tests/coverage.R'); result <- run_coverage_report(); browseURL('coverage/index.html')"
 
 # Lint code
 .PHONY: lint
@@ -89,7 +101,7 @@ quick: document install
 .PHONY: run
 run: install
 	@echo "Running app..."
-	Rscript -e "claudespc::run_app()"
+	Rscript -e "SPCify::run_app()"
 
 # CI/CD pipeline simulation
 .PHONY: ci

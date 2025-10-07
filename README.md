@@ -186,7 +186,28 @@ R -e "testthat::test_file('tests/testthat/test-name-only-detection-final.R')"
 R -e "testthat::test_file('tests/testthat/test-end-to-end-app-flow.R')"
 ```
 
-### Test Coverage Status
+### Test Coverage
+
+**Generate Coverage Report:**
+```bash
+# Detailed coverage report (console + HTML)
+make coverage
+
+# HTML report with browser
+make coverage-html
+
+# Basic covr output
+make coverage-simple
+
+# Or directly:
+R -e "source('tests/coverage.R'); run_coverage_report()"
+```
+
+**Coverage Targets:**
+- **Overall Target**: ≥90% test coverage
+- **Critical Paths**: 100% coverage for state management, error handling, file operations
+
+**Current Coverage Status:**
 - **Name-only Detection**: 47 tests, >95% coverage
 - **File Operations**: 39 tests, >90% coverage
 - **Cross-component Reactive**: >85% coverage

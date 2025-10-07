@@ -23,6 +23,10 @@ inst/extdata/*.xlsx
 logs/
 tests/testthat/logs/
 shinylogs_*.json
+# Coverage reports
+coverage/
+*.coverage.xml
+.coverage
 # OS specific
 .DS_Store
 Thumbs.db
