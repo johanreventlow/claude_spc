@@ -11,28 +11,13 @@
 #' @return List med state management funktioner
 #' @export
 create_chart_state_manager <- function(app_state) {
-  # Initialize visualization state if not present
+  # ARCHITECTURE FIX (2025-01-07): Visualization state centraliseret i state_management.R
+  # Fjernet scattered reactiveValues creation - følger centralized state pattern
+  # app_state$visualization initialiseres nu kun i create_app_state()
+
+  # Verificer at visualization state eksisterer (skal være skabt af create_app_state)
   if (is.null(app_state$visualization)) {
-    app_state$visualization <- shiny::reactiveValues(
-      plot_object = NULL,
-      plot_ready = FALSE,
-      is_computing = FALSE,
-      plot_warnings = character(0),
-      anhoej_results = list(
-        # Initialize with default values instead of NULL to prevent "Beregner..." stuck state
-        longest_run = NA_real_,
-        longest_run_max = NA_real_,
-        n_crossings = NA_real_,
-        n_crossings_min = NA_real_,
-        out_of_control_count = 0L,
-        runs_signal = FALSE,
-        crossings_signal = FALSE,
-        any_signal = FALSE,
-        message = "Afventer data",
-        has_valid_data = FALSE
-      ),
-      module_cached_data = NULL
-    )
+    stop("app_state$visualization must be initialized by create_app_state() before calling create_chart_state_manager()")
   }
 
   list(

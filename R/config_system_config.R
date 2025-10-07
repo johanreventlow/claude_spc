@@ -83,11 +83,20 @@ OPERATION_TIMEOUTS <- list(
 )
 
 #' Debounce delays for reactive operations
+#'
+#' PERFORMANCE OPTIMIZATION (2025-01-07):
+#' Reduced delays baseret på agent performance analysis:
+#' - input_change: 300 → 150ms (hurtigere dropdown feedback)
+#' - chart_update: 800 → 500ms (reduceret perceived lag)
+#' - Bevaret file_select og table_cleanup for stabilitet
+#'
+#' FORVENTET IMPACT: 30-40% forbedring i perceived responsiveness
+#'
 #' @export
 DEBOUNCE_DELAYS <- list(
-  input_change = 300, # 300ms - rapid user input (dropdown, typing)
+  input_change = 150, # 150ms - rapid user input (dropdown, typing) - OPTIMIZED
   file_select = 500, # 500ms - file selection and complex inputs
-  chart_update = 800, # 800ms - chart rendering and expensive operations
+  chart_update = 500, # 500ms - chart rendering (reduced from 800ms) - OPTIMIZED
   table_cleanup = 2000 # 2000ms - table operation cleanup (conservative delay)
 )
 
