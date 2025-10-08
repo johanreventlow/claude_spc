@@ -11,6 +11,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Module initialization
     ns <- session$ns
 
+    # Viewport dimensions for label placement
+    # These are set from renderPlot when actual viewport size is known
+    viewport_dims <- shiny::reactiveVal(list(width = NULL, height = NULL))
+
     # Helper function: Safe max that handles empty vectors and preserves actual values
     safe_max <- function(x, na.rm = TRUE) {
       if (length(x) == 0) {
@@ -415,6 +419,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       computation <- safe_operation(
         "Generate SPC plot",
         code = {
+          # Hent viewport dimensions hvis tilgængelige
+          vp_dims <- viewport_dims()
+
           spc_result <- generateSPCPlot(
             data = inputs$data,
             config = inputs$config,
@@ -427,7 +434,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             chart_title_reactive = chart_title_reactive,
             y_axis_unit = inputs$y_axis_unit,
             kommentar_column = inputs$kommentar_column,
-            base_size = inputs$base_size
+            base_size = inputs$base_size,
+            viewport_width = vp_dims$width,
+            viewport_height = vp_dims$height
           )
 
           plot <- applyHospitalTheme(spc_result$plot, base_size = inputs$base_size)
@@ -674,6 +683,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           viewport_width > 100, # Minimum realistic width
           viewport_height > 100 # Minimum realistic height
         )
+
+        # Opdater viewport dimensions for label placement
+        viewport_dims(list(width = viewport_width, height = viewport_height))
 
         data <- module_data_reactive()
 

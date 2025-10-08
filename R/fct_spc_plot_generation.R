@@ -588,7 +588,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   return(plot)
 }
 
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL) {
   # Generate SPC plot with specified parameters
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
@@ -1232,6 +1232,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         qic_data = qic_data,
         y_axis_unit = y_axis_unit,
         label_size = label_size,
+        viewport_width = viewport_width,
+        viewport_height = viewport_height,
         verbose = FALSE,
         debug_mode = FALSE
       )

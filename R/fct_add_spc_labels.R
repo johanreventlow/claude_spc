@@ -12,6 +12,8 @@
 #' @param qic_data data.frame fra qicharts2::qic() med columns: cl, target, part
 #' @param y_axis_unit character unit for y-akse ("count", "percent", "rate", "time", eller andet)
 #' @param label_size numeric base font size for responsive sizing (default 6)
+#' @param viewport_width numeric viewport width in pixels (optional, from clientData)
+#' @param viewport_height numeric viewport height in pixels (optional, from clientData)
 #' @param verbose logical print placement warnings (default FALSE)
 #' @param debug_mode logical add visual debug annotations (default FALSE)
 #' @return ggplot object med tilføjede labels
@@ -45,12 +47,36 @@ add_spc_labels <- function(
     qic_data,
     y_axis_unit = "count",
     label_size = 6,
+    viewport_width = NULL,
+    viewport_height = NULL,
     verbose = FALSE,
     debug_mode = FALSE) {
   # Entry logging (conditional)
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
     message("[ADD_SPC_LABELS] Function called")
     message(sprintf("[ADD_SPC_LABELS] y_axis_unit: %s, label_size: %.1f", y_axis_unit, label_size))
+
+    if (!is.null(viewport_width) && !is.null(viewport_height)) {
+      message(sprintf(
+        "[ADD_SPC_LABELS] Viewport dimensions provided: %.0f × %.0f pixels",
+        viewport_width, viewport_height
+      ))
+    } else {
+      message("[ADD_SPC_LABELS] No viewport dimensions provided - will use device detection")
+    }
+  }
+
+  # Convert viewport dimensions from pixels to inches (renderPlot uses res=144)
+  viewport_width_inches <- if (!is.null(viewport_width)) viewport_width / 144 else NULL
+  viewport_height_inches <- if (!is.null(viewport_height)) viewport_height / 144 else NULL
+
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    if (!is.null(viewport_width_inches) && !is.null(viewport_height_inches)) {
+      message(sprintf(
+        "[ADD_SPC_LABELS] Viewport dimensions in inches: %.2f × %.2f",
+        viewport_width_inches, viewport_height_inches
+      ))
+    }
   }
 
   # Input validation ----
@@ -275,6 +301,16 @@ add_spc_labels <- function(
   }
 
   # Placer labels med advanced placement system ----
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message(sprintf(
+      "[LABEL_PLACEMENT] Calling add_right_labels_marquee - yA=%.3f, yB=%s, textA_length=%d, textB_length=%d",
+      yA,
+      ifelse(is.na(yB), "NA", sprintf("%.3f", yB)),
+      nchar(textA),
+      nchar(textB)
+    ))
+  }
+
   plot_with_labels <- add_right_labels_marquee(
     p = plot,
     yA = yA,
@@ -293,9 +329,15 @@ add_spc_labels <- function(
     gpA = grid::gpar(col = "#009CE8"), # CL label farve (lyseblå)
     gpB = grid::gpar(col = "#565656"), # Target label farve (grå)
     label_size = label_size, # Label sizing (baseline = 6)
+    viewport_width = viewport_width_inches, # Viewport width in inches (from clientData)
+    viewport_height = viewport_height_inches, # Viewport height in inches (from clientData)
     verbose = verbose, # Print placement warnings
     debug_mode = debug_mode # Visual debugging
   )
+
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message("[LABEL_PLACEMENT] add_right_labels_marquee returned successfully")
+  }
 
   return(plot_with_labels)
 }
