@@ -131,6 +131,15 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # Mark that standard listeners are active to prevent duplicate optimized listeners
   app_state$standard_listeners_active <- TRUE
 
+  # Observer registry for cleanup on session end
+  observer_registry <- list()
+
+  # Helper function to register observers automatically
+  register_observer <- function(name, observer) {
+    observer_registry[[name]] <<- observer
+    return(observer)
+  }
+
   # ============================================================================
   # HELPER FUNCTIONS
   # ============================================================================
@@ -186,7 +195,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   #    - General → update column choices only
 
   # Consolidated data update handler - handles both data loading and changes
-  shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
+  register_observer("data_updated", shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
     # Get data update context for intelligent handling
     update_context <- app_state$last_data_update_context
 
@@ -257,13 +266,13 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         }
       )
     }
-  })
+  }))
 
   # SPRINT 4: Legacy compatibility observers removed - all code migrated to data_updated
   # Previously: data_loaded and data_changed observers only logged deprecation warnings
 
   # Reset auto-default flag for Y-akse når data opdateres
-  shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOWEST, {
+  register_observer("data_updated_y_axis_reset", shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOWEST, {
     if (!is.null(app_state$ui)) {
       app_state$ui$y_axis_unit_autoset_done <- FALSE
     }
@@ -285,7 +294,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # 3. Engine detects columns, stores results in app_state
   # 4. emit$auto_detection_completed()
   # 5. Trigger UI sync to update dropdowns
-  shiny::observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  register_observer("auto_detection_started", shiny::observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Auto-detection started event handler
 
     # Perform auto-detection using unified engine
@@ -325,7 +334,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     )
   })
 
-  shiny::observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  register_observer("auto_detection_completed", shiny::observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Update state
     app_state$columns$auto_detect$in_progress <- FALSE
     app_state$columns$auto_detect$completed <- TRUE
@@ -354,7 +363,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # 2. sync_ui_with_columns_unified() updates dropdowns
   # 3. emit$ui_sync_completed()
   # 4. Trigger navigation_changed for plot updates
-  shiny::observeEvent(app_state$events$ui_sync_requested, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
+  register_observer("ui_sync_requested", shiny::observeEvent(app_state$events$ui_sync_requested, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
     # Add extra debugging
 
     safe_operation(
@@ -379,7 +388,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     emit$ui_sync_completed()
   })
 
-  shiny::observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
+  register_observer("ui_sync_completed", shiny::observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
     # Update timestamp
     app_state$columns$ui_sync$last_sync_time <- Sys.time()
 
@@ -439,7 +448,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # 1. UI sync completed / data changed → emit$navigation_changed()
   # 2. Increment app_state$navigation$trigger
   # 3. All eventReactive(app_state$navigation$trigger) components update
-  shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
+  register_observer("navigation_changed", shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
     # Increment navigation trigger to update all eventReactive components
     app_state$navigation$trigger <- app_state$navigation$trigger + 1L
   })
@@ -461,7 +470,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # 3. Check if autodetect needed
   # 4. Debounce autodetect trigger
   # 5. Phase transitions: data_ready → ui_ready → complete
-  shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  register_observer("test_mode_ready", shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Phase 4: Track test mode startup event
     if (exists("track_event")) {
       track_event("test_mode_ready", "startup_sequence")
@@ -501,7 +510,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Phase 3: Test mode startup phase management
-  shiny::observeEvent(app_state$events$test_mode_startup_phase_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
+  register_observer("test_mode_startup_phase_changed", shiny::observeEvent(app_state$events$test_mode_startup_phase_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
     current_phase <- app_state$test_mode$startup_phase
 
     # Phase 4: Track startup phase transitions
@@ -529,7 +538,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Phase 3: Debounced auto-detection for test mode
-  shiny::observeEvent(app_state$events$test_mode_debounced_autodetect, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  register_observer("test_mode_debounced_autodetect", shiny::observeEvent(app_state$events$test_mode_debounced_autodetect, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Only proceed if race prevention is still active
     if (!app_state$test_mode$race_prevention_active) {
       log_debug("Debounced autodetect skipped - race prevention disabled", .context = "[TEST_MODE_STARTUP]")
@@ -562,7 +571,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # 1. Reset button clicked → emit$session_reset()
   # 2. Clear all caches
   # 3. Reset all state to initial values
-  shiny::observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  register_observer("session_started", shiny::observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Session start logic
     if (is.null(app_state$data$current_data) || nrow(app_state$data$current_data) == 0) {
       # FASE 3: Session start trigger for name-only detection
@@ -577,7 +586,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
   })
 
-  shiny::observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
+  register_observer("manual_autodetect_button", shiny::observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # FASE 3: Manual trigger always runs, bypassing frozen state
     autodetect_engine(
       data = app_state$data$current_data,
@@ -587,7 +596,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     )
   })
 
-  shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
+  register_observer("session_reset", shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
     # SPRINT 3: Clear all caches on session reset
     if (exists("clear_performance_cache") && is.function(clear_performance_cache)) {
       safe_operation(
@@ -632,7 +641,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # 5. If recovery successful → emit$recovery_completed()
 
   # Unified error event listener - handles all error types with context-aware logic
-  shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
+  register_observer("error_occurred", shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
     # Get consolidated error context (new system)
     error_context <- app_state$last_error_context
 
@@ -705,7 +714,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Recovery completed event listener
-  shiny::observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
+  register_observer("recovery_completed", shiny::observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
     error_info <- app_state$errors$last_error
 
 
@@ -744,7 +753,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # Event still emitted for tracking, but UI sync handled via ui_sync_needed.
 
   # Form reset needed event listener
-  shiny::observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
+  register_observer("form_reset_needed", shiny::observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
     if (!is.null(ui_service)) {
       ui_service$reset_form_fields()
     } else {
@@ -752,7 +761,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   })
 
   # Form restore needed event listener
-  shiny::observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
+  register_observer("form_restore_needed", shiny::observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
     # For form restore, we need metadata from app_state
     # This could be triggered by session restore events
     if (!is.null(ui_service) && !is.null(app_state$session$restore_metadata)) {
@@ -819,7 +828,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   }
 
   for (col in columns_to_observe) {
-    shiny::observeEvent(input[[col]],
+    observer_registry[[paste0("input_", col)]] <- shiny::observeEvent(input[[col]],
       {
         input_received_time <- Sys.time()
         new_value <- input[[col]]
@@ -883,7 +892,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   }
 
   # OBSERVER: Toggle N (n_column) enabled state based on chart_type selection
-  shiny::observeEvent(input$chart_type,
+  register_observer("chart_type", shiny::observeEvent(input$chart_type,
     {
       safe_operation(
         "Toggle n_column enabled state by chart type",
@@ -963,7 +972,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   )
 
   # OBSERVER: Auto-vælg korttype baseret på Y-akse UI-type
-  shiny::observeEvent(input$y_axis_unit,
+  register_observer("y_axis_unit", shiny::observeEvent(input$y_axis_unit,
     {
       safe_operation(
         "Auto-select chart type from y-axis UI type",
@@ -1011,7 +1020,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   )
 
   # OBSERVER: Når RUN chart og nævner ændres
-  shiny::observeEvent(input$n_column,
+  register_observer("n_column_change", shiny::observeEvent(input$n_column,
     {
       safe_operation(
         "Adjust y-axis when denominator changed in run chart",
@@ -1082,7 +1091,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
   # This observer tracks timing metrics for optimization without emitting events
   if (!is.null(app_state$ui)) {
-    shiny::observeEvent(app_state$ui$last_programmatic_update, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOWEST, {
+    register_observer("timing_monitor", shiny::observeEvent(app_state$ui$last_programmatic_update, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOWEST, {
       current_time <- Sys.time()
       last_update <- shiny::isolate(app_state$ui$last_programmatic_update)
 
@@ -1119,6 +1128,53 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # - Section markers guide navigation
   # - Priority system ensures correct execution order
   # - Helper functions are documented inline
+
+  # ============================================================================
+  # OBSERVER CLEANUP ON SESSION END
+  # ============================================================================
+  # Register cleanup handler to destroy all observers when session ends.
+  # This prevents memory leaks from observers holding references to app_state.
+
+  session$onSessionEnded(function() {
+    safe_operation(
+      "Observer cleanup on session end",
+      code = {
+        observer_count <- length(observer_registry)
+        log_debug(
+          paste("Cleaning up", observer_count, "observers"),
+          .context = "EVENT_SYSTEM"
+        )
+
+        # Destroy all registered observers
+        for (observer_name in names(observer_registry)) {
+          tryCatch({
+            if (!is.null(observer_registry[[observer_name]])) {
+              observer_registry[[observer_name]]$destroy()
+            }
+          }, error = function(e) {
+            log_warn(
+              paste("Failed to destroy observer:", observer_name, "-", e$message),
+              .context = "EVENT_SYSTEM"
+            )
+          })
+        }
+
+        log_info(
+          paste("Observer cleanup complete:", observer_count, "observers destroyed"),
+          .context = "EVENT_SYSTEM"
+        )
+      },
+      fallback = function(e) {
+        log_error(
+          paste("Observer cleanup failed:", e$message),
+          .context = "EVENT_SYSTEM"
+        )
+      }
+    )
+  })
+
+  # Return observer registry for testing/debugging purposes
+  invisible(observer_registry)
 }
 
 # ============================================================================

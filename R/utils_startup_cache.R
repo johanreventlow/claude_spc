@@ -13,10 +13,14 @@
 #' - System configuration snapshot
 #' - SPC configuration defaults
 #'
-#' Cache location: Uses temporary directory to avoid persistence issues
+#' Cache location: Uses persistent user cache directory for optimal performance
 #' Cache TTL: 1 hour (configurable)
+#'
+#' @details
+#' Cache directory: tools::R_user_dir("SPCify", which = "cache")
+#' This ensures cache persists across R sessions for maximum startup performance.
 STARTUP_CACHE_CONFIG <- list(
-  cache_dir = file.path(tempdir(), "spc_startup_cache"),
+  cache_dir = tools::R_user_dir("SPCify", which = "cache"),
   cache_ttl_seconds = 3600, # 1 hour
   max_cache_size_mb = 10, # Maximum cache size
 

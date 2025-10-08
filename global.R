@@ -22,9 +22,10 @@
 # ==============================================================================
 
 # SMART BOOT FLOW FOR DEVELOPMENT/TESTING ====================================
-# Default to source loading for development to avoid package loading freeze
-# To use package loading instead, run: options(spc.debug.source_loading = FALSE)
-options(spc.debug.source_loading = TRUE)
+# Default to package loading (production standard, ~55ms startup)
+# To use source loading for debugging, run: options(spc.debug.source_loading = TRUE)
+# or set environment variable: Sys.setenv(SPC_SOURCE_LOADING = "TRUE")
+# options(spc.debug.source_loading = TRUE)  # Uncomment for development debugging
 
 # Check for development debug toggle
 use_source_loading <- getOption("spc.debug.source_loading", FALSE) ||
