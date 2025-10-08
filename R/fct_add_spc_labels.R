@@ -78,9 +78,18 @@ add_spc_labels <- function(
     error = function(e) FALSE
   )
 
+  # DEBUG: Always log device status
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message(sprintf(
+      "[DEVICE_CHECK] Device open: %s (dev.cur = %d)",
+      device_open,
+      grDevices::dev.cur()
+    ))
+  }
+
   if (!device_open) {
-    if (verbose) {
-      message("No graphics device open - deferring label placement to next render")
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message("[DEVICE_CHECK] BLOCKING: No graphics device open - deferring label placement")
     }
     return(plot) # Graceful degradation: plot uden labels
   }
@@ -102,11 +111,26 @@ add_spc_labels <- function(
     device_size$height <= 50 && # Maximum realistic height
     device_size$width >= 2 # Permissive minimum
 
+  # DEBUG: Always log device size check
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message(sprintf(
+      "[DEVICE_SIZE] Width: %.1f\" (>= 2: %s), Height: %.1f\" (>= 2: %s, <= 50: %s)",
+      device_size$width %||% 0,
+      !is.null(device_size) && device_size$width >= 2,
+      device_size$height %||% 0,
+      !is.null(device_size) && device_size$height >= 2,
+      !is.null(device_size) && device_size$height <= 50
+    ))
+    message(sprintf(
+      "[DEVICE_SIZE] Ready: %s",
+      device_ready
+    ))
+  }
+
   if (!device_ready) {
-    # Kun returner tom plot hvis device er VIRKELIG ustabil
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
       message(sprintf(
-        "Device not ready (%.1f×%.1f inches) - deferring label placement to next render",
+        "[DEVICE_SIZE] BLOCKING: Device not ready (%.1f×%.1f inches) - deferring label placement",
         device_size$width %||% 0,
         device_size$height %||% 0
       ))
@@ -117,7 +141,7 @@ add_spc_labels <- function(
   # DEVICE ER KLAR: Fortsæt med normal label placement
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
     message(sprintf(
-      "Device ready: %.1f×%.1f inches - proceeding with label placement",
+      "[DEVICE_SIZE] ✓ Device ready: %.1f×%.1f inches - proceeding with label placement",
       device_size$width,
       device_size$height
     ))
@@ -193,8 +217,20 @@ add_spc_labels <- function(
 
   # Valider at vi har mindst én værdi ----
   if (is.na(cl_value) && is.na(target_value)) {
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message("[CL_TARGET_CHECK] BLOCKING: Ingen CL eller Target værdier fundet i qic_data")
+    }
     warning("Ingen CL eller Target værdier fundet i qic_data. Returnerer plot uændret.")
     return(plot)
+  }
+
+  # DEBUG: Log extracted values
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message(sprintf(
+      "[CL_TARGET_CHECK] ✓ Values extracted - CL: %s, Target: %s",
+      ifelse(is.na(cl_value), "NA", sprintf("%.2f", cl_value)),
+      ifelse(is.na(target_value), "NA", sprintf("%.2f", target_value))
+    ))
   }
 
   # Formatér labels med delt formatter ----
