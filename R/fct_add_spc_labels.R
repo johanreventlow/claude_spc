@@ -66,9 +66,9 @@ add_spc_labels <- function(
     }
   }
 
-  # Convert viewport dimensions from pixels to inches (renderPlot uses res=144)
-  viewport_width_inches <- if (!is.null(viewport_width)) viewport_width / 144 else NULL
-  viewport_height_inches <- if (!is.null(viewport_height)) viewport_height / 144 else NULL
+  # Convert viewport dimensions from pixels to inches (renderPlot uses res=96)
+  viewport_width_inches <- if (!is.null(viewport_width)) viewport_width / 96 else NULL
+  viewport_height_inches <- if (!is.null(viewport_height)) viewport_height / 96 else NULL
 
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
     if (!is.null(viewport_width_inches) && !is.null(viewport_height_inches)) {
