@@ -86,21 +86,19 @@ add_spc_labels <- function(
     error = function(e) FALSE
   )
 
-  # DEBUG: Always log device status
-  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-    message(sprintf(
-      "[DEVICE_CHECK] Device open: %s (dev.cur = %d)",
-      device_open,
-      grDevices::dev.cur()
-    ))
-  }
+  # DEBUG: UNCONDITIONAL device status logging
+  message(sprintf(
+    "[DEVICE_CHECK] Device open: %s (dev.cur = %d)",
+    device_open,
+    grDevices::dev.cur()
+  ))
 
   if (!device_open) {
-    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message("[DEVICE_CHECK] BLOCKING: No graphics device open - deferring label placement")
-    }
+    message("[DEVICE_CHECK] BLOCKING: No graphics device open - deferring label placement")
     return(plot) # Graceful degradation: plot uden labels
   }
+
+  message("[DEVICE_CHECK] ✓ Device is open - proceeding")
 
   # LEVEL 2: Check om device size er realistisk (ikke NULL eller ekstreme værdier)
   device_size <- tryCatch(
