@@ -276,7 +276,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     if (!is.null(app_state$ui)) {
       app_state$ui$y_axis_unit_autoset_done <- FALSE
     }
-  })
+  }))
 
   # ============================================================================
   # SECTION 2: AUTO-DETECTION EVENTS
@@ -332,7 +332,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       emit = emit,
       app_state = app_state
     )
-  })
+  }))
 
   register_observer("auto_detection_completed", shiny::observeEvent(app_state$events$auto_detection_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Update state
@@ -346,7 +346,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       emit$ui_sync_needed()
     } else {
     }
-  })
+  }))
 
   # ============================================================================
   # SECTION 3: UI SYNCHRONIZATION EVENTS
@@ -386,7 +386,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
     # Mark sync as completed
     emit$ui_sync_completed()
-  })
+  }))
 
   register_observer("ui_sync_completed", shiny::observeEvent(app_state$events$ui_sync_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
     # Update timestamp
@@ -433,7 +433,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
     # Trigger navigation change to update plots
     emit$navigation_changed()
-  })
+  }))
 
   # ============================================================================
   # SECTION 4: NAVIGATION EVENTS
@@ -451,7 +451,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   register_observer("navigation_changed", shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
     # Increment navigation trigger to update all eventReactive components
     app_state$navigation$trigger <- app_state$navigation$trigger + 1L
-  })
+  }))
 
   # ============================================================================
   # SECTION 5: TEST MODE EVENTS
@@ -507,7 +507,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       # Autodetect already completed, trigger UI sync
       emit$ui_sync_needed()
     }
-  })
+  }))
 
   # Phase 3: Test mode startup phase management
   register_observer("test_mode_startup_phase_changed", shiny::observeEvent(app_state$events$test_mode_startup_phase_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$HIGH, {
@@ -535,7 +535,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         .context = "[TEST_MODE_STARTUP]"
       )
     }
-  })
+  }))
 
   # Phase 3: Debounced auto-detection for test mode
   register_observer("test_mode_debounced_autodetect", shiny::observeEvent(app_state$events$test_mode_debounced_autodetect, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
@@ -548,7 +548,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     # Trigger autodetect
     emit$auto_detection_started()
     emit$test_mode_startup_phase_changed("ui_ready")
-  })
+  }))
 
   # ============================================================================
   # SECTION 6: SESSION LIFECYCLE EVENTS
@@ -584,7 +584,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     } else {
       log_debug("Skipping session_started autodetect - data already available, will be handled by data_loaded event", .context = "AUTO_DETECT_EVENT")
     }
-  })
+  }))
 
   register_observer("manual_autodetect_button", shiny::observeEvent(app_state$events$manual_autodetect_button, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # FASE 3: Manual trigger always runs, bypassing frozen state
@@ -594,7 +594,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       app_state = app_state,
       emit = emit
     )
-  })
+  }))
 
   register_observer("session_reset", shiny::observeEvent(app_state$events$session_reset, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$CLEANUP, {
     # SPRINT 3: Clear all caches on session reset
@@ -617,7 +617,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     # FASE 3: Reset frozen state
     app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
     app_state$columns$auto_detect$last_run <- NULL
-  })
+  }))
 
   # ============================================================================
   # SECTION 7: ERROR HANDLING EVENTS
@@ -711,7 +711,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
         timestamp = Sys.time()
       )
     }
-  })
+  }))
 
   # Recovery completed event listener
   register_observer("recovery_completed", shiny::observeEvent(app_state$events$recovery_completed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
@@ -728,7 +728,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       session_id = if (!is.null(session)) sanitize_session_token(session$token) else "no session",
       .context = "ERROR_SYSTEM"
     )
-  })
+  }))
 
   # ============================================================================
   # SECTION 8: UI UPDATE EVENTS
@@ -758,7 +758,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       ui_service$reset_form_fields()
     } else {
     }
-  })
+  }))
 
   # Form restore needed event listener
   register_observer("form_restore_needed", shiny::observeEvent(app_state$events$form_restore_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
@@ -768,7 +768,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       ui_service$update_form_fields(app_state$session$restore_metadata)
     } else {
     }
-  })
+  }))
 
   # NOTE: ui_update_needed functionality consolidated into ui_sync_requested observer above
 
@@ -969,7 +969,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     },
     ignoreInit = FALSE,
     priority = OBSERVER_PRIORITIES$UI_SYNC
-  )
+  ))
 
   # OBSERVER: Auto-vælg korttype baseret på Y-akse UI-type
   register_observer("y_axis_unit", shiny::observeEvent(input$y_axis_unit,
@@ -1017,7 +1017,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     },
     ignoreInit = TRUE,
     priority = OBSERVER_PRIORITIES$UI_SYNC
-  )
+  ))
 
   # OBSERVER: Når RUN chart og nævner ændres
   register_observer("n_column_change", shiny::observeEvent(input$n_column,
@@ -1071,7 +1071,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     },
     ignoreInit = TRUE,
     priority = OBSERVER_PRIORITIES$UI_SYNC
-  )
+  ))
 
   # ============================================================================
   # SECTION 10: PASSIVE MONITORING
@@ -1107,7 +1107,7 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
         #               ", autodetect active:", autodetect_in_progress), .context = "TIMING_MONITOR")
       }
-    })
+    }))
   }
 
   # ============================================================================
@@ -1147,16 +1147,19 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
         # Destroy all registered observers
         for (observer_name in names(observer_registry)) {
-          tryCatch({
-            if (!is.null(observer_registry[[observer_name]])) {
-              observer_registry[[observer_name]]$destroy()
+          tryCatch(
+            {
+              if (!is.null(observer_registry[[observer_name]])) {
+                observer_registry[[observer_name]]$destroy()
+              }
+            },
+            error = function(e) {
+              log_warn(
+                paste("Failed to destroy observer:", observer_name, "-", e$message),
+                .context = "EVENT_SYSTEM"
+              )
             }
-          }, error = function(e) {
-            log_warn(
-              paste("Failed to destroy observer:", observer_name, "-", e$message),
-              .context = "EVENT_SYSTEM"
-            )
-          })
+          )
         }
 
         log_info(
