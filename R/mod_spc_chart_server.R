@@ -273,25 +273,40 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
       kommentar_value <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
 
-      # VIEWPORT GUARD: Afvent at clientData viewport dimensioner er tilgængelige
-      # Dette forhindrer første render før Shiny's plot viewport er initialiseret,
-      # hvilket sikrer korrekt label placement (grid device size er kendt)
-      width_px <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
-      height_px <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
+      # VIEWPORT DIMENSIONS: Brug clientData hvis tilgængelig, ellers conservative defaults
+      # Dette sikrer at plot ALTID renders (også ved første render), men med progressive
+      # enhancement når faktiske dimensioner bliver tilgængelige.
+      #
+      # STRATEGI: Safe defaults → Perfect placement
+      # - Første render: Brug defaults (800×600) → Labels placeres konservativt
+      # - Anden render: Brug faktiske dimensioner → Labels placeres perfekt
+      width_px_raw <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
+      height_px_raw <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
 
-      # Skip render hvis viewport ikke er klar (første render pre-initialization)
-      shiny::req(width_px, height_px)
-      shiny::req(width_px > 100, height_px > 100) # Sanity check: realistiske dimensioner
+      # Fallback til conservative defaults hvis clientData ikke klar
+      # 800×600 er realistic desktop viewport som giver acceptable label placement
+      width_px <- if (!is.null(width_px_raw) && width_px_raw > 100) {
+        width_px_raw
+      } else {
+        800 # Conservative default width
+      }
+
+      height_px <- if (!is.null(height_px_raw) && height_px_raw > 100) {
+        height_px_raw
+      } else {
+        600 # Conservative default height
+      }
 
       # Log viewport status for debugging label placement issues
       if (getOption("spc.debug.label_placement", FALSE)) {
+        viewport_source <- if (!is.null(width_px_raw)) "clientData" else "defaults"
         log_debug(
-          sprintf("Viewport ready: %d×%d px", width_px, height_px),
-          "VIEWPORT_GUARD"
+          sprintf("Viewport: %d×%d px (source: %s)", width_px, height_px, viewport_source),
+          "VIEWPORT_DIMENSIONS"
         )
       }
 
-      # Beregn responsive base_size baseret på plot bredde (nu med garanteret valid width)
+      # Beregn responsive base_size baseret på plot bredde
       base_size <- max(8, min(14, width_px / 70))
 
       list(

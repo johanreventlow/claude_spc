@@ -85,7 +85,7 @@ add_spc_labels <- function(
     return(plot) # Graceful degradation: plot uden labels
   }
 
-  # LEVEL 2: Check om device size er realistisk (ikke default 7×7 eller NULL)
+  # LEVEL 2: Check om device size er realistisk (ikke NULL eller ekstreme værdier)
   device_size <- tryCatch(
     {
       dev_size <- grDevices::dev.size("in")
@@ -94,12 +94,16 @@ add_spc_labels <- function(
     error = function(e) NULL
   )
 
+  # ADJUSTED THRESHOLD: Accepter device sizes ned til 2 inches (permissive)
+  # Dette tillader conservative defaults (800×600 @ 96dpi ≈ 8.3×6.25 inches)
+  # men afviser ekstreme værdier (< 2" eller > 50")
   device_ready <- !is.null(device_size) &&
-    device_size$height >= 3 && # Minimum realistic height
+    device_size$height >= 2 && # Permissive minimum (accepter small plots)
     device_size$height <= 50 && # Maximum realistic height
-    device_size$width >= 3 # Minimum realistic width
+    device_size$width >= 2 # Permissive minimum
 
   if (!device_ready) {
+    # Kun returner tom plot hvis device er VIRKELIG ustabil
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
       message(sprintf(
         "Device not ready (%.1f×%.1f inches) - deferring label placement to next render",
