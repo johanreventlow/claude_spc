@@ -1,11 +1,12 @@
 # utils_ui_form_helpers.R
-# Ekstraherede UI form helper utilities fra ui_utils_ui_updates.R
+# Ekstraherede UI form helper utilities fra utils_ui_ui_updates.R
+# (file renamed 2024-09 to golem convention: ui_utils_* → utils_ui_*)
 # Forbedrer modularity og separation of concerns
 
 #' Form Field Update Manager
 #'
 #' Factory for creating form field update functions with standardized patterns.
-#' Ekstraeret fra ui_utils_ui_updates.R for bedre testability og genbrug.
+#' Ekstraeret fra utils_ui_ui_updates.R for bedre testability og genbrug.
 #'
 #' @param session Shiny session object
 #' @return List med form update funktioner
@@ -143,7 +144,7 @@ create_form_update_service <- function(session) {
 #' UI Element Visibility Manager
 #'
 #' Utility for managing UI element visibility with consistent patterns.
-#' Ekstraeret fra ui_utils_ui_updates.R for bedre separation of concerns.
+#' Ekstraeret fra utils_ui_ui_updates.R for bedre separation of concerns.
 #'
 #' @param session Shiny session object
 #' @return List med visibility control funktioner
@@ -213,7 +214,7 @@ create_ui_visibility_service <- function(session) {
 #' Column Choice Update Manager
 #'
 #' Specialized service for updating column choice inputs with data-driven choices.
-#' Ekstraeret fra ui_utils_ui_updates.R for better separation og testability.
+#' Ekstraeret fra utils_ui_ui_updates.R for better separation og testability.
 #'
 #' @param session Shiny session object
 #' @param app_state Application state for data access

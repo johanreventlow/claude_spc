@@ -61,6 +61,7 @@ Suggests:
     writexl (>= 1.4.0),
     openxlsx (>= 4.2.0),
     microbenchmark (>= 1.4.0),
+    covr (>= 3.6.0),
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 RemoteType: local

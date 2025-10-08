@@ -82,14 +82,14 @@ height_details <- estimate_label_height_npc(
 result <- place_two_labels_npc(
   yA_npc = 0.4,
   yB_npc = 0.6,
-  label_height_npc = height_details  # List med npc/inches/panel_height
+  label_height_npc = height_details # List med npc/inches/panel_height
 )
 # Gap vil nu være fast \% af label's faktiske højde
 
 # Coincident lines (target = CL)
 result <- place_two_labels_npc(
   yA_npc = 0.5,
-  yB_npc = 0.5,  # Samme værdi
+  yB_npc = 0.5, # Samme værdi
   label_height_npc = 0.13,
   pref_pos = c("under", "under")
 )

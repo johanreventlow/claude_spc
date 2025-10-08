@@ -107,10 +107,10 @@ use_pkgload_setup <- function() {
 source_essential_functions <- function() {
   essential_files <- c(
     "R/state_management.R",
-    "R/utils_safe_operation.R",
-    "R/server_performance_helpers.R",  # For appears_numeric, appears_date
-    "R/core_autodetect_helpers.R",      # For auto-detection functions
-    "R/fct_autodetect_unified.R"        # For unified autodetect functions
+    "R/utils_error_handling.R",        # Updated from utils_safe_operation.R
+    "R/utils_server_performance.R",    # Updated from server_performance_helpers.R
+    "R/fct_autodetect_helpers.R",      # Updated from core_autodetect_helpers.R
+    "R/fct_autodetect_unified.R"       # For unified autodetect functions
   )
 
   for (file_path in essential_files) {

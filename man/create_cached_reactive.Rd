@@ -48,20 +48,33 @@ Implementerer memoization med digest-based cache keys.
 \examples{
 \dontrun{
 # Cache expensive data processing
-processed_data <- create_cached_reactive({
-  expensive_data_processing(app_state$data$current_data)
-}, "data_processing", cache_timeout = 600, session = session)
+processed_data <- create_cached_reactive(
+  {
+    expensive_data_processing(app_state$data$current_data)
+  },
+  "data_processing",
+  cache_timeout = 600,
+  session = session
+)
 }
 
 # Auto-detection caching
-cached_autodetect <- create_cached_reactive({
-  detect_columns_full_analysis(data, app_state)
-}, "autodetect", cache_timeout = 600)
+cached_autodetect <- create_cached_reactive(
+  {
+    detect_columns_full_analysis(data, app_state)
+  },
+  "autodetect",
+  cache_timeout = 600
+)
 
 # Data-specific caching
-cached_processing <- create_cached_reactive({
-  expensive_data_processing(data)
-}, function() paste0("processing_", digest::digest(data)), 300)
+cached_processing <- create_cached_reactive(
+  {
+    expensive_data_processing(data)
+  },
+  function() paste0("processing_", digest::digest(data)),
+  300
+)
 
 }
 \seealso{

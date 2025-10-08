@@ -26,6 +26,6 @@ Convenience-funktion til logging af ERROR-beskeder. Accepterer også en
 log_error("Kunne ikke læse fil", .context = "FILE_UPLOAD")
 log_error(message = "File validation failed", component = "[FILE_VALIDATION]", details = list(filename = "test.txt"))
 \dontrun{
-  tryCatch(stop("Boom"), error = function(e) log_error(e, .context = "PIPELINE"))
+tryCatch(stop("Boom"), error = function(e) log_error(e, .context = "PIPELINE"))
 }
 }

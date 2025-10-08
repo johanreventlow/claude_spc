@@ -3,7 +3,8 @@
 # Fokus på event system integration, state management og cross-component functionality
 
 # Setup ----------------------------------------------------------------
-source(file.path("..", "..", "global.R"))
+# Use helper.R's pkgload setup instead of sourcing global.R
+# helper.R is automatically loaded by testthat
 
 test_that("Event system priorities fungerer i integration", {
   # Test complete event chain med korrekte priorities

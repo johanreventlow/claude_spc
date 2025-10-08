@@ -96,7 +96,7 @@ sanitize_session_metadata <- function(input_value, field_type = "general", max_l
 
   # Base sanitization using existing function if available
   clean_value <- if (exists("sanitize_user_input", mode = "function")) {
-    sanitize_user_input(input_value, max_length = max_length, strict_mode = TRUE)
+    sanitize_user_input(input_value, max_length = max_length)
   } else {
     # Fallback basic sanitization
     substr(trimws(as.character(input_value)), 1, max_length)
@@ -134,13 +134,15 @@ setup_file_upload <- function(input, output, session, app_state, emit, ui_servic
   # File upload handler
   shiny::observeEvent(input$data_file, {
     # RATE LIMITING: Prevent DoS via rapid uploads
+    # Uses RATE_LIMITS$file_upload_seconds for centralized security configuration
     last_upload_time <- shiny::isolate(app_state$session$last_upload_time)
     if (!is.null(last_upload_time)) {
       time_since_upload <- as.numeric(difftime(Sys.time(), last_upload_time, units = "secs"))
+      min_upload_interval <- RATE_LIMITS$file_upload_seconds
 
-      if (time_since_upload < 2) {
+      if (time_since_upload < min_upload_interval) {
         shiny::showNotification(
-          "Vent venligst mindst 2 sekunder mellem fil-uploads (sikkerhedsbeskyttelse)",
+          paste0("Vent venligst mindst ", min_upload_interval, " sekunder mellem fil-uploads (sikkerhedsbeskyttelse)"),
           type = "warning",
           duration = 3
         )
@@ -510,7 +512,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   }
 
   # Emit unified data_updated event (replaces legacy data_loaded)
-  emit$data_loaded()
+  emit$data_updated(context = "session_file_loaded")
 
   # Unified state assignment - Set file uploaded flag
   app_state$session$file_uploaded <- TRUE

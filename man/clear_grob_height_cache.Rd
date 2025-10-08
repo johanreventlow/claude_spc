@@ -25,7 +25,7 @@ override_label_placement_config(height_safety_margin = 1.5)
 clear_grob_height_cache()
 
 # Check cache status efter clear
-get_grob_cache_stats()  # cache_size skal være 0
+get_grob_cache_stats() # cache_size skal være 0
 }
 
 }

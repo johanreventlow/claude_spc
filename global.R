@@ -132,6 +132,7 @@ if (use_source_loading) {
     "R/config_observer_priorities.R",
     "R/config_chart_types.R",
     "R/config_spc_config.R",
+    "R/config_ui.R", # Updated from config_ui_config.R
     "R/app_ui.R",
     "R/app_server.R",
     "R/app_runtime_config.R",
@@ -143,7 +144,6 @@ if (use_source_loading) {
     "R/app_run.R",
 
     # UI components
-    "R/config_ui_config.R",
     "R/utils_ui_ui_components.R",
     "R/utils_ui_ui_updates.R",
     "R/ui_app_ui.R",
@@ -154,11 +154,11 @@ if (use_source_loading) {
     "R/mod_spc_chart_server.R",
 
     # Server components
-    "R/server_observer_manager.R",
     "R/utils_server_server_management.R",
     "R/app_server_main.R",
     "R/utils_server_session_helpers.R",
-    "R/utils_server_event_system.R",
+    "R/utils_server_event_listeners.R", # Split from utils_server_event_system.R
+    "R/utils_ui_column_sync.R", # Split from utils_server_event_system.R
     "R/fct_visualization_server.R"
   )
 

@@ -3,7 +3,8 @@
 # Baseret på commit db5a3ba fixes
 
 # Setup ----------------------------------------------------------------
-source(file.path("..", "..", "global.R"))
+# Use helper.R's pkgload setup instead of sourcing global.R
+# helper.R is automatically loaded by testthat
 
 test_that("OBSERVER_PRIORITIES dobbelt-definition regression test", {
   # REGRESSION: Forhindrer at OBSERVER_PRIORITIES defineres flere steder

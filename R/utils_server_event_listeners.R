@@ -3,6 +3,31 @@
 #' This file contains utilities for the unified reactive event system.
 #' It provides centralized event listeners and handlers for the application.
 #'
+#' ## Quick Navigation
+#'
+#' **Main Function:** `setup_event_listeners()` - Line ~99
+#'
+#' **Sections:**
+#' - HELPER FUNCTIONS - Line ~109
+#' - SECTION 1: Data Lifecycle Events - Line ~145
+#' - SECTION 2: Auto-Detection Events - Line ~247
+#' - SECTION 3: UI Synchronization Events - Line ~317
+#' - SECTION 4: Navigation Events - Line ~404
+#' - SECTION 5: Test Mode Events - Line ~422
+#' - SECTION 6: Session Lifecycle Events - Line ~519
+#' - SECTION 7: Error Handling Events - Line ~588
+#' - SECTION 8: UI Update Events - Line ~699
+#' - SECTION 9: Input Change Observers - Line ~741
+#' - SECTION 10: Passive Monitoring - Line ~1042
+#'
+#' **Supporting Functions:** Line ~1099+
+#'
+#' ## Architecture Note
+#'
+#' This file intentionally consolidates ALL event listeners in one place.
+#' DO NOT split into separate files - this would break event ordering
+#' visibility and make race conditions harder to debug.
+#'
 #' @name utils_event_system
 NULL
 
@@ -17,15 +42,84 @@ NULL
 #' @param input Shiny input
 #' @param output Shiny output
 #' @param session Shiny session
+#' @param ui_service UI service for UI updates (optional)
 #'
 #' @details
-#' This function consolidates all event-driven reactive patterns
-#' in one place, replacing the scattered shiny::observeEvent() calls
-#' and bridge observers that were previously spread across
-#' multiple files.
+#' ## Architectural Philosophy
+#'
+#' This function consolidates all event-driven reactive patterns in ONE place.
+#' This centralization is INTENTIONAL and provides critical benefits:
+#'
+#' **Benefits of Centralization:**
+#' - Event execution order is visible and explicit
+#' - Race condition prevention is manageable
+#' - Dependency chains are traceable
+#' - Priority management is consistent
+#' - Debugging is straightforward
+#'
+#' **Anti-Pattern Warning:**
+#' DO NOT split event listeners into separate files by domain.
+#' This would break event ordering visibility and make race conditions
+#' significantly harder to debug.
+#'
+#' ## Event Listener Organization
+#'
+#' The listeners are organized into functional sections:
+#'
+#' 1. **Data Lifecycle Events** (lines ~62-146)
+#'    - data_updated: Consolidated data loading/changes
+#'    - Handles cache clearing, autodetect triggering, UI sync
+#'
+#' 2. **Auto-Detection Events** (lines ~148-201)
+#'    - auto_detection_started: Triggers autodetect engine
+#'    - auto_detection_completed: Updates state, triggers UI sync
+#'
+#' 3. **UI Synchronization Events** (lines ~203-274)
+#'    - ui_sync_requested: Syncs UI with detected columns
+#'    - ui_sync_completed: Triggers navigation updates
+#'
+#' 4. **Navigation Events** (lines ~276-280)
+#'    - navigation_changed: Updates reactive navigation trigger
+#'
+#' 5. **Test Mode Events** (lines ~282-361)
+#'    - test_mode_ready: Test mode initialization
+#'    - test_mode_startup_phase_changed: Startup sequencing
+#'    - test_mode_debounced_autodetect: Debounced detection
+#'
+#' 6. **Session Lifecycle Events** (lines ~363-410)
+#'    - session_started: Session initialization
+#'    - manual_autodetect_button: Manual detection trigger
+#'    - session_reset: State cleanup
+#'
+#' 7. **Error Handling Events** (lines ~412-502)
+#'    - error_occurred: Centralized error handling
+#'    - recovery_completed: Recovery tracking
+#'
+#' 8. **UI Update Events** (lines ~504-527)
+#'    - form_reset_needed: Form field reset
+#'    - form_restore_needed: Session restore
+#'
+#' 9. **Input Change Observers** (lines ~529-822)
+#'    - Column selection observers (x, y, n, etc.)
+#'    - Chart type observers
+#'    - Y-axis unit observers
+#'    - Denominator observers
+#'
+#' ## Priority System
+#'
+#' Events use OBSERVER_PRIORITIES for execution order:
+#' - STATE_MANAGEMENT: Highest - state updates first
+#' - HIGH: Critical operations
+#' - AUTO_DETECT: Auto-detection processing
+#' - UI_SYNC: UI synchronization
+#' - MEDIUM: Standard operations
+#' - STATUS_UPDATES: Non-critical updates
+#' - LOW: Background tasks
+#' - CLEANUP: Lowest - cleanup operations
+#' - LOWEST: Passive monitoring
 #'
 #' All observers use ignoreInit = TRUE to prevent firing at startup
-#' and appropriate priorities to ensure correct execution order.
+#' unless explicitly designed for initialization (chart_type observer).
 #'
 setup_event_listeners <- function(app_state, emit, input, output, session, ui_service = NULL) {
   # DUPLICATE PREVENTION: Check if optimized listeners are already active
@@ -37,6 +131,20 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # Mark that standard listeners are active to prevent duplicate optimized listeners
   app_state$standard_listeners_active <- TRUE
 
+  # ============================================================================
+  # HELPER FUNCTIONS
+  # ============================================================================
+  # These helper functions support event processing logic below.
+  # They are kept within setup_event_listeners() to maintain closure
+  # over app_state, emit, and session variables.
+
+  #' Resolve Column Update Reason
+  #'
+  #' Determines the reason for a column update based on context string.
+  #' Used to provide appropriate logging and behavior branching.
+  #'
+  #' @param context Context string from data update event
+  #' @return One of: "manual", "edit", "session", "upload"
   resolve_column_update_reason <- function(context) {
     if (is.null(context)) {
       return("manual")
@@ -59,7 +167,23 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     "manual"
   }
 
-  # DATA LIFECYCLE EVENTS (CONSOLIDATED - FASE 2.2) ========================
+  # ============================================================================
+  # SECTION 1: DATA LIFECYCLE EVENTS
+  # ============================================================================
+  # Handles all events related to data loading, changes, and updates.
+  # Priority: STATE_MANAGEMENT (highest) for state consistency.
+  #
+  # Key Events:
+  # - data_updated: Consolidated handler for data_loaded + data_changed
+  #
+  # Event Flow:
+  # 1. Data uploaded → emit$data_updated("file_loaded")
+  # 2. Clear performance cache
+  # 3. Unfreeze autodetect system
+  # 4. Context-based processing:
+  #    - Load context → trigger auto-detection
+  #    - Edit context → update column choices + trigger plot regen
+  #    - General → update column choices only
 
   # Consolidated data update handler - handles both data loading and changes
   shiny::observeEvent(app_state$events$data_updated, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
@@ -145,7 +269,22 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
   })
 
-  # AUTO-DETECTION EVENTS
+  # ============================================================================
+  # SECTION 2: AUTO-DETECTION EVENTS
+  # ============================================================================
+  # Handles automatic column detection for X-axis, Y-axis, and other columns.
+  # Priority: AUTO_DETECT for proper sequencing after data loading.
+  #
+  # Key Events:
+  # - auto_detection_started: Triggers autodetect engine
+  # - auto_detection_completed: Updates state, triggers UI sync
+  #
+  # Event Flow:
+  # 1. Data loaded → emit$auto_detection_started()
+  # 2. Run autodetect_engine() with appropriate trigger_type
+  # 3. Engine detects columns, stores results in app_state
+  # 4. emit$auto_detection_completed()
+  # 5. Trigger UI sync to update dropdowns
   shiny::observeEvent(app_state$events$auto_detection_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Auto-detection started event handler
 
@@ -200,7 +339,21 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     }
   })
 
-  # UI SYNCHRONIZATION EVENTS (CONSOLIDATED)
+  # ============================================================================
+  # SECTION 3: UI SYNCHRONIZATION EVENTS
+  # ============================================================================
+  # Handles synchronization between app_state columns and UI dropdowns.
+  # Priority: UI_SYNC for proper sequencing after auto-detection.
+  #
+  # Key Events:
+  # - ui_sync_requested: Syncs UI controls with detected columns
+  # - ui_sync_completed: Marks sync completion, triggers navigation
+  #
+  # Event Flow:
+  # 1. Auto-detection completed → emit$ui_sync_needed()
+  # 2. sync_ui_with_columns_unified() updates dropdowns
+  # 3. emit$ui_sync_completed()
+  # 4. Trigger navigation_changed for plot updates
   shiny::observeEvent(app_state$events$ui_sync_requested, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$UI_SYNC, {
     # Add extra debugging
 
@@ -273,13 +426,41 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     emit$navigation_changed()
   })
 
-  # NAVIGATION EVENTS
+  # ============================================================================
+  # SECTION 4: NAVIGATION EVENTS
+  # ============================================================================
+  # Handles navigation state updates that trigger reactive plot regeneration.
+  # Priority: STATUS_UPDATES for non-critical updates.
+  #
+  # Key Events:
+  # - navigation_changed: Increments navigation trigger for reactives
+  #
+  # Event Flow:
+  # 1. UI sync completed / data changed → emit$navigation_changed()
+  # 2. Increment app_state$navigation$trigger
+  # 3. All eventReactive(app_state$navigation$trigger) components update
   shiny::observeEvent(app_state$events$navigation_changed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATUS_UPDATES, {
     # Increment navigation trigger to update all eventReactive components
     app_state$navigation$trigger <- app_state$navigation$trigger + 1L
   })
 
-  # TEST MODE EVENTS
+  # ============================================================================
+  # SECTION 5: TEST MODE EVENTS
+  # ============================================================================
+  # Handles test mode initialization and startup sequencing.
+  # Priority: AUTO_DETECT and HIGH for proper test initialization.
+  #
+  # Key Events:
+  # - test_mode_ready: Test mode initialization complete
+  # - test_mode_startup_phase_changed: Phase transition tracking
+  # - test_mode_debounced_autodetect: Debounced detection trigger
+  #
+  # Event Flow:
+  # 1. Test mode started → emit$test_mode_ready()
+  # 2. Enable race prevention
+  # 3. Check if autodetect needed
+  # 4. Debounce autodetect trigger
+  # 5. Phase transitions: data_ready → ui_ready → complete
   shiny::observeEvent(app_state$events$test_mode_ready, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Phase 4: Track test mode startup event
     if (exists("track_event")) {
@@ -360,7 +541,27 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     emit$test_mode_startup_phase_changed("ui_ready")
   })
 
-  # SESSION LIFECYCLE EVENTS
+  # ============================================================================
+  # SECTION 6: SESSION LIFECYCLE EVENTS
+  # ============================================================================
+  # Handles session initialization, manual triggers, and cleanup.
+  # Priority: AUTO_DETECT for initialization, CLEANUP for reset.
+  #
+  # Key Events:
+  # - session_started: Session initialization
+  # - manual_autodetect_button: User-triggered detection
+  # - session_reset: Complete state cleanup
+  #
+  # Event Flow:
+  # Session Start:
+  # 1. App initialization → emit$session_started()
+  # 2. Run name-only autodetect if no data
+  # 3. Setup initial state
+  #
+  # Session Reset:
+  # 1. Reset button clicked → emit$session_reset()
+  # 2. Clear all caches
+  # 3. Reset all state to initial values
   shiny::observeEvent(app_state$events$session_started, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$AUTO_DETECT, {
     # Session start logic
     if (is.null(app_state$data$current_data) || nrow(app_state$data$current_data) == 0) {
@@ -409,7 +610,26 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     app_state$columns$auto_detect$last_run <- NULL
   })
 
-  # ERROR HANDLING EVENTS (CONSOLIDATED - FASE 2.1) ========================
+  # ============================================================================
+  # SECTION 7: ERROR HANDLING EVENTS
+  # ============================================================================
+  # Centralized error handling and recovery tracking.
+  # Priority: STATE_MANAGEMENT for error state, LOW for recovery.
+  #
+  # Key Events:
+  # - error_occurred: Unified error handler for all error types
+  # - recovery_completed: Error recovery tracking
+  #
+  # Event Flow:
+  # 1. Error detected → emit$error_occurred(type, context, details)
+  # 2. Log error with context
+  # 3. Type-specific error handling:
+  #    - processing: Increment recovery attempts
+  #    - validation: Clear validation state
+  #    - network: Log for retry logic
+  #    - ui: May need UI sync
+  # 4. Store error in history
+  # 5. If recovery successful → emit$recovery_completed()
 
   # Unified error event listener - handles all error types with context-aware logic
   shiny::observeEvent(app_state$events$error_occurred, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
@@ -501,10 +721,27 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     )
   })
 
-  # UI UPDATE EVENTS ========================================================
-
-  # NOTE: column_choices_changed observer disabled due to UI clearing issue
-  # Event still emitted for tracking, but UI sync handled via ui_sync_needed
+  # ============================================================================
+  # SECTION 8: UI UPDATE EVENTS
+  # ============================================================================
+  # Handles form field reset and restore operations.
+  # Priority: LOW for background UI operations.
+  #
+  # Key Events:
+  # - form_reset_needed: Clear all form fields
+  # - form_restore_needed: Restore form from session metadata
+  #
+  # Event Flow:
+  # Form Reset:
+  # 1. Reset requested → emit$form_reset_needed()
+  # 2. ui_service$reset_form_fields()
+  #
+  # Form Restore:
+  # 1. Session loaded → emit$form_restore_needed()
+  # 2. ui_service$update_form_fields(metadata)
+  #
+  # NOTE: column_choices_changed observer disabled due to UI clearing issue.
+  # Event still emitted for tracking, but UI sync handled via ui_sync_needed.
 
   # Form reset needed event listener
   shiny::observeEvent(app_state$events$form_reset_needed, ignoreInit = TRUE, priority = OBSERVER_PRIORITIES$LOW, {
@@ -526,11 +763,39 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 
   # NOTE: ui_update_needed functionality consolidated into ui_sync_requested observer above
 
-  # INPUT CHANGE OBSERVERS ===================================================
-  # Keep app_state$columns aligned with UI selections when user manually changes dropdowns
+  # ============================================================================
+  # SECTION 9: INPUT CHANGE OBSERVERS
+  # ============================================================================
+  # Tracks user input changes and maintains app_state synchronization.
+  # Priority: MEDIUM for user-driven changes, UI_SYNC for chart/axis logic.
+  #
+  # Key Observers:
+  # - Column selection observers (x_column, y_column, n_column, etc.)
+  # - chart_type: Chart type changes with automatic Y-axis adjustment
+  # - y_axis_unit: Y-axis unit changes with chart type suggestion
+  # - n_column: Denominator changes affecting Y-axis in run charts
+  #
+  # Token-Based Loop Prevention:
+  # - Programmatic UI updates register tokens before updateSelectizeInput()
+  # - Input observers consume tokens to prevent feedback loops
+  # - Only user-driven changes (no token) emit events
+  #
+  # Event Flow:
+  # 1. User changes dropdown → input[[col]] updates
+  # 2. Check for pending programmatic token
+  # 3. If token exists and matches: consume token, update state, SKIP event
+  # 4. If no token: user change → update state + emit event
+  # 5. Cache normalized value for consistency
 
   columns_to_observe <- c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
 
+  #' Normalize Column Input
+  #'
+  #' Converts input values to consistent string format.
+  #' Handles NULL, empty, and edge cases uniformly.
+  #'
+  #' @param value Input value from Shiny (can be NULL, list, vector, etc.)
+  #' @return Normalized string or "" for empty/NULL values
   normalize_column_input <- function(value) {
     if (is.null(value) || length(value) == 0) {
       return("")
@@ -799,6 +1064,21 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
     priority = OBSERVER_PRIORITIES$UI_SYNC
   )
 
+  # ============================================================================
+  # SECTION 10: PASSIVE MONITORING
+  # ============================================================================
+  # Passive observers that track metrics without interfering with app logic.
+  # Priority: LOWEST to ensure they never block critical operations.
+  #
+  # Key Observers:
+  # - last_programmatic_update: Performance timing metrics
+  #
+  # Purpose:
+  # - Track system performance for optimization
+  # - Monitor timing between programmatic updates
+  # - Freeze-aware metrics collection
+  # - No event emission or state modification
+
   # PASSIVE TIMING OBSERVER: Monitor system performance without interfering
   # This observer tracks timing metrics for optimization without emitting events
   if (!is.null(app_state$ui)) {
@@ -820,7 +1100,32 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       }
     })
   }
+
+  # ============================================================================
+  # END OF EVENT LISTENERS SETUP
+  # ============================================================================
+  # All event listeners are now registered and active.
+  #
+  # Maintenance Guidelines:
+  # 1. Keep ALL event listeners in this file for visibility
+  # 2. Use clear section markers when adding new event types
+  # 3. Document event flows in section headers
+  # 4. Maintain priority order within sections
+  # 5. Extract complex LOGIC to helper functions, but keep OBSERVERS here
+  # 6. Update the table of contents in function documentation when adding sections
+  #
+  # For debugging event flows:
+  # - All events are visible in one place
+  # - Section markers guide navigation
+  # - Priority system ensures correct execution order
+  # - Helper functions are documented inline
 }
+
+# ============================================================================
+# HELPER FUNCTIONS (Outside setup_event_listeners scope)
+# ============================================================================
+# These functions are called by event listeners but don't need closure
+# over app_state/emit/session.
 
 # NOTE: Duplikeret sync_ui_with_columns_unified funktion fjernet
 # Den korrekte funktion findes længere nede i filen
@@ -836,229 +1141,3 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
 #' @param app_state The centralized app state
 #' @param input Shiny input
 #' @param output Shiny output
-#' @param session Shiny session
-#'
-sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_service = NULL) {
-  safe_operation(
-    "UI sync debug block",
-    code = {
-      log_debug_block("UI_SYNC_UNIFIED", "Starting UI synchronization")
-    },
-    fallback = NULL,
-    session = session,
-    error_type = "general"
-  )
-
-  # DROPDOWN DEBUGGING: Log autodetect results that will be used
-  auto_detect_results <- shiny::isolate(app_state$columns$auto_detect$results)
-  if (!is.null(auto_detect_results)) {
-    for (col_name in names(auto_detect_results)) {
-    }
-  } else {
-  }
-
-  # Use shiny::isolate() to access reactive values safely
-  current_data <- shiny::isolate(app_state$data$current_data)
-  if (is.null(current_data)) {
-    return()
-  }
-
-  data <- current_data
-  col_names <- names(data)
-  columns_state <- shiny::isolate(app_state$columns)
-
-  # Update UI controls with detected columns using centralized service
-  safe_operation(
-    "UI controls update with detected columns",
-    code = {
-      if (!is.null(ui_service)) {
-        # Use centralized UI service with detected selections for all 6 columns
-        col_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
-        selected_columns <- list(
-          x_column = shiny::isolate(columns_state$x_column) %||% "",
-          y_column = shiny::isolate(columns_state$y_column) %||% "",
-          n_column = shiny::isolate(columns_state$n_column) %||% "",
-          skift_column = shiny::isolate(columns_state$skift_column) %||% "",
-          frys_column = shiny::isolate(columns_state$frys_column) %||% "",
-          kommentar_column = shiny::isolate(columns_state$kommentar_column) %||% ""
-        )
-
-        # DROPDOWN DEBUGGING: Log alle 6 kolonner eksplicit
-        for (col_name in names(selected_columns)) {
-        }
-
-        ui_service$update_column_choices(
-          choices = col_choices,
-          selected = selected_columns,
-          columns = c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
-        )
-      } else {
-        # SPRINT 2: Use centralized column update helper with state isolation
-        standard_choices <- setNames(c("", col_names), c("Vælg kolonne...", col_names))
-        ui_service$update_all_columns_from_state(
-          choices = standard_choices,
-          columns_state = columns_state,
-          log_context = "UI_SYNC_UNIFIED"
-        )
-      }
-    },
-    fallback = NULL,
-    session = session,
-    error_type = "processing",
-    emit = emit,
-    app_state = app_state
-  )
-}
-
-#' Update Column Choices (Unified Event Version)
-#'
-#' Unified version of column choice updates that handles
-#' data changes through the event system.
-#'
-#' @param app_state The centralized app state
-#' @param input Shiny input
-#' @param output Shiny output
-#' @param session Shiny session
-#' @param reason Character string describing why the update is happening
-#'
-update_column_choices_unified <- function(app_state, input, output, session, ui_service = NULL, reason = "manual") {
-  log_debug_block("COLUMN_CHOICES_UNIFIED", "Starting column choices update")
-
-  # Check if we should skip during table operations
-  if (app_state$data$updating_table) {
-    return()
-  }
-
-  # Skip if auto-detect is in progress
-  if (app_state$columns$auto_detect$in_progress) {
-    return()
-  }
-
-  # Skip if UI sync is needed (to avoid race conditions)
-  if (app_state$columns$ui_sync$needed) {
-    return()
-  }
-
-  # Get current data
-  if (is.null(app_state$data$current_data)) {
-    return()
-  }
-
-  data <- app_state$data$current_data
-  all_cols <- names(data)
-  log_debug_kv(
-    available_columns = paste(all_cols, collapse = ", "),
-    .context = "COLUMN_CHOICES_UNIFIED"
-  )
-
-  if (length(all_cols) > 0) {
-    # Create column choices
-    col_choices <- setNames(
-      c("", all_cols),
-      c("Vælg kolonne...", all_cols)
-    )
-
-    # Retain existing selections from both input and app_state
-    columns_to_update <- c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
-    current_selections <- list()
-
-    normalize_selection_value <- function(value) {
-      if (is.null(value)) {
-        return(NULL)
-      }
-
-      if (length(value) == 0) {
-        return("")
-      }
-
-      candidate <- value[[1]]
-      if (is.null(candidate)) {
-        return(NULL)
-      }
-
-      candidate_chr <- as.character(candidate)[1]
-
-      if (length(candidate_chr) == 0) {
-        return(NULL)
-      }
-
-      if (anyNA(candidate_chr)) {
-        return("")
-      }
-
-      if (identical(candidate_chr, "")) {
-        return("")
-      }
-
-      candidate_chr
-    }
-
-    for (col in columns_to_update) {
-      if (identical(reason, "edit")) {
-        tryCatch(
-          {
-            shiny::freezeReactiveValue(input, col)
-          },
-          error = function(...) NULL
-        )
-      }
-
-      input_val <- tryCatch(input[[col]], error = function(...) NULL)
-      normalized_input <- normalize_selection_value(input_val)
-
-      cache_key <- paste0(col, "_input")
-      cache_val_raw <- tryCatch(
-        {
-          if (!is.null(app_state$ui_cache)) {
-            shiny::isolate(app_state$ui_cache[[cache_key]])
-          } else {
-            NULL
-          }
-        },
-        error = function(...) NULL
-      )
-      cache_val <- normalize_selection_value(cache_val_raw)
-
-      state_val_raw <- tryCatch(shiny::isolate(app_state$columns[[col]]), error = function(...) NULL)
-      state_val <- normalize_selection_value(state_val_raw)
-
-      candidates <- if (identical(reason, "edit")) {
-        list(normalized_input, cache_val)
-      } else {
-        list(normalized_input, cache_val, state_val)
-      }
-
-      selected_val <- NULL
-      for (candidate in candidates) {
-        if (!is.null(candidate)) {
-          selected_val <- candidate
-          break
-        }
-      }
-
-      if (is.null(selected_val)) {
-        selected_val <- ""
-      }
-
-      current_selections[[col]] <- selected_val
-    }
-
-    # Update UI controls using centralized service
-    safe_operation(
-      "Column choices UI update",
-      code = {
-        if (!is.null(ui_service)) {
-          ui_service$update_column_choices(choices = col_choices, selected = current_selections)
-        } else {
-          # Fallback to direct updates with retained selections
-          for (col in columns_to_update) {
-            shiny::updateSelectizeInput(session, col, choices = col_choices, selected = current_selections[[col]])
-          }
-        }
-      },
-      fallback = NULL,
-      session = session,
-      error_type = "processing"
-    )
-  }
-}

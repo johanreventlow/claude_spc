@@ -62,7 +62,12 @@ test_data_load_automated <- function() {
 benchmark_with_test_data <- function() {
   cat("=== Benchmark QIC Performance with Test Data ===\n\n")
 
-  source("global.R")
+  # Load via pkgload or fall back to global.R
+  if (requireNamespace("pkgload", quietly = TRUE)) {
+    pkgload::load_all(here::here(), quiet = TRUE)
+  } else {
+    source("global.R")
+  }
 
   # Reset counters
   reset_qic_counters()

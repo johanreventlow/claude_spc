@@ -94,8 +94,8 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
               set_current_data(app_state, reconstructed_data)
               app_state$data$original_data <- reconstructed_data
 
-              # Emit event to trigger downstream effects
-              emit$data_loaded()
+              # Emit consolidated event with context
+              emit$data_updated(context = "session_restore")
             } else {
               # Fallback for older save format
               # Dual-state sync during migration
@@ -103,8 +103,8 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
               set_current_data(app_state, fallback_data)
               app_state$data$original_data <- fallback_data
 
-              # Emit event to trigger downstream effects
-              emit$data_loaded()
+              # Emit consolidated event with context
+              emit$data_updated(context = "session_restore")
             }
 
             # Unified state assignment only
@@ -346,8 +346,8 @@ reset_to_empty_session <- function(session, app_state, emit, ui_service = NULL) 
 
   # Unified state assignment only
   app_state$data$current_data <- standard_data
-  # Emit event to trigger downstream effects
-  emit$data_loaded()
+  # Emit consolidated event with context
+  emit$data_updated(context = "new_session")
 
   # UNIFIED EVENTS: Trigger navigation change through event system
   emit$navigation_changed()
@@ -527,8 +527,8 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
     app_state$data$current_data <- empty_session_data
     app_state$data$original_data <- empty_session_data
 
-    # Emit event to trigger downstream effects
-    emit$data_loaded()
+    # Emit consolidated event with context
+    emit$data_updated(context = "welcome_page")
 
     # REACTIVE WRAPPER FIX: Increment version to trigger reactive navigation
     old_version <- app_state$data$table_version
@@ -602,8 +602,8 @@ setup_welcome_page_handlers <- function(input, output, session, app_state, emit,
           app_state$data$current_data <- demo_data
           app_state$data$original_data <- demo_data
 
-          # Emit event to trigger downstream effects
-          emit$data_loaded()
+          # Emit consolidated event with context
+          emit$data_updated(context = "demo_data")
           # Unified state assignment only
           app_state$session$file_uploaded <- TRUE
           # Unified state: Set user started session for demo navigation

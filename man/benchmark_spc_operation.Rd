@@ -37,14 +37,21 @@ iterations and statistical analysis.
 \examples{
 \dontrun{
 # Benchmark autodetect engine
-results <- benchmark_spc_operation({
-  autodetect_engine(test_data, "manual", app_state, emit)
-}, operation_name = "autodetect_engine")
+results <- benchmark_spc_operation(
+  {
+    autodetect_engine(test_data, "manual", app_state, emit)
+  },
+  operation_name = "autodetect_engine"
+)
 
 # Compare multiple implementations
 results <- benchmark_spc_operation(list(
-  old_implementation = { old_function() },
-  new_implementation = { new_function() }
+  old_implementation = {
+    old_function()
+  },
+  new_implementation = {
+    new_function()
+  }
 ), operation_name = "implementation_comparison")
 }
 }

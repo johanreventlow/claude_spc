@@ -148,18 +148,8 @@ autodetect_engine <- function(data = NULL,
       # Session start / name-only scenario - benchmark name-based detection
       col_names <- if (is.null(data)) character(0) else names(data)
 
-      if (exists("benchmark_spc_operation") && length(col_names) > 0) {
-        benchmark_result <- benchmark_spc_operation(
-          expr = detect_columns_name_based(col_names, app_state),
-          times = 10, # Lightweight - 10 iterations
-          operation_name = paste0("autodetect_name_based_", length(col_names), "_cols"),
-          log_results = TRUE
-        )
-        # Fix: Direct function call instead of eval(parse()) - eliminates code injection risk
-        results <- detect_columns_name_based(col_names, app_state)
-      } else {
-        results <- detect_columns_name_based(col_names, app_state)
-      }
+      # Benchmarking removed from production code - moved to tests
+      results <- detect_columns_name_based(col_names, app_state)
     } else {
       # Full data analysis scenario - benchmark full analysis
       log_debug_kv(
@@ -168,20 +158,8 @@ autodetect_engine <- function(data = NULL,
         .context = "UNIFIED_AUTODETECT"
       )
 
-      data_size_category <- if (nrow(data) < 100) "small" else if (nrow(data) < 1000) "medium" else "large"
-
-      if (exists("benchmark_spc_operation")) {
-        benchmark_result <- benchmark_spc_operation(
-          expr = detect_columns_full_analysis(data, app_state),
-          times = if (nrow(data) < 1000) 5 else 3, # Fewer iterations for large datasets
-          operation_name = paste0("autodetect_full_analysis_", data_size_category, "_", nrow(data), "_rows"),
-          log_results = TRUE
-        )
-        # Extract actual results
-        results <- detect_columns_full_analysis(data, app_state)
-      } else {
-        results <- detect_columns_full_analysis(data, app_state)
-      }
+      # Benchmarking removed from production code - moved to tests
+      results <- detect_columns_full_analysis(data, app_state)
     }
   }
 

@@ -44,7 +44,9 @@ create_column_selectize("x_col", "X-akse kolonne:", col_choices)
 
 # Multiple selection
 create_column_selectize("multi_cols", "Vælg kolonner:",
-                        col_choices, multiple = TRUE)
+  col_choices,
+  multiple = TRUE
+)
 }
 
 }

@@ -49,7 +49,9 @@ hyppigt-opdaterede reactive expressions.
 }
 \examples{
 optimized_reactive <- create_performance_debounced(
-  reactive({ expensive_computation(input$data) }),
+  reactive({
+    expensive_computation(input$data)
+  }),
   "computation",
   millis = 500,
   cache_timeout = 300

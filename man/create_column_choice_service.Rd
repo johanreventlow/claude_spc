@@ -34,5 +34,5 @@ Update column choices for specific columns
 }
 \description{
 Specialized service for updating column choice inputs with data-driven choices.
-Ekstraeret fra ui_utils_ui_updates.R for better separation og testability.
+Ekstraeret fra utils_ui_ui_updates.R for better separation og testability.
 }

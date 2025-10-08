@@ -14,8 +14,12 @@ Returns statistics from both panel height and grob height caches in a unified fo
 }
 \examples{
 stats <- get_placement_cache_stats()
-cat("Panel cache:", stats$panel_cache$cache_size, "entries,",
-    round(stats$panel_cache$hit_rate * 100, 1), "\% hit rate\n")
-cat("Grob cache:", stats$grob_cache$cache_size, "entries,",
-    round(stats$grob_cache$hit_rate * 100, 1), "\% hit rate\n")
+cat(
+  "Panel cache:", stats$panel_cache$cache_size, "entries,",
+  round(stats$panel_cache$hit_rate * 100, 1), "\% hit rate\n"
+)
+cat(
+  "Grob cache:", stats$grob_cache$cache_size, "entries,",
+  round(stats$grob_cache$hit_rate * 100, 1), "\% hit rate\n"
+)
 }

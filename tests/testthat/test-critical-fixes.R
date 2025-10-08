@@ -3,7 +3,8 @@
 # Fokus på observer priorities, logging API og input sanitization
 
 # Setup ----------------------------------------------------------------
-source(file.path("..", "..", "global.R"))
+# Use helper.R's pkgload setup instead of sourcing global.R
+# helper.R is automatically loaded by testthat
 
 test_that("OBSERVER_PRIORITIES er korrekt konfigureret og tilgængelig", {
   # Test at OBSERVER_PRIORITIES eksisterer og har forventede nøgler

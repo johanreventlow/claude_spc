@@ -25,7 +25,7 @@ Logical - TRUE hvis data har meaningful content, FALSE ellers
 }
 \description{
 Performance-optimeret version af den gentagne purrr::map_lgl logik
-fra server_utils_session_helpers.R. Bruger session-local cache og
+fra utils_server_session_helpers.R. Bruger session-local cache og
 event-driven invalidation for at reducere redundante evaluations.
 }
 \examples{

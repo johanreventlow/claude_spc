@@ -23,5 +23,6 @@ level-filtering baseret på \code{SPC_LOG_LEVEL}.
 \examples{
 log_msg("System startet", "INFO")
 log_msg("Data læst", "INFO", "FILE_UPLOAD")
-Sys.setenv(SPC_LOG_LEVEL = "DEBUG"); log_msg("Detaljer", "DEBUG", "DATA_PROC")
+Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
+log_msg("Detaljer", "DEBUG", "DATA_PROC")
 }
