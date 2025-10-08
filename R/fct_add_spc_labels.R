@@ -47,14 +47,22 @@ add_spc_labels <- function(
     label_size = 6,
     verbose = FALSE,
     debug_mode = FALSE) {
+  # UNCONDITIONAL ENTRY LOG (always prints)
+  message("[ADD_SPC_LABELS] *** FUNCTION CALLED ***")
+  message(sprintf("[ADD_SPC_LABELS] y_axis_unit: %s, label_size: %.1f", y_axis_unit, label_size))
+
   # Input validation ----
   if (!inherits(plot, "gg")) {
+    message("[ADD_SPC_LABELS] EARLY EXIT: plot is not ggplot object")
     stop("plot skal være et ggplot object")
   }
 
   if (!is.data.frame(qic_data)) {
+    message("[ADD_SPC_LABELS] EARLY EXIT: qic_data is not data.frame")
     stop("qic_data skal være en data.frame")
   }
+
+  message("[ADD_SPC_LABELS] Input validation passed")
 
   # Validate y_axis_unit
   valid_units <- c("count", "percent", "rate", "time")
