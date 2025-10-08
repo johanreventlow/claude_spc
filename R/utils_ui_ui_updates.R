@@ -574,9 +574,10 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
 
         if (pending_queue > 0 && queue_idle) {
           if (requireNamespace("later", quietly = TRUE)) {
+            # SPRINT 3: Use config constant for immediate processing
             later::later(function() {
               process_ui_update_queue(app_state)
-            }, delay = 0)
+            }, delay = UI_UPDATE_CONFIG$immediate_delay)
           } else {
             process_ui_update_queue(app_state)
           }
@@ -771,9 +772,10 @@ process_ui_update_queue <- function(app_state) {
     # Schedule next run if queue still has items
     if (length(shiny::isolate(app_state$ui$queued_updates)) > 0) {
       if (requireNamespace("later", quietly = TRUE)) {
+        # SPRINT 3: Use config constant for immediate processing
         later::later(function() {
           process_ui_update_queue(app_state)
-        }, delay = 0) # No delay for immediate processing
+        }, delay = UI_UPDATE_CONFIG$immediate_delay)
       }
     }
   })

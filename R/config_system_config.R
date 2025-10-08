@@ -133,3 +133,40 @@ AUTOSAVE_DELAYS <- list(
   data_save = 2000, # 2 seconds debounce for data auto-save
   settings_save = 1000 # 1 second debounce for settings auto-save (faster response)
 )
+
+#' Test Mode Configuration
+#'
+#' SPRINT 3: Extracted magic numbers for test mode operations
+#'
+#' @export
+TEST_MODE_CONFIG <- list(
+  ready_event_delay_seconds = 1.5, # Delay before emitting test_mode_ready event
+  startup_debounce_ms = 300, # Debounce for test data auto-load
+  auto_detect_delay_ms = 250, # Delay before auto-detection trigger
+  lazy_plot_generation = TRUE # Defer plot generation until needed
+)
+
+#' Cache Configuration
+#'
+#' SPRINT 3: Centralized cache timeout settings
+#'
+#' @export
+CACHE_CONFIG <- list(
+  default_timeout_seconds = 300, # 5 minutes - standard cache lifetime
+  extended_timeout_seconds = 600, # 10 minutes - for expensive computations
+  short_timeout_seconds = 60, # 1 minute - for frequently changing data
+  size_limit_entries = 50, # Maximum number of cached entries
+  cleanup_interval_seconds = 300 # How often to run cache cleanup (5 min)
+)
+
+#' UI Update Configuration
+#'
+#' SPRINT 3: Extracted UI update timing constants
+#'
+#' @export
+UI_UPDATE_CONFIG <- list(
+  immediate_delay = 0, # No delay - process immediately
+  fast_update_delay = 50, # Fast updates for responsive UI (50ms)
+  standard_update_delay = 100, # Standard update timing (100ms)
+  safe_programmatic_delay = 150 # Safe delay for programmatic updates to prevent loops
+)

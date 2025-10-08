@@ -192,7 +192,8 @@ create_app_state <- function() {
     startup_phase = "initializing", # initializing -> data_ready -> ui_ready -> complete
     lazy_plot_generation = TRUE,
     startup_events_queued = list(),
-    debounce_delay = 500, # ms delay for auto-detection
+    # SPRINT 3: Use config constant for debounce delay
+    debounce_delay = TEST_MODE_CONFIG$startup_debounce_ms,
     race_prevention_active = FALSE,
 
     # PR #12: Prevent duplicate autoloads

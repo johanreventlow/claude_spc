@@ -17,7 +17,7 @@ NULL
 #'
 #' @param reactive_expr Reactive expression at cache
 #' @param cache_key Character string eller function der genererer cache key
-#' @param cache_timeout Timeout i sekunder (default: 300 = 5 minutter)
+#' @param cache_timeout Timeout i sekunder (default: CACHE_CONFIG$default_timeout_seconds)
 #' @param cache_size_limit Maximum antal cache entries (default: 50)
 #'
 #' @return Cached reactive expression
@@ -29,7 +29,7 @@ NULL
 #'     detect_columns_full_analysis(data, app_state)
 #'   },
 #'   "autodetect",
-#'   cache_timeout = 600
+#'   cache_timeout = CACHE_CONFIG$extended_timeout_seconds
 #' )
 #'
 #' # Data-specific caching
@@ -38,11 +38,11 @@ NULL
 #'     expensive_data_processing(data)
 #'   },
 #'   function() paste0("processing_", digest::digest(data)),
-#'   300
+#'   CACHE_CONFIG$default_timeout_seconds
 #' )
 #'
 #' @export
-create_cached_reactive <- function(reactive_expr, cache_key, cache_timeout = 300, cache_size_limit = 50) {
+create_cached_reactive <- function(reactive_expr, cache_key, cache_timeout = CACHE_CONFIG$default_timeout_seconds, cache_size_limit = CACHE_CONFIG$size_limit_entries) {
   # Convert cache_key to function if it's a string
   key_func <- if (is.function(cache_key)) {
     cache_key
@@ -397,7 +397,7 @@ get_cache_stats <- function() {
 #' @param reactive_expr Reactive expression
 #' @param cache_key Cache key (string eller function)
 #' @param debounce_millis Debounce delay i millisekunder
-#' @param cache_timeout Cache timeout i sekunder
+#' @param cache_timeout Cache timeout i sekunder (default: CACHE_CONFIG$default_timeout_seconds)
 #'
 #' @return Debounced og cached reactive expression
 #'
@@ -408,11 +408,11 @@ get_cache_stats <- function() {
 #'   }),
 #'   "computation",
 #'   millis = 500,
-#'   cache_timeout = 300
+#'   cache_timeout = CACHE_CONFIG$default_timeout_seconds
 #' )
 #'
 #' @export
-create_performance_debounced <- function(reactive_expr, cache_key, debounce_millis = 500, cache_timeout = 300) {
+create_performance_debounced <- function(reactive_expr, cache_key, debounce_millis = 500, cache_timeout = CACHE_CONFIG$default_timeout_seconds) {
   # First apply caching
   cached_reactive <- create_cached_reactive(reactive_expr, cache_key, cache_timeout)
 

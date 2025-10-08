@@ -335,6 +335,7 @@ initialize_test_mode <- function(app_state, emit, session, hashed_token, session
   }
 
   # Emit test_mode_ready event AFTER all observers are set up
+  # SPRINT 3: Use config constant instead of magic number
   later::later(
     function() {
       shiny::withReactiveDomain(session, {
@@ -354,7 +355,7 @@ initialize_test_mode <- function(app_state, emit, session, hashed_token, session
         )
       })
     },
-    delay = 1.5
+    delay = TEST_MODE_CONFIG$ready_event_delay_seconds
   )
 
   log_debug("Test mode initialized", .context = "TEST_MODE")
