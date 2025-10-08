@@ -273,8 +273,25 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
       kommentar_value <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
 
-      # Beregn responsive base_size baseret på plot bredde
-      width_px <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]] %||% 800
+      # VIEWPORT GUARD: Afvent at clientData viewport dimensioner er tilgængelige
+      # Dette forhindrer første render før Shiny's plot viewport er initialiseret,
+      # hvilket sikrer korrekt label placement (grid device size er kendt)
+      width_px <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
+      height_px <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
+
+      # Skip render hvis viewport ikke er klar (første render pre-initialization)
+      shiny::req(width_px, height_px)
+      shiny::req(width_px > 100, height_px > 100) # Sanity check: realistiske dimensioner
+
+      # Log viewport status for debugging label placement issues
+      if (getOption("spc.debug.label_placement", FALSE)) {
+        log_debug(
+          sprintf("Viewport ready: %d×%d px", width_px, height_px),
+          "VIEWPORT_GUARD"
+        )
+      }
+
+      # Beregn responsive base_size baseret på plot bredde (nu med garanteret valid width)
       base_size <- max(8, min(14, width_px / 70))
 
       list(
@@ -291,7 +308,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         title = title_value,
         y_axis_unit = unit_value,
         kommentar_column = kommentar_value,
-        base_size = base_size
+        base_size = base_size,
+        viewport_width_px = width_px,
+        viewport_height_px = height_px,
+        viewport_ready = TRUE # Flag til add_spc_labels() at viewport er verificeret
       )
     })
 
@@ -608,7 +628,20 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Separat renderPlot for det faktiske SPC plot med responsive font sizing
     # base_size beregnes automatisk i spc_inputs() reactive baseret på plot bredde
     # res = 144 giver skarp tekst på HiDPI-skærme
+    #
+    # VIEWPORT FIX: Explicit width/height binding sikrer at renderPlot() bruger
+    # faktiske Shiny clientData dimensioner i stedet for default (400×400).
+    # Dette er kritisk for korrekt grid device size ved label placement.
     output$spc_plot_actual <- shiny::renderPlot(
+      width = function() {
+        w <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
+        if (is.null(w) || w <= 0) 800 else w # Fallback til reasonable default
+      },
+      height = function() {
+        h <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
+        if (is.null(h) || h <= 0) 600 else h # Fallback til reasonable default
+      },
+      res = 144,
       {
         data <- module_data_reactive()
 
@@ -628,8 +661,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
         print(plot_result)
         invisible(plot_result)
-      },
-      res = 144
+      }
     )
 
     # Status og Information ---------------------------------------------------

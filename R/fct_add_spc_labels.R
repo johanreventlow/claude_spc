@@ -65,6 +65,60 @@ add_spc_labels <- function(
     )
   }
 
+  # DEVICE READY CHECK (Phase 2 Fix) ----
+  # Graceful degradation: Returner plot uden labels hvis device ikke er klar.
+  # Dette forhindrer forkert label placement ved første render hvor viewport
+  # muligvis ikke er fuldt initialiseret (trods viewport guard i server).
+  #
+  # LEVEL 1: Check om device er åbent
+  device_open <- tryCatch(
+    {
+      grDevices::dev.cur() > 1
+    },
+    error = function(e) FALSE
+  )
+
+  if (!device_open) {
+    if (verbose) {
+      message("No graphics device open - deferring label placement to next render")
+    }
+    return(plot) # Graceful degradation: plot uden labels
+  }
+
+  # LEVEL 2: Check om device size er realistisk (ikke default 7×7 eller NULL)
+  device_size <- tryCatch(
+    {
+      dev_size <- grDevices::dev.size("in")
+      list(width = dev_size[1], height = dev_size[2])
+    },
+    error = function(e) NULL
+  )
+
+  device_ready <- !is.null(device_size) &&
+    device_size$height >= 3 && # Minimum realistic height
+    device_size$height <= 50 && # Maximum realistic height
+    device_size$width >= 3 # Minimum realistic width
+
+  if (!device_ready) {
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message(sprintf(
+        "Device not ready (%.1f×%.1f inches) - deferring label placement to next render",
+        device_size$width %||% 0,
+        device_size$height %||% 0
+      ))
+    }
+    return(plot) # Graceful degradation: plot uden labels
+  }
+
+  # DEVICE ER KLAR: Fortsæt med normal label placement
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message(sprintf(
+      "Device ready: %.1f×%.1f inches - proceeding with label placement",
+      device_size$width,
+      device_size$height
+    ))
+  }
+
   # FIX: Auto-scale label_size baseret på device height
   # Dette sikrer at labels skalerer proportionelt med plot størrelse
   # Baseline: label_size = 6 for ~7.8" device height (small plot reference)
