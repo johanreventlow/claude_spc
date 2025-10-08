@@ -313,8 +313,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # Beregn responsive base_size baseret på plot bredde OG pixelratio
       # pixelratio kompensation sikrer konsistent optisk udseende på tværs af
       # forskellige DPI displays (Retina vs standard)
+      # Konfiguration i FONT_SCALING_CONFIG (R/config_ui.R)
       pixelratio <- session$clientData$pixelratio %||% 1
-      base_size_raw <- max(8, min(14, width_px / 70))
+      base_size_raw <- max(
+        FONT_SCALING_CONFIG$min_size,
+        min(FONT_SCALING_CONFIG$max_size, width_px / FONT_SCALING_CONFIG$divisor)
+      )
       base_size <- base_size_raw / pixelratio
 
       list(

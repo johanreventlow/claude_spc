@@ -9,6 +9,8 @@ add_spc_labels(
   qic_data,
   y_axis_unit = "count",
   label_size = 6,
+  viewport_width = NULL,
+  viewport_height = NULL,
   verbose = FALSE,
   debug_mode = FALSE
 )
@@ -21,6 +23,10 @@ add_spc_labels(
 \item{y_axis_unit}{character unit for y-akse ("count", "percent", "rate", "time", eller andet)}
 
 \item{label_size}{numeric base font size for responsive sizing (default 6)}
+
+\item{viewport_width}{numeric viewport width in pixels (optional, from clientData)}
+
+\item{viewport_height}{numeric viewport height in pixels (optional, from clientData)}
 
 \item{verbose}{logical print placement warnings (default FALSE)}
 

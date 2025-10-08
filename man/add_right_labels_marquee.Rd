@@ -15,6 +15,8 @@ add_right_labels_marquee(
   gpA = grid::gpar(col = "#009CE8"),
   gpB = grid::gpar(col = "#565656"),
   label_size = 6,
+  viewport_width = NULL,
+  viewport_height = NULL,
   verbose = TRUE,
   debug_mode = FALSE
 )
@@ -33,6 +35,10 @@ add_right_labels_marquee(
 \item{gpA, gpB}{grid::gpar styling}
 
 \item{label_size}{numeric label size for responsive sizing (default 6, legacy baseline)}
+
+\item{viewport_width}{numeric viewport width in inches (optional, from clientData)}
+
+\item{viewport_height}{numeric viewport height in inches (optional, from clientData)}
 
 \item{verbose}{logical print placement warnings}
 

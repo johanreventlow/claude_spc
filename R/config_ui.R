@@ -61,3 +61,29 @@ UI_LAYOUT_PROPORTIONS <- list(
   two_thirds = 2 / 3,
   three_quarters = 3 / 4
 )
+
+# FONT SCALING CONFIGURATION ===================================================
+
+#' Responsive font scaling configuration
+#'
+#' Styrer hvordan base_size skaleres baseret på viewport bredde og pixelratio.
+#'
+#' @details
+#' base_size beregnes som: max(min_size, min(max_size, width_px / divisor)) / pixelratio
+#'
+#' - divisor: Lavere værdi = større fonts (50 = ~40% større end 70)
+#' - min_size: Minimum font size uanset viewport
+#' - max_size: Maximum font size selv på store skærme
+#'
+#' Eksempler ved divisor = 50:
+#' - 500px bred: base_size = 10pt (Standard) / 5pt (Retina)
+#' - 700px bred: base_size = 14pt (Standard) / 7pt (Retina)
+#' - 1000px bred: base_size = 14pt (capped) / 7pt (capped)
+#'
+#' @format Named list med scaling parametre
+#' @export
+FONT_SCALING_CONFIG <- list(
+  divisor = 24,     # Viewport width divisor (lower = larger fonts)
+  min_size = 8,     # Minimum base_size i points
+  max_size = 64     # Maximum base_size i points
+)
