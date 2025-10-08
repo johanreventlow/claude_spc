@@ -310,8 +310,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         )
       }
 
-      # Beregn responsive base_size baseret på plot bredde
-      base_size <- max(8, min(14, width_px / 70))
+      # Beregn responsive base_size baseret på plot bredde OG pixelratio
+      # pixelratio kompensation sikrer konsistent optisk udseende på tværs af
+      # forskellige DPI displays (Retina vs standard)
+      pixelratio <- session$clientData$pixelratio %||% 1
+      base_size_raw <- max(8, min(14, width_px / 70))
+      base_size <- base_size_raw / pixelratio
 
       list(
         data = data,
@@ -651,7 +655,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     ## Faktisk Plot Rendering
     # Separat renderPlot for det faktiske SPC plot med responsive font sizing
     # base_size beregnes automatisk i spc_inputs() reactive baseret på plot bredde
-    # res = 144 giver skarp tekst på HiDPI-skærme
+    # OG pixelratio for at sikre konsistent optisk udseende på tværs af devices
+    # res = 96 er industry standard for web (Shiny multiplicerer automatisk med pixelratio)
     #
     # VIEWPORT FIX: Explicit width/height binding + viewport guard sikrer korrekt
     # device size ved label placement.
@@ -668,7 +673,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       height = function() {
         session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
       },
-      res = 144,
+      res = 96, # Industry standard for web (auto-scaled by pixelratio)
       {
         # VIEWPORT GUARD: Vent på clientData før rendering
         # Dette sikrer at device altid har korrekte dimensioner når labels beregnes.
