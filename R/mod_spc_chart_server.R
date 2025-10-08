@@ -644,20 +644,37 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # base_size beregnes automatisk i spc_inputs() reactive baseret på plot bredde
     # res = 144 giver skarp tekst på HiDPI-skærme
     #
-    # VIEWPORT FIX: Explicit width/height binding sikrer at renderPlot() bruger
-    # faktiske Shiny clientData dimensioner i stedet for default (400×400).
-    # Dette er kritisk for korrekt grid device size ved label placement.
+    # VIEWPORT FIX: Explicit width/height binding + viewport guard sikrer korrekt
+    # device size ved label placement.
+    #
+    # Strategien:
+    # 1. width/height functions binder til faktiske clientData dimensioner
+    # 2. req() guard inde i renderPlot() venter indtil clientData er klar
+    # 3. Dette sikrer at device ALTID har korrekte dimensioner når labels beregnes
+    # 4. Ingen fallbacks nødvendige - req() garanterer valid data
     output$spc_plot_actual <- shiny::renderPlot(
       width = function() {
-        w <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
-        if (is.null(w) || w <= 0) 800 else w # Fallback til reasonable default
+        session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
       },
       height = function() {
-        h <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
-        if (is.null(h) || h <= 0) 600 else h # Fallback til reasonable default
+        session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
       },
       res = 144,
       {
+        # VIEWPORT GUARD: Vent på clientData før rendering
+        # Dette sikrer at device altid har korrekte dimensioner når labels beregnes.
+        # req() invaliderer reactive context indtil clientData er tilgængelig.
+        viewport_width <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
+        viewport_height <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
+
+        # Kræv at viewport er initialiseret med realistiske værdier
+        shiny::req(
+          !is.null(viewport_width),
+          !is.null(viewport_height),
+          viewport_width > 100, # Minimum realistic width
+          viewport_height > 100 # Minimum realistic height
+        )
+
         data <- module_data_reactive()
 
         if (is.null(data) || nrow(data) == 0) {

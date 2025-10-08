@@ -83,59 +83,112 @@ add_right_labels_marquee <- function(
   gtable <- ggplot2::ggplot_gtable(built_plot)
 
   # Detektér aktiv device størrelse for korrekt panel height measurement
-  # FIX: Brug faktisk device size i stedet for hardcoded 7×7 inches
+  # VIGTIGT: Med viewport guard i renderPlot() er device ALTID klar i production.
+  # Hvis device IKKE er klar, betyder det et arkitektur-problem.
   device_size <- tryCatch(
     {
       if (grDevices::dev.cur() > 1) { # Device aktiv (ikke null device)
         dev_inches <- grDevices::dev.size("in")
-        list(width = dev_inches[1], height = dev_inches[2])
+        list(
+          width = dev_inches[1],
+          height = dev_inches[2],
+          actual = TRUE # Flag: faktiske målinger
+        )
       } else {
-        # Ingen aktiv device - brug defaults
-        list(width = 7, height = 7)
+        # INGEN DEVICE: Dette burde IKKE ske i production med viewport guard
+        if (verbose) {
+          warning(
+            "[LABEL_PLACEMENT] No graphics device open - label measurements will be inaccurate! ",
+            "This indicates a viewport guard failure."
+          )
+        }
+        list(
+          width = NA_real_,
+          height = NA_real_,
+          actual = FALSE # Flag: ingen faktiske målinger
+        )
       }
     },
     error = function(e) {
-      # Fallback hvis dev.size() fejler
-      list(width = 7, height = 7)
+      # Device detection fejlede
+      warning(
+        "[LABEL_PLACEMENT] Device size detection failed: ", e$message,
+        " - label measurements will be inaccurate!"
+      )
+      list(
+        width = NA_real_,
+        height = NA_real_,
+        actual = FALSE
+      )
     }
   )
 
   if (verbose) {
-    message(sprintf(
-      "Device size: %.2f × %.2f inches",
-      device_size$width, device_size$height
-    ))
+    if (device_size$actual) {
+      message(sprintf(
+        "Device size: %.2f × %.2f inches (ACTUAL measurements)",
+        device_size$width, device_size$height
+      ))
+    } else {
+      message("[DEVICE_SIZE] WARNING: No actual device size available - proceeding without measurements")
+    }
   }
 
-  # Mål panel højde med faktisk device størrelse
-  panel_height_inches <- tryCatch(
-    {
-      measure_panel_height_from_gtable(
-        gtable,
-        device_width = device_size$width,
-        device_height = device_size$height
-      )
-    },
-    error = function(e) {
-      if (verbose) {
-        message("Kunne ikke måle panel højde: ", e$message, " - bruger viewport fallback")
-      }
-      NULL
-    }
-  )
+  # Mål panel højde med faktisk device størrelse (kun hvis device er klar)
+  panel_height_inches <- NULL
 
-  if (verbose && !is.null(panel_height_inches)) {
-    message("Målt panel højde: ", round(panel_height_inches, 3), " inches")
+  if (device_size$actual) {
+    # Faktiske målinger tilgængelige - mål panel height
+    panel_height_inches <- tryCatch(
+      {
+        measure_panel_height_from_gtable(
+          gtable,
+          device_width = device_size$width,
+          device_height = device_size$height
+        )
+      },
+      error = function(e) {
+        if (verbose) {
+          message("Panel height measurement failed: ", e$message)
+        }
+        NULL
+      }
+    )
+
+    if (verbose && !is.null(panel_height_inches)) {
+      message(sprintf(
+        "Panel height: %.3f inches (measured from actual device)",
+        panel_height_inches
+      ))
+    }
+  } else {
+    # Ingen faktiske device dimensioner - kan ikke måle panel height
+    if (verbose) {
+      message("[PANEL_HEIGHT] Cannot measure without actual device size - skipping measurement")
+    }
   }
 
   # Auto-beregn label_height
   if (is.null(params$label_height_npc)) {
+    # VIGTIGT: Hvis device ikke er klar (actual=FALSE), er estimater unøjagtige
+    if (!device_size$actual && verbose) {
+      warning(
+        "[LABEL_HEIGHT] Estimating label heights without actual device measurements - ",
+        "results may be inaccurate!"
+      )
+    }
+
+    # Konverter NA til NULL for estimate_label_heights_npc's fallback mechanism
+    # (fallbacks aktiveres kun ved NULL, ikke NA)
+    device_width_for_estimate <- if (device_size$actual) device_size$width else NULL
+    device_height_for_estimate <- if (device_size$actual) device_size$height else NULL
+
     heights <- estimate_label_heights_npc(
       texts = c(textA, textB),
       style = right_aligned_style,
       panel_height_inches = panel_height_inches,
-      device_width = device_size$width,
-      device_height = device_size$height,
+      device_width = device_width_for_estimate,
+      device_height = device_height_for_estimate,
       marquee_size = marquee_size,
       return_details = TRUE
     )

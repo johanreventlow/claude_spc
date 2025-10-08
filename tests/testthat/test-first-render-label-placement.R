@@ -2,13 +2,18 @@
 # Regression test for viewport-ready label placement fix
 #
 # ISSUE: Labels overlappede centerline ved første rendering fordi device/viewport
-# ikke var initialiseret → forkerte NPC konverteringer.
+# ikke var initialiseret → forkerte NPC konverteringer eller forkerte dimensioner.
 #
-# FIX: Dobbelt beskyttelse via:
-# 1) Viewport guard i mod_spc_chart_server.R (skip render før clientData klar)
-# 2) Device ready check i add_spc_labels() (graceful degradation hvis device ikke klar)
+# ROOT CAUSE: add_spc_labels() blev kaldt før renderPlot() havde åbnet device,
+# eller med fallback dimensioner (800×600) i stedet for faktiske viewport dimensioner.
+#
+# FIX: To-lags strategi:
+# 1) Viewport guard i renderPlot() - req() venter på clientData før rendering starter
+# 2) Non-blocking device check i add_spc_labels() - tillader ggplot construction uden device
+#
+# RESULTAT: renderPlot() åbner altid device med KORREKTE dimensioner før labels beregnes
 
-test_that("add_spc_labels() returnerer plot uden labels hvis ingen device", {
+test_that("add_spc_labels() tilføjer labels UDEN device (ggplot kan bygges uden device)", {
   skip_if_not_installed("qicharts2")
   skip_if_not_installed("ggplot2")
 
@@ -16,11 +21,26 @@ test_that("add_spc_labels() returnerer plot uden labels hvis ingen device", {
   if (!exists("add_spc_labels")) {
     source("R/fct_add_spc_labels.R")
   }
+  if (!exists("add_right_labels_marquee")) {
+    source("R/utils_add_right_labels_marquee.R")
+  }
   if (!exists("create_responsive_label")) {
     source("R/utils_label_helpers.R")
   }
   if (!exists("format_y_value")) {
     source("R/utils_label_formatting.R")
+  }
+  if (!exists("place_two_labels_npc")) {
+    source("R/utils_label_placement.R")
+  }
+  if (!exists("npc_mapper_from_built")) {
+    source("R/utils_npc_mapper.R")
+  }
+  if (!exists("estimate_label_heights_npc")) {
+    source("R/utils_label_height_estimation.R")
+  }
+  if (!exists("LABEL_PLACEMENT_CONFIG")) {
+    source("R/config_label_placement.R")
   }
 
   # Create test data
@@ -55,15 +75,15 @@ test_that("add_spc_labels() returnerer plot uden labels hvis ingen device", {
     verbose = FALSE
   )
 
-  # FORVENT: Plot returneret uændret (uden labels)
-  # Ingen placement_info attribute da labels ikke blev tilføjet
+  # FIX: ggplot CAN be built without device, so labels SHOULD be added
+  # FORVENT: Plot returneret MED labels (downstream functions use 7×7" fallback)
   expect_true(inherits(result_no_device, "gg"),
               "Skal returnere ggplot object selv uden device")
 
-  # Verificer at ingen placement info er tilstede (labels ikke tilføjet)
+  # Verificer at placement info ER tilstede (labels blev tilføjet med fallback sizes)
   placement_info <- attr(result_no_device, "placement_info")
-  expect_true(is.null(placement_info),
-              "Ingen placement_info når device ikke klar - graceful degradation")
+  expect_false(is.null(placement_info),
+               "Placement info skal være tilstede - ggplot kan bygges uden device")
 })
 
 test_that("add_spc_labels() fungerer korrekt med valid device", {
@@ -231,7 +251,7 @@ test_that("add_spc_labels() håndterer blank centerline korrekt", {
   }
 })
 
-test_that("Device size unrealistic detection fungerer", {
+test_that("add_spc_labels() tilføjer labels selv med unrealistic device sizes (non-blocking)", {
   skip_if_not_installed("qicharts2")
   skip_if_not_installed("ggplot2")
 
@@ -239,11 +259,26 @@ test_that("Device size unrealistic detection fungerer", {
   if (!exists("add_spc_labels")) {
     source("R/fct_add_spc_labels.R")
   }
+  if (!exists("add_right_labels_marquee")) {
+    source("R/utils_add_right_labels_marquee.R")
+  }
   if (!exists("create_responsive_label")) {
     source("R/utils_label_helpers.R")
   }
   if (!exists("format_y_value")) {
     source("R/utils_label_formatting.R")
+  }
+  if (!exists("place_two_labels_npc")) {
+    source("R/utils_label_placement.R")
+  }
+  if (!exists("npc_mapper_from_built")) {
+    source("R/utils_npc_mapper.R")
+  }
+  if (!exists("estimate_label_heights_npc")) {
+    source("R/utils_label_height_estimation.R")
+  }
+  if (!exists("LABEL_PLACEMENT_CONFIG")) {
+    source("R/config_label_placement.R")
   }
 
   # Create test data
@@ -262,15 +297,15 @@ test_that("Device size unrealistic detection fungerer", {
   base_plot <- qic_result
   qic_data <- qic_result$data
 
-  # Test forskellige unrealistic device sizes
-  unrealistic_sizes <- list(
-    c(1, 1),     # For lille
-    c(100, 100), # For stor
-    c(2, 2)      # Under minimum threshold
+  # Test forskellige device sizes (alle skulle nu tilføje labels)
+  test_sizes <- list(
+    c(1, 1),     # Meget lille
+    c(100, 100), # Meget stor
+    c(2, 2)      # Lille men gyldig
   )
 
-  for (size in unrealistic_sizes) {
-    # Åbn device med unrealistic size
+  for (size in test_sizes) {
+    # Åbn device med given size
     grDevices::pdf(NULL, width = size[1], height = size[2])
 
     result <- add_spc_labels(
@@ -281,15 +316,15 @@ test_that("Device size unrealistic detection fungerer", {
       verbose = FALSE
     )
 
-    # FORVENT: Plot returneret uden labels (graceful degradation)
+    # FIX: Non-blocking approach - labels SKAL tilføjes uanset device size
     expect_true(inherits(result, "gg"),
-                sprintf("Skal returnere ggplot selv med unrealistic size %.1f×%.1f",
+                sprintf("Skal returnere ggplot med size %.1f×%.1f",
                         size[1], size[2]))
 
     placement_info <- attr(result, "placement_info")
-    expect_true(is.null(placement_info),
-                sprintf("Ingen labels ved unrealistic device size %.1f×%.1f",
-                        size[1], size[2]))
+    expect_false(is.null(placement_info),
+                 sprintf("Labels skal tilføjes selv med device size %.1f×%.1f (non-blocking)",
+                         size[1], size[2]))
 
     if (grDevices::dev.cur() > 1) grDevices::dev.off()
   }

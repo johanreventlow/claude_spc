@@ -47,9 +47,11 @@ add_spc_labels <- function(
     label_size = 6,
     verbose = FALSE,
     debug_mode = FALSE) {
-  # UNCONDITIONAL ENTRY LOG (always prints)
-  message("[ADD_SPC_LABELS] *** FUNCTION CALLED ***")
-  message(sprintf("[ADD_SPC_LABELS] y_axis_unit: %s, label_size: %.1f", y_axis_unit, label_size))
+  # Entry logging (conditional)
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message("[ADD_SPC_LABELS] Function called")
+    message(sprintf("[ADD_SPC_LABELS] y_axis_unit: %s, label_size: %.1f", y_axis_unit, label_size))
+  }
 
   # Input validation ----
   if (!inherits(plot, "gg")) {
@@ -62,7 +64,9 @@ add_spc_labels <- function(
     stop("qic_data skal være en data.frame")
   }
 
-  message("[ADD_SPC_LABELS] Input validation passed")
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message("[ADD_SPC_LABELS] Input validation passed")
+  }
 
   # Validate y_axis_unit
   valid_units <- c("count", "percent", "rate", "time")
@@ -73,121 +77,101 @@ add_spc_labels <- function(
     )
   }
 
-  # DEVICE READY CHECK (Phase 2 Fix) ----
-  # Graceful degradation: Returner plot uden labels hvis device ikke er klar.
-  # Dette forhindrer forkert label placement ved første render hvor viewport
-  # muligvis ikke er fuldt initialiseret (trods viewport guard i server).
+  # DEVICE INFO LOGGING (Non-blocking) ----
+  # FIX: ggplot objects CAN be built without an active graphics device.
+  # Device is only needed when renderPlot() executes, not during plot construction.
+  # The downstream functions (add_right_labels_marquee, measure_panel_height_from_gtable)
+  # already have fallback logic for missing device (defaults to 7×7 inches).
   #
-  # LEVEL 1: Check om device er åbent
-  device_open <- tryCatch(
+  # Therefore: NO blocking checks here - just log device status for debugging.
+
+  # Log device status (non-blocking)
+  device_info <- tryCatch(
     {
-      grDevices::dev.cur() > 1
+      dev_cur <- grDevices::dev.cur()
+      dev_open <- dev_cur > 1
+
+      if (dev_open) {
+        dev_size <- grDevices::dev.size("in")
+        list(
+          open = TRUE,
+          dev_num = dev_cur,
+          width = dev_size[1],
+          height = dev_size[2]
+        )
+      } else {
+        list(
+          open = FALSE,
+          dev_num = dev_cur,
+          width = NA_real_,
+          height = NA_real_
+        )
+      }
     },
-    error = function(e) FALSE
-  )
-
-  # DEBUG: UNCONDITIONAL device status logging
-  message(sprintf(
-    "[DEVICE_CHECK] Device open: %s (dev.cur = %d)",
-    device_open,
-    grDevices::dev.cur()
-  ))
-
-  if (!device_open) {
-    message("[DEVICE_CHECK] BLOCKING: No graphics device open - deferring label placement")
-    return(plot) # Graceful degradation: plot uden labels
-  }
-
-  message("[DEVICE_CHECK] ✓ Device is open - proceeding")
-
-  # LEVEL 2: Check om device size er realistisk (ikke NULL eller ekstreme værdier)
-  device_size <- tryCatch(
-    {
-      dev_size <- grDevices::dev.size("in")
-      list(width = dev_size[1], height = dev_size[2])
-    },
-    error = function(e) NULL
-  )
-
-  # ADJUSTED THRESHOLD: Accepter device sizes ned til 2 inches (permissive)
-  # Dette tillader conservative defaults (800×600 @ 96dpi ≈ 8.3×6.25 inches)
-  # men afviser ekstreme værdier (< 2" eller > 50")
-  device_ready <- !is.null(device_size) &&
-    device_size$height >= 2 && # Permissive minimum (accepter small plots)
-    device_size$height <= 50 && # Maximum realistic height
-    device_size$width >= 2 # Permissive minimum
-
-  # DEBUG: Always log device size check
-  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-    message(sprintf(
-      "[DEVICE_SIZE] Width: %.1f\" (>= 2: %s), Height: %.1f\" (>= 2: %s, <= 50: %s)",
-      device_size$width %||% 0,
-      !is.null(device_size) && device_size$width >= 2,
-      device_size$height %||% 0,
-      !is.null(device_size) && device_size$height >= 2,
-      !is.null(device_size) && device_size$height <= 50
-    ))
-    message(sprintf(
-      "[DEVICE_SIZE] Ready: %s",
-      device_ready
-    ))
-  }
-
-  if (!device_ready) {
-    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message(sprintf(
-        "[DEVICE_SIZE] BLOCKING: Device not ready (%.1f×%.1f inches) - deferring label placement",
-        device_size$width %||% 0,
-        device_size$height %||% 0
-      ))
+    error = function(e) {
+      list(
+        open = FALSE,
+        dev_num = 1,
+        width = NA_real_,
+        height = NA_real_,
+        error = e$message
+      )
     }
-    return(plot) # Graceful degradation: plot uden labels
-  }
+  )
 
-  # DEVICE ER KLAR: Fortsæt med normal label placement
+  # Log device info (conditional on verbose mode)
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
     message(sprintf(
-      "[DEVICE_SIZE] ✓ Device ready: %.1f×%.1f inches - proceeding with label placement",
-      device_size$width,
-      device_size$height
+      "[DEVICE_INFO] Device: %s (dev.cur = %d)",
+      if (device_info$open) "OPEN" else "NOT OPEN",
+      device_info$dev_num
     ))
+
+    if (device_info$open) {
+      message(sprintf(
+        "[DEVICE_INFO] Size: %.1f × %.1f inches",
+        device_info$width,
+        device_info$height
+      ))
+    } else {
+      message("[DEVICE_INFO] No device open - downstream functions will use fallback sizes (7×7 inches)")
+    }
   }
 
-  # FIX: Auto-scale label_size baseret på device height
+  # FIX: Auto-scale label_size baseret på device height (hvis tilgængelig)
   # Dette sikrer at labels skalerer proportionelt med plot størrelse
   # Baseline: label_size = 6 for ~7.8" device height (small plot reference)
   device_height_baseline <- 7.8 # inches (reference: 751px @ 96dpi)
 
-  tryCatch(
-    {
-      if (grDevices::dev.cur() > 1) { # Device aktiv
-        dev_height <- grDevices::dev.size("in")[2]
+  if (device_info$open && !is.na(device_info$height)) {
+    # Device aktiv med valid height - skalér label_size
+    dev_height <- device_info$height
 
-        # Skalér label_size proportionelt med device height
-        # VIGTIGT: Kun skalér opad (scale_factor >= 1.0) for at undgå under-skalering
-        # på små plots hvor labels ville blive ulæseligt små
-        # Small plot (7.8"): label_size = 6.0 (ikke skaleret ned)
-        # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0 (skaleret op)
-        scale_factor <- pmax(1.0, dev_height / device_height_baseline)
-        label_size_scaled <- label_size * scale_factor
+    # Skalér label_size proportionelt med device height
+    # VIGTIGT: Kun skalér opad (scale_factor >= 1.0) for at undgå under-skalering
+    # på små plots hvor labels ville blive ulæseligt små
+    # Small plot (7.8"): label_size = 6.0 (ikke skaleret ned)
+    # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0 (skaleret op)
+    scale_factor <- pmax(1.0, dev_height / device_height_baseline)
+    label_size_scaled <- label_size * scale_factor
 
-        if (verbose) {
-          message(sprintf(
-            "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\", scale: %.2f)",
-            label_size, label_size_scaled, dev_height, scale_factor
-          ))
-        }
-
-        label_size <- label_size_scaled
-      }
-    },
-    error = function(e) {
-      # Fallback: brug original label_size hvis device detection fejler
-      if (verbose) {
-        message("Device height detection fejlede - bruger fast label_size: ", label_size)
-      }
+    if (verbose) {
+      message(sprintf(
+        "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\", scale: %.2f)",
+        label_size, label_size_scaled, dev_height, scale_factor
+      ))
     }
-  )
+
+    label_size <- label_size_scaled
+  } else {
+    # Ingen device eller ingen valid height - brug original label_size
+    if (verbose) {
+      message(sprintf(
+        "No device height available - using fixed label_size: %.1f",
+        label_size
+      ))
+    }
+  }
 
   # Beregn y_range for time formatting context
   y_range <- if (y_axis_unit == "time" && !is.null(qic_data$y)) {

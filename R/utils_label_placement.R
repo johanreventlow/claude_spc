@@ -1542,7 +1542,16 @@ estimate_label_heights_npc <- function(
   current_dev <- grDevices::dev.cur()
 
   # Bestem device størrelse til målinger
-  # Fallback: 8×4.5 inches (16:9 aspect ratio) matcher typiske SPC plot dimensioner
+  # VIGTIGT: Fallback til 8×4.5 inches burde IKKE ske i production (viewport guard sikrer device)
+  using_fallback <- is.null(device_width) || is.null(device_height)
+
+  if (using_fallback && getOption("spc.debug.label_placement", FALSE)) {
+    message(
+      "[LABEL_HEIGHT_ESTIMATE] WARNING: No actual device dimensions provided - ",
+      "using fallback 8×4.5\" (this should not happen in production with viewport guard)"
+    )
+  }
+
   meas_width <- if (!is.null(device_width)) device_width else 8
   meas_height <- if (!is.null(device_height)) device_height else 4.5
 
