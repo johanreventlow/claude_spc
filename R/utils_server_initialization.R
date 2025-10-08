@@ -12,6 +12,38 @@
 #' @param session_debugger Session debugger object
 #'
 #' @return List with app_state, emit, ui_service components
+#'
+#' @details
+#' This function initializes the core infrastructure needed for the SPC app:
+#' - Creates centralized app_state for reactive state management
+#' - Sets up event-driven architecture via emit API
+#' - Initializes UI update service for programmatic updates
+#' - Configures shinylogs tracking (if enabled)
+#' - Registers event listeners with proper cleanup
+#'
+#' @examples
+#' \dontrun{
+#' # In main_app_server()
+#' session_token <- session$token %||% paste0("session_", Sys.time())
+#' hashed_token <- hash_session_token(session_token)
+#' session_debugger <- debug_session_lifecycle(hashed_token, session)
+#'
+#' infrastructure <- initialize_app_infrastructure(
+#'   session = session,
+#'   hashed_token = hashed_token,
+#'   session_debugger = session_debugger
+#' )
+#'
+#' # Extract components for use in server logic
+#' app_state <- infrastructure$app_state
+#' emit <- infrastructure$emit
+#' ui_service <- infrastructure$ui_service
+#'
+#' # Use emit API to trigger events
+#' emit$data_updated(context = "file_upload")
+#' emit$auto_detection_started()
+#' }
+#'
 #' @export
 initialize_app_infrastructure <- function(session, hashed_token, session_debugger) {
   log_debug("Initializing app infrastructure", .context = "APP_INIT")
@@ -108,6 +140,28 @@ initialize_app_infrastructure <- function(session, hashed_token, session_debugge
 #' @param session Shiny session object
 #' @param app_state Centralized app state
 #' @param emit Event emission API
+#'
+#' @details
+#' Sets up two periodic background tasks:
+#' - System cleanup (every 5 minutes): Removes stale cache entries, cleans up observers
+#' - Performance monitoring (every 15 minutes): Reports system health metrics
+#'
+#' Both tasks check session_active flag and stop automatically when session ends.
+#'
+#' @examples
+#' \dontrun{
+#' # After initializing infrastructure
+#' setup_background_tasks(
+#'   session = session,
+#'   app_state = app_state,
+#'   emit = emit
+#' )
+#'
+#' # Background tasks will run automatically:
+#' # - Cleanup every 5 minutes
+#' # - Performance reports every 15 minutes
+#' # - Both stop when session$onSessionEnded triggers
+#' }
 #'
 #' @export
 setup_background_tasks <- function(session, app_state, emit) {
@@ -240,6 +294,33 @@ setup_background_tasks <- function(session, app_state, emit) {
 #' @param session Shiny session object
 #' @param hashed_token Hashed session token for logging
 #' @param session_debugger Session debugger object
+#'
+#' @details
+#' Test mode setup includes:
+#' - Auto-loading example data if TEST_MODE_AUTO_LOAD is TRUE
+#' - Configuring test mode optimization settings (debounce delays, lazy plot generation)
+#' - Emitting test_mode_ready event after initialization
+#' - Preventing duplicate autoloads via autoload_completed flag
+#'
+#' The function uses TEST_MODE_CONFIG constants for timing control.
+#'
+#' @examples
+#' \dontrun{
+#' # After infrastructure setup
+#' initialize_test_mode(
+#'   app_state = app_state,
+#'   emit = emit,
+#'   session = session,
+#'   hashed_token = hashed_token,
+#'   session_debugger = session_debugger
+#' )
+#'
+#' # Test mode will:
+#' # 1. Auto-load example data if enabled
+#' # 2. Configure optimization settings
+#' # 3. Emit test_mode_ready event after delay
+#' # 4. Trigger auto-detection workflow
+#' }
 #'
 #' @export
 initialize_test_mode <- function(app_state, emit, session, hashed_token, session_debugger) {
