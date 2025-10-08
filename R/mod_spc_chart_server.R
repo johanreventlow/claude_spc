@@ -11,6 +11,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Module initialization
     ns <- session$ns
 
+    # Viewport dimensions for label placement
+    # These are set from renderPlot when actual viewport size is known
+    viewport_dims <- shiny::reactiveVal(list(width = NULL, height = NULL))
+
     # Helper function: Safe max that handles empty vectors and preserves actual values
     safe_max <- function(x, na.rm = TRUE) {
       if (length(x) == 0) {
@@ -273,8 +277,40 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
       kommentar_value <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
 
+      # VIEWPORT DIMENSIONS: Brug clientData hvis tilgængelig, ellers conservative defaults
+      # Dette sikrer at plot ALTID renders (også ved første render), men med progressive
+      # enhancement når faktiske dimensioner bliver tilgængelige.
+      #
+      # STRATEGI: Safe defaults → Perfect placement
+      # - Første render: Brug defaults (800×600) → Labels placeres konservativt
+      # - Anden render: Brug faktiske dimensioner → Labels placeres perfekt
+      width_px_raw <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
+      height_px_raw <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
+
+      # Fallback til conservative defaults hvis clientData ikke klar
+      # 800×600 er realistic desktop viewport som giver acceptable label placement
+      width_px <- if (!is.null(width_px_raw) && width_px_raw > 100) {
+        width_px_raw
+      } else {
+        800 # Conservative default width
+      }
+
+      height_px <- if (!is.null(height_px_raw) && height_px_raw > 100) {
+        height_px_raw
+      } else {
+        600 # Conservative default height
+      }
+
+      # Log viewport status for debugging label placement issues
+      if (getOption("spc.debug.label_placement", FALSE)) {
+        viewport_source <- if (!is.null(width_px_raw)) "clientData" else "defaults"
+        log_debug(
+          sprintf("Viewport: %d×%d px (source: %s)", width_px, height_px, viewport_source),
+          "VIEWPORT_DIMENSIONS"
+        )
+      }
+
       # Beregn responsive base_size baseret på plot bredde
-      width_px <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]] %||% 800
       base_size <- max(8, min(14, width_px / 70))
 
       list(
@@ -291,7 +327,10 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         title = title_value,
         y_axis_unit = unit_value,
         kommentar_column = kommentar_value,
-        base_size = base_size
+        base_size = base_size,
+        viewport_width_px = width_px,
+        viewport_height_px = height_px,
+        viewport_ready = TRUE # Flag til add_spc_labels() at viewport er verificeret
       )
     })
 
@@ -380,6 +419,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       computation <- safe_operation(
         "Generate SPC plot",
         code = {
+          # Hent viewport dimensions hvis tilgængelige
+          vp_dims <- viewport_dims()
+
           spc_result <- generateSPCPlot(
             data = inputs$data,
             config = inputs$config,
@@ -392,7 +434,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             chart_title_reactive = chart_title_reactive,
             y_axis_unit = inputs$y_axis_unit,
             kommentar_column = inputs$kommentar_column,
-            base_size = inputs$base_size
+            base_size = inputs$base_size,
+            viewport_width = vp_dims$width,
+            viewport_height = vp_dims$height
           )
 
           plot <- applyHospitalTheme(spc_result$plot, base_size = inputs$base_size)
@@ -608,8 +652,41 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Separat renderPlot for det faktiske SPC plot med responsive font sizing
     # base_size beregnes automatisk i spc_inputs() reactive baseret på plot bredde
     # res = 144 giver skarp tekst på HiDPI-skærme
+    #
+    # VIEWPORT FIX: Explicit width/height binding + viewport guard sikrer korrekt
+    # device size ved label placement.
+    #
+    # Strategien:
+    # 1. width/height functions binder til faktiske clientData dimensioner
+    # 2. req() guard inde i renderPlot() venter indtil clientData er klar
+    # 3. Dette sikrer at device ALTID har korrekte dimensioner når labels beregnes
+    # 4. Ingen fallbacks nødvendige - req() garanterer valid data
     output$spc_plot_actual <- shiny::renderPlot(
+      width = function() {
+        session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
+      },
+      height = function() {
+        session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
+      },
+      res = 144,
       {
+        # VIEWPORT GUARD: Vent på clientData før rendering
+        # Dette sikrer at device altid har korrekte dimensioner når labels beregnes.
+        # req() invaliderer reactive context indtil clientData er tilgængelig.
+        viewport_width <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
+        viewport_height <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
+
+        # Kræv at viewport er initialiseret med realistiske værdier
+        shiny::req(
+          !is.null(viewport_width),
+          !is.null(viewport_height),
+          viewport_width > 100, # Minimum realistic width
+          viewport_height > 100 # Minimum realistic height
+        )
+
+        # Opdater viewport dimensions for label placement
+        viewport_dims(list(width = viewport_width, height = viewport_height))
+
         data <- module_data_reactive()
 
         if (is.null(data) || nrow(data) == 0) {
@@ -628,8 +705,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
         print(plot_result)
         invisible(plot_result)
-      },
-      res = 144
+      }
     )
 
     # Status og Information ---------------------------------------------------

@@ -12,6 +12,8 @@
 #' @param qic_data data.frame fra qicharts2::qic() med columns: cl, target, part
 #' @param y_axis_unit character unit for y-akse ("count", "percent", "rate", "time", eller andet)
 #' @param label_size numeric base font size for responsive sizing (default 6)
+#' @param viewport_width numeric viewport width in pixels (optional, from clientData)
+#' @param viewport_height numeric viewport height in pixels (optional, from clientData)
 #' @param verbose logical print placement warnings (default FALSE)
 #' @param debug_mode logical add visual debug annotations (default FALSE)
 #' @return ggplot object med tilføjede labels
@@ -45,15 +47,51 @@ add_spc_labels <- function(
     qic_data,
     y_axis_unit = "count",
     label_size = 6,
+    viewport_width = NULL,
+    viewport_height = NULL,
     verbose = FALSE,
     debug_mode = FALSE) {
+  # Entry logging (conditional)
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message("[ADD_SPC_LABELS] Function called")
+    message(sprintf("[ADD_SPC_LABELS] y_axis_unit: %s, label_size: %.1f", y_axis_unit, label_size))
+
+    if (!is.null(viewport_width) && !is.null(viewport_height)) {
+      message(sprintf(
+        "[ADD_SPC_LABELS] Viewport dimensions provided: %.0f × %.0f pixels",
+        viewport_width, viewport_height
+      ))
+    } else {
+      message("[ADD_SPC_LABELS] No viewport dimensions provided - will use device detection")
+    }
+  }
+
+  # Convert viewport dimensions from pixels to inches (renderPlot uses res=144)
+  viewport_width_inches <- if (!is.null(viewport_width)) viewport_width / 144 else NULL
+  viewport_height_inches <- if (!is.null(viewport_height)) viewport_height / 144 else NULL
+
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    if (!is.null(viewport_width_inches) && !is.null(viewport_height_inches)) {
+      message(sprintf(
+        "[ADD_SPC_LABELS] Viewport dimensions in inches: %.2f × %.2f",
+        viewport_width_inches, viewport_height_inches
+      ))
+    }
+  }
+
   # Input validation ----
   if (!inherits(plot, "gg")) {
+    message("[ADD_SPC_LABELS] EARLY EXIT: plot is not ggplot object")
     stop("plot skal være et ggplot object")
   }
 
   if (!is.data.frame(qic_data)) {
+    message("[ADD_SPC_LABELS] EARLY EXIT: qic_data is not data.frame")
     stop("qic_data skal være en data.frame")
+  }
+
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message("[ADD_SPC_LABELS] Input validation passed")
   }
 
   # Validate y_axis_unit
@@ -65,41 +103,101 @@ add_spc_labels <- function(
     )
   }
 
-  # FIX: Auto-scale label_size baseret på device height
+  # DEVICE INFO LOGGING (Non-blocking) ----
+  # FIX: ggplot objects CAN be built without an active graphics device.
+  # Device is only needed when renderPlot() executes, not during plot construction.
+  # The downstream functions (add_right_labels_marquee, measure_panel_height_from_gtable)
+  # already have fallback logic for missing device (defaults to 7×7 inches).
+  #
+  # Therefore: NO blocking checks here - just log device status for debugging.
+
+  # Log device status (non-blocking)
+  device_info <- tryCatch(
+    {
+      dev_cur <- grDevices::dev.cur()
+      dev_open <- dev_cur > 1
+
+      if (dev_open) {
+        dev_size <- grDevices::dev.size("in")
+        list(
+          open = TRUE,
+          dev_num = dev_cur,
+          width = dev_size[1],
+          height = dev_size[2]
+        )
+      } else {
+        list(
+          open = FALSE,
+          dev_num = dev_cur,
+          width = NA_real_,
+          height = NA_real_
+        )
+      }
+    },
+    error = function(e) {
+      list(
+        open = FALSE,
+        dev_num = 1,
+        width = NA_real_,
+        height = NA_real_,
+        error = e$message
+      )
+    }
+  )
+
+  # Log device info (conditional on verbose mode)
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message(sprintf(
+      "[DEVICE_INFO] Device: %s (dev.cur = %d)",
+      if (device_info$open) "OPEN" else "NOT OPEN",
+      device_info$dev_num
+    ))
+
+    if (device_info$open) {
+      message(sprintf(
+        "[DEVICE_INFO] Size: %.1f × %.1f inches",
+        device_info$width,
+        device_info$height
+      ))
+    } else {
+      message("[DEVICE_INFO] No device open - downstream functions will use fallback sizes (7×7 inches)")
+    }
+  }
+
+  # FIX: Auto-scale label_size baseret på device height (hvis tilgængelig)
   # Dette sikrer at labels skalerer proportionelt med plot størrelse
   # Baseline: label_size = 6 for ~7.8" device height (small plot reference)
   device_height_baseline <- 7.8 # inches (reference: 751px @ 96dpi)
 
-  tryCatch(
-    {
-      if (grDevices::dev.cur() > 1) { # Device aktiv
-        dev_height <- grDevices::dev.size("in")[2]
+  if (device_info$open && !is.na(device_info$height)) {
+    # Device aktiv med valid height - skalér label_size
+    dev_height <- device_info$height
 
-        # Skalér label_size proportionelt med device height
-        # VIGTIGT: Kun skalér opad (scale_factor >= 1.0) for at undgå under-skalering
-        # på små plots hvor labels ville blive ulæseligt små
-        # Small plot (7.8"): label_size = 6.0 (ikke skaleret ned)
-        # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0 (skaleret op)
-        scale_factor <- pmax(1.0, dev_height / device_height_baseline)
-        label_size_scaled <- label_size * scale_factor
+    # Skalér label_size proportionelt med device height
+    # VIGTIGT: Kun skalér opad (scale_factor >= 1.0) for at undgå under-skalering
+    # på små plots hvor labels ville blive ulæseligt små
+    # Small plot (7.8"): label_size = 6.0 (ikke skaleret ned)
+    # Large plot (18.2"): label_size = 6.0 * (18.2/7.8) ≈ 14.0 (skaleret op)
+    scale_factor <- pmax(1.0, dev_height / device_height_baseline)
+    label_size_scaled <- label_size * scale_factor
 
-        if (verbose) {
-          message(sprintf(
-            "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\", scale: %.2f)",
-            label_size, label_size_scaled, dev_height, scale_factor
-          ))
-        }
-
-        label_size <- label_size_scaled
-      }
-    },
-    error = function(e) {
-      # Fallback: brug original label_size hvis device detection fejler
-      if (verbose) {
-        message("Device height detection fejlede - bruger fast label_size: ", label_size)
-      }
+    if (verbose) {
+      message(sprintf(
+        "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\", scale: %.2f)",
+        label_size, label_size_scaled, dev_height, scale_factor
+      ))
     }
-  )
+
+    label_size <- label_size_scaled
+  } else {
+    # Ingen device eller ingen valid height - brug original label_size
+    if (verbose) {
+      message(sprintf(
+        "No device height available - using fixed label_size: %.1f",
+        label_size
+      ))
+    }
+  }
 
   # Beregn y_range for time formatting context
   y_range <- if (y_axis_unit == "time" && !is.null(qic_data$y)) {
@@ -135,8 +233,20 @@ add_spc_labels <- function(
 
   # Valider at vi har mindst én værdi ----
   if (is.na(cl_value) && is.na(target_value)) {
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message("[CL_TARGET_CHECK] BLOCKING: Ingen CL eller Target værdier fundet i qic_data")
+    }
     warning("Ingen CL eller Target værdier fundet i qic_data. Returnerer plot uændret.")
     return(plot)
+  }
+
+  # DEBUG: Log extracted values
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message(sprintf(
+      "[CL_TARGET_CHECK] ✓ Values extracted - CL: %s, Target: %s",
+      ifelse(is.na(cl_value), "NA", sprintf("%.2f", cl_value)),
+      ifelse(is.na(target_value), "NA", sprintf("%.2f", target_value))
+    ))
   }
 
   # Formatér labels med delt formatter ----
@@ -191,6 +301,16 @@ add_spc_labels <- function(
   }
 
   # Placer labels med advanced placement system ----
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message(sprintf(
+      "[LABEL_PLACEMENT] Calling add_right_labels_marquee - yA=%.3f, yB=%s, textA_length=%d, textB_length=%d",
+      yA,
+      ifelse(is.na(yB), "NA", sprintf("%.3f", yB)),
+      nchar(textA),
+      nchar(textB)
+    ))
+  }
+
   plot_with_labels <- add_right_labels_marquee(
     p = plot,
     yA = yA,
@@ -209,9 +329,15 @@ add_spc_labels <- function(
     gpA = grid::gpar(col = "#009CE8"), # CL label farve (lyseblå)
     gpB = grid::gpar(col = "#565656"), # Target label farve (grå)
     label_size = label_size, # Label sizing (baseline = 6)
+    viewport_width = viewport_width_inches, # Viewport width in inches (from clientData)
+    viewport_height = viewport_height_inches, # Viewport height in inches (from clientData)
     verbose = verbose, # Print placement warnings
     debug_mode = debug_mode # Visual debugging
   )
+
+  if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+    message("[LABEL_PLACEMENT] add_right_labels_marquee returned successfully")
+  }
 
   return(plot_with_labels)
 }
