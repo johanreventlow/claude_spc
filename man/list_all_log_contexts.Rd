@@ -15,6 +15,6 @@ Useful for validation or documentation.
 }
 \examples{
 all_contexts <- list_all_log_contexts()
-length(all_contexts)  # Total number of contexts
+length(all_contexts) # Total number of contexts
 
 }

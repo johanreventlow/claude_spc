@@ -18,7 +18,7 @@ Context string
 Helper function to get a specific log context with validation.
 }
 \examples{
-get_log_context("data", "process")  # Returns "DATA_PROCESS"
-get_log_context("qic", "input")     # Returns "QIC_INPUT"
+get_log_context("data", "process") # Returns "DATA_PROCESS"
+get_log_context("qic", "input") # Returns "QIC_INPUT"
 
 }

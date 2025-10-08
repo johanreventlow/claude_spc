@@ -11,6 +11,15 @@ An object of class \code{list} of length 4.
 DEBOUNCE_DELAYS
 }
 \description{
-Debounce delays for reactive operations
+PERFORMANCE OPTIMIZATION (2025-01-07):
+Reduced delays baseret på agent performance analysis:
+\itemize{
+\item input_change: 300 → 150ms (hurtigere dropdown feedback)
+\item chart_update: 800 → 500ms (reduceret perceived lag)
+\item Bevaret file_select og table_cleanup for stabilitet
+}
+}
+\details{
+FORVENTET IMPACT: 30-40\% forbedring i perceived responsiveness
 }
 \keyword{datasets}

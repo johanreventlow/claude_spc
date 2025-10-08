@@ -35,5 +35,5 @@ Default value
 }
 \description{
 Factory for creating form field update functions with standardized patterns.
-Ekstraeret fra ui_utils_ui_updates.R for bedre testability og genbrug.
+Ekstraeret fra utils_ui_ui_updates.R for bedre testability og genbrug.
 }

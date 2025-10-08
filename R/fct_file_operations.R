@@ -512,7 +512,7 @@ handle_csv_upload <- function(file_path, app_state, session_id = NULL, emit = NU
   }
 
   # Emit unified data_updated event (replaces legacy data_loaded)
-  emit$data_loaded()
+  emit$data_updated(context = "session_file_loaded")
 
   # Unified state assignment - Set file uploaded flag
   app_state$session$file_uploaded <- TRUE
