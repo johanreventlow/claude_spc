@@ -43,184 +43,19 @@ main_app_server <- function(input, output, session) {
     level = "INFO", session_id = hashed_token
   )
 
-  # Server components now loaded globally in global.R for better performance
-
-  # Centralized state management using unified app_state architecture
-  app_state <- create_app_state()
-  session_debugger$event("centralized_state_initialized")
-
-  # EVENT SYSTEM: Initialize reactive event bus
-  emit <- create_emit_api(app_state)
-  log_debug("Event system initialized", .context = "APP_SERVER")
-
-  # UI SERVICE: Initialize centralized UI update service
-  ui_service <- create_ui_update_service(session, app_state)
-  log_debug("UI update service initialized", .context = "APP_SERVER")
-
-
-  # SHINYLOGS: Setup advanced web-based logging (if enabled)
-  if (should_enable_shinylogs()) {
-    setup_shinylogs(
-      enable_tracking = TRUE,
-      enable_errors = TRUE,
-      enable_performances = TRUE,
-      log_directory = "logs/"
-    )
-    initialize_shinylogs_tracking(
-      session = session,
-      app_name = "SPC_Analysis_Tool"
-    )
-    # integrate_shinylogs_with_logging(session)  # Disabled - causes conflicts
-    log_debug_kv(
-      message = "shinylogs advanced logging activated",
-      log_directory = "logs/",
-      session_id = hashed_token,
-      .context = "APP_SERVER"
-    )
-  }
-
-  # EVENT SYSTEM: Set up reactive event listeners AFTER shinylogs setup
-
-  # SESSION FLAG: Prevent duplicate event listener registration
-  # Initialize event listeners setup flag in infrastructure state to prevent double registration
-  safe_operation(
-    "Initialize event listeners setup flag",
-    code = {
-      if (is.null(app_state$infrastructure$event_listeners_setup)) {
-        app_state$infrastructure$event_listeners_setup <- FALSE
-      }
-    },
-    fallback = function(e) {
-      log_error(paste("ERROR initializing event_listeners_setup flag:", e$message), .context = "APP_SERVER")
-    },
-    error_type = "processing"
-  )
-
-  safe_operation(
-    "Setup event listeners",
-    code = {
-      setup_event_listeners(app_state, emit, input, output, session, ui_service)
-      app_state$infrastructure$event_listeners_setup <- TRUE # SUCCESS: Mark as completed
-    },
-    fallback = function(e) {
-      log_error(paste("ERROR in setup_event_listeners:", e$message), .context = "APP_SERVER")
-      log_error(paste("Full error details:", e$message), .context = "APP_SERVER")
-    },
-    error_type = "processing"
-  )
-
-  # Emergency observer removed - event listeners setup now reliable
-
-  # Take initial state snapshot - delay to avoid reactive context issues
-  shiny::observeEvent(shiny::reactive(TRUE),
-    {
-      shiny::isolate({
-        initial_snapshot <- debug_state_snapshot("app_initialization", app_state, session_id = hashed_token)
-      })
-    },
-    once = TRUE,
-    priority = OBSERVER_PRIORITIES$LOW,
-    ignoreInit = FALSE
-  )
+  # SPRINT 1 REFACTORING: Initialize app infrastructure (extracted to helper)
+  infrastructure <- initialize_app_infrastructure(session, hashed_token, session_debugger)
+  app_state <- infrastructure$app_state
+  emit <- infrastructure$emit
+  ui_service <- infrastructure$ui_service
 
   # FASE 5: Memory management setup
-  log_debug("Line 150 executed - about to setup memory management", .context = "DEBUG")
   log_debug("Setting up memory management...", .context = "APP_SERVER")
   setup_session_cleanup(session, app_state)
   log_debug("Memory management configured", .context = "APP_SERVER")
 
-  # FASE 4: AUTOMATIC BACKGROUND CLEANUP - Schedule periodic system maintenance
-  log_debug("Setting up automatic background cleanup scheduling...", .context = "APP_SERVER")
-
-  # Schedule regular comprehensive cleanup every 5 minutes
-  if (requireNamespace("later", quietly = TRUE)) {
-    cleanup_interval_minutes <- 5
-    later::later(function() {
-      shiny::withReactiveDomain(session, {
-        # Recursive cleanup scheduler
-        schedule_periodic_cleanup <- function() {
-          # Check if session is still active before continuing
-          session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
-          if (session_check) {
-            log_debug("Stopping periodic cleanup - session ended", .context = "BACKGROUND_CLEANUP")
-            return()
-          }
-
-          log_debug("Running scheduled comprehensive system cleanup", .context = "BACKGROUND_CLEANUP")
-          safe_operation(
-            "Scheduled system cleanup",
-            code = {
-              comprehensive_system_cleanup(app_state)
-              log_debug("Scheduled cleanup completed successfully", .context = "BACKGROUND_CLEANUP")
-            },
-            fallback = NULL,
-            session = session,
-            error_type = "processing",
-            emit = emit,
-            app_state = app_state
-          )
-
-          # Schedule next cleanup only if session is still active
-          should_continue <- app_state$infrastructure$session_active && app_state$infrastructure$background_tasks_active
-          if (should_continue) {
-            later::later(schedule_periodic_cleanup, delay = cleanup_interval_minutes * 60)
-          }
-        }
-
-        # Start the periodic cleanup cycle
-        schedule_periodic_cleanup()
-      })
-    }, delay = cleanup_interval_minutes * 60) # Initial delay
-
-    log_debug(paste("Background cleanup scheduled every", cleanup_interval_minutes, "minutes"), .context = "APP_SERVER")
-  } else {
-    log_warn("later package not available - background cleanup disabled", .context = "APP_SERVER")
-  }
-
-  # FASE 4: PERFORMANCE MONITORING INTEGRATION - Schedule periodic reporting
-  if (requireNamespace("later", quietly = TRUE)) {
-    report_interval_minutes <- 15
-    later::later(function() {
-      shiny::withReactiveDomain(session, {
-        # Recursive performance reporting
-        schedule_periodic_reporting <- function() {
-          # Check if session is still active before continuing
-          session_check <- !app_state$infrastructure$session_active || !app_state$infrastructure$background_tasks_active
-          if (session_check) {
-            return()
-          }
-          safe_operation(
-            "Performance report generation",
-            code = {
-              report <- get_performance_report(app_state)
-              log_debug(report$formatted_text, .context = "PERFORMANCE_MONITOR")
-
-              # Check if system needs attention
-              if (report$health_status == "WARNING") {
-                log_warn(paste("System health WARNING - Queue:", report$queue_utilization_pct, "% | Tokens:", report$token_utilization_pct, "%"), .context = "PERFORMANCE_MONITOR")
-              }
-            },
-            fallback = NULL,
-            session = session,
-            error_type = "processing",
-            emit = emit,
-            app_state = app_state
-          )
-
-          # Schedule next report only if session is still active
-          should_continue <- app_state$infrastructure$session_active && app_state$infrastructure$background_tasks_active
-          if (should_continue) {
-            later::later(schedule_periodic_reporting, delay = report_interval_minutes * 60)
-          }
-        }
-
-        # Start the periodic reporting cycle
-        schedule_periodic_reporting()
-      })
-    }, delay = report_interval_minutes * 60) # Initial delay
-
-    log_debug(paste("Performance monitoring scheduled every", report_interval_minutes, "minutes"), .context = "APP_SERVER")
-  }
+  # SPRINT 1 REFACTORING: Setup background tasks (extracted to helper)
+  setup_background_tasks(session, app_state, emit)
 
   # Test Tilstand ------------------------------------------------------------
   # TEST MODE: Auto-indlæs eksempel data hvis aktiveret
