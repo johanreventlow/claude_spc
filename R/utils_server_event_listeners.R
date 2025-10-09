@@ -1203,20 +1203,25 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
       "Observer cleanup on session end",
       code = {
         observer_count <- length(observer_registry)
+        failed_observers <- character(0)
+
         log_debug(
           paste("Cleaning up", observer_count, "observers"),
           .context = "EVENT_SYSTEM"
         )
 
-        # Destroy all registered observers
+        # Destroy all registered observers with explicit nullification
         for (observer_name in names(observer_registry)) {
           tryCatch(
             {
               if (!is.null(observer_registry[[observer_name]])) {
                 observer_registry[[observer_name]]$destroy()
+                # CRITICAL: Explicit nullification to release references
+                observer_registry[[observer_name]] <- NULL
               }
             },
             error = function(e) {
+              failed_observers <<- c(failed_observers, observer_name)
               log_warn(
                 paste("Failed to destroy observer:", observer_name, "-", e$message),
                 .context = "EVENT_SYSTEM"
@@ -1225,10 +1230,26 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
           )
         }
 
-        log_info(
-          paste("Observer cleanup complete:", observer_count, "observers destroyed"),
-          .context = "EVENT_SYSTEM"
-        )
+        # Verification and reporting
+        successful_count <- observer_count - length(failed_observers)
+
+        if (length(failed_observers) > 0) {
+          log_warn(
+            paste("Observer cleanup incomplete:", length(failed_observers), "failed"),
+            .context = "EVENT_SYSTEM"
+          )
+          log_debug_kv(
+            failed_observers = paste(failed_observers, collapse = ", "),
+            successful_count = successful_count,
+            total_count = observer_count,
+            .context = "EVENT_SYSTEM"
+          )
+        } else {
+          log_info(
+            paste("Observer cleanup complete: All", observer_count, "observers destroyed"),
+            .context = "EVENT_SYSTEM"
+          )
+        }
       },
       fallback = function(e) {
         log_error(
