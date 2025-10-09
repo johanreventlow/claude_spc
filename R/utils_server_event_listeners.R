@@ -272,14 +272,24 @@ register_autodetect_events <- function(app_state, emit, session, register_observ
 #'
 #' @details
 #' Handles UI synchronization events:
-#' - ui_sync_requested: Syncs UI controls with detected columns
+#' - ui_sync_requested: Syncs UI controls with detected columns (throttled 250ms)
 #' - ui_sync_completed: Marks sync completion, triggers navigation
 register_ui_sync_events <- function(app_state, emit, input, output, session, ui_service, register_observer) {
   observers <- list()
 
+  # PERFORMANCE: Throttle UI sync to reduce update overhead (250ms)
+  # This prevents excessive UI updates during rapid event chains while
+  # maintaining imperceptible user experience (<250ms delay)
+  throttled_ui_sync <- shiny::throttle(
+    shiny::reactive({
+      app_state$events$ui_sync_requested
+    }),
+    millis = 250
+  )
+
   observers$ui_sync_requested <- register_observer(
     "ui_sync_requested",
-    shiny::observeEvent(app_state$events$ui_sync_requested,
+    shiny::observeEvent(throttled_ui_sync(),
       ignoreInit = TRUE,
       priority = OBSERVER_PRIORITIES$UI_SYNC,
       {
