@@ -86,19 +86,8 @@ register_data_lifecycle_events <- function(app_state, emit, input, output, sessi
       {
         update_context <- app_state$last_data_update_context
 
-        # SPRINT 4: Clear QIC cache when data changes
-        if (!is.null(app_state$cache) && !is.null(app_state$cache$qic)) {
-          safe_operation(
-            "Clear QIC cache on data update",
-            code = {
-              app_state$cache$qic$clear()
-              log_debug("QIC cache cleared due to data update", .context = "QIC_CACHE")
-            },
-            fallback = function(e) {
-              log_warn(paste("Failed to clear QIC cache:", e$message), .context = "QIC_CACHE")
-            }
-          )
-        }
+        # SPRINT 4: Smart QIC cache invalidation (context-aware)
+        invalidate_qic_cache_smart(app_state, update_context)
 
         # Legacy performance cache clearing
         if (exists("clear_performance_cache") && is.function(clear_performance_cache)) {
