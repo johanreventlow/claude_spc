@@ -1247,6 +1247,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       )
 
       # Add SPC labels (CL og Target) med advanced placement system
+      # Bestem om Frys og Skift kolonner er valgt (for BASELINE label logik)
+      has_frys <- !is.null(frys_column) && frys_column %in% names(data)
+      has_skift <- !is.null(skift_column) && skift_column %in% names(data)
+
       plot <- add_spc_labels(
         plot = plot,
         qic_data = qic_data,
@@ -1255,6 +1259,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         viewport_width = viewport_width,
         viewport_height = viewport_height,
         target_text = target_text,
+        centerline_value = centerline_value,
+        has_frys_column = has_frys,
+        has_skift_column = has_skift,
         verbose = FALSE,
         debug_mode = FALSE
       )

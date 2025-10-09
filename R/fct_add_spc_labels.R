@@ -15,6 +15,9 @@
 #' @param viewport_width numeric viewport width in pixels (optional, from clientData)
 #' @param viewport_height numeric viewport height in pixels (optional, from clientData)
 #' @param target_text character original målværdi text from user input (optional, for operator parsing)
+#' @param centerline_value numeric centerline value from user input (optional, for BASELINE label logic)
+#' @param has_frys_column logical TRUE if Frys column is selected (optional, for BASELINE label logic)
+#' @param has_skift_column logical TRUE if Skift column is selected (optional, for BASELINE label logic)
 #' @param verbose logical print placement warnings (default FALSE)
 #' @param debug_mode logical add visual debug annotations (default FALSE)
 #' @return ggplot object med tilføjede labels
@@ -51,6 +54,9 @@ add_spc_labels <- function(
     viewport_width = NULL,
     viewport_height = NULL,
     target_text = NULL,
+    centerline_value = NULL,
+    has_frys_column = FALSE,
+    has_skift_column = FALSE,
     verbose = FALSE,
     debug_mode = FALSE) {
   # Entry logging (conditional)
@@ -254,9 +260,31 @@ add_spc_labels <- function(
   # Formatér labels med delt formatter ----
   label_cl <- NULL
   if (!is.na(cl_value)) {
+    # Bestem CL header baseret på baseline-logik
+    # Regel 1: Hvis centerline_value er angivet → "BASELINE"
+    # Regel 2: Hvis Frys-kolonne er valgt OG Skift-kolonne IKKE er valgt → "BASELINE"
+    # Ellers → "NUV. NIVEAU"
+    cl_header <- if (!is.null(centerline_value) && !is.na(centerline_value)) {
+      "BASELINE"
+    } else if (has_frys_column && !has_skift_column) {
+      "BASELINE"
+    } else {
+      "NUV. NIVEAU"
+    }
+
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message(sprintf(
+        "[CL_HEADER_LOGIC] centerline_value: %s, has_frys: %s, has_skift: %s → header: '%s'",
+        if (!is.null(centerline_value) && !is.na(centerline_value)) sprintf("%.2f", centerline_value) else "NULL",
+        has_frys_column,
+        has_skift_column,
+        cl_header
+      ))
+    }
+
     formatted_cl <- format_y_value(cl_value, y_axis_unit, y_range)
     label_cl <- create_responsive_label(
-      header = "NUV. NIVEAU",
+      header = cl_header,
       value = formatted_cl,
       label_size = label_size
     )
