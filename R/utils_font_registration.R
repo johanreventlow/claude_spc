@@ -1,18 +1,20 @@
 # utils_font_registration.R
-# Font registration utilities for ensuring Roboto Medium is available across all systems
+# Font registration utilities for ensuring Roboto fonts are available across all systems
 
-#' Register Roboto Medium Font
+#' Register Roboto Fonts (Medium and Bold)
 #'
-#' Registrerer den bundlede Roboto Medium font med systemfonts pakken.
-#' Dette sikrer at fonten er tilgængelig på alle systemer, uanset om
+#' Registrerer bundlede Roboto Medium og Bold fonts med systemfonts pakken.
+#' Dette sikrer at fonterne er tilgængelige på alle systemer, uanset om
 #' Roboto er installeret lokalt.
 #'
 #' Funktionen køres automatisk ved app-start for at sikre font-tilgængelighed.
+#' Roboto Medium registreres som "plain" variant og Roboto Bold som "bold" variant,
+#' så marquee kan bruge **bold** markup korrekt.
 #'
-#' @return NULL (invisible). Registrerer font som sideeffekt.
+#' @return NULL (invisible). Registrerer fonts som sideeffekt.
 #'
 #' @details
-#' Roboto Medium font er bundlet i inst/fonts/ mappen og licenseret under
+#' Roboto Medium og Bold fonts er bundlet i inst/fonts/ mappen og licenseret under
 #' Apache License 2.0 (se inst/fonts/LICENSE).
 #'
 #' Font-registrering håndteres af systemfonts pakken, som er cross-platform
@@ -44,8 +46,8 @@ register_roboto_font <- function() {
     return(invisible(NULL))
   }
 
-  # Definer font-sti (udvikling vs. installeret pakke)
-  font_path <- tryCatch(
+  # Definer font-stier (udvikling vs. installeret pakke)
+  font_path_medium <- tryCatch(
     {
       # Forsøg at finde font i installeret pakke
       system.file("fonts", "Roboto-Medium.ttf", package = "SPCify")
@@ -56,13 +58,22 @@ register_roboto_font <- function() {
     }
   )
 
-  # Verificer at font-filen eksisterer
-  if (!file.exists(font_path) || font_path == "") {
+  font_path_bold <- tryCatch(
+    {
+      system.file("fonts", "Roboto-Bold.ttf", package = "SPCify")
+    },
+    error = function(e) {
+      file.path("inst", "fonts", "Roboto-Bold.ttf")
+    }
+  )
+
+  # Verificer at begge font-filer eksisterer
+  if (!file.exists(font_path_medium) || font_path_medium == "") {
     log_error(
       component = "[FONT_REGISTRATION]",
       message = "Roboto-Medium.ttf font-fil ikke fundet",
       details = list(
-        expected_path = font_path,
+        expected_path = font_path_medium,
         working_directory = getwd(),
         fallback = "System vil forsøge at bruge lokalt installeret Roboto"
       )
@@ -70,24 +81,57 @@ register_roboto_font <- function() {
     return(invisible(NULL))
   }
 
-  # Registrer font med systemfonts
-  safe_operation(
-    "Registrer Roboto Medium font",
-    code = {
-      # Register font family with full font path
-      systemfonts::register_font(
-        name = "Roboto Medium",
-        plain = font_path
+  if (!file.exists(font_path_bold) || font_path_bold == "") {
+    log_warn(
+      component = "[FONT_REGISTRATION]",
+      message = "Roboto-Bold.ttf font-fil ikke fundet - fortsætter kun med Medium",
+      details = list(
+        expected_path = font_path_bold,
+        impact = "Bold text vil ikke vises korrekt i labels"
       )
+    )
+    # Fortsæt med kun Medium variant
+    font_path_bold <- NULL
+  }
 
-      log_info(
-        component = "[FONT_REGISTRATION]",
-        message = "Roboto Medium font registreret succesfuldt",
-        details = list(
-          font_path = font_path,
-          font_size_kb = round(file.size(font_path) / 1024, 1)
+  # Registrer fonts med systemfonts
+  safe_operation(
+    "Registrer Roboto fonts (Medium + Bold)",
+    code = {
+      # Register font family with both Medium (plain) and Bold variants
+      if (!is.null(font_path_bold)) {
+        systemfonts::register_font(
+          name = "Roboto Medium",
+          plain = font_path_medium,
+          bold = font_path_bold
         )
-      )
+
+        log_info(
+          component = "[FONT_REGISTRATION]",
+          message = "Roboto fonts registreret succesfuldt (Medium + Bold)",
+          details = list(
+            medium_path = font_path_medium,
+            bold_path = font_path_bold,
+            medium_size_kb = round(file.size(font_path_medium) / 1024, 1),
+            bold_size_kb = round(file.size(font_path_bold) / 1024, 1)
+          )
+        )
+      } else {
+        # Fallback: Registrer kun Medium
+        systemfonts::register_font(
+          name = "Roboto Medium",
+          plain = font_path_medium
+        )
+
+        log_info(
+          component = "[FONT_REGISTRATION]",
+          message = "Roboto Medium font registreret (Bold ikke tilgængelig)",
+          details = list(
+            medium_path = font_path_medium,
+            medium_size_kb = round(file.size(font_path_medium) / 1024, 1)
+          )
+        )
+      }
 
       # Mark as registered to prevent duplicate registrations
       assign(".roboto_registered", TRUE, envir = .GlobalEnv)
@@ -160,18 +204,32 @@ get_font_status <- function() {
   # Check if systemfonts is available
   systemfonts_available <- requireNamespace("systemfonts", quietly = TRUE)
 
-  # Check font file existence
-  font_path <- system.file("fonts", "Roboto-Medium.ttf", package = "SPCify")
-  font_exists <- file.exists(font_path) && font_path != ""
+  # Check font files existence
+  font_path_medium <- system.file("fonts", "Roboto-Medium.ttf", package = "SPCify")
+  font_path_bold <- system.file("fonts", "Roboto-Bold.ttf", package = "SPCify")
+
+  medium_exists <- file.exists(font_path_medium) && font_path_medium != ""
+  bold_exists <- file.exists(font_path_bold) && font_path_bold != ""
 
   # Check if Roboto is available
   roboto_available <- is_roboto_available()
 
+  # Determine overall status
+  status_msg <- if (roboto_available && medium_exists && bold_exists) {
+    "OK: Roboto Medium + Bold tilgængelig"
+  } else if (roboto_available && medium_exists) {
+    "PARTIAL: Roboto Medium tilgængelig, Bold mangler"
+  } else {
+    "WARNING: Roboto fonts ikke tilgængelige"
+  }
+
   list(
     systemfonts_installed = systemfonts_available,
-    font_file_exists = font_exists,
-    font_file_path = if (font_exists) font_path else NA_character_,
+    medium_file_exists = medium_exists,
+    bold_file_exists = bold_exists,
+    medium_file_path = if (medium_exists) font_path_medium else NA_character_,
+    bold_file_path = if (bold_exists) font_path_bold else NA_character_,
     roboto_registered = roboto_available,
-    status = if (roboto_available) "OK" else "WARNING: Roboto Medium not available"
+    status = status_msg
   )
 }

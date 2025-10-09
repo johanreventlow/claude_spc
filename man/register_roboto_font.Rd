@@ -2,22 +2,24 @@
 % Please edit documentation in R/utils_font_registration.R
 \name{register_roboto_font}
 \alias{register_roboto_font}
-\title{Register Roboto Medium Font}
+\title{Register Roboto Fonts (Medium and Bold)}
 \usage{
 register_roboto_font()
 }
 \value{
-NULL (invisible). Registrerer font som sideeffekt.
+NULL (invisible). Registrerer fonts som sideeffekt.
 }
 \description{
-Registrerer den bundlede Roboto Medium font med systemfonts pakken.
-Dette sikrer at fonten er tilgængelig på alle systemer, uanset om
+Registrerer bundlede Roboto Medium og Bold fonts med systemfonts pakken.
+Dette sikrer at fonterne er tilgængelige på alle systemer, uanset om
 Roboto er installeret lokalt.
 }
 \details{
 Funktionen køres automatisk ved app-start for at sikre font-tilgængelighed.
+Roboto Medium registreres som "plain" variant og Roboto Bold som "bold" variant,
+så marquee kan bruge \strong{bold} markup korrekt.
 
-Roboto Medium font er bundlet i inst/fonts/ mappen og licenseret under
+Roboto Medium og Bold fonts er bundlet i inst/fonts/ mappen og licenseret under
 Apache License 2.0 (se inst/fonts/LICENSE).
 
 Font-registrering håndteres af systemfonts pakken, som er cross-platform
