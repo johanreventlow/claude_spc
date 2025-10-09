@@ -231,7 +231,7 @@ create_chart_settings_card <- function() {
               "target_value",
               "Målværdi:",
               value = "",
-              placeholder = "fx 80%, 0,8 el. 25",
+              placeholder = "fx >=90%, <25 eller >",
               width = UI_INPUT_WIDTHS$full
             ),
 

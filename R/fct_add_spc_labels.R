@@ -14,6 +14,7 @@
 #' @param label_size numeric base font size for responsive sizing (default 6)
 #' @param viewport_width numeric viewport width in pixels (optional, from clientData)
 #' @param viewport_height numeric viewport height in pixels (optional, from clientData)
+#' @param target_text character original målværdi text from user input (optional, for operator parsing)
 #' @param verbose logical print placement warnings (default FALSE)
 #' @param debug_mode logical add visual debug annotations (default FALSE)
 #' @return ggplot object med tilføjede labels
@@ -49,6 +50,7 @@ add_spc_labels <- function(
     label_size = 6,
     viewport_width = NULL,
     viewport_height = NULL,
+    target_text = NULL,
     verbose = FALSE,
     debug_mode = FALSE) {
   # Entry logging (conditional)
@@ -262,12 +264,19 @@ add_spc_labels <- function(
 
   label_target <- NULL
   if (!is.na(target_value)) {
-    formatted_target <- format_y_value(target_value, y_axis_unit, y_range)
-    # Tilføj større-end tegn for target
-    størreend <- "\U2265"
+    # Determiner label value baseret på om vi har target_text
+    if (!is.null(target_text) && nchar(trimws(target_text)) > 0) {
+      # Brug target_text med formateret prefix
+      formatted_target_with_prefix <- format_target_prefix(target_text)
+    } else {
+      # Fallback: brug formateret numerisk værdi med ≥ prefix (legacy behaviour)
+      formatted_target <- format_y_value(target_value, y_axis_unit, y_range)
+      formatted_target_with_prefix <- paste0("\U2265", formatted_target)
+    }
+
     label_target <- create_responsive_label(
-      header = "MÅL",
-      value = paste0(størreend, formatted_target),
+      header = "UDVIKLINGSMÅL",
+      value = formatted_target_with_prefix,
       label_size = label_size
     )
   }
