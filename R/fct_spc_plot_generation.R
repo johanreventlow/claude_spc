@@ -470,6 +470,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   extended_lines_data <- data.frame()
 
   # Centerline extended line KUN for seneste part
+  cl_extension_linetype <- "solid" # Default linetype
   if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
     # Find seneste part
     latest_part <- max(qic_data$part, na.rm = TRUE)
@@ -479,12 +480,20 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       # Brug sidste punkt i seneste part
       last_row <- part_data[nrow(part_data), ]
       cl_value <- last_row$cl
+
+      # Bestem linetype baseret på anhoej.signal i seneste part
+      # Match formatering fra hovedplot centerline
+      if ("anhoej.signal" %in% names(last_row)) {
+        cl_extension_linetype <- if (isTRUE(last_row$anhoej.signal)) "12" else "solid"
+      }
+
       if (!is.na(cl_value)) {
         # Extended line fra sidste datapunkt til extended_x
         extended_lines_data <- rbind(extended_lines_data, data.frame(
           x = c(last_row$x, extended_x),
           y = c(cl_value, cl_value),
           type = "cl",
+          linetype = cl_extension_linetype,
           stringsAsFactors = FALSE
         ))
       }
@@ -542,12 +551,12 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       plot <- plot +
         ggplot2::geom_line(
           data = cl_ext,
-          ggplot2::aes(x = x, y = y),
+          ggplot2::aes(x = x, y = y, linetype = linetype),
           color = hospital_colors$hospitalblue,
           linewidth = cl_linewidth,
-          linetype = "solid",
           inherit.aes = FALSE
-        )
+        ) +
+        ggplot2::scale_linetype_identity()
     }
 
     # Target extension
