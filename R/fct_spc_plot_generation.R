@@ -551,12 +551,12 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       plot <- plot +
         ggplot2::geom_line(
           data = cl_ext,
-          ggplot2::aes(x = x, y = y, linetype = linetype),
+          ggplot2::aes(x = x, y = y),
           color = hospital_colors$hospitalblue,
           linewidth = cl_linewidth,
+          linetype = cl_ext$linetype[1], # Use captured linetype directly
           inherit.aes = FALSE
-        ) +
-        ggplot2::scale_linetype_identity()
+        )
     }
 
     # Target extension
