@@ -521,15 +521,20 @@ evaluate_data_content_cached <- function(data, cache_key = NULL, session = NULL,
 
   # Generate cache key hvis ikke angivet
   if (is.null(cache_key)) {
-    # Brug fast hash af data dimensions og første række som cache key
+    # FIX BUG #2: Hash ENTIRE dataset instead of just first row
+    # This prevents cache returning TRUE when rows 2+ are cleared
     cache_key <- safe_operation(
       "Generate data content cache key",
       code = {
-        data_signature <- paste(
-          nrow(data),
-          ncol(data),
-          digest::digest(head(data, 1), algo = "xxhash32"),
-          sep = "_"
+        data_signature <- digest::digest(
+          list(
+            nrow = nrow(data),
+            ncol = ncol(data),
+            column_names = names(data),
+            data_hash = digest::digest(data, algo = "xxhash64", serialize = TRUE)
+          ),
+          algo = "xxhash64",
+          serialize = TRUE
         )
         paste0("data_content_", data_signature)
       },

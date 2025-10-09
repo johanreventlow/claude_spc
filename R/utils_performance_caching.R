@@ -43,6 +43,20 @@ NULL
 #'
 #' @export
 create_cached_reactive <- function(reactive_expr, cache_key, cache_timeout = CACHE_CONFIG$default_timeout_seconds, cache_size_limit = CACHE_CONFIG$size_limit_entries) {
+  # FIX BUG #3: Capture expression lazily using substitute()
+  # This allows reactive dependencies to trigger re-evaluation
+  expr_call <- substitute(reactive_expr)
+  expr_env <- parent.frame()
+
+  # Create evaluation function that runs inside reactive context
+  expr_fn <- if (is.function(reactive_expr)) {
+    # Already a function - use directly
+    reactive_expr
+  } else {
+    # Expression or code block - wrap in function for lazy evaluation
+    eval(call("function", pairlist(), expr_call), expr_env)
+  }
+
   # Convert cache_key to function if it's a string
   key_func <- if (is.function(cache_key)) {
     cache_key
@@ -73,9 +87,9 @@ create_cached_reactive <- function(reactive_expr, cache_key, cache_timeout = CAC
     )
     log_debug_kv(cache_key = actual_key, .context = "PERFORMANCE_CACHE")
 
-    # Execute expensive computation
+    # FIX BUG #3: Execute lazily via expr_fn() instead of evaluating reactive_expr directly
     start_time <- Sys.time()
-    result <- reactive_expr
+    result <- expr_fn()
     computation_time <- as.numeric(Sys.time() - start_time)
 
     # Store result in cache
