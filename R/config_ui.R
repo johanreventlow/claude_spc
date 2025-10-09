@@ -1,5 +1,21 @@
-# UI Configuration
-# UI layout constants, styles, and sizing configuration
+# ==============================================================================
+# CONFIG_UI.R
+# ==============================================================================
+# FORMÅL: UI layout constants, CSS styles og responsive font scaling configuration.
+#         Centraliserer alle UI-relaterede dimensioner og styling for konsistent
+#         appearance på tværs af komponenter.
+#
+# ANVENDES AF:
+#   - UI rendering (column widths, heights, styles)
+#   - Plot generation (responsive font scaling)
+#   - CSS styling (UI_STYLES genbrugelige patterns)
+#   - Responsive design (FONT_SCALING_CONFIG)
+#
+# RELATERET:
+#   - config_label_placement.R - Label sizing for plots
+#   - Plot rendering functions - Font calculation
+#   - See: docs/CONFIGURATION.md for complete guide
+# ==============================================================================
 
 # UI LAYOUT CONSTANTS ==========================================================
 

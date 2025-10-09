@@ -1,20 +1,23 @@
 # ==============================================================================
-# LOG CONTEXT CONSTANTS
+# CONFIG_LOG_CONTEXTS.R
 # ==============================================================================
+# FORMÅL: Centraliserede log context strings for struktureret logging gennem
+#         hele applikationen. Eliminerer hardcoded strings og muliggør nem
+#         refaktorering via hierarchical context organization.
 #
-# Centraliserede konstanter for log context strings gennem applikationen.
-# Eliminerer hardcoded strings og gør det nemt at opdatere/refaktorere.
+# ANVENDES AF:
+#   - Alle logging calls: log_debug(), log_info(), log_warn(), log_error()
+#   - Struktureret fejlfinding og debugging
+#   - Log filtering og analyse
 #
-# MOTIVATION:
-# - Eliminerer hardcoded context strings
-# - Gør det nemt at finde hvor hver context bruges
-# - Muliggør nemt at omdøbe contexts
-# - Type-safety (autocomplete i IDE)
-# - Dokumenterer kategorier af contexts
+# RELATERET:
+#   - utils_logging.R - Logging system implementation
+#   - CLAUDE.md Section 2.4 - Observability & Debugging
+#   - See: docs/CONFIGURATION.md for complete guide
 #
 # BRUG:
-# log_debug("message", .context = LOG_CONTEXTS$data$process)
-# log_info("message", .context = LOG_CONTEXTS$performance$cache)
+#   log_debug("message", .context = LOG_CONTEXTS$data$process)
+#   log_info("message", .context = LOG_CONTEXTS$performance$cache)
 # ==============================================================================
 
 #' Log Context Constants

@@ -132,21 +132,32 @@ SPC_MAX_CONCURRENT_USERS=50
 
 ### Hospital Branding
 
-Edit `R/config_hospital_branding.R`:
+Edit `inst/config/brand.yml`:
 
-```r
-HOSPITAL_BRANDING <- list(
-  name = "Your Hospital Name",
-  colors = list(
-    primary = "#003366",
-    secondary = "#0066CC",
-    accent = "#FF6600"
-  ),
-  logo_path = "www/hospital_logo.png"
-)
+```yaml
+meta:
+  name: "Your Hospital Name"
+  description: "Statistical Process Control værktøj"
+
+logo:
+  image: "www/hospital_logo.png"
+
+color:
+  palette:
+    primary: "#003366"
+    secondary: "#0066CC"
+    accent: "#FF6600"
+    success: "#00891a"
+    warning: "#f9b928"
+    danger: "#c10000"
+    info: "#009ce8"
+    light: "#f8f8f8"
+    dark: "#202020"
 ```
 
 Place logo file in `www/` directory.
+
+Branding is automatically loaded via `config_branding_getters.R` during app initialization.
 
 ### Performance Tuning
 

@@ -46,6 +46,7 @@ R -e "microbenchmark::microbenchmark(package = library(SPCify), source = source(
 1. **ALDRIG merge til master uden eksplicit godkendelse**
 2. **ALDRIG push til remote uden anmodning**
 3. **STOP efter feature branch commit – vent på instruktioner**
+4. **Do NOT add Claude co-authorship footer to commits**
 
 **Workflow:**
 ```bash
@@ -54,6 +55,11 @@ git checkout -b fix/feature-name
 git commit -m "beskrivelse"
 # STOP - vent på instruktion
 ```
+
+**VIGTIGT:** Commit messages skal IKKE indeholde:
+- ❌ "🤖 Generated with [Claude Code]"
+- ❌ "Co-Authored-By: Claude <noreply@anthropic.com>"
+- ❌ Andre Claude attribution footers
 
 Undtagelse: Simple operationer (`git status`, `git diff`, `git log`)
 
@@ -570,3 +576,62 @@ app_state$session <- reactiveValues(
   file_name = NULL
 )
 ```
+
+---
+
+## 📎 Appendix E: Configuration Quick Reference
+
+**Se `docs/CONFIGURATION.md` for detaljeret guide.**
+
+### Configuration Files Overview
+
+| Fil | Ansvar | Typiske Use Cases |
+|-----|--------|-------------------|
+| **config_branding_getters.R** | Hospital branding (navn, logo, theme, farver) | Tilføj nyt hospital, ændre farver |
+| **config_chart_types.R** | SPC chart type definitions (DA→EN mappings) | Tilføj ny chart type |
+| **config_observer_priorities.R** | Observer priorities (race condition prevention) | Juster execution order |
+| **config_spc_config.R** | SPC-specifikke konstanter (validation, colors) | Ændre SPC defaults, tilføj enheder |
+| **config_log_contexts.R** | Centraliserede log context strings | Tilføj logging kategori |
+| **config_label_placement.R** | Intelligent label placement (collision avoidance) | Tune label spacing |
+| **config_system_config.R** | System constants (performance, timeouts, cache) | Juster debounce delays |
+| **config_ui.R** | UI layout (widths, heights, font scaling) | Ændre UI spacing, fonts |
+| **inst/golem-config.yml** | Environment-based config (dev/prod/test) | Miljø settings |
+
+### Hvor skal nye configs?
+
+**Beslutningsdiagram:**
+```
+Environment-specifikt (dev/prod/test)? → inst/golem-config.yml
+UI layout/styling? → config_ui.R
+SPC-specifikt (charts, colors, validation)? → config_spc_config.R / config_chart_types.R
+Performance/timing (debounce, cache, timeouts)? → config_system_config.R
+Logging context? → config_log_contexts.R
+Branding (hospital navn, logo, farver)? → config_branding_getters.R / inst/config/brand.yml
+Observer priorities? → config_observer_priorities.R
+Plot label placement? → config_label_placement.R
+```
+
+### Naming Conventions
+
+**Konstanter:**
+```r
+✅ SPC_COLORS <- list(...)        # ALL_CAPS
+❌ spc_colors <- list(...)
+```
+
+**Funktioner:**
+```r
+✅ get_qic_chart_type()           # snake_case
+❌ getQicChartType()
+```
+
+### Configuration Change Checklist
+
+- [ ] Identificeret korrekt config-fil
+- [ ] Fulgt naming conventions
+- [ ] Tilføjet Roxygen docs med `@export`
+- [ ] Opdateret relaterede tests
+- [ ] Kørt `devtools::document()` hvis nødvendigt
+- [ ] Manuel test i app
+- [ ] Performance vurderet
+- [ ] Opdateret `docs/CONFIGURATION.md` hvis major changes

@@ -137,7 +137,6 @@ if (use_source_loading) {
 
     # Configuration
     "R/config_system_config.R",
-    "R/config_hospital_branding.R",
     "R/config_branding_getters.R",
     "R/config_observer_priorities.R",
     "R/config_chart_types.R",
