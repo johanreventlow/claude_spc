@@ -327,7 +327,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       log_info(
         component = "[FONT_SCALING]",
         message = sprintf(
-          "Font metrics | width_px=%d | pixelratio=%.2f | divisor=%d | base_size=%.2f",
+          "Font metrics | width_px=%.0f | pixelratio=%.2f | divisor=%d | base_size=%.2f",
           width_px, pixelratio, FONT_SCALING_CONFIG$divisor, base_size
         )
       )
