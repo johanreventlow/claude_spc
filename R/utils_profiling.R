@@ -209,8 +209,15 @@ track_memory_usage <- function(session, interval_seconds = 60, max_samples = 100
 
   # Recursive memory tracking function
   schedule_memory_sample <- function() {
-    # Check if session is still active
-    if (is.null(session) || session$closed) {
+    # Check if session is still active via tryCatch
+    session_active <- tryCatch(
+      {
+        !is.null(session) && inherits(session, "ShinySession")
+      },
+      error = function(e) FALSE
+    )
+
+    if (!session_active) {
       log_debug("Memory tracking stopped - session closed", .context = "MEMORY_TRACKING")
       return()
     }

@@ -76,10 +76,8 @@ main_app_server <- function(input, output, session) {
     app_state$test_mode$lazy_plot_generation <- claudespc_env$TEST_MODE_LAZY_PLOT_GENERATION %||% TRUE
     app_state$test_mode$autoload_completed <- FALSE
 
-    # Phase 4: Track memory usage during test mode setup
-    if (exists("track_memory_usage")) {
-      track_memory_usage("test_mode_setup")
-    }
+    # Phase 4: Memory tracking (now handled by setup_background_tasks)
+    # Note: track_memory_usage() moved to profiling utilities with session parameter
 
     log_debug_kv(
       message = "Test mode optimization configured",
