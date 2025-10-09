@@ -8,6 +8,7 @@ log_qic_call_wrapper(
   qic_args,
   call_context = "UNKNOWN",
   call_number = NULL,
+  qic_cache = NULL,
   ...
 )
 }

@@ -310,16 +310,32 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         )
       }
 
-      # Beregn responsive base_size baseret på plot bredde OG pixelratio
-      # pixelratio kompensation sikrer konsistent optisk udseende på tværs af
-      # forskellige DPI displays (Retina vs standard)
+      # Beregn responsive base_size baseret på viewport diagonal (geometric mean)
       # Konfiguration i FONT_SCALING_CONFIG (R/config_ui.R)
+      #
+      # VIGTIG: Vi dividerer IKKE med pixelratio fordi Shiny's renderPlot()
+      # automatisk multiplicerer res med pixelratio (res = 96 * pixelratio).
+      # Dette sikrer at fonts har samme visuelle størrelse på både standard
+      # og Retina displays.
+      #
+      # GEOMETRIC MEAN APPROACH: sqrt(width_px * height_px) giver balanced scaling
+      # baseret på både bredde og højde. Dette sikrer at fonts skalerer intuitivt
+      # med den samlede plotstørrelse, ikke kun én dimension.
       pixelratio <- session$clientData$pixelratio %||% 1
-      base_size_raw <- max(
+      viewport_diagonal <- sqrt(width_px * height_px)
+      base_size <- max(
         FONT_SCALING_CONFIG$min_size,
-        min(FONT_SCALING_CONFIG$max_size, width_px / FONT_SCALING_CONFIG$divisor)
+        min(FONT_SCALING_CONFIG$max_size, viewport_diagonal / FONT_SCALING_CONFIG$divisor)
       )
-      base_size <- base_size_raw / pixelratio
+
+      # DEBUG: Log font scaling metrics for cross-device analysis
+      log_info(
+        component = "[FONT_SCALING]",
+        message = sprintf(
+          "Font metrics | width_px=%.0f | height_px=%.0f | diagonal=%.0f | pixelratio=%.2f | divisor=%d | base_size=%.2f",
+          width_px, height_px, viewport_diagonal, pixelratio, FONT_SCALING_CONFIG$divisor, base_size
+        )
+      )
 
       list(
         data = data,

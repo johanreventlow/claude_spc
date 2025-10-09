@@ -27,17 +27,9 @@ setup_event_listeners(
 \item{ui_service}{UI service for UI updates (optional)}
 
 \item{context}{Context string from data update event}
-
-\item{value}{Input value from Shiny (can be NULL, list, vector, etc.)}
 }
 \value{
 One of: "manual", "edit", "session", "upload"
-Normalize Column Input
-
-Converts input values to consistent string format.
-Handles NULL, empty, and edge cases uniformly.
-
-Normalized string or "" for empty/NULL values
 }
 \description{
 Sets up all reactive event listeners for the application.

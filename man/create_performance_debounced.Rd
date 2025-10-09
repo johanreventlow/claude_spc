@@ -9,14 +9,14 @@ create_performance_debounced(
   reactive_expr,
   cache_key,
   debounce_millis = 500,
-  cache_timeout = 300
+  cache_timeout = CACHE_CONFIG$default_timeout_seconds
 )
 
 create_performance_debounced(
   reactive_expr,
   cache_key,
   debounce_millis = 500,
-  cache_timeout = 300
+  cache_timeout = CACHE_CONFIG$default_timeout_seconds
 )
 }
 \arguments{
@@ -26,7 +26,7 @@ create_performance_debounced(
 
 \item{debounce_millis}{Debounce delay i millisekunder}
 
-\item{cache_timeout}{Cache timeout i sekunder}
+\item{cache_timeout}{Cache timeout i sekunder (default: CACHE_CONFIG$default_timeout_seconds)}
 
 \item{r}{Reactive expression der skal debounces (eller function i non-reactive context)}
 
@@ -54,7 +54,7 @@ optimized_reactive <- create_performance_debounced(
   }),
   "computation",
   millis = 500,
-  cache_timeout = 300
+  cache_timeout = CACHE_CONFIG$default_timeout_seconds
 )
 
 }
