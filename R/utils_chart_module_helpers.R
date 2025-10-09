@@ -301,11 +301,12 @@ create_spc_results_processor <- function() {
     #' @param chart_title_reactive Chart title reactive
     #' @param y_unit Y-axis unit
     #' @param kommentar_col Comment column
+    #' @param qic_cache QIC cache object for performance optimization (SPRINT 4)
     #' @return List med plot object og QIC data
     generate_plot_safely = function(data, config, chart_type, target_value = NULL,
                                     centerline_value = NULL, skift_config = NULL,
                                     frys_column = NULL, chart_title_reactive = NULL,
-                                    y_unit = "count", kommentar_col = NULL) {
+                                    y_unit = "count", kommentar_col = NULL, qic_cache = NULL) {
       safe_operation(
         "Generate SPC plot with safety wrapper",
         code = {
@@ -315,6 +316,7 @@ create_spc_results_processor <- function() {
           }
 
           # Generate the SPC plot
+          # SPRINT 4: Pass QIC cache for performance optimization
           spc_result <- generateSPCPlot(
             data = data,
             config = config,
@@ -326,7 +328,8 @@ create_spc_results_processor <- function() {
             frys_column = frys_column,
             chart_title_reactive = chart_title_reactive,
             y_axis_unit = y_unit,
-            kommentar_column = kommentar_col
+            kommentar_column = kommentar_col,
+            qic_cache = qic_cache
           )
 
           # Apply hospital theme if available

@@ -334,10 +334,59 @@ log_qic_results <- function(qic_result, call_context = "UNKNOWN", call_number = 
 #'
 #' @return Resultat fra qic() kaldet
 #' @export
-log_qic_call_wrapper <- function(qic_args, call_context = "UNKNOWN", call_number = NULL, ...) {
+log_qic_call_wrapper <- function(qic_args, call_context = "UNKNOWN", call_number = NULL, qic_cache = NULL, ...) {
+  # SPRINT 4: Check if caching is enabled and available
+  use_cache <- !is.null(qic_cache) && !is.null(qic_args$data)
+
+  if (use_cache) {
+    # Extract parameters for cache key generation
+    cache_params <- list(
+      x = qic_args$x,
+      y = qic_args$y,
+      chart = qic_args$chart,
+      n = qic_args$n,
+      cl = qic_args$cl,
+      target = qic_args$target,
+      multiply = qic_args$multiply,
+      freeze = qic_args$freeze,
+      breaks = qic_args$breaks,
+      exclude = qic_args$exclude,
+      part = qic_args$part
+    )
+
+    cache_key <- generate_qic_cache_key(qic_args$data, cache_params)
+
+    # Try cache first
+    cached_result <- qic_cache$get(cache_key)
+    if (!is.null(cached_result)) {
+      log_debug_kv(
+        message = "QIC cache hit",
+        cache_key = substr(cache_key, 1, 20),
+        context = call_context,
+        .context = "QIC_CACHE"
+      )
+      return(cached_result)
+    }
+
+    # Cache miss - log it
+    log_debug_kv(
+      message = "QIC cache miss - computing",
+      cache_key = substr(cache_key, 1, 20),
+      context = call_context,
+      .context = "QIC_CACHE"
+    )
+  }
+
   if (!.should_log("DEBUG")) {
     # Ved ikke-DEBUG niveau, kør qic() direkte uden logging overhead
-    return(do.call(qicharts2::qic, qic_args))
+    result <- do.call(qicharts2::qic, qic_args)
+
+    # SPRINT 4: Cache the result if caching is enabled
+    if (use_cache) {
+      qic_cache$set(cache_key, result)
+    }
+
+    return(result)
   }
 
   # Pre-call logging
@@ -353,6 +402,17 @@ log_qic_call_wrapper <- function(qic_args, call_context = "UNKNOWN", call_number
 
       execution_time <- round(as.numeric(difftime(end_time, start_time, units = "secs")), 3)
       log_debug(paste("QIC execution time:", execution_time, "seconds"), .context = "QIC_TIMING")
+
+      # SPRINT 4: Cache the result if caching is enabled
+      if (use_cache) {
+        qic_cache$set(cache_key, result, timeout = CACHE_CONFIG$default_timeout_seconds)
+        log_debug_kv(
+          message = "QIC result cached",
+          cache_key = substr(cache_key, 1, 20),
+          computation_time_ms = round(execution_time * 1000, 2),
+          .context = "QIC_CACHE"
+        )
+      }
 
       result
     },

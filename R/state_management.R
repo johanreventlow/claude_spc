@@ -280,6 +280,13 @@ create_app_state <- function() {
     last_valid_config = list(x_col = NULL, y_col = NULL, n_col = NULL, chart_type = "run")
   )
 
+  # SPRINT 4: Performance Cache Management
+  # Non-reactive cache objects for QIC results
+  # Cache creation is delayed until first use to avoid dependency issues
+  app_state$cache <- list(
+    qic = NULL # Will be initialized lazily on first use
+  )
+
   # Error State - Convert to reactiveValues for consistency
   app_state$errors <- shiny::reactiveValues(
     last_error = NULL, # Last error details

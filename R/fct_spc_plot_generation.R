@@ -381,7 +381,7 @@ build_qic_arguments <- function(data, x_col_for_qic, y_col_name, n_col_name,
 
 ## Execute QIC Call with Post-processing
 # Udfører qicharts2::qic() kald og post-processerer resultaterne
-execute_qic_call <- function(qic_args, chart_type, config) {
+execute_qic_call <- function(qic_args, chart_type, config, qic_cache = NULL) {
   # Call qic() with prepared arguments
   if (getOption("debug.mode", FALSE)) {
     log_debug("qic_args structure:", .context = "QIC_CALL")
@@ -411,7 +411,7 @@ execute_qic_call <- function(qic_args, chart_type, config) {
     benchmark_iterations <- if (data_size < 100) 3 else if (data_size < 1000) 2 else 1
 
     benchmark_result <- benchmark_spc_operation(
-      expr = log_qic_call_wrapper(qic_args, "execute_qic_call_benchmark", call_number),
+      expr = log_qic_call_wrapper(qic_args, "execute_qic_call_benchmark", call_number, qic_cache = qic_cache),
       times = benchmark_iterations,
       operation_name = paste0("qic_", chart_type, "_", size_category, "_", data_size, "_rows"),
       log_results = TRUE,
@@ -421,8 +421,8 @@ execute_qic_call <- function(qic_args, chart_type, config) {
     # Use result from benchmark to eliminate redundant QIC call
     qic_data <- benchmark_result$captured_result
   } else {
-    # Fallback: Execute without benchmarking with debug logging
-    qic_data <- log_qic_call_wrapper(qic_args, "execute_qic_call_fallback", call_number)
+    # SPRINT 4: Execute without benchmarking with caching support
+    qic_data <- log_qic_call_wrapper(qic_args, "execute_qic_call_fallback", call_number, qic_cache = qic_cache)
   }
 
   qic_data
@@ -588,7 +588,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   return(plot)
 }
 
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL, qic_cache = NULL) {
   # Generate SPC plot with specified parameters
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
@@ -776,7 +776,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           )
 
           # Execute QIC call with post-processing
-          qic_data <- execute_qic_call(qic_args, chart_type, config)
+          # SPRINT 4: Pass QIC cache for performance optimization
+          qic_data <- execute_qic_call(qic_args, chart_type, config, qic_cache = qic_cache)
 
           # Tilføj kombineret anhoej.signal kolonne (runs ELLER crossings) per part
           if (!is.null(qic_data)) {

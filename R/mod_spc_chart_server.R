@@ -430,6 +430,13 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           # Hent viewport dimensions hvis tilgængelige
           vp_dims <- viewport_dims()
 
+          # SPRINT 4: Pass QIC cache for performance optimization
+          qic_cache <- if (!is.null(app_state) && !is.null(app_state$cache)) {
+            get_or_init_qic_cache(app_state)
+          } else {
+            NULL
+          }
+
           spc_result <- generateSPCPlot(
             data = inputs$data,
             config = inputs$config,
@@ -444,7 +451,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             kommentar_column = inputs$kommentar_column,
             base_size = inputs$base_size,
             viewport_width = vp_dims$width,
-            viewport_height = vp_dims$height
+            viewport_height = vp_dims$height,
+            qic_cache = qic_cache
           )
 
           plot <- applyHospitalTheme(spc_result$plot, base_size = inputs$base_size)
