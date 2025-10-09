@@ -127,7 +127,9 @@ detect_columns_with_cache <- function(data, app_state = NULL) {
 
 #' Create Data Signature
 #'
-#' Creates a unique signature for data to enable caching
+#' Creates a unique signature for data to enable caching.
+#' FIXED: Now hashes the ENTIRE dataset instead of just first 10 rows
+#' to prevent cache collisions when data changes beyond the sample.
 #'
 #' @param data The data frame to create signature for
 #'
@@ -136,16 +138,17 @@ create_data_signature <- function(data) {
     return("empty_data")
   }
 
-  # Create signature from dimensions, column names, and sample data
+  # FIX BUG #1: Hash ENTIRE dataset, not just first 10 rows
+  # This prevents cache collisions when rows 11+ change
   signature_components <- list(
     nrow = nrow(data),
     ncol = ncol(data),
     column_names = names(data),
     column_types = purrr::map_chr(data, ~ class(.x)[1]),
-    sample_hash = digest::digest(utils::head(data, 10))
+    data_hash = digest::digest(data, algo = "xxhash64", serialize = TRUE)
   )
 
-  return(digest::digest(signature_components))
+  return(digest::digest(signature_components, algo = "xxhash64", serialize = TRUE))
 }
 
 #' Simple Cache Implementation
