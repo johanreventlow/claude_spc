@@ -28,6 +28,8 @@ create_spc_results_processor()
 \item{y_unit}{Y-axis unit}
 
 \item{kommentar_col}{Comment column}
+
+\item{qic_cache}{QIC cache object for performance optimization (SPRINT 4)}
 }
 \value{
 List med SPC metrics og beskeder

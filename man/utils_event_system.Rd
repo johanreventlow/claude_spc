@@ -12,28 +12,22 @@ It provides centralized event listeners and handlers for the application.
 
 \strong{Main Function:} \code{setup_event_listeners()} - Line ~99
 
-\strong{Sections:}
+\strong{SPRINT 4: Modular Event Registration Functions}
 \itemize{
-\item HELPER FUNCTIONS - Line ~109
-\item SECTION 1: Data Lifecycle Events - Line ~145
-\item SECTION 2: Auto-Detection Events - Line ~247
-\item SECTION 3: UI Synchronization Events - Line ~317
-\item SECTION 4: Navigation Events - Line ~404
-\item SECTION 5: Test Mode Events - Line ~422
-\item SECTION 6: Session Lifecycle Events - Line ~519
-\item SECTION 7: Error Handling Events - Line ~588
-\item SECTION 8: UI Update Events - Line ~699
-\item SECTION 9: Input Change Observers - Line ~741
-\item SECTION 10: Passive Monitoring - Line ~1042
+\item \code{register_data_lifecycle_events()} - Data loading and changes
+\item \code{register_autodetect_events()} - Auto-detection processing
+\item \code{register_ui_sync_events()} - UI synchronization
+\item \code{register_chart_type_events()} - Chart type and Y-axis logic
+\item \code{register_navigation_events()} - Navigation and session lifecycle
 }
 
-\strong{Supporting Functions:} Line ~1099+
+\strong{Supporting Functions:} Helper functions for event processing
 }
 
-\subsection{Architecture Note}{
+\subsection{Architecture Note (SPRINT 4 Update)}{
 
-This file intentionally consolidates ALL event listeners in one place.
-DO NOT split into separate files - this would break event ordering
-visibility and make race conditions harder to debug.
+Event listeners are organized into category-specific registration functions
+for better maintainability, but all are orchestrated by setup_event_listeners()
+to maintain visibility of event ordering and prevent race conditions.
 }
 }

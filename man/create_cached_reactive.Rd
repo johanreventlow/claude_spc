@@ -8,15 +8,15 @@
 create_cached_reactive(
   reactive_expr,
   cache_key,
-  cache_timeout = 300,
-  cache_size_limit = 50
+  cache_timeout = CACHE_CONFIG$default_timeout_seconds,
+  cache_size_limit = CACHE_CONFIG$size_limit_entries
 )
 
 create_cached_reactive(
   reactive_expr,
   cache_key,
-  cache_timeout = 300,
-  cache_size_limit = 50
+  cache_timeout = CACHE_CONFIG$default_timeout_seconds,
+  cache_size_limit = CACHE_CONFIG$size_limit_entries
 )
 }
 \arguments{
@@ -24,7 +24,7 @@ create_cached_reactive(
 
 \item{cache_key}{Character string eller function der genererer cache key}
 
-\item{cache_timeout}{Timeout i sekunder (default: 300 = 5 minutter)}
+\item{cache_timeout}{Timeout i sekunder (default: CACHE_CONFIG$default_timeout_seconds)}
 
 \item{cache_size_limit}{Maximum antal cache entries (default: 50)}
 
@@ -64,7 +64,7 @@ cached_autodetect <- create_cached_reactive(
     detect_columns_full_analysis(data, app_state)
   },
   "autodetect",
-  cache_timeout = 600
+  cache_timeout = CACHE_CONFIG$extended_timeout_seconds
 )
 
 # Data-specific caching
@@ -73,7 +73,7 @@ cached_processing <- create_cached_reactive(
     expensive_data_processing(data)
   },
   function() paste0("processing_", digest::digest(data)),
-  300
+  CACHE_CONFIG$default_timeout_seconds
 )
 
 }

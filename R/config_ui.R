@@ -66,24 +66,28 @@ UI_LAYOUT_PROPORTIONS <- list(
 
 #' Responsive font scaling configuration
 #'
-#' Styrer hvordan base_size skaleres baseret på viewport bredde og pixelratio.
+#' Styrer hvordan base_size skaleres baseret på viewport bredde.
 #'
 #' @details
-#' base_size beregnes som: max(min_size, min(max_size, width_px / divisor)) / pixelratio
+#' base_size beregnes som: max(min_size, min(max_size, width_px / divisor))
 #'
-#' - divisor: Lavere værdi = større fonts (50 = ~40% større end 70)
+#' VIGTIG: Shiny's renderPlot() multiplicerer automatisk res med pixelratio,
+#' så vi skal IKKE dividere base_size med pixelratio. Dette sikrer konsistent
+#' visuel størrelse på tværs af standard og Retina displays.
+#'
+#' - divisor: Lavere værdi = større fonts (40 = ~40% større end 56)
 #' - min_size: Minimum font size uanset viewport
 #' - max_size: Maximum font size selv på store skærme
 #'
 #' Eksempler ved divisor = 50:
-#' - 500px bred: base_size = 10pt (Standard) / 5pt (Retina)
-#' - 700px bred: base_size = 14pt (Standard) / 7pt (Retina)
-#' - 1000px bred: base_size = 14pt (capped) / 7pt (capped)
+#' - 500px bred: base_size = 10pt (både Standard og Retina)
+#' - 700px bred: base_size = 14pt (både Standard og Retina)
+#' - 1000px bred: base_size = 20pt (begge displays - samme visuelle størrelse)
 #'
 #' @format Named list med scaling parametre
 #' @export
 FONT_SCALING_CONFIG <- list(
-  divisor = 56, # Viewport width divisor (lower = larger fonts)
+  divisor = 50, # Viewport width divisor (lower = larger fonts)
   min_size = 8, # Minimum base_size i points
   max_size = 64 # Maximum base_size i points
 )
