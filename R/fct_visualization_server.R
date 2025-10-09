@@ -118,6 +118,14 @@ setup_visualization <- function(input, output, session, app_state) {
     get_qic_chart_type(chart_selection)
   })
 
+  # Raw target text reactive (for operator parsing in labels)
+  target_text_reactive <- shiny::debounce(shiny::reactive({
+    if (is.null(input$target_value) || input$target_value == "") {
+      return(NULL)
+    }
+    return(input$target_value)
+  }), millis = DEBOUNCE_DELAYS$chart_update)
+
   # Initialiser visualiserings modul - no debouncing for valuebox stability
   # Operation completed
   visualization <- visualizationModuleServer(
@@ -129,6 +137,21 @@ setup_visualization <- function(input, output, session, app_state) {
       if (is.null(input$target_value) || input$target_value == "") {
         return(NULL)
       }
+
+      trimmed_input <- trimws(input$target_value)
+
+      # Check if input is ONLY operators (for arrow symbols)
+      # In that case, return a dummy numeric value (will be ignored, only text matters)
+      if (grepl("^[<>=]+$", trimmed_input)) {
+        # Only operators - return a dummy value
+        # The actual arrow logic will use target_text
+        return(0)
+      }
+
+      # CRITICAL FIX: Strip leading operators before parsing
+      # This allows "<80%" to extract "80%" for normalization
+      # while target_text preserves original "<80%" for label formatting
+      numeric_part <- sub("^[<>=]+", "", trimmed_input)
 
       # Use unified axis value processing with chart-type awareness
       chart_type <- chart_type_reactive() # Get chart type from reactive
@@ -146,14 +169,16 @@ setup_visualization <- function(input, output, session, app_state) {
       }
 
       # Use chart-type aware normalization (eliminates 100×-mismatch)
+      # Pass numeric_part instead of original input
       return(normalize_axis_value(
-        x = input$target_value,
+        x = numeric_part,
         user_unit = y_unit,
         col_unit = NULL, # Could be added if we have column metadata
         y_sample = y_sample,
         chart_type = chart_type # This determines internal_unit automatically
       ))
     }), millis = DEBOUNCE_DELAYS$chart_update), # Debounce input changes to prevent excessive plot regeneration
+    target_text_reactive = target_text_reactive,
     centerline_value_reactive = shiny::debounce(shiny::reactive({
       if (is.null(input$centerline_value) || input$centerline_value == "") {
         return(NULL)

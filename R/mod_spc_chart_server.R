@@ -6,7 +6,7 @@
 # Helper functions now loaded globally in global.R for better performance
 
 
-visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL) {
+visualizationModuleServer <- function(id, data_reactive, column_config_reactive, chart_type_reactive, target_value_reactive, target_text_reactive, centerline_value_reactive, skift_config_reactive, frys_config_reactive, chart_title_reactive = NULL, y_axis_unit_reactive = NULL, kommentar_column_reactive = NULL, app_state = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
     # Module initialization
     ns <- session$ns
@@ -276,6 +276,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       title_value <- if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL
       unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
       kommentar_value <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
+      target_text_value <- if (!is.null(target_text_reactive)) target_text_reactive() else NULL
 
       # VIEWPORT DIMENSIONS: Brug clientData hvis tilgængelig, ellers conservative defaults
       # Dette sikrer at plot ALTID renders (også ved første render), men med progressive
@@ -343,6 +344,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         config = config,
         chart_type = config$chart_type %||% "run",
         target_value = target_value_reactive(),
+        target_text = target_text_value,
         centerline_value = centerline_value_reactive(),
         skift_config = skift_config,
         skift_hash = digest::digest(skift_config, algo = "xxhash64"),
@@ -379,6 +381,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           inputs$chart_type,
           config_key,
           inputs$target_value,
+          inputs$target_text, # CRITICAL: Include target_text for operator invalidation
           inputs$centerline_value,
           inputs$skift_hash,
           inputs$frys_hash,
@@ -458,6 +461,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             config = inputs$config,
             chart_type = inputs$chart_type,
             target_value = inputs$target_value,
+            target_text = inputs$target_text,
             centerline_value = inputs$centerline_value,
             show_phases = inputs$skift_config$show_phases %||% FALSE,
             skift_column = inputs$skift_config$skift_column,
@@ -584,6 +588,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           inputs$chart_type,
           paste0(inputs$config$x_col %||% "NULL", "|", inputs$config$y_col %||% "NULL", "|", inputs$config$n_col %||% "NULL"),
           inputs$target_value,
+          inputs$target_text, # CRITICAL: Include target_text for operator invalidation
           inputs$centerline_value,
           inputs$skift_hash,
           inputs$frys_hash,

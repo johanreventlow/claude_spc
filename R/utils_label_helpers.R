@@ -77,6 +77,13 @@ sanitize_marquee_text <- function(text) {
     text <- text[1]
   }
 
+  # CRITICAL: Do NOT escape < and > for marquee rendering
+  # Marquee's markdown parser actually handles these characters correctly
+  # without escaping. Previous attempts with HTML entities and fullwidth
+  # characters caused parser errors and crashes.
+  # The characters are only problematic in raw HTML/XML contexts, not in
+  # marquee's markdown-based rendering pipeline.
+
   # Escape marquee special characters
   # Note: Marquee bruger {} til markup, ** bevar vi da det skal være bold i output
   text <- gsub("\\{", "&#123;", text) # Escape {
@@ -93,6 +100,130 @@ sanitize_marquee_text <- function(text) {
   }
 
   text
+}
+
+# ============================================================================
+# TARGET PREFIX FORMATTING
+# ============================================================================
+
+#' Check if text contains intelligent arrow symbols
+#'
+#' Detekterer om tekst indeholder pil-symboler (↓ eller ↑) som kræver
+#' speciel label positionering uden targetline.
+#'
+#' @param text character string to check
+#' @return logical TRUE hvis pil-symbol detekteret, FALSE ellers
+#' @keywords internal
+#' @export
+has_arrow_symbol <- function(text) {
+  if (is.null(text) || length(text) == 0 || !is.character(text)) {
+    return(FALSE)
+  }
+
+  # Check for down arrow (U+2193) or up arrow (U+2191)
+  grepl("\U2193|\U2191", text)
+}
+
+#' Formatér målværdi med foranstillede tegn
+#'
+#' Konverterer foranstillede operatorer i målværdi tekst til Unicode-symboler:
+#' - `>=` → ≥ (U+2265)
+#' - `<=` → ≤ (U+2264)
+#' - `<` (uden tal) → ↓ (U+2193, pil ned)
+#' - `>` (uden tal) → ↑ (U+2191, pil op)
+#'
+#' @param target_text character string med målværdi (kan indeholde operator)
+#' @return character string med formateret målværdi
+#'
+#' @details
+#' Funktionen parser input for at detektere foranstillede operatorer.
+#' For `<` og `>` tjekkes om der følger et tal efter operatoren:
+#' - Hvis intet tal: erstat med pil-symbol (↓ eller ↑)
+#' - Hvis tal følger: bevar original operator
+#'
+#' @examples
+#' \dontrun{
+#' format_target_prefix(">=90") # → "≥90"
+#' format_target_prefix("<= 25") # → "≤ 25"
+#' format_target_prefix("<") # → "↓"
+#' format_target_prefix(">") # → "↑"
+#' format_target_prefix("<25") # → "<25"
+#' format_target_prefix("80") # → "80"
+#' }
+#'
+#' @export
+format_target_prefix <- function(target_text) {
+  # Håndter NULL og tomme strenge
+  if (is.null(target_text) || length(target_text) == 0) {
+    return("")
+  }
+
+  # Konverter til character hvis nødvendigt
+  if (!is.character(target_text)) {
+    target_text <- as.character(target_text)
+  }
+
+  # Håndter tom streng
+  if (nchar(trimws(target_text)) == 0) {
+    return(target_text)
+  }
+
+  # Pattern matching for operatorer
+  # >= og <= skal matches før < og >
+
+  # 1. Check for >= (skal erstattes med ≥)
+  if (grepl("^>=", target_text)) {
+    target_text <- sub("^>=", "\U2265", target_text)
+    return(target_text)
+  }
+
+  # 2. Check for <= (skal erstattes med ≤)
+  if (grepl("^<=", target_text)) {
+    target_text <- sub("^<=", "\U2264", target_text)
+    return(target_text)
+  }
+
+  # 3. Check for < (evt. pil ned hvis ingen tal følger)
+  if (grepl("^<", target_text)) {
+    # Extract alt efter <
+    remainder <- sub("^<", "", target_text)
+    # Trim whitespace
+    remainder_trimmed <- trimws(remainder)
+
+    # Check om der er et tal (eller decimal separator + tal)
+    # Pattern: start med optional minus, derefter cifre, derefter optional decimal separator og flere cifre
+    has_number <- grepl("^-?[0-9]", remainder_trimmed)
+
+    if (!has_number) {
+      # Ingen tal → pil ned
+      return("\U2193")
+    } else {
+      # Tal følger → bevar <
+      return(target_text)
+    }
+  }
+
+  # 4. Check for > (evt. pil op hvis ingen tal følger)
+  if (grepl("^>", target_text)) {
+    # Extract alt efter >
+    remainder <- sub("^>", "", target_text)
+    # Trim whitespace
+    remainder_trimmed <- trimws(remainder)
+
+    # Check om der er et tal
+    has_number <- grepl("^-?[0-9]", remainder_trimmed)
+
+    if (!has_number) {
+      # Ingen tal → pil op
+      return("\U2191")
+    } else {
+      # Tal følger → bevar >
+      return(target_text)
+    }
+  }
+
+  # Ingen operator fundet → returner uændret
+  return(target_text)
 }
 
 # ============================================================================

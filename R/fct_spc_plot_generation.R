@@ -433,7 +433,7 @@ execute_qic_call <- function(qic_args, chart_type, config, qic_cache = NULL) {
 ## Add Plot Enhancements
 # Tilføjer extended lines, phase separations og comment annotations
 # NOTE: Label placement er flyttet til add_spc_labels() funktion
-add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6) {
+add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6, suppress_targetline = FALSE) {
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
@@ -470,6 +470,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   extended_lines_data <- data.frame()
 
   # Centerline extended line KUN for seneste part
+  cl_extension_linetype <- "solid" # Default linetype
   if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
     # Find seneste part
     latest_part <- max(qic_data$part, na.rm = TRUE)
@@ -479,20 +480,28 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       # Brug sidste punkt i seneste part
       last_row <- part_data[nrow(part_data), ]
       cl_value <- last_row$cl
+
+      # Bestem linetype baseret på anhoej.signal i seneste part
+      # Match formatering fra hovedplot centerline
+      if ("anhoej.signal" %in% names(last_row)) {
+        cl_extension_linetype <- if (isTRUE(last_row$anhoej.signal)) "12" else "solid"
+      }
+
       if (!is.na(cl_value)) {
         # Extended line fra sidste datapunkt til extended_x
         extended_lines_data <- rbind(extended_lines_data, data.frame(
           x = c(last_row$x, extended_x),
           y = c(cl_value, cl_value),
           type = "cl",
+          linetype = cl_extension_linetype,
           stringsAsFactors = FALSE
         ))
       }
     }
   }
 
-  # Target extended line
-  if (!is.null(qic_data$target) && any(!is.na(qic_data$target))) {
+  # Target extended line (only if not suppressed by arrow symbols)
+  if (!suppress_targetline && !is.null(qic_data$target) && any(!is.na(qic_data$target))) {
     target_value <- qic_data$target[!is.na(qic_data$target)][1]
 
     # Extended line fra sidste datapunkt til extended_x
@@ -545,7 +554,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
           ggplot2::aes(x = x, y = y),
           color = hospital_colors$hospitalblue,
           linewidth = cl_linewidth,
-          linetype = "solid",
+          linetype = cl_ext$linetype[1], # Use captured linetype directly
           inherit.aes = FALSE
         )
     }
@@ -588,10 +597,22 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
   return(plot)
 }
 
-generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL, qic_cache = NULL) {
+generateSPCPlot <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL, target_text = NULL, qic_cache = NULL) {
   # Generate SPC plot with specified parameters
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
+
+  # Detect arrow symbols in target_text to determine if targetline should be suppressed
+  suppress_targetline <- FALSE
+  if (!is.null(target_text) && nchar(trimws(target_text)) > 0) {
+    # Format target_text to check for arrows
+    formatted_target <- format_target_prefix(target_text)
+    suppress_targetline <- has_arrow_symbol(formatted_target)
+
+    if (suppress_targetline) {
+      message(sprintf("[TARGETLINE_SUPPRESSION] Arrow symbol detected in target_text - targetline will be suppressed"))
+    }
+  }
 
   # Beregn responsive geom størrelser baseret på base_size
   # Reference: base_size 14 giver original størrelser
@@ -832,9 +853,16 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b5b9", na.rm = TRUE) +
               geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b7b9", na.rm = TRUE)
           }
+
+          # Targetline tilføjes (conditionally suppressed if arrow symbols detected)
+          # Arrow symbols (↓ ↑) indicate direction without specific numeric target
+          if (!suppress_targetline) {
+            plot <- plot +
+              ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = target_linewidth, colour = "#565656", linetype = "42", na.rm = TRUE)
+          }
+
           # Resten af plot tilføjes ------
           plot <- plot +
-            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = target_linewidth, colour = "#565656", linetype = "42", na.rm = TRUE) +
             ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = data_linewidth, na.rm = TRUE) +
             ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = point_size, na.rm = TRUE) +
 
@@ -848,7 +876,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               values = c("FALSE" = "solid", "TRUE" = "12"),
               guide = "none" # Skjul legend
             )
-
 
           plot
         },
@@ -1224,10 +1251,62 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         plot, qic_data, comment_data, y_axis_unit,
         cl_linewidth = cl_linewidth,
         target_linewidth = target_linewidth,
-        comment_size = comment_size
+        comment_size = comment_size,
+        suppress_targetline = suppress_targetline
       )
 
       # Add SPC labels (CL og Target) med advanced placement system
+      # Bestem BASELINE label logik: Tjek om Frys er markeret og om der er Skift EFTER Frys
+      has_frys_without_subsequent_skift <- FALSE
+
+      if (!is.null(frys_column) && frys_column %in% names(data) &&
+        !is.null(skift_column) && skift_column %in% names(data)) {
+        # Extract og process begge kolonner
+        frys_data <- data[[frys_column]]
+        if (is.list(frys_data)) frys_data <- unlist(frys_data)
+        if (!is.logical(frys_data)) frys_data <- as.logical(frys_data)
+
+        skift_data <- data[[skift_column]]
+        if (is.list(skift_data)) skift_data <- unlist(skift_data)
+        if (!is.logical(skift_data)) skift_data <- as.logical(skift_data)
+
+        # Find sidste position hvor Frys er markeret
+        frys_positions <- which(frys_data == TRUE)
+
+        if (length(frys_positions) > 0) {
+          last_frys_position <- max(frys_positions)
+
+          # Tjek om Skift er markeret VED SAMME position som Frys
+          has_skift_at_same_position <- FALSE
+          if (last_frys_position <= length(skift_data)) {
+            has_skift_at_same_position <- isTRUE(skift_data[last_frys_position] == TRUE)
+          }
+
+          # Hvis Skift er markeret ved samme position → "NUV. NIVEAU" (ikke BASELINE)
+          if (has_skift_at_same_position) {
+            has_frys_without_subsequent_skift <- FALSE
+          } else {
+            # Tjek om der er TRUE-værdier i Skift EFTER sidste Frys position
+            has_skift_after_frys <- FALSE
+            if (last_frys_position < length(skift_data)) {
+              skift_after_frys <- skift_data[(last_frys_position + 1):length(skift_data)]
+              has_skift_after_frys <- any(skift_after_frys == TRUE, na.rm = TRUE)
+            }
+
+            # BASELINE label hvis Frys er markeret OG ingen Skift ved samme eller efterfølgende position
+            has_frys_without_subsequent_skift <- !has_skift_after_frys
+          }
+        }
+      } else if (!is.null(frys_column) && frys_column %in% names(data)) {
+        # Kun Frys kolonne eksisterer (ingen Skift kolonne)
+        frys_data <- data[[frys_column]]
+        if (is.list(frys_data)) frys_data <- unlist(frys_data)
+        if (!is.logical(frys_data)) frys_data <- as.logical(frys_data)
+
+        # Hvis Frys er markeret og ingen Skift kolonne findes → BASELINE
+        has_frys_without_subsequent_skift <- any(frys_data == TRUE, na.rm = TRUE)
+      }
+
       plot <- add_spc_labels(
         plot = plot,
         qic_data = qic_data,
@@ -1235,6 +1314,10 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         label_size = label_size,
         viewport_width = viewport_width,
         viewport_height = viewport_height,
+        target_text = target_text,
+        centerline_value = centerline_value,
+        has_frys_column = has_frys_without_subsequent_skift,
+        has_skift_column = FALSE,
         verbose = FALSE,
         debug_mode = FALSE
       )

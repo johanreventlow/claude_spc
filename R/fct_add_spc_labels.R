@@ -14,6 +14,10 @@
 #' @param label_size numeric base font size for responsive sizing (default 6)
 #' @param viewport_width numeric viewport width in pixels (optional, from clientData)
 #' @param viewport_height numeric viewport height in pixels (optional, from clientData)
+#' @param target_text character original målværdi text from user input (optional, for operator parsing)
+#' @param centerline_value numeric centerline value from user input (optional, for BASELINE label logic)
+#' @param has_frys_column logical TRUE if Frys column is selected (optional, for BASELINE label logic)
+#' @param has_skift_column logical TRUE if Skift column is selected (optional, for BASELINE label logic)
 #' @param verbose logical print placement warnings (default FALSE)
 #' @param debug_mode logical add visual debug annotations (default FALSE)
 #' @return ggplot object med tilføjede labels
@@ -49,6 +53,10 @@ add_spc_labels <- function(
     label_size = 6,
     viewport_width = NULL,
     viewport_height = NULL,
+    target_text = NULL,
+    centerline_value = NULL,
+    has_frys_column = FALSE,
+    has_skift_column = FALSE,
     verbose = FALSE,
     debug_mode = FALSE) {
   # Entry logging (conditional)
@@ -252,24 +260,168 @@ add_spc_labels <- function(
   # Formatér labels med delt formatter ----
   label_cl <- NULL
   if (!is.na(cl_value)) {
+    # Bestem CL header baseret på baseline-logik
+    # Regel 1: Hvis centerline_value er angivet → "BASELINE"
+    # Regel 2: Hvis Frys-kolonne er valgt OG Skift-kolonne IKKE er valgt → "BASELINE"
+    # Ellers → "NUV. NIVEAU"
+    cl_header <- if (!is.null(centerline_value) && !is.na(centerline_value)) {
+      "BASELINE"
+    } else if (has_frys_column && !has_skift_column) {
+      "BASELINE"
+    } else {
+      "NUV. NIVEAU"
+    }
+
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message(sprintf(
+        "[CL_HEADER_LOGIC] centerline_value: %s, has_frys: %s, has_skift: %s → header: '%s'",
+        if (!is.null(centerline_value) && !is.na(centerline_value)) sprintf("%.2f", centerline_value) else "NULL",
+        has_frys_column,
+        has_skift_column,
+        cl_header
+      ))
+    }
+
     formatted_cl <- format_y_value(cl_value, y_axis_unit, y_range)
     label_cl <- create_responsive_label(
-      header = "NUV. NIVEAU",
+      header = cl_header,
       value = formatted_cl,
       label_size = label_size
     )
   }
 
   label_target <- NULL
+  has_arrow <- FALSE
+  arrow_type <- NULL # "up" or "down"
+
   if (!is.na(target_value)) {
-    formatted_target <- format_y_value(target_value, y_axis_unit, y_range)
-    # Tilføj større-end tegn for target
-    størreend <- "\U2265"
+    # Determiner label value baseret på om vi har target_text
+    if (!is.null(target_text) && nchar(trimws(target_text)) > 0) {
+      # Debug logging
+      if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+        message(sprintf("[TARGET_FORMATTING] Raw target_text: '%s'", target_text))
+      }
+
+      # Brug target_text med formateret prefix
+      formatted_target_with_prefix <- format_target_prefix(target_text)
+
+      # Debug logging
+      if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+        message(sprintf("[TARGET_FORMATTING] After format_target_prefix: '%s'", formatted_target_with_prefix))
+      }
+
+      # Detektér om der er pil-symbol
+      has_arrow <- has_arrow_symbol(formatted_target_with_prefix)
+
+      # AUTO-ADD PERCENT SUFFIX: If y_axis_unit is "percent" and user didn't include %
+      # Only add % if:
+      # 1. y_axis_unit == "percent"
+      # 2. Text doesn't already contain %
+      # 3. It's not an arrow symbol (arrows don't need %)
+      if (y_axis_unit == "percent" && !has_arrow && !grepl("%", formatted_target_with_prefix, fixed = TRUE)) {
+        formatted_target_with_prefix <- paste0(formatted_target_with_prefix, "%")
+        if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+          message(sprintf("[TARGET_FORMATTING] Auto-added %% suffix: '%s'", formatted_target_with_prefix))
+        }
+      }
+
+      if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+        message(sprintf("[TARGET_FORMATTING] has_arrow: %s", has_arrow))
+      }
+
+      if (has_arrow) {
+        # Check for specific arrow types using direct character comparison
+        # For single arrow characters, == is more reliable than grepl
+        arrow_down_char <- "\U2193"
+        arrow_up_char <- "\U2191"
+
+        # Debug: Show what we're comparing
+        if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+          message(sprintf("[ARROW_TYPE_DETECTION] Comparing:"))
+          message(sprintf(
+            "  formatted == arrow_down ('%s' == '%s'): %s",
+            formatted_target_with_prefix, arrow_down_char,
+            formatted_target_with_prefix == arrow_down_char
+          ))
+          message(sprintf(
+            "  formatted == arrow_up ('%s' == '%s'): %s",
+            formatted_target_with_prefix, arrow_up_char,
+            formatted_target_with_prefix == arrow_up_char
+          ))
+        }
+
+        # Direct comparison since formatted_target_with_prefix is exactly the arrow character
+        arrow_type <- if (formatted_target_with_prefix == arrow_down_char) {
+          "down"
+        } else if (formatted_target_with_prefix == arrow_up_char) {
+          "up"
+        } else {
+          # Fallback if neither detected (should not happen)
+          warning(sprintf("Unexpected arrow format: '%s'", formatted_target_with_prefix))
+          "down"
+        }
+
+        if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+          message(sprintf(
+            "[ARROW_DETECTED] Arrow type: %s (char: '%s') - targetline will be suppressed",
+            arrow_type, formatted_target_with_prefix
+          ))
+        }
+      }
+    } else {
+      # Fallback: brug formateret numerisk værdi med ≥ prefix (legacy behaviour)
+      formatted_target <- format_y_value(target_value, y_axis_unit, y_range)
+      formatted_target_with_prefix <- paste0(formatted_target)
+    }
+
     label_target <- create_responsive_label(
-      header = "MÅL",
-      value = paste0(størreend, formatted_target),
+      header = "UDVIKLINGSMÅL",
+      value = formatted_target_with_prefix,
       label_size = label_size
     )
+  }
+
+  # Håndter pil-positioning: beregn y-akse limits for arrow placement ----
+  if (has_arrow) {
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message(sprintf("[ARROW_POSITIONING] Entering arrow positioning block with arrow_type: '%s'", arrow_type))
+    }
+
+    # Get y-axis limits from qic_data
+    y_min <- min(qic_data$y, na.rm = TRUE)
+    y_max <- max(qic_data$y, na.rm = TRUE)
+    y_range_plot <- y_max - y_min
+
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message(sprintf("[ARROW_POSITIONING] Y-axis range: %.3f to %.3f (range: %.3f)", y_min, y_max, y_range_plot))
+    }
+
+    # CRITICAL FIX: Position arrow labels INSIDE plot boundaries
+    # Labels placed outside y-axis limits may not render due to clipping
+    # Use small inset margin (1% from edge) to keep labels visible
+    # This ensures labels are always within rendered plot area
+    inset_margin_factor <- 0.01 # 1% inset from edge
+    arrow_y_position <- if (arrow_type == "down") {
+      # Place at bottom with small inset (slightly above y_min)
+      y_min + (y_range_plot * inset_margin_factor)
+    } else {
+      # Place at top with small inset (slightly below y_max)
+      y_max - (y_range_plot * inset_margin_factor)
+    }
+
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message(sprintf(
+        "[ARROW_POSITIONING] Placing %s arrow at y=%.3f (y_range: %.3f to %.3f)",
+        arrow_type, arrow_y_position, y_min, y_max
+      ))
+    }
+
+    # Override target_value for label positioning
+    target_value <- arrow_y_position
+
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message(sprintf("[ARROW_POSITIONING] target_value overridden to: %.3f", target_value))
+    }
   }
 
   # Håndter edge case: kun én label ----
@@ -311,21 +463,39 @@ add_spc_labels <- function(
     ))
   }
 
+  # CRITICAL FIX: Arrow labels skal holde deres absolutte positioner
+  # Når arrows detekteres, skal collision avoidance IKKE flytte labels
+  # Dette opnås ved at sætte gap_labels til 0 (ingen spacing enforcement)
+  # og lade labels placeres præcist ved deres givne y-koordinater
+  if (has_arrow) {
+    if (verbose || getOption("spc.debug.label_placement", FALSE)) {
+      message("[LABEL_PLACEMENT] Arrow detected - disabling collision avoidance (gap_labels=0)")
+    }
+    label_params <- list(
+      pad_top = 0.01,
+      pad_bot = 0.01,
+      gap_labels = 0, # CRITICAL: Disable collision avoidance for arrows
+      pref_pos = c("under", "under"),
+      priority = "A"
+    )
+  } else {
+    # Normal labels: use collision avoidance
+    label_params <- list(
+      pad_top = 0.01,
+      pad_bot = 0.01,
+      # gap_labels uses default from config
+      pref_pos = c("under", "under"),
+      priority = "A"
+    )
+  }
+
   plot_with_labels <- add_right_labels_marquee(
     p = plot,
     yA = yA,
     yB = yB,
     textA = textA,
     textB = textB,
-    params = list(
-      # label_height_npc - AUTO-BEREGNES fra font sizes
-      # gap_line - AUTO: fra config (relative_gap_line)
-      # gap_labels - AUTO: fra config (relative_gap_labels)
-      pad_top = 0.01, # Top padding
-      pad_bot = 0.01, # Bottom padding
-      pref_pos = c("under", "under"), # Default: placer under linjer
-      priority = "A" # Beskyt CL label ved konflikter
-    ),
+    params = label_params,
     gpA = grid::gpar(col = "#009CE8"), # CL label farve (lyseblå)
     gpB = grid::gpar(col = "#565656"), # Target label farve (grå)
     label_size = label_size, # Label sizing (baseline = 6)
@@ -337,6 +507,14 @@ add_spc_labels <- function(
 
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
     message("[LABEL_PLACEMENT] add_right_labels_marquee returned successfully")
+  }
+
+  # Attach metadata about arrow detection for targetline suppression
+  attr(plot_with_labels, "suppress_targetline") <- has_arrow
+  attr(plot_with_labels, "arrow_type") <- arrow_type
+
+  if (verbose && has_arrow) {
+    message(sprintf("[METADATA] Setting suppress_targetline=TRUE (arrow_type=%s)", arrow_type))
   }
 
   return(plot_with_labels)
