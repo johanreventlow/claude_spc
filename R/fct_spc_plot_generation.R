@@ -444,7 +444,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     NULL
   }
 
-  # Beregn extended x position (15% ud over sidste datapunkt) ----
+  # Beregn extended x position (20% ud over sidste datapunkt) ----
   last_x <- max(qic_data$x, na.rm = TRUE)
   first_x <- min(qic_data$x, na.rm = TRUE)
 
@@ -454,15 +454,15 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     first_x <- as.POSIXct(first_x)
   }
 
-  # Beregn 15% extension baseret på data range
+  # Beregn 20% extension baseret på data range
   if (inherits(last_x, c("POSIXct", "POSIXt"))) {
     # For tidsobjekter: beregn i sekunder
     range_secs <- as.numeric(difftime(last_x, first_x, units = "secs"))
-    extended_x <- last_x + range_secs * 0.15
+    extended_x <- last_x + range_secs * 0.20
   } else {
     # For numerisk
     x_range <- last_x - first_x
-    extended_x <- last_x + (x_range * 0.15)
+    extended_x <- last_x + (x_range * 0.20)
   }
 
   # Opret extended line data ----
@@ -509,6 +509,7 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
       x = c(last_x, extended_x),
       y = c(target_value, target_value),
       type = "target",
+      linetype = "42", # Match target linetype
       stringsAsFactors = FALSE
     ))
   }
@@ -850,8 +851,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
           if (!is.null(qic_data$ucl) && !all(is.na(qic_data$ucl)) && !is.null(qic_data$lcl) && !all(is.na(qic_data$lcl))) {
             plot <- plot +
               ggplot2::geom_ribbon(ggplot2::aes(ymin = lcl, ymax = ucl), fill = "#E6F5FD", alpha = 0.5) +
-              geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b5b9", na.rm = TRUE) +
-              geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b7b9", na.rm = TRUE)
+              geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b5b9", size = 3.0, na.rm = TRUE) +
+              geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b7b9", size = 3.0, na.rm = TRUE)
           }
 
           # Targetline tilføjes (conditionally suppressed if arrow symbols detected)
@@ -898,13 +899,13 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         data_x_min <- as.POSIXct(data_x_min)
       }
 
-      # Beregn extended limit (15% ekstra) - matcher add_plot_enhancements beregning
+      # Beregn extended limit (20% ekstra) - matcher add_plot_enhancements beregning
       if (inherits(data_x_max, c("POSIXct", "POSIXt"))) {
         range_secs <- as.numeric(difftime(data_x_max, data_x_min, units = "secs"))
-        extended_x_limit <- data_x_max + range_secs * 0.15
+        extended_x_limit <- data_x_max + range_secs * 0.20
       } else {
         x_range <- data_x_max - data_x_min
-        extended_x_limit <- data_x_max + (x_range * 0.15)
+        extended_x_limit <- data_x_max + (x_range * 0.20)
       }
 
       # X-akse limits: udvid til extended_x
@@ -1365,7 +1366,7 @@ applyHospitalTheme <- function(plot, base_size = 14) {
           plot.margin = ggplot2::unit(c(0, 0, 0, 10), "pt"),
           panel.background = ggplot2::element_blank(),
           axis.text.y = ggplot2::element_text(color = "#858585", size = ggplot2::rel(1.0), angle = 0, hjust = 1, family = "Roboto Medium"),
-          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = ggplot2::rel(0.7), family = "Roboto Medium"),
+          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = ggplot2::rel(0.85), family = "Roboto Medium"),
           axis.line.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.x = ggplot2::element_line(color = "#D6D6D6"),
           axis.ticks.y = ggplot2::element_line(color = "#D6D6D6"),

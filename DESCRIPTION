@@ -51,7 +51,9 @@ Imports:
     tibble (>= 3.2.0),
     stringr (>= 1.5.0),
     forcats (>= 1.0.0),
-    config (>= 0.3.0)
+    config (>= 0.3.0),
+    systemfonts (>= 1.0.0),
+    ragg (>= 1.2.0)
 Suggests:
     testthat (>= 3.0.0),
     shinytest2,

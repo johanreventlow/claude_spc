@@ -98,6 +98,14 @@ if (use_source_loading) {
       message("⚠ Hospital branding not available - check package installation")
     }
 
+    # Register Roboto Medium font for cross-platform compatibility
+    # Font registration already handled by .onLoad in package loading mode
+    # This is redundant but harmless - just logs a message
+    if (exists("register_roboto_font", mode = "function")) {
+      # Font already registered by .onLoad, skip duplicate registration
+      message("✓ Roboto Medium font already registered via package loading")
+    }
+
     # Set development log level if not set
     if (!nzchar(Sys.getenv("SPC_LOG_LEVEL", ""))) {
       Sys.setenv(SPC_LOG_LEVEL = "INFO")
@@ -119,6 +127,7 @@ if (use_source_loading) {
     "R/utils_cache_generators.R", # Cache generators
     "R/utils_lazy_loading.R", # Add lazy loading system
     "R/utils_dependency_injection.R",
+    "R/utils_font_registration.R", # Font registration utilities
     # Note: utils_performance.R and utils_advanced_debug.R are now lazy loaded
     "R/utils_shinylogs_config.R",
     "R/utils_memory_management.R",
@@ -229,6 +238,13 @@ if (use_source_loading) {
       accent = "#FF6B35"
     )
     message("⚠ Hospital branding not available - using fallback colors")
+  }
+
+  # Register Roboto Medium font for cross-platform compatibility
+  if (exists("register_roboto_font", mode = "function")) {
+    register_roboto_font()
+  } else {
+    message("⚠ Font registration not available - check utils_font_registration.R")
   }
 
   # BACKWARD COMPATIBILITY LAYER --------------------------------
