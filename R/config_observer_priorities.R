@@ -1,5 +1,20 @@
-# Observer Priorities Configuration
-# Extracted from global.R for better modularity
+# ==============================================================================
+# CONFIG_OBSERVER_PRIORITIES.R
+# ==============================================================================
+# FORMÅL: Observer execution priorities til at forhindre race conditions gennem
+#         deterministisk eksekveringsrækkefølge. Wide gaps mellem levels sikrer
+#         korrekt state management → data processing → UI updates flow.
+#
+# ANVENDES AF:
+#   - Alle observeEvent() calls med priority parameter
+#   - Race condition prevention system
+#   - Event-bus listeners i utils_event_system.R
+#
+# RELATERET:
+#   - utils_event_system.R - Event listener setup
+#   - CLAUDE.md Section 3.1.1 - Race Condition Prevention
+#   - See: docs/CONFIGURATION.md for complete guide
+# ==============================================================================
 
 # OBSERVER MANAGEMENT ================================
 

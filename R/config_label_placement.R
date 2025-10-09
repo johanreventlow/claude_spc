@@ -1,19 +1,23 @@
 # ==============================================================================
-# LABEL PLACEMENT CONFIGURATION CONSTANTS
+# CONFIG_LABEL_PLACEMENT.R
 # ==============================================================================
+# FORMÅL: Intelligent label placement configuration for SPC plots med collision
+#         avoidance. Alle værdier er empirisk tunet for optimal visuel separation
+#         mellem labels og linjer.
 #
-# Centraliserede konstanter for intelligent label placement system.
-# Alle værdier er empirisk afledt og tunet for SPC plots.
+# ANVENDES AF:
+#   - fct_add_spc_labels.R - Label placement logic
+#   - Plot generation system (collision detection)
+#   - Label rendering (gap calculation, marquee sizing)
 #
-# MOTIVATION:
-# - Eliminerer spredte magic numbers gennem kodebasen
-# - Gør system konfigurerbart uden at ændre core logic
-# - Dokumenterer rationale for hver konstant
-# - Muliggør A/B testing og tuning
+# RELATERET:
+#   - config_ui.R - Font scaling configuration
+#   - fct_spc_plot_generation.R - Plot rendering
+#   - See: docs/CONFIGURATION.md for complete guide
 #
 # BRUG:
-# config <- get_label_placement_config()
-# gap_line <- config$relative_gap_line * label_height_npc
+#   config <- get_label_placement_config()
+#   gap_line <- config$relative_gap_line * label_height_npc
 # ==============================================================================
 
 #' Label Placement Configuration Constants

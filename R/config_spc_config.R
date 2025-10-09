@@ -1,5 +1,22 @@
-# SPC Configuration
-# Statistical Process Control specific constants and visualization settings
+# ==============================================================================
+# CONFIG_SPC_CONFIG.R
+# ==============================================================================
+# FORMÅL: SPC-specifikke konstanter for data validation, column detection og
+#         visualization settings. Centraliserer alle Statistical Process Control
+#         defaults og thresholds.
+#
+# ANVENDES AF:
+#   - Data validation logic (MIN_SPC_ROWS, MAX_MISSING_PERCENT)
+#   - Auto-detection algorithms (SPC_COLUMN_NAMES, MIN_NUMERIC_PERCENT)
+#   - Plot rendering (SPC_COLORS, SPC_LINE_TYPES, SPC_ALPHA_VALUES)
+#   - Y-axis formatting (Y_AXIS_UNITS_DA)
+#
+# RELATERET:
+#   - config_chart_types.R - Chart type definitions
+#   - utils_auto_detect.R - Column detection logic
+#   - fct_spc_plot_generation.R - Visualization
+#   - See: docs/CONFIGURATION.md for complete guide
+# ==============================================================================
 
 # DATA VALIDATION CONSTANTS ====================================================
 

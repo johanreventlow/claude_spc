@@ -1,5 +1,20 @@
-# Package-Internal Branding Getters
-# Safe access to branding configuration without global environment pollution
+# ==============================================================================
+# CONFIG_BRANDING_GETTERS.R
+# ==============================================================================
+# FORMÅL: Safe access til hospital branding (navn, logo, theme, farver) uden
+#         global environment pollution. Loader brand.yml og eksponerer via
+#         getter-funktioner.
+#
+# ANVENDES AF:
+#   - UI rendering (logo, bootstrap theme)
+#   - Plot generation (hospital ggplot2 theme, farver, footer)
+#   - App initialization (branding setup)
+#
+# RELATERET:
+#   - inst/config/brand.yml - Brand configuration source file
+#   - config_spc_config.R - SPC visualization colors
+#   - See: docs/CONFIGURATION.md for complete guide
+# ==============================================================================
 
 # Package environment for storing initialized branding
 claudespc_branding <- new.env(parent = emptyenv())

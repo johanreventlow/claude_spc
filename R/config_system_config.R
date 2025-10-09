@@ -1,5 +1,22 @@
-# System Configuration
-# System-level constants for performance, logging, and operation timeouts
+# ==============================================================================
+# CONFIG_SYSTEM_CONFIG.R
+# ==============================================================================
+# FORMÅL: System-level constants for performance optimization, operation timeouts,
+#         rate limiting, cache management og file processing. Centraliserer alle
+#         tuning parameters for app responsiveness og stabilitet.
+#
+# ANVENDES AF:
+#   - Performance optimization (DEBOUNCE_DELAYS, PERFORMANCE_THRESHOLDS)
+#   - Rate limiting og security (RATE_LIMITS)
+#   - Cache management (CACHE_CONFIG)
+#   - File operations (DEFAULT_ENCODING, CSV_SEPARATORS)
+#   - Test mode (TEST_MODE_CONFIG)
+#
+# RELATERET:
+#   - config_ui.R - UI-specific timing settings
+#   - CLAUDE.md Appendix B - Performance Architecture
+#   - See: docs/CONFIGURATION.md for complete guide
+# ==============================================================================
 
 # APPLICATION CONFIGURATION ===================================================
 

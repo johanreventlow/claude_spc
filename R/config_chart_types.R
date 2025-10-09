@@ -1,5 +1,20 @@
-# Chart Types Configuration
-# Extracted from global.R for better modularity
+# ==============================================================================
+# CONFIG_CHART_TYPES.R
+# ==============================================================================
+# FORMÅL: SPC chart type definitions og mappings mellem danske UI labels og
+#         engelske qicharts2-koder. Centraliserer chart type logik og
+#         beskrivelser.
+#
+# ANVENDES AF:
+#   - UI dropdowns (chart type selection)
+#   - Plot generation (qicharts2::qic interface)
+#   - Input validation (chart type → nævner relevans)
+#
+# RELATERET:
+#   - config_spc_config.R - Y-axis units og SPC validation
+#   - fct_spc_plot_generation.R - Plot rendering
+#   - See: docs/CONFIGURATION.md for complete guide
+# ==============================================================================
 
 # DIAGRAM TYPER ================================
 
