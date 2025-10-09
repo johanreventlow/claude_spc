@@ -11,10 +11,15 @@ Named list med scaling parametre
 FONT_SCALING_CONFIG
 }
 \description{
-Styrer hvordan base_size skaleres baseret på viewport bredde.
+Styrer hvordan base_size skaleres baseret på viewport dimensioner.
 }
 \details{
-base_size beregnes som: max(min_size, min(max_size, width_px / divisor))
+base_size beregnes som: max(min_size, min(max_size, viewport_diagonal / divisor))
+hvor viewport_diagonal = sqrt(width_px * height_px)
+
+GEOMETRIC MEAN APPROACH: Geometric mean (sqrt(width × height)) giver balanced
+scaling baseret på både bredde og højde. Dette sikrer at fonts skalerer
+intuitivt med den samlede plotstørrelse, ikke kun én dimension.
 
 VIGTIG: Shiny's renderPlot() multiplicerer automatisk res med pixelratio,
 så vi skal IKKE dividere base_size med pixelratio. Dette sikrer konsistent
@@ -25,11 +30,11 @@ visuel størrelse på tværs af standard og Retina displays.
 \item max_size: Maximum font size selv på store skærme
 }
 
-Eksempler ved divisor = 50:
+Eksempler ved divisor = 56:
 \itemize{
-\item 500px bred: base_size = 10pt (både Standard og Retina)
-\item 700px bred: base_size = 14pt (både Standard og Retina)
-\item 1000px bred: base_size = 20pt (begge displays - samme visuelle størrelse)
+\item 700×500px viewport: diagonal = 836px → base_size = 14.9pt
+\item 1000×800px viewport: diagonal = 894px → base_size = 16.0pt
+\item 1400×900px viewport: diagonal = 1668px → base_size = 29.8pt
 }
 }
 \keyword{datasets}

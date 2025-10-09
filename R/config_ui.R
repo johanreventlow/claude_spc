@@ -66,10 +66,15 @@ UI_LAYOUT_PROPORTIONS <- list(
 
 #' Responsive font scaling configuration
 #'
-#' Styrer hvordan base_size skaleres baseret på viewport bredde.
+#' Styrer hvordan base_size skaleres baseret på viewport dimensioner.
 #'
 #' @details
-#' base_size beregnes som: max(min_size, min(max_size, width_px / divisor))
+#' base_size beregnes som: max(min_size, min(max_size, viewport_diagonal / divisor))
+#' hvor viewport_diagonal = sqrt(width_px * height_px)
+#'
+#' GEOMETRIC MEAN APPROACH: Geometric mean (sqrt(width × height)) giver balanced
+#' scaling baseret på både bredde og højde. Dette sikrer at fonts skalerer
+#' intuitivt med den samlede plotstørrelse, ikke kun én dimension.
 #'
 #' VIGTIG: Shiny's renderPlot() multiplicerer automatisk res med pixelratio,
 #' så vi skal IKKE dividere base_size med pixelratio. Dette sikrer konsistent
@@ -79,15 +84,15 @@ UI_LAYOUT_PROPORTIONS <- list(
 #' - min_size: Minimum font size uanset viewport
 #' - max_size: Maximum font size selv på store skærme
 #'
-#' Eksempler ved divisor = 50:
-#' - 500px bred: base_size = 10pt (både Standard og Retina)
-#' - 700px bred: base_size = 14pt (både Standard og Retina)
-#' - 1000px bred: base_size = 20pt (begge displays - samme visuelle størrelse)
+#' Eksempler ved divisor = 56:
+#' - 700×500px viewport: diagonal = 836px → base_size = 14.9pt
+#' - 1000×800px viewport: diagonal = 894px → base_size = 16.0pt
+#' - 1400×900px viewport: diagonal = 1668px → base_size = 29.8pt
 #'
 #' @format Named list med scaling parametre
 #' @export
 FONT_SCALING_CONFIG <- list(
-  divisor = 50, # Viewport width divisor (lower = larger fonts)
+  divisor = 56, # Viewport diagonal divisor (lower = larger fonts)
   min_size = 8, # Minimum base_size i points
   max_size = 64 # Maximum base_size i points
 )
