@@ -92,7 +92,7 @@ UI_LAYOUT_PROPORTIONS <- list(
 #' @format Named list med scaling parametre
 #' @export
 FONT_SCALING_CONFIG <- list(
-  divisor = 56, # Viewport diagonal divisor (lower = larger fonts)
+  divisor = 42, # Viewport diagonal divisor (lower = larger fonts)
   min_size = 8, # Minimum base_size i points
   max_size = 64 # Maximum base_size i points
 )
