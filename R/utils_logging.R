@@ -521,19 +521,19 @@ get_log_level_name <- function() {
 
 #' Sanitize session token for logging
 #'
-#' SPRINT 1 SECURITY FIX: Masks session tokens before logging to prevent
-#' session hijacking if logs are compromised. Shows only first 4 and last 4
-#' characters with ellipsis in between.
+#' SECURITY: Uses SHA256 hashing (upgraded from simple masking) to prevent
+#' session hijacking if logs are compromised. Returns first 8 characters of
+#' SHA256 hash for logging identification.
 #'
 #' @param session_token Character string containing the session token to sanitize
 #'
-#' @return Masked session token string (e.g., "abc1...xyz9") or "INVALID_SESSION"
+#' @return First 8 characters of SHA256 hash (e.g., "a1b2c3d4") or "NO_SESSION"
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #' sanitize_session_token("abc123def456ghi789")
-#' # Returns: "abc1...i789"
+#' # Returns: "a1b2c3d4" (first 8 chars of SHA256 hash)
 #'
 #' sanitize_session_token(NULL)
 #' # Returns: "NO_SESSION"
@@ -544,16 +544,13 @@ sanitize_session_token <- function(session_token) {
     return("NO_SESSION")
   }
 
-  # Handle very short tokens (less than 8 characters)
+  # Handle invalid tokens (not character or empty)
   token_str <- as.character(session_token[[1]])
-  if (nchar(token_str) < 8) {
+  if (nchar(token_str) == 0) {
     return("INVALID_SESSION")
   }
 
-  # Mask middle characters, show first 4 and last 4
-  paste0(
-    substr(token_str, 1, 4),
-    "...",
-    substr(token_str, nchar(token_str) - 3, nchar(token_str))
-  )
+  # SECURITY: Use SHA256 hash (upgraded from simple masking for stronger protection)
+  # Return first 8 characters for logging identification
+  substr(digest::digest(token_str, algo = "sha256"), 1, 8)
 }
