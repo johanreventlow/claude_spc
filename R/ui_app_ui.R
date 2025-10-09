@@ -229,7 +229,7 @@ create_chart_settings_card <- function() {
             # Target value input
             shiny::textInput(
               "target_value",
-              "Målværdi:",
+              "Udviklingsmål:",
               value = "",
               placeholder = "fx >=90%, <25 eller >",
               width = UI_INPUT_WIDTHS$full

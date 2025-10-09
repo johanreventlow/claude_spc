@@ -77,6 +77,13 @@ sanitize_marquee_text <- function(text) {
     text <- text[1]
   }
 
+  # CRITICAL: Do NOT escape < and > for marquee rendering
+  # Marquee's markdown parser actually handles these characters correctly
+  # without escaping. Previous attempts with HTML entities and fullwidth
+  # characters caused parser errors and crashes.
+  # The characters are only problematic in raw HTML/XML contexts, not in
+  # marquee's markdown-based rendering pipeline.
+
   # Escape marquee special characters
   # Note: Marquee bruger {} til markup, ** bevar vi da det skal være bold i output
   text <- gsub("\\{", "&#123;", text) # Escape {
@@ -98,6 +105,24 @@ sanitize_marquee_text <- function(text) {
 # ============================================================================
 # TARGET PREFIX FORMATTING
 # ============================================================================
+
+#' Check if text contains intelligent arrow symbols
+#'
+#' Detekterer om tekst indeholder pil-symboler (↓ eller ↑) som kræver
+#' speciel label positionering uden targetline.
+#'
+#' @param text character string to check
+#' @return logical TRUE hvis pil-symbol detekteret, FALSE ellers
+#' @keywords internal
+#' @export
+has_arrow_symbol <- function(text) {
+  if (is.null(text) || length(text) == 0 || !is.character(text)) {
+    return(FALSE)
+  }
+
+  # Check for down arrow (U+2193) or up arrow (U+2191)
+  grepl("\U2193|\U2191", text)
+}
 
 #' Formatér målværdi med foranstillede tegn
 #'

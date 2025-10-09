@@ -158,3 +158,81 @@ test_that("Integration: målværdi formatering i add_spc_labels()", {
     )
   })
 })
+
+test_that("has_arrow_symbol() detekterer pil-symboler korrekt", {
+  # Test down arrow
+  expect_true(has_arrow_symbol("\U2193"))
+
+  # Test up arrow
+  expect_true(has_arrow_symbol("\U2191"))
+
+  # Test kombineret tekst med down arrow
+  expect_true(has_arrow_symbol("UDVIKLINGSMÅL: \U2193"))
+
+  # Test kombineret tekst med up arrow
+  expect_true(has_arrow_symbol("UDVIKLINGSMÅL: \U2191"))
+
+  # Test tekst uden pil-symboler
+  expect_false(has_arrow_symbol("≥90%"))
+  expect_false(has_arrow_symbol("≤25"))
+  expect_false(has_arrow_symbol("Normal tekst"))
+
+  # Test NULL og tom streng
+  expect_false(has_arrow_symbol(NULL))
+  expect_false(has_arrow_symbol(""))
+  expect_false(has_arrow_symbol(character(0)))
+})
+
+test_that("add_spc_labels() sætter suppress_targetline attribute ved pil-symboler", {
+  skip_if_not_installed("ggplot2")
+
+  # Opret simple test data
+  test_data <- data.frame(
+    x = 1:10,
+    y = c(85, 88, 90, 92, 87, 89, 91, 93, 88, 90),
+    cl = rep(89.3, 10),
+    target = rep(90, 10),
+    part = rep(1, 10)
+  )
+
+  # Opret simple ggplot
+  p <- ggplot2::ggplot(test_data, ggplot2::aes(x = x, y = y)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line()
+
+  # Test med down arrow
+  plot_with_down_arrow <- add_spc_labels(
+    plot = p,
+    qic_data = test_data,
+    y_axis_unit = "percent",
+    target_text = "<",
+    verbose = FALSE
+  )
+
+  expect_true(attr(plot_with_down_arrow, "suppress_targetline"))
+  expect_equal(attr(plot_with_down_arrow, "arrow_type"), "down")
+
+  # Test med up arrow
+  plot_with_up_arrow <- add_spc_labels(
+    plot = p,
+    qic_data = test_data,
+    y_axis_unit = "percent",
+    target_text = ">",
+    verbose = FALSE
+  )
+
+  expect_true(attr(plot_with_up_arrow, "suppress_targetline"))
+  expect_equal(attr(plot_with_up_arrow, "arrow_type"), "up")
+
+  # Test uden pil-symbol
+  plot_normal <- add_spc_labels(
+    plot = p,
+    qic_data = test_data,
+    y_axis_unit = "percent",
+    target_text = ">=90",
+    verbose = FALSE
+  )
+
+  expect_false(attr(plot_normal, "suppress_targetline"))
+  expect_null(attr(plot_normal, "arrow_type"))
+})

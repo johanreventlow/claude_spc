@@ -433,7 +433,7 @@ execute_qic_call <- function(qic_args, chart_type, config, qic_cache = NULL) {
 ## Add Plot Enhancements
 # Tilføjer extended lines, phase separations og comment annotations
 # NOTE: Label placement er flyttet til add_spc_labels() funktion
-add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6) {
+add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6, suppress_targetline = FALSE) {
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
 
@@ -491,8 +491,8 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     }
   }
 
-  # Target extended line
-  if (!is.null(qic_data$target) && any(!is.na(qic_data$target))) {
+  # Target extended line (only if not suppressed by arrow symbols)
+  if (!suppress_targetline && !is.null(qic_data$target) && any(!is.na(qic_data$target))) {
     target_value <- qic_data$target[!is.na(qic_data$target)][1]
 
     # Extended line fra sidste datapunkt til extended_x
@@ -592,6 +592,18 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Generate SPC plot with specified parameters
   # Get hospital colors using the proper package function
   hospital_colors <- get_hospital_colors()
+
+  # Detect arrow symbols in target_text to determine if targetline should be suppressed
+  suppress_targetline <- FALSE
+  if (!is.null(target_text) && nchar(trimws(target_text)) > 0) {
+    # Format target_text to check for arrows
+    formatted_target <- format_target_prefix(target_text)
+    suppress_targetline <- has_arrow_symbol(formatted_target)
+
+    if (suppress_targetline) {
+      message(sprintf("[TARGETLINE_SUPPRESSION] Arrow symbol detected in target_text - targetline will be suppressed"))
+    }
+  }
 
   # Beregn responsive geom størrelser baseret på base_size
   # Reference: base_size 14 giver original størrelser
@@ -832,9 +844,16 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               geomtextpath::geom_textline(ggplot2::aes(y = ucl, x = x, label = "Øvre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = -0.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b5b9", na.rm = TRUE) +
               geomtextpath::geom_textline(ggplot2::aes(y = lcl, x = x, label = "Nedre kontrolgrænse"), inherit.aes = FALSE, hjust = 0.05, vjust = 1.2, linewidth = ucl_linewidth, linecolour = NA, textcolour = "#b5b7b9", na.rm = TRUE)
           }
+
+          # Targetline tilføjes (conditionally suppressed if arrow symbols detected)
+          # Arrow symbols (↓ ↑) indicate direction without specific numeric target
+          if (!suppress_targetline) {
+            plot <- plot +
+              ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = target_linewidth, colour = "#565656", linetype = "42", na.rm = TRUE)
+          }
+
           # Resten af plot tilføjes ------
           plot <- plot +
-            ggplot2::geom_line(ggplot2::aes(y = target, x = x), inherit.aes = FALSE, linewidth = target_linewidth, colour = "#565656", linetype = "42", na.rm = TRUE) +
             ggplot2::geom_line(ggplot2::aes(y = y, group = part), colour = "#AEAEAE", linewidth = data_linewidth, na.rm = TRUE) +
             ggplot2::geom_point(ggplot2::aes(y = y, group = part), colour = "#858585", size = point_size, na.rm = TRUE) +
 
@@ -848,7 +867,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               values = c("FALSE" = "solid", "TRUE" = "12"),
               guide = "none" # Skjul legend
             )
-
 
           plot
         },
@@ -1224,7 +1242,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         plot, qic_data, comment_data, y_axis_unit,
         cl_linewidth = cl_linewidth,
         target_linewidth = target_linewidth,
-        comment_size = comment_size
+        comment_size = comment_size,
+        suppress_targetline = suppress_targetline
       )
 
       # Add SPC labels (CL og Target) med advanced placement system
