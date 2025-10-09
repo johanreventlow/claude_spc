@@ -1247,9 +1247,56 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       )
 
       # Add SPC labels (CL og Target) med advanced placement system
-      # Bestem om Frys og Skift kolonner er valgt (for BASELINE label logik)
-      has_frys <- !is.null(frys_column) && frys_column %in% names(data)
-      has_skift <- !is.null(skift_column) && skift_column %in% names(data)
+      # Bestem BASELINE label logik: Tjek om Frys er markeret og om der er Skift EFTER Frys
+      has_frys_without_subsequent_skift <- FALSE
+
+      if (!is.null(frys_column) && frys_column %in% names(data) &&
+        !is.null(skift_column) && skift_column %in% names(data)) {
+        # Extract og process begge kolonner
+        frys_data <- data[[frys_column]]
+        if (is.list(frys_data)) frys_data <- unlist(frys_data)
+        if (!is.logical(frys_data)) frys_data <- as.logical(frys_data)
+
+        skift_data <- data[[skift_column]]
+        if (is.list(skift_data)) skift_data <- unlist(skift_data)
+        if (!is.logical(skift_data)) skift_data <- as.logical(skift_data)
+
+        # Find sidste position hvor Frys er markeret
+        frys_positions <- which(frys_data == TRUE)
+
+        if (length(frys_positions) > 0) {
+          last_frys_position <- max(frys_positions)
+
+          # Tjek om Skift er markeret VED SAMME position som Frys
+          has_skift_at_same_position <- FALSE
+          if (last_frys_position <= length(skift_data)) {
+            has_skift_at_same_position <- isTRUE(skift_data[last_frys_position] == TRUE)
+          }
+
+          # Hvis Skift er markeret ved samme position → "NUV. NIVEAU" (ikke BASELINE)
+          if (has_skift_at_same_position) {
+            has_frys_without_subsequent_skift <- FALSE
+          } else {
+            # Tjek om der er TRUE-værdier i Skift EFTER sidste Frys position
+            has_skift_after_frys <- FALSE
+            if (last_frys_position < length(skift_data)) {
+              skift_after_frys <- skift_data[(last_frys_position + 1):length(skift_data)]
+              has_skift_after_frys <- any(skift_after_frys == TRUE, na.rm = TRUE)
+            }
+
+            # BASELINE label hvis Frys er markeret OG ingen Skift ved samme eller efterfølgende position
+            has_frys_without_subsequent_skift <- !has_skift_after_frys
+          }
+        }
+      } else if (!is.null(frys_column) && frys_column %in% names(data)) {
+        # Kun Frys kolonne eksisterer (ingen Skift kolonne)
+        frys_data <- data[[frys_column]]
+        if (is.list(frys_data)) frys_data <- unlist(frys_data)
+        if (!is.logical(frys_data)) frys_data <- as.logical(frys_data)
+
+        # Hvis Frys er markeret og ingen Skift kolonne findes → BASELINE
+        has_frys_without_subsequent_skift <- any(frys_data == TRUE, na.rm = TRUE)
+      }
 
       plot <- add_spc_labels(
         plot = plot,
@@ -1260,8 +1307,8 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         viewport_height = viewport_height,
         target_text = target_text,
         centerline_value = centerline_value,
-        has_frys_column = has_frys,
-        has_skift_column = has_skift,
+        has_frys_column = has_frys_without_subsequent_skift,
+        has_skift_column = FALSE,
         verbose = FALSE,
         debug_mode = FALSE
       )
