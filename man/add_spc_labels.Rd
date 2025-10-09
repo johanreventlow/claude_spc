@@ -11,6 +11,10 @@ add_spc_labels(
   label_size = 6,
   viewport_width = NULL,
   viewport_height = NULL,
+  target_text = NULL,
+  centerline_value = NULL,
+  has_frys_column = FALSE,
+  has_skift_column = FALSE,
   verbose = FALSE,
   debug_mode = FALSE
 )
@@ -27,6 +31,14 @@ add_spc_labels(
 \item{viewport_width}{numeric viewport width in pixels (optional, from clientData)}
 
 \item{viewport_height}{numeric viewport height in pixels (optional, from clientData)}
+
+\item{target_text}{character original målværdi text from user input (optional, for operator parsing)}
+
+\item{centerline_value}{numeric centerline value from user input (optional, for BASELINE label logic)}
+
+\item{has_frys_column}{logical TRUE if Frys column is selected (optional, for BASELINE label logic)}
+
+\item{has_skift_column}{logical TRUE if Skift column is selected (optional, for BASELINE label logic)}
 
 \item{verbose}{logical print placement warnings (default FALSE)}
 

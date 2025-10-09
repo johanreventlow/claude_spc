@@ -105,6 +105,12 @@ get_test_mode_file_path <- function() {
   # Set up resource paths for static files
   setup_resource_paths()
 
+  # Register embedded Roboto Medium font for cross-platform compatibility
+  # This ensures consistent font rendering across all systems
+  if (exists("register_roboto_font", mode = "function")) {
+    register_roboto_font()
+  }
+
   # Unlock cache statistics bindings for runtime modification
   # CRITICAL FIX: Package loading locks these bindings, preventing cache stats updates
   # This causes panel height measurement to fail with "cannot change value of locked binding"
