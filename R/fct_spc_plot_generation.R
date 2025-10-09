@@ -810,24 +810,31 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
               rep(FALSE, nrow(qic_data))
             }
 
-            # Beregn crossings signal per part
-            crossings_sig_col <- rep(FALSE, nrow(qic_data))
+            # VECTORIZED: Beregn crossings signal per part med dplyr group_by + mutate
+            # BEFORE: O(n*p) for-loop iterating over parts
+            # AFTER: O(n) vectorized group operation
             if ("n.crossings" %in% names(qic_data) && "n.crossings.min" %in% names(qic_data) && "part" %in% names(qic_data)) {
-              # For hver part, check om crossings signal er brudt
-              for (p in unique(qic_data$part)) {
-                part_rows <- which(qic_data$part == p)
-                if (length(part_rows) > 0) {
-                  part_data <- qic_data[part_rows, ]
-                  n_cross <- max(part_data$n.crossings, na.rm = TRUE)
-                  n_cross_min <- max(part_data$n.crossings.min, na.rm = TRUE)
-                  has_crossing_signal <- !is.na(n_cross) && !is.na(n_cross_min) && n_cross < n_cross_min
-                  crossings_sig_col[part_rows] <- has_crossing_signal
-                }
-              }
-            }
+              qic_data <- qic_data |>
+                dplyr::group_by(part) |>
+                dplyr::mutate(
+                  part_n_cross = max(n.crossings, na.rm = TRUE),
+                  part_n_cross_min = max(n.crossings.min, na.rm = TRUE),
+                  crossings_signal = !is.na(part_n_cross) & !is.na(part_n_cross_min) &
+                    part_n_cross < part_n_cross_min
+                ) |>
+                dplyr::ungroup()
 
-            # Kombinér: TRUE hvis ENTEN runs ELLER crossings signal for den pågældende række
-            qic_data$anhoej.signal <- runs_sig_col | crossings_sig_col
+              # Kombinér: TRUE hvis ENTEN runs ELLER crossings signal
+              qic_data$anhoej.signal <- runs_sig_col | qic_data$crossings_signal
+
+              # Cleanup intermediate columns (optional - keeps data clean)
+              qic_data$part_n_cross <- NULL
+              qic_data$part_n_cross_min <- NULL
+              qic_data$crossings_signal <- NULL
+            } else {
+              # No crossings data available - use runs.signal only
+              qic_data$anhoej.signal <- runs_sig_col
+            }
           }
 
           qic_data
