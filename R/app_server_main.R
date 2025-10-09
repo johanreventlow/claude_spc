@@ -2,14 +2,19 @@
 # Main server function following Golem conventions
 
 #' Hash session token for secure logging
+#'
+#' SECURITY: Uses SHA256 (not SHA1) for stronger cryptographic hashing.
+#' Returns first 8 characters of the hash for logging identification while
+#' preventing session hijacking if logs are compromised.
+#'
 #' @param token Session token to hash
 #' @return First 8 characters of SHA256 hash for logging identification
 hash_session_token <- function(token) {
   if (is.null(token) || !is.character(token)) {
     return("unknown")
   }
-  # Use first 8 chars of SHA256 hash for secure but identifiable logging
-  substr(digest::sha1(token), 1, 8)
+  # SECURITY: Use SHA256 (upgraded from SHA1) for stronger hashing
+  substr(digest::digest(token, algo = "sha256"), 1, 8)
 }
 
 #' Main Server Function
