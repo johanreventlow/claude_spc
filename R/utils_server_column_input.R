@@ -116,13 +116,29 @@ handle_column_input <- function(col_name, new_value, app_state, emit) {
   }
 
   # ============================================================================
-  # STEP 5: EVENT EMISSION
+  # STEP 5: EVENT EMISSION (BATCHED)
   # ============================================================================
   # Only emit events for user-driven changes (not programmatic updates)
   # This triggers downstream reactive observers to update UI, plots, etc.
+  #
+  # PERFORMANCE: Use batching to reduce reactive storm overhead
+  # Multiple rapid column changes → single batched event after 50ms delay
 
   if (exists("column_choices_changed", envir = as.environment(emit))) {
-    emit$column_choices_changed()
+    # Use batching if available, fallback to immediate emission
+    if (exists("schedule_batched_update", mode = "function")) {
+      schedule_batched_update(
+        update_fn = function() {
+          emit$column_choices_changed()
+        },
+        delay_ms = 50,
+        app_state = app_state,
+        batch_key = "column_choices"
+      )
+    } else {
+      # Fallback: immediate emission (backwards compatibility)
+      emit$column_choices_changed()
+    }
   }
 
   invisible(NULL)
