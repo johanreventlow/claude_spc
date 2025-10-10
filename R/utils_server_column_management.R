@@ -271,8 +271,11 @@ handle_column_name_changes <- function(input, session, app_state = NULL, emit = 
 
   if (!identical(current_names, new_names)) {
     changed_cols <- which(current_names != new_names)
+    # K2 FIX: Sanitize column names to prevent XSS via <script> injection in notifications
+    safe_old_names <- sapply(current_names[changed_cols], htmltools::htmlEscape)
+    safe_new_names <- sapply(new_names[changed_cols], htmltools::htmlEscape)
     change_summary <- paste(
-      paste0("'", current_names[changed_cols], "' -> '", new_names[changed_cols], "'"),
+      paste0("'", safe_old_names, "' -> '", safe_new_names, "'"),
       collapse = ", "
     )
 
@@ -329,7 +332,9 @@ handle_add_column <- function(input, session, app_state = NULL, emit = NULL) {
   }
 
   shiny::removeModal()
-  shiny::showNotification(paste("Kolonne", new_col_name, "tilføjet"), type = "message")
+  # K2 FIX: Sanitize column name to prevent XSS
+  safe_col_name <- htmltools::htmlEscape(new_col_name)
+  shiny::showNotification(paste("Kolonne", safe_col_name, "tilføjet"), type = "message")
 }
 
 # DATA TABLE FUNKTIONER ======================================================
