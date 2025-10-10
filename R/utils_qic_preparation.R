@@ -9,7 +9,7 @@
 #' This function eliminates 100×-mismatch by ensuring all inputs to qicharts2
 #' are prepared consistently, regardless of chart type or user input format.
 #'
-#' Key principle: Either use counts+n OR use proportions[0,1], never mix both.
+#' Key principle: Either use counts+n OR use proportions `[0,1]`, never mix both.
 #'
 #' @param y_raw Raw Y data (could be counts, rates, proportions)
 #' @param n_raw Raw N data (denominators, NULL for non-ratio charts)
@@ -64,14 +64,14 @@ prepare_qic_inputs <- function(y_raw, n_raw = NULL, chart_type, user_unit = NULL
   ))
 }
 
-#' Normalize proportions to internal [0,1] scale
+#' Normalize proportions to internal `[0,1]` scale
 #'
-#' Helper function to convert proportion-like data to consistent [0,1] scale
+#' Helper function to convert proportion-like data to consistent `[0,1]` scale
 #'
 #' @param y_raw Raw Y data
 #' @param y_sample Parsed numeric sample for heuristics
 #' @param user_unit User's unit preference
-#' @return Numeric vector in [0,1] scale
+#' @return Numeric vector in `[0,1]` scale
 #' @keywords internal
 normalize_proportions_to_internal <- function(y_raw, y_sample, user_unit) {
   # Determine if data is already in [0,1] or needs conversion

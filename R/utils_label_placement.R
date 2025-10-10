@@ -96,10 +96,10 @@
 # HELPER FUNCTIONS
 # ==============================================================================
 
-#' Clamp værdi til interval [0, 1]
+#' Clamp værdi til interval `[0, 1]`
 #'
 #' @param x Numerisk værdi eller vektor
-#' @return Værdi begrænset til [0, 1]
+#' @return Værdi begrænset til `[0, 1]`
 clamp01 <- function(x) {
   # Input validation
   if (is.null(x) || length(x) == 0) {
@@ -126,7 +126,7 @@ clamp01 <- function(x) {
 #' @param x Numerisk værdi eller vektor
 #' @param low_bound Nedre grænse
 #' @param high_bound Øvre grænse
-#' @return Værdi begrænset til [low_bound, high_bound]
+#' @return Værdi begrænset til `[low_bound, high_bound]`
 clamp_to_bounds <- function(x, low_bound, high_bound) {
   # Input validation
   if (is.null(x) || length(x) == 0) {

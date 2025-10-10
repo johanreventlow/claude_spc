@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_label_placement.R
 \name{clamp01}
 \alias{clamp01}
-\title{Clamp værdi til interval [0, 1]}
+\title{Clamp værdi til interval \verb{[0, 1]}}
 \usage{
 clamp01(x)
 }
@@ -10,8 +10,8 @@ clamp01(x)
 \item{x}{Numerisk værdi eller vektor}
 }
 \value{
-Værdi begrænset til \link{0, 1}
+Værdi begrænset til \verb{[0, 1]}
 }
 \description{
-Clamp værdi til interval [0, 1]
+Clamp værdi til interval \verb{[0, 1]}
 }
