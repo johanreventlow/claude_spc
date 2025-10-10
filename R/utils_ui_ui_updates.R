@@ -645,9 +645,15 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
         update_function()
       },
       fallback = function(e) {
-        stop(e)
+        # H8: Log only - skip retry/recovery for simplicity
+        log_error(
+          paste("UI update function fejlede:", e$message),
+          .context = "UI_UPDATE_QUEUE"
+        )
+        # Return NULL to continue queue processing
+        return(NULL)
       },
-      error_type = "processing"
+      error_type = "ui"
     )
 
     update_completed_time <- Sys.time()

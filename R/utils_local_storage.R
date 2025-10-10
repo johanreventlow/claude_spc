@@ -48,9 +48,16 @@ saveDataLocally <- function(session, data, metadata = NULL) {
       )
     },
     fallback = function(e) {
-      stop(paste("Kunne ikke gemme data lokalt:", e$message))
+      # H7: Robust error handling - return FALSE instead of stop()
+      log_error(
+        paste("Kunne ikke gemme data lokalt:", e$message),
+        .context = "LOCAL_STORAGE"
+      )
+      return(FALSE)
     },
-    error_type = "processing"
+    error_type = "local_storage",
+    session = session,
+    show_user = FALSE # Manual saves will show user message separately
   )
 }
 
@@ -98,20 +105,31 @@ autoSaveAppState <- function(session, current_data, metadata) {
       data_size <- object.size(current_data)
 
       if (data_size < 1000000) { # 1MB limit
-        safe_operation(
+        result <- safe_operation(
           "Auto-save application state",
           code = {
             saveDataLocally(session, current_data, metadata)
           },
           fallback = function(e) {
-            shiny::showNotification(
+            # H7: Disable auto-save on persistent failures
+            log_error(
               paste("Auto-gem fejlede:", e$message),
-              type = "error",
-              duration = 3
+              .context = "AUTO_SAVE"
             )
+            shiny::showNotification(
+              "Auto-gem fejlede. Funktionen er midlertidigt deaktiveret. Brug Download for at gemme data.",
+              type = "warning",
+              duration = 5
+            )
+            return(FALSE)
           },
-          error_type = "processing"
+          error_type = "local_storage"
         )
+
+        # Disable auto-save if it failed
+        if (identical(result, FALSE) && exists("app_state")) {
+          app_state$session$auto_save_enabled <- FALSE
+        }
       } else {
         shiny::showNotification(
           "Data for stor til automatisk gem - brug Download funktion",

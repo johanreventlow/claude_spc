@@ -178,10 +178,33 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
 
     metadata <- collect_metadata(input)
 
-    saveDataLocally(session, current_data_check, metadata)
-    # Unified state assignment only
-    app_state$session$last_save_time <- Sys.time()
-    shiny::showNotification("Session gemt lokalt!", type = "message", duration = 2)
+    # H7: Wrap manual save in safe_operation with user feedback
+    result <- safe_operation(
+      "Manual save to local storage",
+      code = {
+        saveDataLocally(session, current_data_check, metadata)
+      },
+      fallback = function(e) {
+        log_error(
+          paste("Manuel gem fejlede:", e$message),
+          .context = "MANUAL_SAVE"
+        )
+        shiny::showNotification(
+          "Kunne ikke gemme sessionen lokalt. Prøv igen eller brug Download-funktionen.",
+          type = "error",
+          duration = 5
+        )
+        return(FALSE)
+      },
+      error_type = "local_storage"
+    )
+
+    # Only update timestamp and show success if save worked
+    if (!identical(result, FALSE)) {
+      # Unified state assignment only
+      app_state$session$last_save_time <- Sys.time()
+      shiny::showNotification("Session gemt lokalt!", type = "message", duration = 2)
+    }
   })
 
   # Clear saved handler

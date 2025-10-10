@@ -61,16 +61,22 @@ add_spc_labels <- function(
     debug_mode = FALSE) {
   # Entry logging (conditional)
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-    message("[ADD_SPC_LABELS] Function called")
-    message(sprintf("[ADD_SPC_LABELS] y_axis_unit: %s, label_size: %.1f", y_axis_unit, label_size))
+    log_debug("Function called", .context = "LABEL_PLACEMENT")
+    log_debug_kv(
+      y_axis_unit = y_axis_unit,
+      label_size = label_size,
+      .context = "LABEL_PLACEMENT"
+    )
 
     if (!is.null(viewport_width) && !is.null(viewport_height)) {
-      message(sprintf(
-        "[ADD_SPC_LABELS] Viewport dimensions provided: %.0f × %.0f pixels",
-        viewport_width, viewport_height
-      ))
+      log_debug_kv(
+        viewport_width_px = viewport_width,
+        viewport_height_px = viewport_height,
+        message = "Viewport dimensions provided",
+        .context = "LABEL_PLACEMENT"
+      )
     } else {
-      message("[ADD_SPC_LABELS] No viewport dimensions provided - will use device detection")
+      log_debug("No viewport dimensions provided - will use device detection", .context = "LABEL_PLACEMENT")
     }
   }
 
@@ -80,34 +86,38 @@ add_spc_labels <- function(
 
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
     if (!is.null(viewport_width_inches) && !is.null(viewport_height_inches)) {
-      message(sprintf(
-        "[ADD_SPC_LABELS] Viewport dimensions in inches: %.2f × %.2f",
-        viewport_width_inches, viewport_height_inches
-      ))
+      log_debug_kv(
+        viewport_width_inches = viewport_width_inches,
+        viewport_height_inches = viewport_height_inches,
+        message = "Viewport dimensions in inches",
+        .context = "LABEL_PLACEMENT"
+      )
     }
   }
 
   # Input validation ----
   if (!inherits(plot, "gg")) {
-    message("[ADD_SPC_LABELS] EARLY EXIT: plot is not ggplot object")
+    log_error("EARLY EXIT: plot is not ggplot object", .context = "LABEL_PLACEMENT")
     stop("plot skal være et ggplot object")
   }
 
   if (!is.data.frame(qic_data)) {
-    message("[ADD_SPC_LABELS] EARLY EXIT: qic_data is not data.frame")
+    log_error("EARLY EXIT: qic_data is not data.frame", .context = "LABEL_PLACEMENT")
     stop("qic_data skal være en data.frame")
   }
 
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-    message("[ADD_SPC_LABELS] Input validation passed")
+    log_debug("Input validation passed", .context = "LABEL_PLACEMENT")
   }
 
   # Validate y_axis_unit
   valid_units <- c("count", "percent", "rate", "time")
   if (!y_axis_unit %in% valid_units && verbose) {
-    message(
-      "y_axis_unit '", y_axis_unit, "' ikke standard. Understøttede: ",
-      paste(valid_units, collapse = ", ")
+    log_debug_kv(
+      y_axis_unit = y_axis_unit,
+      valid_units = paste(valid_units, collapse = ", "),
+      message = "Non-standard y_axis_unit",
+      .context = "LABEL_PLACEMENT"
     )
   }
 
@@ -155,20 +165,21 @@ add_spc_labels <- function(
 
   # Log device info (conditional on verbose mode)
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-    message(sprintf(
-      "[DEVICE_INFO] Device: %s (dev.cur = %d)",
-      if (device_info$open) "OPEN" else "NOT OPEN",
-      device_info$dev_num
-    ))
+    log_debug_kv(
+      device_status = if (device_info$open) "OPEN" else "NOT OPEN",
+      dev_cur = device_info$dev_num,
+      .context = "DEVICE_INFO"
+    )
 
     if (device_info$open) {
-      message(sprintf(
-        "[DEVICE_INFO] Size: %.1f × %.1f inches",
-        device_info$width,
-        device_info$height
-      ))
+      log_debug_kv(
+        device_width = device_info$width,
+        device_height = device_info$height,
+        message = "Device size",
+        .context = "DEVICE_INFO"
+      )
     } else {
-      message("[DEVICE_INFO] No device open - downstream functions will use fallback sizes (7×7 inches)")
+      log_debug("No device open - downstream functions will use fallback sizes (7×7 inches)", .context = "DEVICE_INFO")
     }
   }
 
@@ -190,20 +201,25 @@ add_spc_labels <- function(
     label_size_scaled <- label_size * scale_factor
 
     if (verbose) {
-      message(sprintf(
-        "Auto-scaled label_size: %.1f → %.1f (device height: %.1f\", scale: %.2f)",
-        label_size, label_size_scaled, dev_height, scale_factor
-      ))
+      log_debug_kv(
+        original_label_size = label_size,
+        scaled_label_size = label_size_scaled,
+        device_height = dev_height,
+        scale_factor = scale_factor,
+        message = "Auto-scaled label_size",
+        .context = "LABEL_PLACEMENT"
+      )
     }
 
     label_size <- label_size_scaled
   } else {
     # Ingen device eller ingen valid height - brug original label_size
     if (verbose) {
-      message(sprintf(
-        "No device height available - using fixed label_size: %.1f",
-        label_size
-      ))
+      log_debug_kv(
+        label_size = label_size,
+        message = "No device height available - using fixed label_size",
+        .context = "LABEL_PLACEMENT"
+      )
     }
   }
 
@@ -242,7 +258,7 @@ add_spc_labels <- function(
   # Valider at vi har mindst én værdi ----
   if (is.na(cl_value) && is.na(target_value)) {
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message("[CL_TARGET_CHECK] BLOCKING: Ingen CL eller Target værdier fundet i qic_data")
+      log_error("BLOCKING: Ingen CL eller Target værdier fundet i qic_data", .context = "CL_TARGET_CHECK")
     }
     warning("Ingen CL eller Target værdier fundet i qic_data. Returnerer plot uændret.")
     return(plot)
@@ -250,11 +266,12 @@ add_spc_labels <- function(
 
   # DEBUG: Log extracted values
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-    message(sprintf(
-      "[CL_TARGET_CHECK] ✓ Values extracted - CL: %s, Target: %s",
-      ifelse(is.na(cl_value), "NA", sprintf("%.2f", cl_value)),
-      ifelse(is.na(target_value), "NA", sprintf("%.2f", target_value))
-    ))
+    log_debug_kv(
+      cl_value = ifelse(is.na(cl_value), "NA", sprintf("%.2f", cl_value)),
+      target_value = ifelse(is.na(target_value), "NA", sprintf("%.2f", target_value)),
+      message = "Values extracted",
+      .context = "CL_TARGET_CHECK"
+    )
   }
 
   # Formatér labels med delt formatter ----
@@ -273,13 +290,14 @@ add_spc_labels <- function(
     }
 
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message(sprintf(
-        "[CL_HEADER_LOGIC] centerline_value: %s, has_frys: %s, has_skift: %s → header: '%s'",
-        if (!is.null(centerline_value) && !is.na(centerline_value)) sprintf("%.2f", centerline_value) else "NULL",
-        has_frys_column,
-        has_skift_column,
-        cl_header
-      ))
+      log_debug_kv(
+        centerline_value = if (!is.null(centerline_value) && !is.na(centerline_value)) sprintf("%.2f", centerline_value) else "NULL",
+        has_frys = has_frys_column,
+        has_skift = has_skift_column,
+        cl_header = cl_header,
+        message = "CL header logic",
+        .context = "CL_HEADER_LOGIC"
+      )
     }
 
     formatted_cl <- format_y_value(cl_value, y_axis_unit, y_range)
@@ -299,7 +317,10 @@ add_spc_labels <- function(
     if (!is.null(target_text) && nchar(trimws(target_text)) > 0) {
       # Debug logging
       if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-        message(sprintf("[TARGET_FORMATTING] Raw target_text: '%s'", target_text))
+        log_debug_kv(
+          raw_target_text = target_text,
+          .context = "TARGET_FORMATTING"
+        )
       }
 
       # Brug target_text med formateret prefix
@@ -307,7 +328,11 @@ add_spc_labels <- function(
 
       # Debug logging
       if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-        message(sprintf("[TARGET_FORMATTING] After format_target_prefix: '%s'", formatted_target_with_prefix))
+        log_debug_kv(
+          formatted_target = formatted_target_with_prefix,
+          message = "After format_target_prefix",
+          .context = "TARGET_FORMATTING"
+        )
       }
 
       # Detektér om der er pil-symbol
@@ -321,12 +346,19 @@ add_spc_labels <- function(
       if (y_axis_unit == "percent" && !has_arrow && !grepl("%", formatted_target_with_prefix, fixed = TRUE)) {
         formatted_target_with_prefix <- paste0(formatted_target_with_prefix, "%")
         if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-          message(sprintf("[TARGET_FORMATTING] Auto-added %% suffix: '%s'", formatted_target_with_prefix))
+          log_debug_kv(
+            target_with_percent = formatted_target_with_prefix,
+            message = "Auto-added % suffix",
+            .context = "TARGET_FORMATTING"
+          )
         }
       }
 
       if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-        message(sprintf("[TARGET_FORMATTING] has_arrow: %s", has_arrow))
+        log_debug_kv(
+          has_arrow = has_arrow,
+          .context = "TARGET_FORMATTING"
+        )
       }
 
       if (has_arrow) {
@@ -337,17 +369,19 @@ add_spc_labels <- function(
 
         # Debug: Show what we're comparing
         if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-          message(sprintf("[ARROW_TYPE_DETECTION] Comparing:"))
-          message(sprintf(
-            "  formatted == arrow_down ('%s' == '%s'): %s",
-            formatted_target_with_prefix, arrow_down_char,
-            formatted_target_with_prefix == arrow_down_char
-          ))
-          message(sprintf(
-            "  formatted == arrow_up ('%s' == '%s'): %s",
-            formatted_target_with_prefix, arrow_up_char,
-            formatted_target_with_prefix == arrow_up_char
-          ))
+          log_debug("Comparing arrow types", .context = "ARROW_TYPE_DETECTION")
+          log_debug_kv(
+            formatted = formatted_target_with_prefix,
+            arrow_down = arrow_down_char,
+            is_down = formatted_target_with_prefix == arrow_down_char,
+            .context = "ARROW_TYPE_DETECTION"
+          )
+          log_debug_kv(
+            formatted = formatted_target_with_prefix,
+            arrow_up = arrow_up_char,
+            is_up = formatted_target_with_prefix == arrow_up_char,
+            .context = "ARROW_TYPE_DETECTION"
+          )
         }
 
         # Direct comparison since formatted_target_with_prefix is exactly the arrow character
@@ -362,10 +396,12 @@ add_spc_labels <- function(
         }
 
         if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-          message(sprintf(
-            "[ARROW_DETECTED] Arrow type: %s (char: '%s') - targetline will be suppressed",
-            arrow_type, formatted_target_with_prefix
-          ))
+          log_debug_kv(
+            arrow_type = arrow_type,
+            arrow_char = formatted_target_with_prefix,
+            message = "Arrow detected - targetline will be suppressed",
+            .context = "ARROW_DETECTED"
+          )
         }
       }
     } else {
@@ -384,7 +420,11 @@ add_spc_labels <- function(
   # Håndter pil-positioning: beregn y-akse limits for arrow placement ----
   if (has_arrow) {
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message(sprintf("[ARROW_POSITIONING] Entering arrow positioning block with arrow_type: '%s'", arrow_type))
+      log_debug_kv(
+        arrow_type = arrow_type,
+        message = "Entering arrow positioning block",
+        .context = "ARROW_POSITIONING"
+      )
     }
 
     # Get y-axis limits from qic_data
@@ -393,7 +433,13 @@ add_spc_labels <- function(
     y_range_plot <- y_max - y_min
 
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message(sprintf("[ARROW_POSITIONING] Y-axis range: %.3f to %.3f (range: %.3f)", y_min, y_max, y_range_plot))
+      log_debug_kv(
+        y_min = y_min,
+        y_max = y_max,
+        y_range = y_range_plot,
+        message = "Y-axis range",
+        .context = "ARROW_POSITIONING"
+      )
     }
 
     # CRITICAL FIX: Position arrow labels INSIDE plot boundaries
@@ -410,17 +456,25 @@ add_spc_labels <- function(
     }
 
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message(sprintf(
-        "[ARROW_POSITIONING] Placing %s arrow at y=%.3f (y_range: %.3f to %.3f)",
-        arrow_type, arrow_y_position, y_min, y_max
-      ))
+      log_debug_kv(
+        arrow_type = arrow_type,
+        arrow_y_position = arrow_y_position,
+        y_min = y_min,
+        y_max = y_max,
+        message = "Placing arrow",
+        .context = "ARROW_POSITIONING"
+      )
     }
 
     # Override target_value for label positioning
     target_value <- arrow_y_position
 
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message(sprintf("[ARROW_POSITIONING] target_value overridden to: %.3f", target_value))
+      log_debug_kv(
+        target_value = target_value,
+        message = "target_value overridden",
+        .context = "ARROW_POSITIONING"
+      )
     }
   }
 
@@ -428,7 +482,7 @@ add_spc_labels <- function(
   if (is.null(label_cl) || is.na(cl_value)) {
     # Kun target label
     if (verbose) {
-      message("Kun Target label tilgængelig")
+      log_debug("Only Target label available", .context = "LABEL_PLACEMENT")
     }
     # Sæt cl til NA og brug target som primær
     yA <- target_value
@@ -438,7 +492,7 @@ add_spc_labels <- function(
   } else if (is.null(label_target) || is.na(target_value)) {
     # Kun CL label
     if (verbose) {
-      message("Kun CL label tilgængelig")
+      log_debug("Only CL label available", .context = "LABEL_PLACEMENT")
     }
     yA <- cl_value
     yB <- NA_real_
@@ -454,13 +508,14 @@ add_spc_labels <- function(
 
   # Placer labels med advanced placement system ----
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-    message(sprintf(
-      "[LABEL_PLACEMENT] Calling add_right_labels_marquee - yA=%.3f, yB=%s, textA_length=%d, textB_length=%d",
-      yA,
-      ifelse(is.na(yB), "NA", sprintf("%.3f", yB)),
-      nchar(textA),
-      nchar(textB)
-    ))
+    log_debug_kv(
+      yA = yA,
+      yB = ifelse(is.na(yB), "NA", sprintf("%.3f", yB)),
+      textA_length = nchar(textA),
+      textB_length = nchar(textB),
+      message = "Calling add_right_labels_marquee",
+      .context = "LABEL_PLACEMENT"
+    )
   }
 
   # CRITICAL FIX: Arrow labels skal holde deres absolutte positioner
@@ -469,7 +524,7 @@ add_spc_labels <- function(
   # og lade labels placeres præcist ved deres givne y-koordinater
   if (has_arrow) {
     if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-      message("[LABEL_PLACEMENT] Arrow detected - disabling collision avoidance (gap_labels=0)")
+      log_debug("Arrow detected - disabling collision avoidance (gap_labels=0)", .context = "LABEL_PLACEMENT")
     }
     label_params <- list(
       pad_top = 0.01,
@@ -506,7 +561,7 @@ add_spc_labels <- function(
   )
 
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
-    message("[LABEL_PLACEMENT] add_right_labels_marquee returned successfully")
+    log_debug("add_right_labels_marquee returned successfully", .context = "LABEL_PLACEMENT")
   }
 
   # Attach metadata about arrow detection for targetline suppression
@@ -514,7 +569,12 @@ add_spc_labels <- function(
   attr(plot_with_labels, "arrow_type") <- arrow_type
 
   if (verbose && has_arrow) {
-    message(sprintf("[METADATA] Setting suppress_targetline=TRUE (arrow_type=%s)", arrow_type))
+    log_debug_kv(
+      suppress_targetline = TRUE,
+      arrow_type = arrow_type,
+      message = "Setting suppress_targetline",
+      .context = "METADATA"
+    )
   }
 
   return(plot_with_labels)
