@@ -13,5 +13,7 @@ hash_session_token(token)
 First 8 characters of SHA256 hash for logging identification
 }
 \description{
-Hash session token for secure logging
+SECURITY: Uses SHA256 (not SHA1) for stronger cryptographic hashing.
+Returns first 8 characters of the hash for logging identification while
+preventing session hijacking if logs are compromised.
 }

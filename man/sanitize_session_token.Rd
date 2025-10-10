@@ -10,17 +10,17 @@ sanitize_session_token(session_token)
 \item{session_token}{Character string containing the session token to sanitize}
 }
 \value{
-Masked session token string (e.g., "abc1...xyz9") or "INVALID_SESSION"
+First 8 characters of SHA256 hash (e.g., "a1b2c3d4") or "NO_SESSION"
 }
 \description{
-SPRINT 1 SECURITY FIX: Masks session tokens before logging to prevent
-session hijacking if logs are compromised. Shows only first 4 and last 4
-characters with ellipsis in between.
+SECURITY: Uses SHA256 hashing (upgraded from simple masking) to prevent
+session hijacking if logs are compromised. Returns first 8 characters of
+SHA256 hash for logging identification.
 }
 \examples{
 \dontrun{
 sanitize_session_token("abc123def456ghi789")
-# Returns: "abc1...i789"
+# Returns: "a1b2c3d4" (first 8 chars of SHA256 hash)
 
 sanitize_session_token(NULL)
 # Returns: "NO_SESSION"
