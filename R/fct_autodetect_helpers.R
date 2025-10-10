@@ -621,12 +621,6 @@ parse_danish_dates <- function(date_strings, format) {
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   )
 
-  # Replace Danish month abbreviations
-  for (i in seq_along(danish_months)) {
-    pattern <- paste0("\\b", danish_months[i], "\\b")
-    processed_strings <- gsub(pattern, english_months[i], processed_strings, ignore.case = TRUE)
-  }
-
   # Handle Danish full month names
   danish_month_full <- c(
     "januar", "februar", "marts", "april", "maj", "juni",
@@ -637,11 +631,18 @@ parse_danish_dates <- function(date_strings, format) {
     "July", "August", "September", "October", "November", "December"
   )
 
-  # Replace Danish full month names
-  for (i in seq_along(danish_month_full)) {
-    pattern <- paste0("\\b", danish_month_full[i], "\\b")
-    processed_strings <- gsub(pattern, english_month_full[i], processed_strings, ignore.case = TRUE)
-  }
+  # TIDYVERSE: Replace Danish months using purrr::reduce2 (eliminates mutable state)
+  # Combines abbreviations + full names in single functional operation
+  processed_strings <- purrr::reduce2(
+    .x = c(danish_months, danish_month_full),
+    .y = c(english_months, english_month_full),
+    .init = processed_strings,
+    .f = ~ stringr::str_replace_all(
+      ..1,
+      pattern = stringr::regex(paste0("\\b", ..2, "\\b"), ignore_case = TRUE),
+      replacement = ..3
+    )
+  )
 
   # Use appropriate lubridate function with quiet parsing
   safe_operation(
