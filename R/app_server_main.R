@@ -223,9 +223,6 @@ main_app_server <- function(input, output, session) {
   ## Visualiserings logik
   visualization <- setup_visualization(input, output, session, app_state)
 
-  ## Download handlers
-  # setup_download_handlers(input, output, session, app_state, visualization)
-
   session_debugger$event("server_setup_complete")
   debug_log("All server components setup completed", "SESSION_LIFECYCLE", level = "INFO", session_id = hashed_token)
 

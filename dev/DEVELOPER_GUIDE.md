@@ -961,10 +961,13 @@ help(package = "claude_spc")
 ## Resources
 
 ### Internal Documentation
-- `TECHNICAL_IMPROVEMENTS_PLAN.md` - Roadmap og improvement tracking
-- `SHINY_BEST_PRACTICES_FASER.md` - Phase-based development approach
+- `../CLAUDE.md` - Primary development instructions og guidelines
+- `../docs/CONFIGURATION.md` - Configuration system documentation
+- `../docs/code-analysis/` - Code quality rapporter og analysis
+- `ARCHITECTURE.md` - Current architecture documentation
 - `TESTING.md` - Test framework guide
 - `MODULE_STRUCTURE.md` - Module organization principles
+- `archive/` - Historical migration documentation (completed phases)
 
 ### External Resources
 - [Shiny Development Best Practices](https://shiny.rstudio.com/articles/)
