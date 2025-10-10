@@ -514,36 +514,6 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
     ))
   }
 
-  # Fase tilfæjes - temporarily disabled ----
-  # if ("part" %in% names(qic_data) && length(unique(qic_data$part)) > 1) {
-  #   # Find phase change points
-  #   phase_changes <- which(diff(as.numeric(qic_data$part)) != 0)
-  #   # Add phase change lines using tidyverse approach
-  #   if (length(phase_changes) > 0) {
-  #     plot <- phase_changes |>
-  #       purrr::reduce(function(p, change_point) {
-  #         p +
-  #           ggplot2::geom_vline(
-  #             xintercept = qic_data$x[change_point + 1],
-  #             color = hospital_colors$warning,
-  #             linetype = "dotted", linewidth = 1, alpha = 0.7
-  #           )
-  #       }, .init = plot)
-  #   }
-  # }
-
-  # Mållinje tilføjes ----
-  # if ("target" %in% names(qic_data) && !all(is.na(qic_data$target))) {
-  #   plot <- plot +
-  #     ggplot2::geom_line(
-  #       ggplot2::aes(y = target),
-  #       color = hospital_colors$darkgrey,
-  #       linetype = "42",
-  #       linewidth = 1.2,
-  #       alpha = 0.8
-  #     )
-  # }
-
   # Extended CL og Target linjer tilføjes ----
   if (!is.null(extended_lines_data) && nrow(extended_lines_data) > 0) {
     # CL extension
@@ -1288,24 +1258,6 @@ applyHospitalTheme <- function(plot, base_size = 14) {
           panel.grid.minor = ggplot2::element_blank(),
           legend.position = "none",
         ) + lemon::coord_capped_cart(bottom = "right", gap = 0)
-
-
-      # ggplot2::theme_minimal() +
-      # ggplot2::theme(
-      #   plot.title = ggplot2::element_text(color = hospital_colors$primary, size = 14, face = "bold"),
-      #   plot.subtitle = ggplot2::element_text(color = hospital_colors$secondary, size = 12),
-      #   axis.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
-      #   axis.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
-      #   legend.title = ggplot2::element_text(color = hospital_colors$dark, size = 11),
-      #   legend.text = ggplot2::element_text(color = hospital_colors$dark, size = 10),
-      #   panel.grid.major = ggplot2::element_line(color = hospital_colors$light),
-      #   panel.grid.minor = ggplot2::element_line(color = hospital_colors$light),
-      #   strip.text = ggplot2::element_text(color = hospital_colors$primary, face = "bold")
-      # ) +
-      # ggplot2::labs(caption = footer_text) +
-      # ggplot2::theme(
-      #   plot.caption = ggplot2::element_text(size = 8, color = hospital_colors$secondary, hjust = 0)
-      # )
 
       return(themed_plot)
     },
