@@ -14,7 +14,7 @@ validate_safe_file_path <- function(uploaded_path) {
   if (is.null(uploaded_path) || !is.character(uploaded_path) || length(uploaded_path) != 1) {
     log_error(
       component = "[SECURITY]",
-      message = "Invalid file path input",
+      message = "Ugyldig filsti",
       details = list(
         input_type = typeof(uploaded_path),
         input_length = length(uploaded_path)
@@ -32,7 +32,7 @@ validate_safe_file_path <- function(uploaded_path) {
     error = function(e) {
       log_error(
         component = "[SECURITY]",
-        message = "Failed to normalize file path",
+        message = "Kunne ikke normalisere filsti",
         details = list(
           attempted_path = uploaded_path,
           error = e$message
@@ -641,7 +641,7 @@ validate_uploaded_file <- function(file_info, session_id = NULL) {
 
   # File existence check
   if (!file.exists(file_info$datapath)) {
-    errors <- c(errors, "Uploaded file does not exist or is corrupted")
+    errors <- c(errors, "Uploaded fil findes ikke eller er beskadiget")
     return(list(valid = FALSE, errors = errors))
   }
 
@@ -697,7 +697,7 @@ validate_uploaded_file <- function(file_info, session_id = NULL) {
         # If we can't count, allow file but log warning
         log_warn(
           component = "[FILE_VALIDATION]",
-          message = "Could not validate row count",
+          message = "Kunne ikke validere antal rækker",
           details = list(filename = file_info$name, error = e$message)
         )
       }
@@ -706,7 +706,7 @@ validate_uploaded_file <- function(file_info, session_id = NULL) {
 
   # Empty file check
   if (file_info$size == 0) {
-    errors <- c(errors, "Uploaded file is empty")
+    errors <- c(errors, "Uploaded fil er tom")
   }
 
   # Enhanced file extension validation med security hardening
@@ -808,7 +808,7 @@ validate_excel_file <- function(file_path) {
       sheets <- readxl::excel_sheets(file_path)
 
       if (length(sheets) == 0) {
-        errors <- c(errors, "Excel file contains no sheets")
+        errors <- c(errors, "Excel fil indeholder ingen ark")
       }
 
       # If this is a session restore file, check for required sheets
@@ -819,15 +819,15 @@ validate_excel_file <- function(file_path) {
           code = {
             data <- readxl::read_excel(file_path, sheet = "Data", n_max = 1)
             if (ncol(data) == 0) {
-              errors <- c(errors, "Data sheet is empty")
+              errors <- c(errors, "Data ark er tomt")
             }
             if (nrow(data) == 0) {
-              errors <- c(errors, "Data sheet contains no data rows")
+              errors <- c(errors, "Data ark indeholder ingen datarækker")
             }
             TRUE
           },
           fallback = function(e) {
-            errors <<- c(errors, paste("Cannot read Data sheet:", e$message))
+            errors <<- c(errors, paste("Kan ikke læse Data-ark:", e$message))
             FALSE
           },
           error_type = "processing"
@@ -841,7 +841,7 @@ validate_excel_file <- function(file_path) {
             TRUE
           },
           fallback = function(e) {
-            errors <<- c(errors, paste("Cannot read Metadata sheet:", e$message))
+            errors <<- c(errors, paste("Kan ikke læse Metadata-ark:", e$message))
             FALSE
           },
           error_type = "processing"
@@ -853,18 +853,18 @@ validate_excel_file <- function(file_path) {
           code = {
             data <- readxl::read_excel(file_path, n_max = 1)
             if (ncol(data) == 0) {
-              errors <- c(errors, "Excel file contains no columns")
+              errors <- c(errors, "Excel fil indeholder ingen kolonner")
             }
           },
           fallback = function(e) {
-            errors <<- c(errors, paste("Cannot read Excel file:", e$message))
+            errors <<- c(errors, paste("Kan ikke læse Excel-fil:", e$message))
           },
           error_type = "processing"
         )
       }
     },
     fallback = function(e) {
-      errors <<- c(errors, paste("Excel file is corrupted or invalid:", e$message))
+      errors <<- c(errors, paste("Excel fil er beskadiget eller ugyldig:", e$message))
     },
     error_type = "processing"
   )
@@ -895,26 +895,26 @@ validate_csv_file <- function(file_path) {
       )
 
       if (ncol(sample_data) == 0) {
-        errors <- c(errors, "CSV file contains no columns")
+        errors <- c(errors, "CSV fil indeholder ingen kolonner")
       }
 
       if (nrow(sample_data) == 0) {
-        errors <- c(errors, "CSV file contains no data rows")
+        errors <- c(errors, "CSV fil indeholder ingen datarækker")
       }
 
       # Check for proper column separation
       if (ncol(sample_data) == 1 && nrow(sample_data) > 0) {
         first_value <- as.character(sample_data[1, 1])
         if (grepl("[,;\\t]", first_value)) {
-          errors <- c(errors, "CSV file may have incorrect delimiter. Expected semicolon (;) separated values")
+          errors <- c(errors, "CSV fil har muligvis forkert separator. Forventet semikolon (;) separerede værdier")
         }
       }
     },
     fallback = function(e) {
       if (grepl("invalid", tolower(e$message)) || grepl("encoding", tolower(e$message))) {
-        errors <<- c(errors, "CSV file has encoding issues. Try saving as UTF-8 or ISO-8859-1")
+        errors <<- c(errors, "CSV fil har encoding problemer. Prøv at gemme som UTF-8 eller ISO-8859-1")
       } else {
-        errors <<- c(errors, paste("Cannot read CSV file:", e$message))
+        errors <<- c(errors, paste("Kan ikke læse CSV-fil:", e$message))
       }
     },
     error_type = "processing"
@@ -1033,11 +1033,11 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
   validation_results$columns <- ncol(data)
 
   if (nrow(data) < 2) {
-    issues <- c(issues, "Too few data rows (minimum 2 required)")
+    issues <- c(issues, "For få datarækker (minimum 2 krævet)")
   }
 
   if (ncol(data) < 2) {
-    issues <- c(issues, "Too few columns (minimum 2 required)")
+    issues <- c(issues, "For få kolonner (minimum 2 krævet)")
   }
 
   # Check for reasonable column names
@@ -1049,7 +1049,7 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
   validation_results$empty_column_names <- empty_names
 
   if (empty_names > 0) {
-    issues <- c(issues, paste(empty_names, "columns have missing or invalid names"))
+    issues <- c(issues, paste(empty_names, "kolonner har manglende eller ugyldige navne"))
   }
 
   # Check for data content - optimized med vectorized base R operations
@@ -1069,7 +1069,7 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
   validation_results$columns_with_data <- columns_with_data
 
   if (columns_with_data < 2) {
-    issues <- c(issues, "Insufficient columns with meaningful data")
+    issues <- c(issues, "Utilstrækkelige kolonner med meningsfuld data")
   }
 
   # Check for potential date columns (for X-axis) - optimized med vectorized base R
@@ -1100,7 +1100,7 @@ validate_data_for_auto_detect <- function(data, session_id = NULL) {
   validation_results$potential_numeric_columns <- sum(potential_numeric_columns)
 
   if (sum(potential_numeric_columns) < 1) {
-    issues <- c(issues, "No suitable numeric columns found for Y-axis")
+    issues <- c(issues, "Ingen egnede numeriske kolonner fundet til Y-akse")
   }
 
   # Overall suitability assessment

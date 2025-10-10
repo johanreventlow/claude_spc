@@ -35,7 +35,7 @@ saveDataLocally <- function(session, data, metadata = NULL) {
       )
 
       if (is.null(json_data) || nchar(json_data) == 0) {
-        stop("JSON conversion resulted in empty data")
+        stop("JSON konvertering resulterede i tomme data")
       }
 
       # Send til browser localStorage
@@ -48,7 +48,7 @@ saveDataLocally <- function(session, data, metadata = NULL) {
       )
     },
     fallback = function(e) {
-      stop(paste("Failed to save data locally:", e$message))
+      stop(paste("Kunne ikke gemme data lokalt:", e$message))
     },
     error_type = "processing"
   )
