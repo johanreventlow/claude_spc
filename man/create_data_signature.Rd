@@ -10,5 +10,7 @@ create_data_signature(data)
 \item{data}{The data frame to create signature for}
 }
 \description{
-Creates a unique signature for data to enable caching
+Creates a unique signature for data to enable caching.
+FIXED: Now hashes the ENTIRE dataset instead of just first 10 rows
+to prevent cache collisions when data changes beyond the sample.
 }

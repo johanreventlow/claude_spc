@@ -25,11 +25,6 @@ setup_event_listeners(
 \item{session}{Shiny session}
 
 \item{ui_service}{UI service for UI updates (optional)}
-
-\item{context}{Context string from data update event}
-}
-\value{
-One of: "manual", "edit", "session", "upload"
 }
 \description{
 Sets up all reactive event listeners for the application.
@@ -129,10 +124,5 @@ Events use OBSERVER_PRIORITIES for execution order:
 
 All observers use ignoreInit = TRUE to prevent firing at startup
 unless explicitly designed for initialization (chart_type observer).
-
-Resolve Column Update Reason
-
-Determines the reason for a column update based on context string.
-Used to provide appropriate logging and behavior branching.
 }
 }

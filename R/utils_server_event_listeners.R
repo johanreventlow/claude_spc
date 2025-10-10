@@ -54,30 +54,7 @@ NULL
 register_data_lifecycle_events <- function(app_state, emit, input, output, session, ui_service, register_observer) {
   observers <- list()
 
-  # Helper function for context resolution
-  resolve_column_update_reason <- function(context) {
-    if (is.null(context)) {
-      return("manual")
-    }
-
-    ctx <- tolower(context)
-
-    if (grepl("edit|change|modify|column", ctx, ignore.case = FALSE)) {
-      return("edit")
-    }
-
-    if (grepl("session", ctx, ignore.case = FALSE)) {
-      return("session")
-    }
-
-    if (grepl("load|upload|file|new", ctx, ignore.case = FALSE)) {
-      return("upload")
-    }
-
-    "manual"
-  }
-
-  # Consolidated data update handler
+  # Consolidated data update handler (REFACTORED: Using strategy pattern)
   observers$data_updated <- register_observer(
     "data_updated",
     shiny::observeEvent(app_state$events$data_updated,
@@ -106,52 +83,17 @@ register_data_lifecycle_events <- function(app_state, emit, input, output, sessi
         # Unfreeze autodetect system when data is updated
         app_state$columns$auto_detect$frozen_until_next_trigger <- FALSE
 
-        # Context-aware processing based on update type
-        if (!is.null(update_context)) {
-          context <- update_context$context %||% "general"
-          column_update_reason <- resolve_column_update_reason(context)
-
-          is_table_cells_edit <- identical(context, "table_cells_edited")
-          is_load_context <- grepl("load|upload|new", context, ignore.case = TRUE)
-          is_change_context <- grepl("change|edit|modify", context, ignore.case = TRUE)
-
-          if (is_load_context) {
-            # Data loading path - trigger auto-detection
-            if (!is.null(app_state$data$current_data)) {
-              emit$auto_detection_started()
-            }
-          } else if (is_table_cells_edit) {
-            emit$navigation_changed()
-            emit$visualization_update_needed()
-          } else if (is_change_context) {
-            # Data change path - update column choices AND trigger plot regeneration
-            safe_operation(
-              "Update column choices on data change",
-              code = {
-                update_column_choices_unified(app_state, input, output, session, ui_service, reason = column_update_reason)
-              }
-            )
-
-            emit$navigation_changed()
-            emit$visualization_update_needed()
-          } else {
-            # General data update - NO autodetect (only update choices)
-            safe_operation(
-              "Update column choices on data update",
-              code = {
-                update_column_choices_unified(app_state, input, output, session, ui_service, reason = column_update_reason)
-              }
-            )
-          }
-        } else {
-          # Fallback: NO autodetect by default (only update choices)
-          safe_operation(
-            "Update column choices on data update (fallback)",
-            code = {
-              update_column_choices_unified(app_state, input, output, session, ui_service, reason = "manual")
-            }
-          )
-        }
+        # REFACTORED: Use strategy pattern for context-aware processing
+        # Replaces complex nested if/else (cyclomatic complexity 12 → 3)
+        handle_data_update_by_context(
+          update_context = update_context,
+          app_state = app_state,
+          emit = emit,
+          input = input,
+          output = output,
+          session = session,
+          ui_service = ui_service
+        )
       }
     )
   )
@@ -1059,34 +1001,9 @@ setup_event_listeners <- function(app_state, emit, input, output, session, ui_se
   # They are kept within setup_event_listeners() to maintain closure
   # over app_state, emit, and session variables.
 
-  #' Resolve Column Update Reason
-  #'
-  #' Determines the reason for a column update based on context string.
-  #' Used to provide appropriate logging and behavior branching.
-  #'
-  #' @param context Context string from data update event
-  #' @return One of: "manual", "edit", "session", "upload"
-  resolve_column_update_reason <- function(context) {
-    if (is.null(context)) {
-      return("manual")
-    }
-
-    ctx <- tolower(context)
-
-    if (grepl("edit|change|modify|column", ctx, ignore.case = FALSE)) {
-      return("edit")
-    }
-
-    if (grepl("session", ctx, ignore.case = FALSE)) {
-      return("session")
-    }
-
-    if (grepl("load|upload|file|new", ctx, ignore.case = FALSE)) {
-      return("upload")
-    }
-
-    "manual"
-  }
+  # NOTE: resolve_column_update_reason() has been moved to
+  # R/utils_event_context_handlers.R as part of the strategy pattern refactoring.
+  # See handle_data_update_by_context() for context-aware event handling.
 
   # ============================================================================
   # SPRINT 4: MODULAR EVENT REGISTRATION

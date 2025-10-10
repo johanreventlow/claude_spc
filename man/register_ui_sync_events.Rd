@@ -38,7 +38,7 @@ Registers observers for UI synchronization.
 \details{
 Handles UI synchronization events:
 \itemize{
-\item ui_sync_requested: Syncs UI controls with detected columns
+\item ui_sync_requested: Syncs UI controls with detected columns (throttled 250ms)
 \item ui_sync_completed: Marks sync completion, triggers navigation
 }
 }
