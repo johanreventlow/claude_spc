@@ -127,11 +127,15 @@ init_startup_metrics <- function() {
   log_debug("Enhanced startup metrics initialized", .context = "PERFORMANCE_MONITORING")
 }
 
-#' Track memory usage at specific points
+#' Track memory usage at specific points during startup
+#'
+#' Records a point-in-time memory snapshot for startup performance monitoring.
+#' For continuous session-based memory tracking, use track_memory_usage() from
+#' utils_profiling.R instead.
 #'
 #' @param context Character. Context where memory is being tracked
 #' @export
-track_memory_usage <- function(context = "unknown") {
+track_startup_memory <- function(context = "unknown") {
   if (!exists("start_time", envir = .startup_metrics)) {
     init_startup_metrics()
   }
@@ -153,10 +157,14 @@ track_memory_usage <- function(context = "unknown") {
 
   .startup_metrics$memory_snapshots[[length(.startup_metrics$memory_snapshots) + 1]] <- memory_info
 
-  log_debug(paste("Memory tracked:", context, "-", current_memory_mb, "MB"),
+  log_debug(paste("Startup memory tracked:", context, "-", current_memory_mb, "MB"),
     .context = "PERFORMANCE_MONITORING"
   )
 }
+
+#' @rdname track_startup_memory
+#' @export
+track_memory_usage <- track_startup_memory
 
 #' Track QIC function call with context
 #'
