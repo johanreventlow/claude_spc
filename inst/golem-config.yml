@@ -267,7 +267,8 @@ testing:
   # Testing and data (controlled test environment)
   testing:
     auto_load_test_data: false     # Explicit control in tests
-    test_data_file: "R/data/spc_exampledata.csv"
+    # H1 FIX: Correct path to actual test data location
+    test_data_file: "inst/extdata/spc_exampledata.csv"
     enable_test_endpoints: true
     mock_external_services: true   # Isolated testing
     validate_test_data: true
