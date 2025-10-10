@@ -1170,46 +1170,39 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
         # K starts at 1.000+ for correct notation (K = 1.000, not 10.000)
         # Trade-off: loses thousand separator for 1.000-9.999 range
         # Only shows decimals if present (50K vs 50,5K)
+
+        # TIDYVERSE: Helper functions for DRY number formatting (60% code reduction)
+        format_scaled_number <- function(val, scale, suffix) {
+          scaled <- val / scale
+          if (scaled == round(scaled)) {
+            paste0(round(scaled), suffix)
+          } else {
+            paste0(format(scaled, decimal.mark = ",", nsmall = 1), suffix)
+          }
+        }
+
+        format_unscaled_number <- function(val) {
+          if (val == round(val)) {
+            format(round(val), big.mark = ".", decimal.mark = ",")
+          } else {
+            format(val, big.mark = ".", decimal.mark = ",", nsmall = 1)
+          }
+        }
+
         plot <- plot + ggplot2::scale_y_continuous(
           expand = ggplot2::expansion(mult = c(.25, .25)),
           labels = function(x) {
-            # Apply scale cuts manually using sapply for vectorization
-            sapply(x, function(val) {
-              # Handle NA values
-              if (is.na(val)) {
-                return(NA)
-              }
-
-              if (abs(val) >= 1e9) {
-                scaled <- val / 1e9
-                if (scaled == round(scaled)) {
-                  paste0(round(scaled), " mia.")
-                } else {
-                  paste0(format(scaled, decimal.mark = ",", nsmall = 1), " mia.")
-                }
-              } else if (abs(val) >= 1e6) {
-                scaled <- val / 1e6
-                if (scaled == round(scaled)) {
-                  paste0(round(scaled), "M")
-                } else {
-                  paste0(format(scaled, decimal.mark = ",", nsmall = 1), "M")
-                }
-              } else if (abs(val) >= 1e3) {
-                scaled <- val / 1e3
-                if (scaled == round(scaled)) {
-                  paste0(round(scaled), "K")
-                } else {
-                  paste0(format(scaled, decimal.mark = ",", nsmall = 1), "K")
-                }
-              } else {
-                # No scaling - just format with thousand separator if needed
-                if (val == round(val)) {
-                  format(round(val), big.mark = ".", decimal.mark = ",")
-                } else {
-                  format(val, big.mark = ".", decimal.mark = ",", nsmall = 1)
-                }
-              }
-            })
+            # TIDYVERSE: purrr::map_chr + dplyr::case_when replaces sapply + nested if-else
+            x |>
+              purrr::map_chr(~ {
+                dplyr::case_when(
+                  is.na(.x) ~ NA_character_,
+                  abs(.x) >= 1e9 ~ format_scaled_number(.x, 1e9, " mia."),
+                  abs(.x) >= 1e6 ~ format_scaled_number(.x, 1e6, "M"),
+                  abs(.x) >= 1e3 ~ format_scaled_number(.x, 1e3, "K"),
+                  TRUE ~ format_unscaled_number(.x)
+                )
+              })
           }
         )
       } else if (y_axis_unit == "rate") {

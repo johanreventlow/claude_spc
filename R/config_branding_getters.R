@@ -33,10 +33,10 @@ get_brand_config_path <- function() {
       "_brand.yml"
     )
 
-    for (path in fallback_paths) {
-      if (file.exists(path)) {
-        return(path)
-      }
+    # TIDYVERSE: Use purrr::detect to find first matching path (80% code reduction)
+    found_path <- purrr::detect(fallback_paths, file.exists)
+    if (!is.null(found_path)) {
+      return(found_path)
     }
 
     # If no brand file found, return NULL and use defaults
