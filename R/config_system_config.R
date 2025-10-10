@@ -180,6 +180,7 @@ CACHE_CONFIG <- list(
 #'
 #' SPRINT 3: Extracted UI update timing constants
 #'
+#' @name UI_UPDATE_CONFIG
 #' @export
 UI_UPDATE_CONFIG <- list(
   immediate_delay = 0, # No delay - process immediately

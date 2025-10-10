@@ -23,5 +23,5 @@ This function eliminates 100×-mismatch by ensuring all inputs to qicharts2
 are prepared consistently, regardless of chart type or user input format.
 }
 \details{
-Key principle: Either use counts+n OR use proportions\link{0,1}, never mix both.
+Key principle: Either use counts+n OR use proportions \verb{[0,1]}, never mix both.
 }

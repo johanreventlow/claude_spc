@@ -14,7 +14,7 @@ clamp_to_bounds(x, low_bound, high_bound)
 \item{high_bound}{Øvre grænse}
 }
 \value{
-Værdi begrænset til \link{low_bound, high_bound}
+Værdi begrænset til \verb{[low_bound, high_bound]}
 }
 \description{
 Bruges til at sikre at labels respekterer panel padding (pad_top/pad_bot)

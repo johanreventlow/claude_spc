@@ -39,7 +39,8 @@ This function replaces inline Y-axis formatting from generateSPCPlot()
 }
 \examples{
 \dontrun{
-plot <- ggplot(qic_data, aes(x = x, y = y)) + geom_point()
+plot <- ggplot(qic_data, aes(x = x, y = y)) +
+  geom_point()
 plot <- apply_y_axis_formatting(plot, "percent", qic_data)
 }
 

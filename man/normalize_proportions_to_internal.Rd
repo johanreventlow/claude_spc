@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_qic_preparation.R
 \name{normalize_proportions_to_internal}
 \alias{normalize_proportions_to_internal}
-\title{Normalize proportions to internal \link{0,1} scale}
+\title{Normalize proportions to internal \verb{[0,1]} scale}
 \usage{
 normalize_proportions_to_internal(y_raw, y_sample, user_unit)
 }
@@ -14,9 +14,9 @@ normalize_proportions_to_internal(y_raw, y_sample, user_unit)
 \item{user_unit}{User's unit preference}
 }
 \value{
-Numeric vector in \link{0,1} scale
+Numeric vector in \verb{[0,1]} scale
 }
 \description{
-Helper function to convert proportion-like data to consistent \link{0,1} scale
+Helper function to convert proportion-like data to consistent \verb{[0,1]} scale
 }
 \keyword{internal}
