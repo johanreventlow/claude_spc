@@ -20,8 +20,8 @@ Used for logging and behavior branching in column choice updates.
 }
 \examples{
 \dontrun{
-resolve_column_update_reason("file_upload")  # Returns: "upload"
-resolve_column_update_reason("table_cells_edited")  # Returns: "edit"
+resolve_column_update_reason("file_upload") # Returns: "upload"
+resolve_column_update_reason("table_cells_edited") # Returns: "edit"
 }
 
 }
