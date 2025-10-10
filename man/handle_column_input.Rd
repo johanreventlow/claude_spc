@@ -9,7 +9,7 @@ handle_column_input(col_name, new_value, app_state, emit)
 \arguments{
 \item{col_name}{Character. Name of the column input (e.g., "x_column", "y_column")}
 
-\item{new_value}{The new value from input[\link{col_name}]}
+\item{new_value}{The new value from input[[col_name]]}
 
 \item{app_state}{Centralized app state containing UI tokens and column mappings}
 
