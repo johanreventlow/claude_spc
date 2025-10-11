@@ -170,18 +170,9 @@ autodetect_engine <- function(data = NULL,
   # Set frozen state to prevent re-running until next legitimate trigger
   shiny::isolate({
     app_state$columns$auto_detect$frozen_until_next_trigger <- TRUE
-    app_state$columns$auto_detect$last_run <- list(
-      trigger = trigger_type,
-      timestamp = Sys.time(),
-      data_rows = if (!is.null(data)) nrow(data) else 0,
-      data_cols = if (!is.null(data)) ncol(data) else 0,
-      results_summary = list(
-        x_column = results$x_col,
-        y_column = results$y_col,
-        n_column = results$n_col,
-        cl_column = results$cl_col
-      )
-    )
+    # K1 FIX: Store only timestamp (POSIXct) for difftime compatibility in guard (line 73-75)
+    # Previous list structure caused "Fejl i as.POSIXct.default(time2)" crash
+    app_state$columns$auto_detect$last_run <- Sys.time()
   })
 
   log_debug_kv(
@@ -390,26 +381,18 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
 
   # DIRECT APP_STATE UPDATE: If app_state is provided, update it directly
   if (!is.null(app_state)) {
-    # Update individual column mappings directly in app_state (with isolate for reactive safety)
+    # K4 FIX: Update individual column mappings - ALWAYS assign (including NULL)
+    # Previous code only updated when results$X_col was not NULL, causing old mappings
+    # to persist when autodetect couldn't find a column in new data.
+    # This caused ratio charts to reference non-existent columns → "For få gyldige datapunkter" errors
     shiny::isolate({
-      if (!is.null(results$x_col)) {
-        app_state$columns$mappings$x_column <- results$x_col
-      }
-      if (!is.null(results$y_col)) {
-        app_state$columns$mappings$y_column <- results$y_col
-      }
-      if (!is.null(results$n_col)) {
-        app_state$columns$mappings$n_column <- results$n_col
-      }
-      if (!is.null(results$skift_col)) {
-        app_state$columns$mappings$skift_column <- results$skift_col
-      }
-      if (!is.null(results$frys_col)) {
-        app_state$columns$mappings$frys_column <- results$frys_col
-      }
-      if (!is.null(results$kommentar_col)) {
-        app_state$columns$mappings$kommentar_column <- results$kommentar_col
-      }
+      # Always assign results - NULL explicitly clears old mappings
+      app_state$columns$mappings$x_column <- results$x_col
+      app_state$columns$mappings$y_column <- results$y_col
+      app_state$columns$mappings$n_column <- results$n_col
+      app_state$columns$mappings$skift_column <- results$skift_col
+      app_state$columns$mappings$frys_column <- results$frys_col
+      app_state$columns$mappings$kommentar_column <- results$kommentar_col
 
       # Store complete results for backward compatibility
       shiny::isolate({
@@ -428,13 +411,14 @@ update_all_column_mappings <- function(results, existing_columns = NULL, app_sta
     existing_columns <- list()
   }
 
-  # Update individual column mappings
-  if (!is.null(results$x_col)) existing_columns$x_column <- results$x_col
-  if (!is.null(results$y_col)) existing_columns$y_column <- results$y_col
-  if (!is.null(results$n_col)) existing_columns$n_column <- results$n_col
-  if (!is.null(results$skift_col)) existing_columns$skift_column <- results$skift_col
-  if (!is.null(results$frys_col)) existing_columns$frys_column <- results$frys_col
-  if (!is.null(results$kommentar_col)) existing_columns$kommentar_column <- results$kommentar_col
+  # K4 FIX: Update individual column mappings - ALWAYS assign (including NULL)
+  # Legacy return value also needs explicit NULL assignment to clear old mappings
+  existing_columns$x_column <- results$x_col
+  existing_columns$y_column <- results$y_col
+  existing_columns$n_column <- results$n_col
+  existing_columns$skift_column <- results$skift_col
+  existing_columns$frys_column <- results$frys_col
+  existing_columns$kommentar_column <- results$kommentar_col
 
   # Store complete results for backward compatibility
   existing_columns$auto_detect_results <- results

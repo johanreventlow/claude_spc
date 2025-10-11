@@ -88,6 +88,10 @@ create_app_state <- function() {
     test_mode_startup_phase_changed = 0L,
     test_mode_debounced_autodetect = 0L,
 
+    # K3 FIX: Add visualization_update_needed to event bus initialization
+    # This event has emit API (line 409-413) but was missing from init
+    visualization_update_needed = 0L,
+
     # FEJL- OG GENOPRETTELSESHÅNDTERING (CONSOLIDATED) -------------------
     error_occurred = 0L, # Consolidated: all error types with context
     recovery_completed = 0L, # Remains: recovery tracking
@@ -283,6 +287,7 @@ create_app_state <- function() {
   # SPRINT 4: Performance Cache Management
   # Non-reactive cache objects for QIC results
   # Cache creation is delayed until first use to avoid dependency issues
+  # M1: Performance counters moved to package environment (R/zzz.R) for proper isolation
   app_state$cache <- list(
     qic = NULL # Will be initialized lazily on first use
   )

@@ -356,12 +356,20 @@ get_y_axis_label_optimized <- function(y_axis_unit, y_column) {
 
 .plot_cache_env <- new.env(parent = emptyenv())
 
+# K7 FIX: Cache configuration - enforce size limits to prevent memory leak
+.plot_cache_config <- list(
+  max_entries = 50L, # Maximum cache entries (CACHE_CONFIG$size_limit_entries fallback)
+  max_size_mb = 200, # Maximum total cache size in MB
+  sweep_interval_sec = 300 # Clean expired entries every 5 minutes
+)
+
 get_plot_cache <- function(key) {
   if (exists(key, envir = .plot_cache_env)) {
     cache_entry <- .plot_cache_env[[key]]
     if (Sys.time() < cache_entry$expires_at) {
       return(cache_entry$value)
     } else {
+      # K7: Remove expired entry on read-through
       rm(list = key, envir = .plot_cache_env)
     }
   }
@@ -369,11 +377,173 @@ get_plot_cache <- function(key) {
 }
 
 set_plot_cache <- function(key, value, timeout_minutes = 15) {
+  # K7 FIX: Enforce size limit before adding new entry
+  evict_plot_cache_if_needed()
+
   .plot_cache_env[[key]] <- list(
     value = value,
     expires_at = Sys.time() + (timeout_minutes * 60),
-    created_at = Sys.time()
+    created_at = Sys.time(),
+    size_bytes = as.numeric(object.size(value)) # Track entry size
   )
+}
+
+#' K7 FIX: Evict Plot Cache Entries to Enforce Limits
+#'
+#' Remove expired entries and enforce size limits to prevent unbounded growth.
+#' Uses LRU (Least Recently Used) eviction when over capacity.
+#'
+#' @details
+#' Without eviction, .plot_cache_env accumulates full data frames (≈2.3 MB each)
+#' and ggplot objects indefinitely. This function:
+#' 1. Removes expired entries (read-through cleanup)
+#' 2. Enforces max entry count (LRU eviction)
+#' 3. Enforces max total size (LRU eviction)
+#'
+#' Should be called:
+#' - Before adding new entries (set_plot_cache)
+#' - Periodically via background task (setup_plot_cache_maintenance)
+#'
+evict_plot_cache_if_needed <- function() {
+  all_keys <- ls(envir = .plot_cache_env)
+
+  if (length(all_keys) == 0) {
+    return(invisible(NULL))
+  }
+
+  # Step 1: Remove expired entries
+  now <- Sys.time()
+  expired_keys <- character(0)
+
+  for (key in all_keys) {
+    entry <- .plot_cache_env[[key]]
+    if (!is.null(entry$expires_at) && now >= entry$expires_at) {
+      expired_keys <- c(expired_keys, key)
+    }
+  }
+
+  if (length(expired_keys) > 0) {
+    rm(list = expired_keys, envir = .plot_cache_env)
+    log_debug(paste("Evicted", length(expired_keys), "expired plot cache entries"), .context = "CACHE_EVICTION")
+  }
+
+  # Step 2: Enforce entry count limit (LRU)
+  remaining_keys <- setdiff(all_keys, expired_keys)
+
+  if (length(remaining_keys) > .plot_cache_config$max_entries) {
+    # Sort by creation time (oldest first)
+    key_ages <- sapply(remaining_keys, function(k) {
+      entry <- .plot_cache_env[[k]]
+      entry$created_at %||% Sys.time()
+    })
+
+    oldest_keys <- names(sort(key_ages))[1:(length(remaining_keys) - .plot_cache_config$max_entries)]
+    rm(list = oldest_keys, envir = .plot_cache_env)
+    log_debug(paste("Evicted", length(oldest_keys), "old entries (LRU, count limit)"), .context = "CACHE_EVICTION")
+
+    remaining_keys <- setdiff(remaining_keys, oldest_keys)
+  }
+
+  # Step 3: Enforce total size limit (LRU)
+  if (length(remaining_keys) > 0) {
+    total_size_bytes <- sum(sapply(remaining_keys, function(k) {
+      entry <- .plot_cache_env[[k]]
+      entry$size_bytes %||% 0
+    }))
+
+    max_size_bytes <- .plot_cache_config$max_size_mb * 1024^2
+
+    if (total_size_bytes > max_size_bytes) {
+      # Sort by creation time and evict until under limit
+      key_ages <- sapply(remaining_keys, function(k) {
+        entry <- .plot_cache_env[[k]]
+        entry$created_at %||% Sys.time()
+      })
+
+      sorted_keys <- names(sort(key_ages))
+      evicted_count <- 0
+
+      for (key in sorted_keys) {
+        if (total_size_bytes <= max_size_bytes) break
+
+        entry <- .plot_cache_env[[key]]
+        entry_size <- entry$size_bytes %||% 0
+        rm(list = key, envir = .plot_cache_env)
+        total_size_bytes <- total_size_bytes - entry_size
+        evicted_count <- evicted_count + 1
+      }
+
+      if (evicted_count > 0) {
+        log_debug(paste("Evicted", evicted_count, "entries (LRU, size limit)"), .context = "CACHE_EVICTION")
+      }
+    }
+  }
+
+  return(invisible(NULL))
+}
+
+#' K7 FIX: Setup Plot Cache Background Maintenance
+#'
+#' Register periodic background task to clean plot cache.
+#' Call this once during app initialization (from setup_background_tasks or similar).
+#'
+#' @param session Shiny session object
+#' @param app_state App state environment
+#'
+setup_plot_cache_maintenance <- function(session = NULL, app_state = NULL) {
+  # Schedule recurring cache cleanup
+  later::later(
+    func = function() {
+      # Only run if session is still active
+      if (!is.null(app_state) &&
+        !is.null(app_state$infrastructure) &&
+        isTRUE(app_state$infrastructure$session_active)) {
+        evict_plot_cache_if_needed()
+
+        # Reschedule for next interval
+        setup_plot_cache_maintenance(session, app_state)
+      }
+    },
+    delay = .plot_cache_config$sweep_interval_sec
+  )
+
+  log_debug("Plot cache maintenance scheduled", .context = "CACHE_INIT")
+}
+
+#' Get Plot Cache Statistics (K7: Observability)
+#'
+#' Returns cache health metrics for monitoring dashboards.
+#'
+get_plot_cache_stats <- function() {
+  all_keys <- ls(envir = .plot_cache_env)
+
+  if (length(all_keys) == 0) {
+    return(list(
+      entry_count = 0L,
+      total_size_mb = 0,
+      expired_count = 0L
+    ))
+  }
+
+  now <- Sys.time()
+  expired_count <- 0L
+  total_size <- 0
+
+  for (key in all_keys) {
+    entry <- .plot_cache_env[[key]]
+    if (!is.null(entry$expires_at) && now >= entry$expires_at) {
+      expired_count <- expired_count + 1L
+    }
+    total_size <- total_size + (entry$size_bytes %||% 0)
+  }
+
+  return(list(
+    entry_count = length(all_keys),
+    total_size_mb = round(total_size / (1024^2), 2),
+    expired_count = expired_count,
+    max_entries = .plot_cache_config$max_entries,
+    max_size_mb = .plot_cache_config$max_size_mb
+  ))
 }
 
 #' Create Plot Cache Key

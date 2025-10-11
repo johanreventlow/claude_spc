@@ -7,37 +7,25 @@
 
 #' Reset QIC call counters
 #'
-#' Resets global counters used to track QIC calculation calls
+#' Resets performance counters used to track QIC calculation calls
+#' M1: Updated to use package environment instead of .GlobalEnv
 #'
 #' @export
 reset_qic_counters <- function() {
-  if (exists("qic_call_counter", envir = .GlobalEnv)) {
-    rm("qic_call_counter", envir = .GlobalEnv)
-  }
-  if (exists("actual_qic_call_counter", envir = .GlobalEnv)) {
-    rm("actual_qic_call_counter", envir = .GlobalEnv)
-  }
+  reset_qic_performance_counters()
   log_debug("QIC performance counters reset", .context = "PERFORMANCE_MONITOR")
 }
 
 #' Get current QIC call counts
 #'
 #' Returns the current state of QIC calculation counters
+#' M1: Updated to use package environment instead of .GlobalEnv
 #'
 #' @return List with generateSPCPlot_calls and actual_qic_calls counts
 #' @export
 get_qic_call_counts <- function() {
-  generateSPCPlot_calls <- if (exists("qic_call_counter", envir = .GlobalEnv)) {
-    get("qic_call_counter", envir = .GlobalEnv)
-  } else {
-    0
-  }
-
-  actual_qic_calls <- if (exists("actual_qic_call_counter", envir = .GlobalEnv)) {
-    get("actual_qic_call_counter", envir = .GlobalEnv)
-  } else {
-    0
-  }
+  generateSPCPlot_calls <- get_qic_call_counter()
+  actual_qic_calls <- get_actual_qic_call_counter()
 
   result <- list(
     generateSPCPlot_calls = generateSPCPlot_calls,
@@ -127,11 +115,15 @@ init_startup_metrics <- function() {
   log_debug("Enhanced startup metrics initialized", .context = "PERFORMANCE_MONITORING")
 }
 
-#' Track memory usage at specific points
+#' Track memory usage at specific points during startup
+#'
+#' Records a point-in-time memory snapshot for startup performance monitoring.
+#' For continuous session-based memory tracking, use track_memory_usage() from
+#' utils_profiling.R instead.
 #'
 #' @param context Character. Context where memory is being tracked
 #' @export
-track_memory_usage <- function(context = "unknown") {
+track_startup_memory <- function(context = "unknown") {
   if (!exists("start_time", envir = .startup_metrics)) {
     init_startup_metrics()
   }
@@ -153,10 +145,14 @@ track_memory_usage <- function(context = "unknown") {
 
   .startup_metrics$memory_snapshots[[length(.startup_metrics$memory_snapshots) + 1]] <- memory_info
 
-  log_debug(paste("Memory tracked:", context, "-", current_memory_mb, "MB"),
+  log_debug(paste("Startup memory tracked:", context, "-", current_memory_mb, "MB"),
     .context = "PERFORMANCE_MONITORING"
   )
 }
+
+#' @rdname track_startup_memory
+#' @export
+track_memory_usage <- track_startup_memory
 
 #' Track QIC function call with context
 #'

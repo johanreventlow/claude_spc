@@ -23,34 +23,10 @@ create_config_registry <- function() {
     safe_operation(
       "Loading chart configuration",
       code = {
-        # Package-baseret loading - chart types er nu hardcoded i stedet for sourced
-        chart_types_da <- list(
-          "Seriediagram med SPC (Run Chart)" = "run",
-          "I-kort (Individuelle værdier)" = "i",
-          "MR-kort (Moving Range)" = "mr",
-          "P-kort (Andele)" = "p",
-          "P'-kort (Andele, standardiseret)" = "pp",
-          "U-kort (Rater)" = "u",
-          "U'-kort (Rater, standardiseret)" = "up",
-          "C-kort (Tællinger)" = "c",
-          "G-kort (Tid mellem hændelser)" = "g"
-        )
-
-        chart_type_descriptions <- list(
-          "run" = "Seriediagram der viser data over tid med median centerlinje",
-          "i" = "I-kort til individuelle målinger",
-          "mr" = "Moving Range kort til variabilitet mellem på hinanden følgende målinger",
-          "p" = "P-kort til andele og procenter",
-          "pp" = "P'-kort til standardiserede andele",
-          "u" = "U-kort til rater og hændelser per enhed",
-          "up" = "U'-kort til standardiserede rater",
-          "c" = "C-kort til tællinger af defekter eller hændelser",
-          "g" = "G-kort til tid mellem sjældne hændelser"
-        )
-
+        # Genbruger autoritativ config fra config_chart_types.R
         list(
-          chart_types_da = chart_types_da,
-          chart_type_descriptions = chart_type_descriptions,
+          chart_types_da = CHART_TYPES_DA,
+          chart_type_descriptions = CHART_TYPE_DESCRIPTIONS,
           default_chart = "i"
         )
       },
@@ -63,78 +39,23 @@ create_config_registry <- function() {
     safe_operation(
       "Loading system configuration",
       code = {
-        # Package-baseret loading - system constants hardcoded
-        observer_priorities <- list(
-          # Generic priorities (for compatibility)
-          highest = 2000, # Critical state management
-          high = 1500, # Data processing
-          medium = 1000, # Auto-detection
-          low = 500, # UI sync and updates
-          lowest = 100, # Cleanup operations
-
-          # Specific named priorities used in event system
-          STATE_MANAGEMENT = 1800, # Data loading and state changes
-          DATA_PROCESSING = 1500, # Data transformation and processing
-          AUTO_DETECT = 1200, # Auto-detection operations
-          UI_SYNC = 800, # UI synchronization
-          STATUS_UPDATES = 600, # Status and navigation updates
-          CLEANUP = 200, # Cleanup operations
-          MEDIUM = 1000 # Used in new input observers
-        )
-
+        # Genbruger autoritative configs fra config_observer_priorities.R og config_system_config.R
         system_settings <- list(
-          DEFAULT_PORT = 3838,
-          AUTO_RESTORE_ENABLED = FALSE,
-          DEFAULT_ENCODING = "ISO-8859-1",
-          UTF8_ENCODING = "UTF-8",
-          CSV_SEPARATORS = list(
-            semicolon = ";",
-            comma = ",",
-            tab = "\t"
-          ),
-          DECIMAL_SEPARATORS = list(
-            comma = ",",
-            period = "."
-          ),
-          OPERATION_TIMEOUTS = list(
-            file_read = 30000, # 30 sekunder
-            chart_render = 10000, # 10 sekunder
-            auto_detect = 5000, # 5 sekunder
-            ui_update = 2000 # 2 sekunder
-          ),
-          DEBOUNCE_DELAYS = list(
-            input_change = 300, # 300ms
-            file_select = 500, # 500ms
-            chart_update = 800 # 800ms
-          ),
-          LOOP_PROTECTION_DELAYS = list(
-            default = 500, # Standard delay for programmatic UI updates
-            conservative = 800, # Conservative delay for slower browsers
-            minimal = 200, # Minimal delay for fast responses
-            onFlushed_fallback = 1000 # Fallback delay if session$onFlushed not available
-          ),
-          PERFORMANCE_THRESHOLDS = list(
-            reactive_warning = 0.5, # 500ms for reactive expressions
-            debounce_warning = 1.0, # 1 second for debounced operations
-            memory_warning = 10, # 10MB memory change warning
-            cache_timeout_default = 300, # 5 minutes default cache
-            max_cache_entries = 50 # Maximum cached reactive results
-          ),
-          LOG_COMPONENTS = list(
-            DATA_PROC = "DATA_PROC",
-            AUTO_DETECT = "AUTO_DETECT",
-            FILE_UPLOAD = "FILE_UPLOAD",
-            VISUALIZATION = "VISUALIZATION",
-            ERROR_HANDLING = "ERROR_HANDLING",
-            TEST_MODE = "TEST_MODE",
-            SESSION_MGMT = "SESSION_MGMT",
-            UI_SYNC = "UI_SYNC",
-            STATE_MGMT = "STATE_MGMT"
-          )
+          DEFAULT_PORT = DEFAULT_PORT,
+          AUTO_RESTORE_ENABLED = AUTO_RESTORE_ENABLED,
+          DEFAULT_ENCODING = DEFAULT_ENCODING,
+          UTF8_ENCODING = UTF8_ENCODING,
+          CSV_SEPARATORS = CSV_SEPARATORS,
+          DECIMAL_SEPARATORS = DECIMAL_SEPARATORS,
+          OPERATION_TIMEOUTS = OPERATION_TIMEOUTS,
+          DEBOUNCE_DELAYS = DEBOUNCE_DELAYS,
+          LOOP_PROTECTION_DELAYS = LOOP_PROTECTION_DELAYS,
+          PERFORMANCE_THRESHOLDS = PERFORMANCE_THRESHOLDS,
+          LOG_COMPONENTS = LOG_COMPONENTS
         )
 
         list(
-          observer_priorities = observer_priorities,
+          observer_priorities = OBSERVER_PRIORITIES,
           system_settings = system_settings
         )
       },
@@ -147,53 +68,13 @@ create_config_registry <- function() {
     safe_operation(
       "Loading UI configuration",
       code = {
-        # Package-baseret loading - UI constants hardcoded
-        ui_column_widths <- list(
-          quarter = c(6, 6, 6, 6),
-          half = c(6, 6),
-          thirds = c(4, 4, 4),
-          sidebar = c(3, 9)
-        )
-
-        ui_heights <- list(
-          logo = "40px",
-          modal_content = "300px",
-          chart_container = "calc(50vh - 60px)",
-          table_max = "200px",
-          sidebar_min = "130px"
-        )
-
-        ui_styles <- list(
-          flex_column = "display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;",
-          scroll_auto = "max-height: 300px; overflow-y: auto;",
-          full_width = "width: 100%;",
-          right_align = "text-align: right;",
-          margin_right = "margin-right: 10px;",
-          position_absolute_right = "position: absolute; right: 20px; top: 20px; font-weight: bold;"
-        )
-
-        ui_input_widths <- list(
-          full = "100%",
-          half = "50%",
-          quarter = "25%",
-          three_quarter = "75%",
-          auto = "auto"
-        )
-
-        ui_layout_proportions <- list(
-          half = 1 / 2,
-          third = 1 / 3,
-          quarter = 1 / 4,
-          two_thirds = 2 / 3,
-          three_quarters = 3 / 4
-        )
-
+        # Genbruger autoritativ config fra config_ui.R
         list(
-          ui_column_widths = ui_column_widths,
-          ui_heights = ui_heights,
-          ui_styles = ui_styles,
-          ui_input_widths = ui_input_widths,
-          ui_layout_proportions = ui_layout_proportions
+          ui_column_widths = UI_COLUMN_WIDTHS,
+          ui_heights = UI_HEIGHTS,
+          ui_styles = UI_STYLES,
+          ui_input_widths = UI_INPUT_WIDTHS,
+          ui_layout_proportions = UI_LAYOUT_PROPORTIONS
         )
       },
       fallback = list(ui_column_widths = list(), ui_heights = list(), ui_styles = list(), ui_input_widths = list(), ui_layout_proportions = list()),
@@ -223,74 +104,18 @@ create_config_registry <- function() {
     safe_operation(
       "Loading SPC configuration",
       code = {
-        # Package-baseret loading - SPC constants hardcoded
-        spc_column_names <- list(
-          x = c("Dato", "Date", "Tid", "Time", "Periode", "Period"),
-          y = c("Tæller", "Count", "Værdi", "Value", "Antal", "Number"),
-          n = c("Nævner", "Denominator", "Total", "Sum"),
-          cl = c("Centerlinje", "CL", "Center", "Målværdi", "Target"),
-          freeze = "Frys",
-          shift = "Skift",
-          comment = "Kommentar"
-        )
-
-        y_axis_units_da <- list(
-          "Antal" = "count",
-          "Procent (%)" = "percent",
-          "Promille (‰)" = "permille",
-          "Rate pr. 1000" = "rate_1000",
-          "Rate pr. 100.000" = "rate_100000",
-          "Dage" = "days",
-          "Timer" = "hours",
-          "Gram" = "grams",
-          "Kilogram" = "kg",
-          "Kroner" = "dkk"
-        )
-
-        spc_colors <- list(
-          # Target linjer
-          target_line = "#2E8B57", # SeaGreen for målværdi linjer
-          control_line = "#FF6B6B", # Coral for kontrolgrænser
-          # Data punkter
-          normal_point = "#4A90E2", # Blå for normale datapunkter
-          special_cause = "#FF4444", # Rød for special cause punkter
-          # Chart baggrund
-          chart_bg = "#FFFFFF", # Hvid baggrund
-          grid_line = "#E8E8E8", # Lys grå for grid
-          # UI elementer
-          success = "#28A745", # Grøn for success states
-          warning = "#FFC107", # Gul for warnings
-          error = "#DC3545", # Rød for errors
-          info = "#17A2B8" # Blå for info
-        )
-
+        # Genbruger autoritativ config fra config_spc_config.R
         spc_settings <- list(
-          MIN_SPC_ROWS = 10,
-          RECOMMENDED_SPC_POINTS = 20,
-          MAX_MISSING_PERCENT = 20,
-          MIN_NUMERIC_PERCENT = 0.8,
-          SPC_COLUMN_NAMES = spc_column_names,
-          Y_AXIS_UNITS_DA = y_axis_units_da,
-          SPC_COLORS = spc_colors,
-          SPC_ALPHA_VALUES = list(
-            target_line = 0.8,
-            control_line = 0.7,
-            data_point = 0.9,
-            background = 0.1,
-            highlight = 1.0
-          ),
-          SPC_LINE_TYPES = list(
-            solid = "solid",
-            dashed = "dashed",
-            dotted = "dotted",
-            dot_dash = "dotdash"
-          ),
-          SPC_LINE_WIDTHS = list(
-            thin = 0.8,
-            normal = 1.0,
-            thick = 1.2,
-            extra_thick = 1.5
-          )
+          MIN_SPC_ROWS = MIN_SPC_ROWS,
+          RECOMMENDED_SPC_POINTS = RECOMMENDED_SPC_POINTS,
+          MAX_MISSING_PERCENT = MAX_MISSING_PERCENT,
+          MIN_NUMERIC_PERCENT = MIN_NUMERIC_PERCENT,
+          SPC_COLUMN_NAMES = SPC_COLUMN_NAMES,
+          Y_AXIS_UNITS_DA = Y_AXIS_UNITS_DA,
+          SPC_COLORS = SPC_COLORS,
+          SPC_ALPHA_VALUES = SPC_ALPHA_VALUES,
+          SPC_LINE_TYPES = SPC_LINE_TYPES,
+          SPC_LINE_WIDTHS = SPC_LINE_WIDTHS
         )
 
         list(

@@ -6,6 +6,14 @@
 *.Rcheck/
 *.tar.gz
 .Rlibs/
+
+# H4 FIX: Environment variables and secrets protection
+# Prevent accidental commit of sensitive configuration
+.Renviron
+.Renviron.local
+.env
+.env.local
+.env.*.local
 # Backup files
 *.bak
 *.backup

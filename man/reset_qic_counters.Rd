@@ -7,5 +7,6 @@
 reset_qic_counters()
 }
 \description{
-Resets global counters used to track QIC calculation calls
+Resets performance counters used to track QIC calculation calls
+M1: Updated to use package environment instead of .GlobalEnv
 }

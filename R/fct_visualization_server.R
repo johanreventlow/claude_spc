@@ -8,18 +8,13 @@
 ## Hovedfunktion for visualisering
 # Opsætter al server logik relateret til visualisering og data forberedelse
 setup_visualization <- function(input, output, session, app_state) {
-  # Operation completed
-  # Operation completed
-
   # INPUT SANITIZATION: Using centralized sanitize_selection from utils_ui_helpers.R
 
   # UNIFIED EVENT SYSTEM: Direct access to app_state data instead of reactive dependencies
   # No need for app_data_reactive - visualization module uses its own event-driven data access
-  # Operation completed
 
   # Kolonne konfiguration til visualisering
   # Store last valid config to avoid NULL during input updates
-  # Operation completed
   # Initialize last_valid_config in app_state if not already present
   # Use isolate() to safely check reactive value outside reactive context
   current_config <- isolate(app_state$visualization$last_valid_config)
@@ -29,17 +24,12 @@ setup_visualization <- function(input, output, session, app_state) {
 
   # Separate reactives for auto-detected and manual column selection
   auto_detected_config <- shiny::reactive({
-    # Operation completed
-    # Operation completed
-
     # Use unified state management - CORRECTED PATH
     auto_columns <- app_state$columns$auto_detect$results
-    # Operation completed
 
     if (!is.null(auto_columns)) {
-      # Operation completed
       if (!is.null(auto_columns$timestamp)) {
-        # Operation completed
+        # Timestamp available for logging/debugging if needed
       }
     }
 
@@ -52,7 +42,6 @@ setup_visualization <- function(input, output, session, app_state) {
       chart_type = get_qic_chart_type(if (is.null(input$chart_type)) "Seriediagram (Run Chart)" else input$chart_type)
     )
 
-    # Operation completed
     return(config)
   })
 
@@ -71,26 +60,18 @@ setup_visualization <- function(input, output, session, app_state) {
 
   # Simplified column config - single source of truth without debouncing for valuebox stability
   column_config <- shiny::reactive({
-    # Operation completed
-    # Operation completed
-
     # Always prioritize manual input when available (user selections)
     manual_config_check <- manual_config()
-    # Operation completed
 
     # If user has made explicit selections, use those
     if (!is.null(manual_config_check) && !is.null(manual_config_check$y_col)) {
-      # Operation completed
       return(manual_config_check)
     }
 
     # Otherwise, try auto-detected config as fallback only
-    # Operation completed
-
     # Simplified auto-config access with better error handling
     auto_columns <- app_state$columns$auto_detect$results
     if (!is.null(auto_columns) && !is.null(auto_columns$y_col)) {
-      # Operation completed
       return(list(
         x_col = auto_columns$x_col,
         y_col = auto_columns$y_col,
@@ -100,7 +81,6 @@ setup_visualization <- function(input, output, session, app_state) {
     }
 
     # No valid config available
-    # Operation completed
     return(NULL)
   })
 
@@ -127,7 +107,6 @@ setup_visualization <- function(input, output, session, app_state) {
   }), millis = DEBOUNCE_DELAYS$chart_update)
 
   # Initialiser visualiserings modul - no debouncing for valuebox stability
-  # Operation completed
   visualization <- visualizationModuleServer(
     "visualization",
     data_reactive = NULL, # Module uses its own event-driven data access

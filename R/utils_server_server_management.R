@@ -57,7 +57,22 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
             # Rekonstruer data.frame fra gemt struktur
             saved_data <- saved_state$data
 
+            # K5 FIX: Bounds checking to prevent DoS via unbounded memory allocation
+            # Reject payloads exceeding conservative limits before reconstruction
+            max_rows <- 1e6 # 1 million rows max
+            max_cols <- 1000 # 1000 columns max
+            max_cells <- 1e7 # 10 million total cells max
+
             if (!is.null(saved_data$values) && !is.null(saved_data$nrows) && !is.null(saved_data$ncols)) {
+              # Validate dimensions before reconstruction
+              if (!is.numeric(saved_data$nrows) || !is.numeric(saved_data$ncols) ||
+                saved_data$nrows < 0 || saved_data$ncols < 0 ||
+                saved_data$nrows > max_rows || saved_data$ncols > max_cols ||
+                (saved_data$nrows * saved_data$ncols) > max_cells ||
+                length(saved_data$values) != saved_data$ncols) {
+                stop("Invalid data dimensions or structure - rejecting restoration payload")
+              }
+
               # Reconstruct data.frame manually
               reconstructed_data <- data.frame(
                 matrix(nrow = saved_data$nrows, ncol = saved_data$ncols),
@@ -163,10 +178,33 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
 
     metadata <- collect_metadata(input)
 
-    saveDataLocally(session, current_data_check, metadata)
-    # Unified state assignment only
-    app_state$session$last_save_time <- Sys.time()
-    shiny::showNotification("Session gemt lokalt!", type = "message", duration = 2)
+    # H7: Wrap manual save in safe_operation with user feedback
+    result <- safe_operation(
+      "Manual save to local storage",
+      code = {
+        saveDataLocally(session, current_data_check, metadata)
+      },
+      fallback = function(e) {
+        log_error(
+          paste("Manuel gem fejlede:", e$message),
+          .context = "MANUAL_SAVE"
+        )
+        shiny::showNotification(
+          "Kunne ikke gemme sessionen lokalt. Prøv igen eller brug Download-funktionen.",
+          type = "error",
+          duration = 5
+        )
+        return(FALSE)
+      },
+      error_type = "local_storage"
+    )
+
+    # Only update timestamp and show success if save worked
+    if (!identical(result, FALSE)) {
+      # Unified state assignment only
+      app_state$session$last_save_time <- Sys.time()
+      shiny::showNotification("Session gemt lokalt!", type = "message", duration = 2)
+    }
   })
 
   # Clear saved handler

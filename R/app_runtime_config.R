@@ -335,7 +335,7 @@ determine_test_mode_setting <- function(override_options) {
   }
 
   # Check explicit environment variable
-  env_var <- Sys.getenv("TEST_MODE_AUTO_LOAD", "")
+  env_var <- safe_getenv("TEST_MODE_AUTO_LOAD", "", "character")
   if (env_var != "") {
     return(as.logical(env_var))
   }
@@ -369,8 +369,8 @@ determine_debug_mode_setting <- function(override_options) {
   }
 
   # Check environment variable
-  env_debug <- Sys.getenv("SHINY_DEBUG_MODE", "FALSE")
-  if (env_debug == "TRUE") {
+  env_debug <- safe_getenv("SHINY_DEBUG_MODE", FALSE, "logical")
+  if (env_debug) {
     return(TRUE)
   }
 
@@ -396,7 +396,7 @@ determine_log_level <- function(override_options) {
   }
 
   # Check environment variable
-  env_level <- Sys.getenv("SPC_LOG_LEVEL", "")
+  env_level <- safe_getenv("SPC_LOG_LEVEL", "", "character")
   if (env_level != "") {
     return(env_level)
   }

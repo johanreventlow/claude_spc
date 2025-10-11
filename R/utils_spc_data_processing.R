@@ -55,18 +55,18 @@ process_chart_title <- function(chart_title_reactive, config) {
           },
           error = function(e) {
             log_warn("Could not get reactive title, using fallback", .context = "TITLE_PROCESSING")
-            title_text <- paste("SPC Chart -", config$y_col %||% "Data")
+            title_text <- paste("SPC Diagram -", config$y_col %||% "Data")
           }
         )
       } else if (is.character(chart_title_reactive) && length(chart_title_reactive) > 0) {
         title_text <- chart_title_reactive
       } else {
-        title_text <- paste("SPC Chart -", config$y_col %||% "Data")
+        title_text <- paste("SPC Diagram -", config$y_col %||% "Data")
       }
 
       return(title_text)
     },
-    fallback = "SPC Chart",
+    fallback = "SPC Diagram",
     error_type = "title_processing"
   )
 }

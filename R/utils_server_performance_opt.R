@@ -127,19 +127,25 @@ detect_columns_with_cache <- function(data, app_state = NULL) {
 
 #' Create Data Signature
 #'
-#' Creates a unique signature for data to enable caching.
-#' FIXED: Now hashes the ENTIRE dataset instead of just first 10 rows
-#' to prevent cache collisions when data changes beyond the sample.
+#' DEPRECATED: This function has been migrated to utils_data_signatures.R (H14).
+#' Use generate_shared_data_signature() for new code.
+#'
+#' This wrapper is maintained for backward compatibility only.
 #'
 #' @param data The data frame to create signature for
 #'
 create_data_signature <- function(data) {
+  # H14: Migrate to shared data signatures
+  # This avoids redundant hashing between QIC cache and auto-detect cache
+  if (exists("generate_shared_data_signature", mode = "function")) {
+    return(generate_shared_data_signature(data, include_structure = TRUE))
+  }
+
+  # Legacy fallback (should not reach here in production)
   if (is.null(data) || nrow(data) == 0) {
     return("empty_data")
   }
 
-  # FIX BUG #1: Hash ENTIRE dataset, not just first 10 rows
-  # This prevents cache collisions when rows 11+ change
   signature_components <- list(
     nrow = nrow(data),
     ncol = ncol(data),
