@@ -112,3 +112,24 @@ FONT_SCALING_CONFIG <- list(
   min_size = 8, # Minimum base_size i points
   max_size = 64 # Maximum base_size i points
 )
+
+# VIEWPORT DEFAULTS ============================================================
+
+#' Viewport default dimensioner for plot rendering
+#'
+#' Standard viewport størrelse og DPI settings til konsistent plot rendering.
+#' Disse værdier bruges som fallback når viewport dimensioner ikke er tilgængelige.
+#'
+#' @details
+#' - width/height: Default pixels for plot rendering
+#' - dpi: Industry standard 96 DPI for web graphics
+#'
+#' M10: Centraliseret fra hardcoded magic numbers i mod_spc_chart_server.R
+#'
+#' @format Named list med viewport parametre
+#' @export
+VIEWPORT_DEFAULTS <- list(
+  width = 800, # Default width i pixels
+  height = 600, # Default height i pixels
+  dpi = 96 # Standard DPI for web graphics
+)

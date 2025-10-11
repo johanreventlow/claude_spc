@@ -254,6 +254,13 @@ create_app_state <- function() {
   app_state$visualization <- shiny::reactiveValues(
     plot_ready = FALSE,
     plot_warnings = character(0),
+
+    # M10: Viewport dimensions (centralized from mod_spc_chart_server.R reactiveVal)
+    viewport_dims = list(
+      width = NULL,
+      height = NULL,
+      last_updated = NULL
+    ),
     anhoej_results = list(
       # Initialize with default values instead of NULL to prevent "Beregner..." stuck state
       longest_run = NA_real_,

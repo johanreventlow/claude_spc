@@ -11,9 +11,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # Module initialization
     ns <- session$ns
 
-    # Viewport dimensions for label placement
-    # These are set from renderPlot when actual viewport size is known
-    viewport_dims <- shiny::reactiveVal(list(width = NULL, height = NULL))
+    # M10: Viewport dimensions now centralized in app_state$visualization$viewport_dims
+    # (removed local reactiveVal)
 
     # Helper function: Safe max that handles empty vectors and preserves actual values
     safe_max <- function(x, na.rm = TRUE) {
@@ -288,18 +287,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       width_px_raw <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_width")]]
       height_px_raw <- session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
 
-      # Fallback til conservative defaults hvis clientData ikke klar
-      # 800×600 er realistic desktop viewport som giver acceptable label placement
+      # M10: Fallback til konfigurerede defaults hvis clientData ikke klar
       width_px <- if (!is.null(width_px_raw) && width_px_raw > 100) {
         width_px_raw
       } else {
-        800 # Conservative default width
+        VIEWPORT_DEFAULTS$width # Conservative default width
       }
 
       height_px <- if (!is.null(height_px_raw) && height_px_raw > 100) {
         height_px_raw
       } else {
-        600 # Conservative default height
+        VIEWPORT_DEFAULTS$height # Conservative default height
       }
 
       # Log viewport status for debugging label placement issues
@@ -446,8 +444,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       computation <- safe_operation(
         "Generate SPC plot",
         code = {
-          # Hent viewport dimensions hvis tilgængelige
-          vp_dims <- viewport_dims()
+          # M10: Hent viewport dimensions fra centraliseret state
+          vp_dims <- get_viewport_dims(app_state)
 
           # SPRINT 4: Pass QIC cache for performance optimization
           qic_cache <- if (!is.null(app_state) && !is.null(app_state$cache)) {
@@ -706,7 +704,7 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       height = function() {
         session$clientData[[paste0("output_", ns("spc_plot_actual"), "_height")]]
       },
-      res = 96, # Industry standard for web (auto-scaled by pixelratio)
+      res = VIEWPORT_DEFAULTS$dpi, # M10: Industry standard for web (auto-scaled by pixelratio)
       {
         # VIEWPORT GUARD: Vent på clientData før rendering
         # Dette sikrer at device altid har korrekte dimensioner når labels beregnes.
@@ -722,8 +720,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           viewport_height > 100 # Minimum realistic height
         )
 
-        # Opdater viewport dimensions for label placement
-        viewport_dims(list(width = viewport_width, height = viewport_height))
+        # M10: Opdater viewport dimensions i centraliseret state
+        emit <- create_emit_api(app_state)
+        set_viewport_dims(app_state, viewport_width, viewport_height, emit)
 
         data <- module_data_reactive()
 
