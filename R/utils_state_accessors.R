@@ -414,6 +414,64 @@ set_plot_generating <- function(app_state, value) {
   })
 }
 
+#' Get Viewport Dimensions
+#'
+#' Safely retrieves viewport dimensions with fallback to defaults.
+#'
+#' M10: Centralized viewport state management
+#'
+#' @param app_state Centralized app state
+#'
+#' @return Named list with width, height, last_updated
+#'
+#' @details
+#' Returns VIEWPORT_DEFAULTS if dimensions haven't been set yet.
+#'
+#' @export
+get_viewport_dims <- function(app_state) {
+  shiny::isolate({
+    dims <- app_state$visualization$viewport_dims
+
+    # Fallback to defaults if not yet set
+    if (is.null(dims$width) || is.null(dims$height)) {
+      return(list(
+        width = VIEWPORT_DEFAULTS$width,
+        height = VIEWPORT_DEFAULTS$height,
+        last_updated = NULL
+      ))
+    }
+
+    return(dims)
+  })
+}
+
+#' Set Viewport Dimensions
+#'
+#' Safely updates viewport dimensions and triggers visualization update.
+#'
+#' M10: Centralized viewport state management
+#'
+#' @param app_state Centralized app state
+#' @param width Viewport width in pixels
+#' @param height Viewport height in pixels
+#' @param emit Emit API (optional) for triggering visualization_update_needed
+#'
+#' @export
+set_viewport_dims <- function(app_state, width, height, emit = NULL) {
+  shiny::isolate({
+    app_state$visualization$viewport_dims <- list(
+      width = width,
+      height = height,
+      last_updated = Sys.time()
+    )
+  })
+
+  # Emit visualization update if emit API available
+  if (!is.null(emit) && is.function(emit$visualization_update_needed)) {
+    emit$visualization_update_needed()
+  }
+}
+
 # ============================================================================
 # SESSION STATE ACCESSORS
 # ============================================================================

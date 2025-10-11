@@ -48,3 +48,4 @@ summary(benchmark_result)
 }
 
 }
+\keyword{internal}

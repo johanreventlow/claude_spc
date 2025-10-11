@@ -37,7 +37,7 @@
 #' print(result)
 #' }
 #'
-#' @export
+#' @keywords internal
 profile_reactive <- function(expr, label = "reactive", interval = 0.005) {
   if (requireNamespace("profvis", quietly = TRUE)) {
     log_debug_kv(
@@ -107,7 +107,7 @@ profile_reactive <- function(expr, label = "reactive", interval = 0.005) {
 #' summary(benchmark_result)
 #' }
 #'
-#' @export
+#' @keywords internal
 benchmark_reactives <- function(..., times = 10, check = FALSE) {
   if (requireNamespace("bench", quietly = TRUE)) {
     expressions <- list(...)
@@ -401,7 +401,7 @@ get_memory_summary <- function(memory_log) {
 #' print(pipeline_profile)
 #' }
 #'
-#' @export
+#' @keywords internal
 profile_data_pipeline <- function(pipeline_steps, input_data) {
   results <- data.frame(
     step = character(0),
