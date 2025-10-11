@@ -129,3 +129,19 @@ SPC_LINE_WIDTHS <- list(
   thick = 1.2,
   extra_thick = 1.5
 )
+
+# SPC COMMENT PROCESSING CONSTANTS =============================================
+
+#' Kommentar behandling konfiguration
+#' M3: Centraliseret magic numbers for kommentar længdebegrænsninger
+#' @export
+SPC_COMMENT_CONFIG <- list(
+  # Maximum længde før sanitization trunkering
+  max_length = 100,
+
+  # Display længde før afkortning med "..."
+  display_length = 40,
+
+  # Afkortning prefix længde
+  truncate_length = 37
+)

@@ -64,17 +64,17 @@ extract_comment_data <- function(data, kommentar_column, qic_data) {
       comment_data$comment <- sapply(comment_data$comment, function(cmt) {
         sanitize_user_input(
           input_value = cmt,
-          max_length = 100, # Longer limit for comments before truncation
+          max_length = SPC_COMMENT_CONFIG$max_length, # M3: Using config constant
           allowed_chars = "A-Za-z0-9_æøåÆØÅ .,-:!?",
           html_escape = TRUE
         )
       }, USE.NAMES = FALSE)
     }
 
-    # Afkort meget lange kommentarer efter sanitization
+    # Afkort meget lange kommentarer efter sanitization (M3: Using config constants)
     comment_data$comment <- dplyr::if_else(
-      nchar(comment_data$comment) > 40,
-      stringr::str_c(substr(comment_data$comment, 1, 37), "..."),
+      nchar(comment_data$comment) > SPC_COMMENT_CONFIG$display_length,
+      stringr::str_c(substr(comment_data$comment, 1, SPC_COMMENT_CONFIG$truncate_length), "..."),
       comment_data$comment
     )
   }
