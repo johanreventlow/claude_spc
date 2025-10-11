@@ -138,7 +138,7 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
     x = x_data,
     y = qic_inputs$y,
     chart = chart_type,
-    title = title %||% paste("SPC Chart:", toupper(chart_type))
+    title = title %||% paste("SPC Diagram:", toupper(chart_type))
   )
 
   # Add n if available

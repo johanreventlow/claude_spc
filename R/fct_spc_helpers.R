@@ -384,7 +384,7 @@ process_chart_title <- function(chart_title_reactive, config) {
   title_result <- if (!is.null(custom_title)) {
     custom_title
   } else {
-    paste("SPC Chart -", config$y_col)
+    paste("SPC Diagram -", config$y_col)
   }
 
   # Apply sanitization to final title

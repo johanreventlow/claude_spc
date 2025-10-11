@@ -348,7 +348,7 @@ create_ui_update_service <- function(session, app_state) {
           # Show as modal dialog
           shiny::showModal(shiny::modalDialog(
             title = switch(type,
-              "success" = "Success",
+              "success" = "Succes",
               "info" = "Information",
               "warning" = "Advarsel",
               "error" = "Fejl",
