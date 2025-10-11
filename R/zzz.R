@@ -89,6 +89,78 @@ get_package_theme <- function() {
 get_test_mode_file_path <- function() {
   get_package_config("TEST_MODE_FILE_PATH", default = NULL)
 }
+
+#' Get QIC call counter value
+#'
+#' Returns current value of the QIC call counter for performance monitoring.
+#'
+#' @return Integer counter value
+#' @export
+get_qic_call_counter <- function() {
+  claudespc_env <- get_claudespc_environment()
+  if (exists("qic_call_counter", envir = claudespc_env)) {
+    return(claudespc_env$qic_call_counter)
+  } else {
+    return(0L)
+  }
+}
+
+#' Increment QIC call counter
+#'
+#' Increments the QIC call counter and returns new value.
+#'
+#' @return New counter value
+#' @export
+increment_qic_call_counter <- function() {
+  claudespc_env <- get_claudespc_environment()
+  if (!exists("qic_call_counter", envir = claudespc_env)) {
+    claudespc_env$qic_call_counter <- 0L
+  }
+  claudespc_env$qic_call_counter <- claudespc_env$qic_call_counter + 1L
+  return(claudespc_env$qic_call_counter)
+}
+
+#' Get actual QIC call counter value
+#'
+#' Returns current value of actual qicharts2::qic() calls for performance monitoring.
+#'
+#' @return Integer counter value
+#' @export
+get_actual_qic_call_counter <- function() {
+  claudespc_env <- get_claudespc_environment()
+  if (exists("actual_qic_call_counter", envir = claudespc_env)) {
+    return(claudespc_env$actual_qic_call_counter)
+  } else {
+    return(0L)
+  }
+}
+
+#' Increment actual QIC call counter
+#'
+#' Increments the actual qicharts2::qic() call counter and returns new value.
+#'
+#' @return New counter value
+#' @export
+increment_actual_qic_call_counter <- function() {
+  claudespc_env <- get_claudespc_environment()
+  if (!exists("actual_qic_call_counter", envir = claudespc_env)) {
+    claudespc_env$actual_qic_call_counter <- 0L
+  }
+  claudespc_env$actual_qic_call_counter <- claudespc_env$actual_qic_call_counter + 1L
+  return(claudespc_env$actual_qic_call_counter)
+}
+
+#' Reset QIC performance counters
+#'
+#' Resets both QIC call counters to zero.
+#'
+#' @export
+reset_qic_performance_counters <- function() {
+  claudespc_env <- get_claudespc_environment()
+  claudespc_env$qic_call_counter <- 0L
+  claudespc_env$actual_qic_call_counter <- 0L
+  invisible()
+}
 .onLoad <- function(libname, pkgname) {
   # Initialize package-level configuration
   initialize_package_globals()
@@ -133,6 +205,11 @@ initialize_package_globals <- function() {
   claudespc_env$my_theme <- get_bootstrap_theme()
   claudespc_env$HOSPITAL_COLORS <- get_hospital_colors()
   claudespc_env$HOSPITAL_THEME <- get_hospital_ggplot_theme()
+
+  # M1: Initialize QIC performance counters in package environment
+  # (moved from .GlobalEnv for session isolation)
+  claudespc_env$qic_call_counter <- 0L
+  claudespc_env$actual_qic_call_counter <- 0L
 
   # NOTE: Global environment exposure removed as part of legacy cleanup
   # All consumers should now use package getters:

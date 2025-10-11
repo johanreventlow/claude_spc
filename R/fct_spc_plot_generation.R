@@ -390,12 +390,8 @@ execute_qic_call <- function(qic_args, chart_type, config, qic_cache = NULL) {
 
   log_debug(qic_args, .context = "QIC")
 
-  # Get call number for debugging correlation
-  call_number <- if (exists("qic_call_counter", envir = .GlobalEnv)) {
-    get("qic_call_counter", envir = .GlobalEnv)
-  } else {
-    NULL
-  }
+  # Get call number for debugging correlation (M1: using package environment)
+  call_number <- get_qic_call_counter()
 
   # MICROBENCHMARK: Measure QIC calculation performance with statistical analysis
   # Feature flag check - disable benchmarking in production by default
@@ -598,14 +594,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   comment_size <- 6 * scale_factor
   label_size <- 6 * scale_factor
 
-  # PERFORMANCE MONITORING: Track QIC calculation calls
-  if (!exists("qic_call_counter", envir = .GlobalEnv)) {
-    assign("qic_call_counter", 0, envir = .GlobalEnv)
-  }
-  assign("qic_call_counter", get("qic_call_counter", envir = .GlobalEnv) + 1, envir = .GlobalEnv)
-
+  # PERFORMANCE MONITORING: Track QIC calculation calls (M1: using package environment)
+  call_number <- increment_qic_call_counter()
   current_time <- Sys.time()
-  call_number <- get("qic_call_counter", envir = .GlobalEnv)
 
   # Phase 4: Integrate with enhanced startup metrics
   if (exists("track_generateSPCPlot_call")) {

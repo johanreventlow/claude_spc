@@ -17,6 +17,6 @@ Standardised priority access function for safe retrieval of priority values.
 }
 \examples{
 \dontrun{
-get_priority("STATE_MANAGEMENT")  # Returns 2000
+get_priority("STATE_MANAGEMENT") # Returns 2000
 }
 }

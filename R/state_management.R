@@ -287,6 +287,7 @@ create_app_state <- function() {
   # SPRINT 4: Performance Cache Management
   # Non-reactive cache objects for QIC results
   # Cache creation is delayed until first use to avoid dependency issues
+  # M1: Performance counters moved to package environment (R/zzz.R) for proper isolation
   app_state$cache <- list(
     qic = NULL # Will be initialized lazily on first use
   )

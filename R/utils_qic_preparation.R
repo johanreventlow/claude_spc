@@ -164,14 +164,9 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
     .context = "QIC_PREPARATION"
   )
 
-  # PERFORMANCE MONITORING: Track actual qic() function calls
-  if (!exists("actual_qic_call_counter", envir = .GlobalEnv)) {
-    assign("actual_qic_call_counter", 0, envir = .GlobalEnv)
-  }
-  assign("actual_qic_call_counter", get("actual_qic_call_counter", envir = .GlobalEnv) + 1, envir = .GlobalEnv)
-
+  # PERFORMANCE MONITORING: Track actual qic() function calls (M1: using package environment)
+  qic_call_number <- increment_actual_qic_call_counter()
   current_time <- Sys.time()
-  qic_call_number <- get("actual_qic_call_counter", envir = .GlobalEnv)
   log_debug(paste("ACTUAL qic() CALL #", qic_call_number, "at", format(current_time, "%H:%M:%S.%OS3")), "QIC_CALL_DEBUG")
 
   # Enhanced tracking - track this QIC call with context

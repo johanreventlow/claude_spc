@@ -9,7 +9,7 @@ handle_column_input(col_name, new_value, app_state, emit)
 \arguments{
 \item{col_name}{Character. Name of the column input (e.g., "x_column", "y_column")}
 
-\item{new_value}{The new value from input[\link{col_name}]}
+\item{new_value}{The new value from input[[col_name]]}
 
 \item{app_state}{Centralized app state containing UI tokens and column mappings}
 
@@ -24,27 +24,35 @@ changes to column selection inputs with full token consumption, normalization,
 state updates, and cache invalidation.
 }
 \details{
-## Processing Flow
-
-1. **Token Consumption**: Check if this is a programmatic update
-   - If token exists and matches value, consume token and skip event emission
-   - This prevents infinite loops from programmatic UI updates
-
-2. **Normalization**: Convert input value to consistent string format
-   - Handles NULL, empty vectors, empty strings
-   - Returns normalized string or ""
-
-3. **State Update**: Update app_state with normalized value
-   - Updates app_state$columns[[col_name]]
-   - Maintains synchronization between UI and state
-
-4. **Cache Invalidation**: Clear cached column input if cache exists
-   - Updates app_state$ui_cache[[cache_key]]
-   - Ensures fresh data on next access
-
-5. **Event Emission**: Emit column_choices_changed event for user changes
-   - Only emits if NOT a programmatic update (token consumed)
-   - Triggers downstream reactive updates
+\subsection{Processing Flow}{
+\enumerate{
+\item \strong{Token Consumption}: Check if this is a programmatic update
+\itemize{
+\item If token exists and matches value, consume token and skip event emission
+\item This prevents infinite loops from programmatic UI updates
+}
+\item \strong{Normalization}: Convert input value to consistent string format
+\itemize{
+\item Handles NULL, empty vectors, empty strings
+\item Returns normalized string or ""
+}
+\item \strong{State Update}: Update app_state with normalized value
+\itemize{
+\item Updates app_state$columns[\link{col_name}]
+\item Maintains synchronization between UI and state
+}
+\item \strong{Cache Invalidation}: Clear cached column input if cache exists
+\itemize{
+\item Updates app_state$ui_cache[\link{cache_key}]
+\item Ensures fresh data on next access
+}
+\item \strong{Event Emission}: Emit column_choices_changed event for user changes
+\itemize{
+\item Only emits if NOT a programmatic update (token consumed)
+\item Triggers downstream reactive updates
+}
+}
+}
 }
 \examples{
 \dontrun{
