@@ -183,15 +183,17 @@ create_ui_main_content <- function() {
     # Welcome page when no meaningful data is loaded - DISABLED FOR DEVELOPMENT
     # shiny::conditionalPanel(condition = "output.dataLoaded != 'TRUE'", create_welcome_page()),
 
-    # Main content in 2x2 grid layout - ALWAYS VISIBLE FOR DEVELOPMENT
+    # Main content in 8-4-8-4 grid layout
+    # Top row: SPC Preview (8), ValueBoxes (4)
+    # Bottom row: Data table (8), Empty (4)
     bslib::layout_columns(
-      col_widths = c(6, 6, 6, 6),
+      col_widths = c(8, 4, 8, 4),
       height = "auto",
       max_height = "100%",
       create_plot_only_card(),
       create_status_value_boxes(),
       create_data_table_card(),
-      create_chart_settings_card()
+      shiny::div() # Empty space (4/12)
     )
   )
 }
@@ -582,75 +584,179 @@ create_export_card <- function() {
 #' @export
 create_ui_sidebar <- function() {
   bslib::sidebar(
-    # title = shiny::div(
-    #   shiny::icon("upload"),
-    #   " Data upload & konfiguration",
-    #   style = paste("color:", HOSPITAL_COLORS$primary, "; font-weight: 600;")
-    # ),
-    width = "300px",
+    width = "350px",
     position = "left",
     open = TRUE,
     collapsible = TRUE,
 
-    # Upload eller start ny session sektion - ALTID SYNLIG
-    # shiny::div(
-    # style = "margin-bottom: 15px;",
-    # shiny::h6("Vælg handling:", style = "font-weight: 500; margin-bottom: 15px;"),
+    # Action buttons section
+    shiny::div(
+      style = "margin-bottom: 20px;",
+      # Start ny session knap
+      shiny::actionButton(
+        "clear_saved",
+        "Start ny session",
+        icon = shiny::icon("refresh"),
+        class = "btn-primary w-100 mb-2",
+        title = "Start med tom standardtabel"
+      ),
 
-    # Start ny session knap
-    shiny::actionButton(
-      "clear_saved",
-      "Start ny session",
-      icon = shiny::icon("refresh"),
-      class = "btn-primary w-100 mb-2",
-      title = "Start med tom standardtabel"
+      # Upload fil knap - åbner modal
+      shiny::actionButton(
+        "show_upload_modal",
+        "Upload datafil",
+        icon = shiny::icon("upload"),
+        class = "btn-secondary w-100",
+        title = "Upload Excel eller CSV fil"
+      )
     ),
+    shiny::hr(),
 
-    # Upload fil knap - åbner modal
-    shiny::actionButton(
-      "show_upload_modal",
-      "Upload datafil",
-      icon = shiny::icon("upload"),
-      class = "btn-secondary w-100",
-      title = "Upload Excel eller CSV fil"
-      # )
-    ),
+    # Vertical accordion with settings panels
+    bslib::accordion(
+      id = "sidebar_accordion",
+      open = "detaljer",
+      multiple = FALSE,
 
-    # REST OF SIDEBAR - only when data is loaded
-    # shiny::conditionalPanel(
-    #   condition = "output.dataLoaded == 'TRUE'",
-    #
-    #   shiny::hr(),
-    #
-    #
-    #
-    #
-    #
-    #   # shiny::hr(),
-    #
-    #   # Session management
-    #   shiny::div(
-    #     shiny::h6("Session:", style = "font-weight: 500; margin-bottom: 10px;"),
-    #     shiny::actionButton(
-    #       "manual_save",
-    #       "Gem session",
-    #       icon = shiny::icon("save"),
-    #       class = "btn-outline-primary btn-sm w-100"
-    #     ),
-    #     shiny::div(
-    #       id = "save_status",
-    #       style = "margin-top: 8px; font-size: 0.8rem; color: #666;",
-    #       shiny::uiOutput("save_status_display")
-    #     )
-    #   ),
-    #
-    #   shiny::hr(),
-    #
-    #   # Data status
-    #   shiny::div(
-    #     shiny::uiOutput("data_status_display")
-    #   )
-    # )
+      # Panel 1: Detaljer
+      bslib::accordion_panel(
+        title = shiny::tagList(shiny::icon("pen-to-square"), " Detaljer"),
+        value = "detaljer",
+
+        # MIDLERTIDIG SKJULT: Indikator metadata (flyttes til anden side senere)
+        # shiny::textInput(
+        #   "indicator_title",
+        #   "Titel på indikator:",
+        #   width = "100%",
+        #   value = "",
+        #   placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
+        # ),
+
+        # Target value and baseline side by side
+        shiny::textInput(
+          "target_value",
+          "Udviklingsmål:",
+          value = "",
+          placeholder = "fx >=90%, <25 eller >",
+          width = "100%"
+        ),
+        shiny::textInput(
+          "centerline_value",
+          "Evt. baseline:",
+          value = "",
+          placeholder = "fx 68%, 0,7 el. 22",
+          width = "100%"
+        ),
+
+        # MIDLERTIDIG SKJULT: Beskrivelse (flyttes til anden side senere)
+        # shiny::textAreaInput(
+        #   "indicator_description",
+        #   "Datadefinition:",
+        #   value = "",
+        #   placeholder = "Angiv kort, hvad indikatoren udtrykker",
+        #   resize = "vertical",
+        #   width = "100%",
+        #   rows = 4
+        # ),
+
+        # Chart type selection
+        shiny::selectizeInput(
+          "chart_type",
+          "Diagram type:",
+          choices = CHART_TYPES_DA,
+          selected = "run",
+          width = "100%"
+        ),
+
+        # Y-axis unit
+        shiny::selectizeInput(
+          "y_axis_unit",
+          "Y-akse enhed:",
+          choices = Y_AXIS_UI_TYPES_DA,
+          selected = "count",
+          width = "100%"
+        )
+      ),
+
+      # Panel 2: Kolonnematch
+      bslib::accordion_panel(
+        title = shiny::tagList(shiny::icon("columns"), " Kolonnematch"),
+        value = "kolonnematch",
+
+        # X-axis column
+        shiny::selectizeInput(
+          "x_column",
+          "X-akse (tidsakse):",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ),
+
+        # Y-axis column
+        shiny::selectizeInput(
+          "y_column",
+          "Y-akse (værdiakse):",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ),
+
+        # N column
+        shiny::selectizeInput(
+          "n_column",
+          "Nævner (n):",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ) |>
+          bslib::tooltip("Run: valgfri. P, P′, U, U′: kræver nævner. I, MR, C, G: ignoreres."),
+
+        # Skift column
+        shiny::selectizeInput(
+          "skift_column",
+          "Opdel proces:",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ),
+
+        # Frys column
+        shiny::selectizeInput(
+          "frys_column",
+          "Fastfrys niveau:",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ),
+
+        # Kommentar column
+        shiny::selectizeInput(
+          "kommentar_column",
+          "Kommentar (noter):",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ) |>
+          bslib::tooltip("Valgfri: Kolonne med kommentarer"),
+        shiny::div(
+          style = "padding: 15px 0;",
+          # Auto-detect button
+          shiny::actionButton(
+            "auto_detect_columns",
+            "Auto-detektér kolonner",
+            icon = shiny::icon("magic"),
+            class = "btn-secondary w-100"
+          )
+        )
+      ),
+
+      # Panel 3: Organisatorisk
+      bslib::accordion_panel(
+        title = shiny::tagList(shiny::icon("building"), " Organisatorisk"),
+        value = "organisatorisk",
+        create_unit_selection()
+      )
+    )
   )
 }
 # ui_welcome_page.R
