@@ -63,7 +63,37 @@ git commit -m "beskrivelse"
 
 Undtagelse: Simple operationer (`git status`, `git diff`, `git log`)
 
-### 2.4 Observability & Debugging
+### 2.4 Issue Tracking
+
+✅ **OBLIGATORISK:** Alle fejl, rettelser, todo-emner og forbedringsforslag skal dokumenteres som GitHub Issues.
+
+**Issue workflow:**
+```bash
+# Opret issue via gh CLI
+gh issue create --title "Beskrivelse af problem/feature" --body "Detaljeret beskrivelse"
+
+# Link commit til issue
+git commit -m "fix: kort beskrivelse (fixes #123)"
+
+# Vis aktive issues
+gh issue list
+```
+
+**Issue labels:**
+* `bug` - Fejl der skal rettes
+* `enhancement` - Forbedringer og nye features
+* `documentation` - Dokumentationsændringer
+* `technical-debt` - Refaktorering og code quality
+* `performance` - Performance-relaterede issues
+* `testing` - Test coverage og test-relaterede opgaver
+
+**Best practices:**
+* Opret issue før arbejde påbegyndes på større features
+* Reference issue nummer i commits (`fixes #123`, `relates to #456`)
+* Luk issues automatisk via commit messages (`fixes`, `closes`, `resolves`)
+* Hold issues opdaterede med status og blokeringer
+
+### 2.5 Observability & Debugging
 
 **Struktureret logging:**
 * Brug centralt logger-API: `log_debug()`, `log_info()`, `log_warn()`, `log_error()`
@@ -79,7 +109,7 @@ log_debug(
 )
 ```
 
-### 2.5 Modularity & Architecture
+### 2.6 Modularity & Architecture
 
 * **Single Responsibility** – én opgave pr. funktion
 * **Immutable data flow** – returnér nye objekter
