@@ -431,12 +431,26 @@ create_plot_only_card <- function() {
     bslib::card_header(
       shiny::div(shiny::icon("chart-line"), " SPC Preview")
     ),
-    bslib::card_body(
-      fill = TRUE,
-      bslib::layout_sidebar(
-        sidebar = bslib::sidebar(
-          width = "200px",
-          position = "right",
+    bslib::layout_sidebar(
+      sidebar = bslib::sidebar(
+        width = "350px",
+        position = "right",
+        shiny::selectizeInput(
+          "chart_type",
+          "Diagram type:",
+          choices = CHART_TYPES_DA,
+          selected = "run",
+          width = "100%"
+        ),
+        shiny::selectizeInput(
+          "y_axis_unit",
+          "Y-akse enhed:",
+          choices = Y_AXIS_UI_TYPES_DA,
+          selected = "count",
+          width = "100%"
+        ),
+        bslib::layout_column_wrap(
+          width = 1 / 2,
           # Detaljer fields from accordion
           shiny::textInput(
             "target_value",
@@ -451,26 +465,16 @@ create_plot_only_card <- function() {
             value = "",
             placeholder = "fx 68%, 0,7 el. 22",
             width = "100%"
-          ),
-          shiny::selectizeInput(
-            "chart_type",
-            "Diagram type:",
-            choices = CHART_TYPES_DA,
-            selected = "run",
-            width = "100%"
-          ),
-          shiny::selectizeInput(
-            "y_axis_unit",
-            "Y-akse enhed:",
-            choices = Y_AXIS_UI_TYPES_DA,
-            selected = "count",
-            width = "100%"
           )
-        ),
-        shiny::div(
-          style = "height: 100%",
-          visualizationModuleUI("visualization")
         )
+      ),
+
+      # bslib::card_body(
+      #   fill = TRUE,
+      shiny::div(
+        style = "height: 100%",
+        visualizationModuleUI("visualization")
+        # )
       )
     )
   )
@@ -517,12 +521,15 @@ create_data_table_card <- function() {
         )
       )
     ),
-    bslib::card_body(
-      bslib::layout_sidebar(
-        sidebar = bslib::sidebar(
-          width = "200px",
-          position = "right",
-          # Kolonnematch fields from accordion
+    # bslib::card_body(
+    bslib::layout_sidebar(
+      sidebar = bslib::sidebar(
+        width = "350px",
+        position = "right",
+        # Kolonnematch fields from accordion
+        # X-akse og Y-akse ved siden af hinanden
+        bslib::layout_column_wrap(
+          width = 1 / 2,
           shiny::selectizeInput(
             "x_column",
             "X-akse (tidsakse):",
@@ -565,23 +572,24 @@ create_data_table_card <- function() {
             choices = NULL,
             selected = NULL,
             width = "100%"
-          ) |>
-            bslib::tooltip("Valgfri: Kolonne med kommentarer"),
-          shiny::div(
-            style = "padding: 15px 0;",
-            shiny::actionButton(
-              "auto_detect_columns",
-              "Auto-detektér kolonner",
-              icon = shiny::icon("magic"),
-              class = "btn-secondary w-100"
-            )
           )
-        ),
-        # Data table using excelR
-        excelR::excelOutput("main_data_table", height = "auto")
-      )
+        ) |>
+          bslib::tooltip("Valgfri: Kolonne med kommentarer"),
+        # shiny::div(
+        #   style = "padding: 15px 0;",
+        shiny::actionButton(
+          "auto_detect_columns",
+          "Auto-detektér kolonner",
+          icon = shiny::icon("magic"),
+          class = "btn-secondary w-100"
+          # )
+        )
+      ),
+      # Data table using excelR
+      excelR::excelOutput("main_data_table", height = "auto")
     )
   )
+  # )
 }
 
 
@@ -678,10 +686,10 @@ create_export_card <- function() {
 #' @export
 create_ui_sidebar <- function() {
   bslib::sidebar(
-    width = "250px",
+    width = "200px",
     position = "left",
-    open = TRUE,
-    collapsible = TRUE,
+    open = "always",
+    # collapsible = FALSE,
 
     # Action buttons section
     shiny::div(
@@ -707,80 +715,80 @@ create_ui_sidebar <- function() {
     shiny::hr(),
 
     # Vertical accordion with settings panels
-    bslib::accordion(
-      id = "sidebar_accordion",
-      open = "detaljer",
-      multiple = FALSE,
-
-      # Panel 1: Detaljer
-      # BEMÆRK: Detaljer-felter flyttet til SPC Preview card sidebar
-      bslib::accordion_panel(
-        title = shiny::tagList(shiny::icon("pen-to-square"), " Detaljer"),
-        value = "detaljer",
-
-        # MIDLERTIDIG SKJULT: Indikator metadata (flyttes til anden side senere)
-        # shiny::textInput(
-        #   "indicator_title",
-        #   "Titel på indikator:",
-        #   width = "100%",
-        #   value = "",
-        #   placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
-        # ),
-
-        # FLYTTET: Detaljer-felter nu i SPC Preview card sidebar (se create_plot_only_card)
-        # - target_value (Udviklingsmål)
-        # - centerline_value (Evt. baseline)
-        # - chart_type (Diagram type)
-        # - y_axis_unit (Y-akse enhed)
-
-        # MIDLERTIDIG SKJULT: Beskrivelse (flyttes til anden side senere)
-        # shiny::textAreaInput(
-        #   "indicator_description",
-        #   "Datadefinition:",
-        #   value = "",
-        #   placeholder = "Angiv kort, hvad indikatoren udtrykker",
-        #   resize = "vertical",
-        #   width = "100%",
-        #   rows = 4
-        # )
-
-        # Placeholder - panel er nu tom, alle felter flyttet til SPC Preview card sidebar
-        shiny::p(
-          style = "color: #999; font-style: italic; text-align: center; padding: 20px;",
-          "Detaljer-felter vises nu i SPC Preview card sidebar"
-        )
-      ),
-
-      # Panel 2: Kolonnematch
-      # BEMÆRK: Kolonnematch-felter flyttet til Data card sidebar
-      bslib::accordion_panel(
-        title = shiny::tagList(shiny::icon("columns"), " Kolonnematch"),
-        value = "kolonnematch",
-
-        # FLYTTET: Kolonnematch-felter nu i Data card sidebar (se create_data_table_card)
-        # - x_column (X-akse)
-        # - y_column (Y-akse)
-        # - n_column (Nævner)
-        # - skift_column (Opdel proces)
-        # - frys_column (Fastfrys niveau)
-        # - kommentar_column (Kommentar)
-        # - auto_detect_columns button
-
-        # Placeholder - panel er nu tom, alle felter flyttet til Data card sidebar
-        shiny::p(
-          style = "color: #999; font-style: italic; text-align: center; padding: 20px;",
-          "Kolonnematch-felter vises nu i Data card sidebar"
-        )
-      ),
-
-      # Panel 3: Organisatorisk
-      # MIDLERTIDIG SKJULT: Organisatorisk panel flyttes til anden side senere
-      # bslib::accordion_panel(
-      #   title = shiny::tagList(shiny::icon("building"), " Organisatorisk"),
-      #   value = "organisatorisk",
-      #   create_unit_selection()
-      # )
-    )
+    # bslib::accordion(
+    #   id = "sidebar_accordion",
+    #   open = "detaljer",
+    #   multiple = FALSE,
+    #
+    #   # Panel 1: Detaljer
+    #   # BEMÆRK: Detaljer-felter flyttet til SPC Preview card sidebar
+    #   bslib::accordion_panel(
+    #     title = shiny::tagList(shiny::icon("pen-to-square"), " Detaljer"),
+    #     value = "detaljer",
+    #
+    #     # MIDLERTIDIG SKJULT: Indikator metadata (flyttes til anden side senere)
+    #     # shiny::textInput(
+    #     #   "indicator_title",
+    #     #   "Titel på indikator:",
+    #     #   width = "100%",
+    #     #   value = "",
+    #     #   placeholder = "F.eks. 'Infektioner pr. 1000 sengedage'"
+    #     # ),
+    #
+    #     # FLYTTET: Detaljer-felter nu i SPC Preview card sidebar (se create_plot_only_card)
+    #     # - target_value (Udviklingsmål)
+    #     # - centerline_value (Evt. baseline)
+    #     # - chart_type (Diagram type)
+    #     # - y_axis_unit (Y-akse enhed)
+    #
+    #     # MIDLERTIDIG SKJULT: Beskrivelse (flyttes til anden side senere)
+    #     # shiny::textAreaInput(
+    #     #   "indicator_description",
+    #     #   "Datadefinition:",
+    #     #   value = "",
+    #     #   placeholder = "Angiv kort, hvad indikatoren udtrykker",
+    #     #   resize = "vertical",
+    #     #   width = "100%",
+    #     #   rows = 4
+    #     # )
+    #
+    #     # Placeholder - panel er nu tom, alle felter flyttet til SPC Preview card sidebar
+    #     shiny::p(
+    #       style = "color: #999; font-style: italic; text-align: center; padding: 20px;",
+    #       "Detaljer-felter vises nu i SPC Preview card sidebar"
+    #     )
+    #   ),
+    #
+    #   # Panel 2: Kolonnematch
+    #   # BEMÆRK: Kolonnematch-felter flyttet til Data card sidebar
+    #   bslib::accordion_panel(
+    #     title = shiny::tagList(shiny::icon("columns"), " Kolonnematch"),
+    #     value = "kolonnematch",
+    #
+    #     # FLYTTET: Kolonnematch-felter nu i Data card sidebar (se create_data_table_card)
+    #     # - x_column (X-akse)
+    #     # - y_column (Y-akse)
+    #     # - n_column (Nævner)
+    #     # - skift_column (Opdel proces)
+    #     # - frys_column (Fastfrys niveau)
+    #     # - kommentar_column (Kommentar)
+    #     # - auto_detect_columns button
+    #
+    #     # Placeholder - panel er nu tom, alle felter flyttet til Data card sidebar
+    #     shiny::p(
+    #       style = "color: #999; font-style: italic; text-align: center; padding: 20px;",
+    #       "Kolonnematch-felter vises nu i Data card sidebar"
+    #     )
+    #   ),
+    #
+    #   # Panel 3: Organisatorisk
+    #   # MIDLERTIDIG SKJULT: Organisatorisk panel flyttes til anden side senere
+    #   # bslib::accordion_panel(
+    #   #   title = shiny::tagList(shiny::icon("building"), " Organisatorisk"),
+    #   #   value = "organisatorisk",
+    #   #   create_unit_selection()
+    #   # )
+    # )
   )
 }
 # ui_welcome_page.R
