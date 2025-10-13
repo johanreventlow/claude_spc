@@ -423,50 +423,50 @@ create_chart_settings_card <- function() {
 # New function for plot-only card
 
 create_plot_only_card <- function() {
-  bslib::layout_sidebar(
-    sidebar = bslib::sidebar(
-      width = "200px",
-      position = "right",
-      # Detaljer fields from accordion
-      shiny::textInput(
-        "target_value",
-        "Udviklingsmål:",
-        value = "",
-        placeholder = "fx >=90%, <25 eller >",
-        width = "100%"
-      ),
-      shiny::textInput(
-        "centerline_value",
-        "Evt. baseline:",
-        value = "",
-        placeholder = "fx 68%, 0,7 el. 22",
-        width = "100%"
-      ),
-      shiny::selectizeInput(
-        "chart_type",
-        "Diagram type:",
-        choices = CHART_TYPES_DA,
-        selected = "run",
-        width = "100%"
-      ),
-      shiny::selectizeInput(
-        "y_axis_unit",
-        "Y-akse enhed:",
-        choices = Y_AXIS_UI_TYPES_DA,
-        selected = "count",
-        width = "100%"
-      )
+  bslib::card(
+    full_screen = TRUE,
+    fillable = TRUE,
+    max_height = "100%",
+    min_height = "calc(50vh - 60px)",
+    bslib::card_header(
+      shiny::div(shiny::icon("chart-line"), " SPC Preview")
     ),
-    bslib::card(
-      full_screen = TRUE,
-      fillable = TRUE,
-      max_height = "100%",
-      min_height = "calc(50vh - 60px)",
-      bslib::card_header(
-        shiny::div(shiny::icon("chart-line"), " SPC Preview")
-      ),
-      bslib::card_body(
-        fill = TRUE,
+    bslib::card_body(
+      fill = TRUE,
+      bslib::layout_sidebar(
+        sidebar = bslib::sidebar(
+          width = "200px",
+          position = "right",
+          # Detaljer fields from accordion
+          shiny::textInput(
+            "target_value",
+            "Udviklingsmål:",
+            value = "",
+            placeholder = "fx >=90%, <25 eller >",
+            width = "100%"
+          ),
+          shiny::textInput(
+            "centerline_value",
+            "Evt. baseline:",
+            value = "",
+            placeholder = "fx 68%, 0,7 el. 22",
+            width = "100%"
+          ),
+          shiny::selectizeInput(
+            "chart_type",
+            "Diagram type:",
+            choices = CHART_TYPES_DA,
+            selected = "run",
+            width = "100%"
+          ),
+          shiny::selectizeInput(
+            "y_axis_unit",
+            "Y-akse enhed:",
+            choices = Y_AXIS_UI_TYPES_DA,
+            selected = "count",
+            width = "100%"
+          )
+        ),
         shiny::div(
           style = "height: 100%",
           visualizationModuleUI("visualization")
@@ -477,106 +477,106 @@ create_plot_only_card <- function() {
 }
 
 create_data_table_card <- function() {
-  bslib::layout_sidebar(
-    sidebar = bslib::sidebar(
-      width = "200px",
-      position = "right",
-      # Kolonnematch fields from accordion
-      shiny::selectizeInput(
-        "x_column",
-        "X-akse (tidsakse):",
-        choices = NULL,
-        selected = NULL,
-        width = "100%"
-      ),
-      shiny::selectizeInput(
-        "y_column",
-        "Y-akse (værdiakse):",
-        choices = NULL,
-        selected = NULL,
-        width = "100%"
-      ),
-      shiny::selectizeInput(
-        "n_column",
-        "Nævner (n):",
-        choices = NULL,
-        selected = NULL,
-        width = "100%"
-      ) |>
-        bslib::tooltip("Run: valgfri. P, P′, U, U′: kræver nævner. I, MR, C, G: ignoreres."),
-      shiny::selectizeInput(
-        "skift_column",
-        "Opdel proces:",
-        choices = NULL,
-        selected = NULL,
-        width = "100%"
-      ),
-      shiny::selectizeInput(
-        "frys_column",
-        "Fastfrys niveau:",
-        choices = NULL,
-        selected = NULL,
-        width = "100%"
-      ),
-      shiny::selectizeInput(
-        "kommentar_column",
-        "Kommentar (noter):",
-        choices = NULL,
-        selected = NULL,
-        width = "100%"
-      ) |>
-        bslib::tooltip("Valgfri: Kolonne med kommentarer"),
+  bslib::card(
+    full_screen = TRUE,
+    min_height = "calc(50vh - 60px)",
+    bslib::card_header(
       shiny::div(
-        style = "padding: 15px 0;",
-        shiny::actionButton(
-          "auto_detect_columns",
-          "Auto-detektér kolonner",
-          icon = shiny::icon("magic"),
-          class = "btn-secondary w-100"
+        style = "display: flex; justify-content: space-between; align-items: center;",
+        shiny::div(shiny::icon("table"), " Data", ),
+        shiny::div(
+          class = "btn-group-sm",
+          shiny::actionButton(
+            "edit_column_names",
+            label = "Redigér kolonnenavne",
+            icon = shiny::icon("edit"),
+            title = "Redigér kolonnenavne",
+            class = "btn-secondary btn-sm"
+          ),
+          shiny::actionButton(
+            "add_column",
+            label = "Tilføj kolonne",
+            icon = shiny::icon("plus"),
+            title = "Tilføj kolonne",
+            class = "btn-secondary btn-sm"
+          ),
+          shiny::actionButton(
+            "add_row",
+            label = "Tilføj række",
+            icon = shiny::icon("plus-square"),
+            title = "Tilføj række",
+            class = "btn-secondary btn-sm"
+          ),
+          # shiny::actionButton(
+          #   "reset_table",
+          #   label = NULL,
+          #   icon = shiny::icon("refresh"),
+          #   title = "Reset tabel",
+          #   class = "btn-outline-warning btn-sm"
+          # )
         )
       )
     ),
-    bslib::card(
-      full_screen = TRUE,
-      min_height = "calc(50vh - 60px)",
-      bslib::card_header(
-        shiny::div(
-          style = "display: flex; justify-content: space-between; align-items: center;",
-          shiny::div(shiny::icon("table"), " Data", ),
+    bslib::card_body(
+      bslib::layout_sidebar(
+        sidebar = bslib::sidebar(
+          width = "200px",
+          position = "right",
+          # Kolonnematch fields from accordion
+          shiny::selectizeInput(
+            "x_column",
+            "X-akse (tidsakse):",
+            choices = NULL,
+            selected = NULL,
+            width = "100%"
+          ),
+          shiny::selectizeInput(
+            "y_column",
+            "Y-akse (værdiakse):",
+            choices = NULL,
+            selected = NULL,
+            width = "100%"
+          ),
+          shiny::selectizeInput(
+            "n_column",
+            "Nævner (n):",
+            choices = NULL,
+            selected = NULL,
+            width = "100%"
+          ) |>
+            bslib::tooltip("Run: valgfri. P, P′, U, U′: kræver nævner. I, MR, C, G: ignoreres."),
+          shiny::selectizeInput(
+            "skift_column",
+            "Opdel proces:",
+            choices = NULL,
+            selected = NULL,
+            width = "100%"
+          ),
+          shiny::selectizeInput(
+            "frys_column",
+            "Fastfrys niveau:",
+            choices = NULL,
+            selected = NULL,
+            width = "100%"
+          ),
+          shiny::selectizeInput(
+            "kommentar_column",
+            "Kommentar (noter):",
+            choices = NULL,
+            selected = NULL,
+            width = "100%"
+          ) |>
+            bslib::tooltip("Valgfri: Kolonne med kommentarer"),
           shiny::div(
-            class = "btn-group-sm",
+            style = "padding: 15px 0;",
             shiny::actionButton(
-              "edit_column_names",
-              label = "Redigér kolonnenavne",
-              icon = shiny::icon("edit"),
-              title = "Redigér kolonnenavne",
-              class = "btn-secondary btn-sm"
-            ),
-            shiny::actionButton(
-              "add_column",
-              label = "Tilføj kolonne",
-              icon = shiny::icon("plus"),
-              title = "Tilføj kolonne",
-              class = "btn-secondary btn-sm"
-            ),
-            shiny::actionButton(
-              "add_row",
-              label = "Tilføj række",
-              icon = shiny::icon("plus-square"),
-              title = "Tilføj række",
-              class = "btn-secondary btn-sm"
-            ),
-            # shiny::actionButton(
-            #   "reset_table",
-            #   label = NULL,
-            #   icon = shiny::icon("refresh"),
-            #   title = "Reset tabel",
-            #   class = "btn-outline-warning btn-sm"
-            # )
+              "auto_detect_columns",
+              "Auto-detektér kolonner",
+              icon = shiny::icon("magic"),
+              class = "btn-secondary w-100"
+            )
           )
-        )
-      ),
-      bslib::card_body(
+        ),
         # Data table using excelR
         excelR::excelOutput("main_data_table", height = "auto")
       )
