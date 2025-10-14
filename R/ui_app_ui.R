@@ -491,13 +491,6 @@ create_data_table_card <- function() {
         shiny::div(
           class = "btn-group-sm",
           shiny::actionButton(
-            "show_column_mapping_modal",
-            label = "Angiv kolonner manuelt",
-            icon = shiny::icon("columns"),
-            title = "Angiv kolonner manuelt",
-            class = "btn-primary btn-sm"
-          ),
-          shiny::actionButton(
             "edit_column_names",
             label = "Redigér kolonnenavne",
             icon = shiny::icon("edit"),
@@ -521,7 +514,25 @@ create_data_table_card <- function() {
         )
       )
     ),
-    bslib::card_body(
+    bslib::layout_sidebar(
+      sidebar = bslib::sidebar(
+        width = "350px",
+        position = "right",
+
+        # Knapper til kolonnematch
+        shiny::actionButton(
+          "show_column_mapping_modal",
+          "Angiv kolonner manuelt",
+          icon = shiny::icon("columns"),
+          class = "btn-primary w-100 mb-2"
+        ),
+        shiny::actionButton(
+          "auto_detect_columns",
+          "Auto-detektér kolonner",
+          icon = shiny::icon("magic"),
+          class = "btn-secondary w-100"
+        )
+      ),
       # Data table using excelR
       excelR::excelOutput("main_data_table", height = "auto")
     )
@@ -539,15 +550,7 @@ create_column_mapping_modal <- function() {
     ),
     size = "l",
     easyClose = TRUE,
-    footer = shiny::div(
-      shiny::actionButton(
-        "auto_detect_columns",
-        "Auto-detektér kolonner",
-        icon = shiny::icon("magic"),
-        class = "btn-secondary"
-      ),
-      shiny::modalButton("Luk", icon = shiny::icon("times"))
-    ),
+    footer = shiny::modalButton("Luk", icon = shiny::icon("times")),
 
     # Column mapping fields in two columns
     bslib::layout_column_wrap(
