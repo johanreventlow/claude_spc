@@ -99,7 +99,11 @@ create_app_state <- function() {
     # FORM- OG STATEHÅNDTERING --------------------------------------------
     form_reset_needed = 0L,
     form_restore_needed = 0L,
-    form_update_needed = 0L
+    form_update_needed = 0L,
+
+    # MODAL LIFECYCLE (PHASE 1: Modal pause protection) ------------------
+    column_mapping_modal_opened = 0L,
+    column_mapping_modal_closed = 0L
   )
 
   # Data Management - Simplified unified structure
@@ -595,6 +599,20 @@ create_emit_api <- function(app_state) {
     form_restore_needed = function() {
       shiny::isolate({
         app_state$events$form_restore_needed <- app_state$events$form_restore_needed + 1L
+      })
+    },
+
+    # Modal lifecycle events (PHASE 1: Modal pause protection)
+    column_mapping_modal_opened = function() {
+      shiny::isolate({
+        app_state$events$column_mapping_modal_opened <- app_state$events$column_mapping_modal_opened + 1L
+        app_state$ui$modal_column_mapping_active <- TRUE
+      })
+    },
+    column_mapping_modal_closed = function() {
+      shiny::isolate({
+        app_state$events$column_mapping_modal_closed <- app_state$events$column_mapping_modal_closed + 1L
+        app_state$ui$modal_column_mapping_active <- FALSE
       })
     }
   )

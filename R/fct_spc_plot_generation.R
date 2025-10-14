@@ -16,40 +16,69 @@ extract_comment_data <- function(data, kommentar_column, qic_data) {
 
   # STABLE ROW MAPPING: Use row-id to correctly map comments to qic_data points
   # This prevents comment drift when qicharts2 reorders/filters rows
-  if (!".original_row_id" %in% names(qic_data)) {
-    log_warn("Missing .original_row_id in qic_data - falling back to positional mapping", .context = "PLOT_COMMENT")
-    # Fallback til gamle positionsbaserede mapping
-    comments_raw <- data[[kommentar_column]]
-    comment_data <- data.frame(
-      x = qic_data$x,
-      y = qic_data$y,
-      comment = comments_raw[1:min(length(comments_raw), nrow(qic_data))],
-      stringsAsFactors = FALSE
-    )
-  } else {
-    # ROBUST MAPPING: Join på .original_row_id for korrekt kommentar-punkt mapping
-    original_data_with_comments <- data.frame(
-      .original_row_id = 1:nrow(data),
-      comment = data[[kommentar_column]],
-      stringsAsFactors = FALSE
-    )
 
-    # Join qic_data med original kommentarer via row-id
-    qic_data_with_comments <- merge(
-      qic_data[, c("x", "y", ".original_row_id")],
-      original_data_with_comments,
-      by = ".original_row_id",
-      all.x = TRUE,
-      sort = FALSE
-    )
-
-    comment_data <- data.frame(
-      x = qic_data_with_comments$x,
-      y = qic_data_with_comments$y,
-      comment = qic_data_with_comments$comment,
-      stringsAsFactors = FALSE
-    )
+  # PHASE 1: STRATEGY 4 - Robust fallback for missing columns
+  # Verify required columns exist before processing
+  if (!all(c("x", "y") %in% names(qic_data))) {
+    log_error("Missing required columns (x or y) in qic_data - cannot extract comments", .context = "PLOT_COMMENT")
+    return(NULL)
   }
+
+  # Regenerate .original_row_id if missing
+  if (!".original_row_id" %in% names(qic_data)) {
+    log_warn("Missing .original_row_id in qic_data - regenerating from row count", .context = "PLOT_COMMENT")
+    qic_data$.original_row_id <- 1:nrow(qic_data)
+  }
+
+  # Build comment mapping with row IDs
+  original_data_with_comments <- data.frame(
+    .original_row_id = 1:nrow(data),
+    comment = data[[kommentar_column]],
+    stringsAsFactors = FALSE
+  )
+
+  # Safe subset: Only include columns that exist
+  subset_cols <- c("x", "y", ".original_row_id")
+  available_cols <- subset_cols[subset_cols %in% names(qic_data)]
+
+  if (length(available_cols) < 3) {
+    log_warn(
+      paste("Incomplete qic_data structure for comment mapping. Available:", paste(available_cols, collapse = ", ")),
+      .context = "PLOT_COMMENT"
+    )
+    return(NULL)
+  }
+
+  # Join qic_data med original kommentarer via row-id
+  qic_data_with_comments <- tryCatch(
+    {
+      merge(
+        qic_data[, available_cols, drop = FALSE],
+        original_data_with_comments,
+        by = ".original_row_id",
+        all.x = TRUE,
+        sort = FALSE
+      )
+    },
+    error = function(e) {
+      log_error(
+        paste("Merge failed in extract_comment_data:", e$message),
+        .context = "PLOT_COMMENT"
+      )
+      return(NULL)
+    }
+  )
+
+  if (is.null(qic_data_with_comments)) {
+    return(NULL)
+  }
+
+  comment_data <- data.frame(
+    x = qic_data_with_comments$x,
+    y = qic_data_with_comments$y,
+    comment = qic_data_with_comments$comment,
+    stringsAsFactors = FALSE
+  )
 
   # Filtrer til kun ikke-tomme kommentarer
   comment_data <- comment_data[

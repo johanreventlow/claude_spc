@@ -219,6 +219,9 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
 
   # Column mapping modal handler
   shiny::observeEvent(input$show_column_mapping_modal, {
+    # PHASE 1: Emit modal opened event to pause observers
+    emit$column_mapping_modal_opened()
+
     # Vis modalen først
     shiny::showModal(create_column_mapping_modal())
 
@@ -278,6 +281,15 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
         )
       })
     }
+
+    # PHASE 1: PRAGMATIC WORKAROUND - Emit modal close after 1 second
+    # This ensures observers resume even if user closes modal immediately
+    # TODO: Replace with proper JavaScript hidden.bs.modal event handler
+    later::later(function() {
+      if (isTRUE(shiny::isolate(app_state$ui$modal_column_mapping_active))) {
+        emit$column_mapping_modal_closed()
+      }
+    }, delay = 1.0)
   })
 
   # Confirm clear saved handler

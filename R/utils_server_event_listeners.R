@@ -809,6 +809,13 @@ register_chart_type_events <- function(app_state, emit, input, session, register
         safe_operation(
           "Adjust y-axis when denominator changed in run chart",
           code = {
+            # PHASE 1: MODAL PAUSE GUARD - Prevent observer firing during modal operations
+            # This prevents plot regeneration when modal populates fields programmatically
+            if (isTRUE(shiny::isolate(app_state$ui$modal_column_mapping_active))) {
+              # Modal is open - skip all observer logic
+              return(invisible(NULL))
+            }
+
             # CRITICAL: Skip ALL logic during programmatic UI updates
             # Token-based check alone is insufficient because updateSelectizeInput
             # may trigger intermediate states (e.g., cleared then set)
