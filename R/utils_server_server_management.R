@@ -217,6 +217,11 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
     show_upload_modal()
   })
 
+  # Column mapping modal handler
+  shiny::observeEvent(input$show_column_mapping_modal, {
+    shiny::showModal(create_column_mapping_modal())
+  })
+
   # Confirm clear saved handler
   shiny::observeEvent(input$confirm_clear_saved, {
     handle_confirm_clear_saved(session, app_state, emit, ui_service)

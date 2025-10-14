@@ -491,6 +491,13 @@ create_data_table_card <- function() {
         shiny::div(
           class = "btn-group-sm",
           shiny::actionButton(
+            "show_column_mapping_modal",
+            label = "Angiv kolonner manuelt",
+            icon = shiny::icon("columns"),
+            title = "Angiv kolonner manuelt",
+            class = "btn-primary btn-sm"
+          ),
+          shiny::actionButton(
             "edit_column_names",
             label = "Redigér kolonnenavne",
             icon = shiny::icon("edit"),
@@ -510,88 +517,96 @@ create_data_table_card <- function() {
             icon = shiny::icon("plus-square"),
             title = "Tilføj række",
             class = "btn-secondary btn-sm"
-          ),
-          # shiny::actionButton(
-          #   "reset_table",
-          #   label = NULL,
-          #   icon = shiny::icon("refresh"),
-          #   title = "Reset tabel",
-          #   class = "btn-outline-warning btn-sm"
-          # )
+          )
         )
       )
     ),
-    # bslib::card_body(
-    bslib::layout_sidebar(
-      sidebar = bslib::sidebar(
-        width = "350px",
-        position = "right",
-        # Kolonnematch fields from accordion
-        # X-akse og Y-akse ved siden af hinanden
-        bslib::layout_column_wrap(
-          width = 1 / 2,
-          shiny::selectizeInput(
-            "x_column",
-            "X-akse (tidsakse):",
-            choices = NULL,
-            selected = NULL,
-            width = "100%"
-          ),
-          shiny::selectizeInput(
-            "y_column",
-            "Y-akse (værdiakse):",
-            choices = NULL,
-            selected = NULL,
-            width = "100%"
-          ),
-          shiny::selectizeInput(
-            "n_column",
-            "Nævner (n):",
-            choices = NULL,
-            selected = NULL,
-            width = "100%"
-          ) |>
-            bslib::tooltip("Run: valgfri. P, P′, U, U′: kræver nævner. I, MR, C, G: ignoreres."),
-          shiny::selectizeInput(
-            "skift_column",
-            "Opdel proces:",
-            choices = NULL,
-            selected = NULL,
-            width = "100%"
-          ),
-          shiny::selectizeInput(
-            "frys_column",
-            "Fastfrys niveau:",
-            choices = NULL,
-            selected = NULL,
-            width = "100%"
-          ),
-          shiny::selectizeInput(
-            "kommentar_column",
-            "Kommentar (noter):",
-            choices = NULL,
-            selected = NULL,
-            width = "100%"
-          )
-        ) |>
-          bslib::tooltip("Valgfri: Kolonne med kommentarer"),
-        # shiny::div(
-        #   style = "padding: 15px 0;",
-        shiny::actionButton(
-          "auto_detect_columns",
-          "Auto-detektér kolonner",
-          icon = shiny::icon("magic"),
-          class = "btn-secondary w-100"
-          # )
-        )
-      ),
+    bslib::card_body(
       # Data table using excelR
       excelR::excelOutput("main_data_table", height = "auto")
     )
   )
-  # )
 }
 
+
+# Modal dialog for column mapping
+#' @export
+create_column_mapping_modal <- function() {
+  shiny::modalDialog(
+    title = shiny::div(
+      shiny::icon("columns"),
+      " Kolonnematch - Angiv kolonner manuelt"
+    ),
+    size = "l",
+    easyClose = TRUE,
+    footer = shiny::div(
+      shiny::actionButton(
+        "auto_detect_columns",
+        "Auto-detektér kolonner",
+        icon = shiny::icon("magic"),
+        class = "btn-secondary"
+      ),
+      shiny::modalButton("Luk", icon = shiny::icon("times"))
+    ),
+
+    # Column mapping fields in two columns
+    bslib::layout_column_wrap(
+      width = 1 / 2,
+
+      # Left column
+      shiny::div(
+        shiny::selectizeInput(
+          "x_column",
+          "X-akse (tidsakse):",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ),
+        shiny::selectizeInput(
+          "y_column",
+          "Y-akse (værdiakse):",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ),
+        shiny::selectizeInput(
+          "n_column",
+          "Nævner (n):",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ) |>
+          bslib::tooltip("Run: valgfri. P, P′, U, U′: kræver nævner. I, MR, C, G: ignoreres.")
+      ),
+
+      # Right column
+      shiny::div(
+        shiny::selectizeInput(
+          "skift_column",
+          "Opdel proces:",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ),
+        shiny::selectizeInput(
+          "frys_column",
+          "Fastfrys niveau:",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ),
+        shiny::selectizeInput(
+          "kommentar_column",
+          "Kommentar (noter):",
+          choices = NULL,
+          selected = NULL,
+          width = "100%"
+        ) |>
+          bslib::tooltip("Valgfri: Kolonne med kommentarer")
+      )
+    )
+  )
+}
 
 # New function for status value boxes
 create_status_value_boxes <- function() {
