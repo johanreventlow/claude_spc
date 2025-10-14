@@ -266,6 +266,23 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       config <- chart_config()
       shiny::req(config)
 
+      # FIX: Hent y_axis_unit tidligt for at afgøre om n_col skal cleares
+      unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
+
+      # FIX: For run charts med y_axis_unit = "count", clear n_col fra config
+      # Run charts kan kun bruge nævner (denominator) når y_axis_unit = "percent"
+      # Dette forhindrer plot generation failure når bruger skifter fra percent til count
+      qic_chart_type <- get_qic_chart_type(config$chart_type %||% "run")
+      if (identical(qic_chart_type, "run") && identical(unit_value, "count")) {
+        config$n_col <- NULL
+        log_debug_kv(
+          message = "Cleared n_col from config for run chart with count mode",
+          chart_type = qic_chart_type,
+          y_axis_unit = unit_value,
+          .context = "[SPC_CONFIG]"
+        )
+      }
+
       skift_config <- skift_config_reactive()
       if (is.null(skift_config) || !is.list(skift_config)) {
         skift_config <- list(show_phases = FALSE, skift_column = NULL)
@@ -273,7 +290,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
 
       frys_column <- frys_config_reactive()
       title_value <- if (!is.null(chart_title_reactive)) chart_title_reactive() else NULL
-      unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
       kommentar_value <- if (!is.null(kommentar_column_reactive)) kommentar_column_reactive() else NULL
       target_text_value <- if (!is.null(target_text_reactive)) target_text_reactive() else NULL
 

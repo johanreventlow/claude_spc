@@ -677,10 +677,19 @@ register_chart_type_events <- function(app_state, emit, input, session, register
     shiny::observeEvent(input$chart_type,
       {
         safe_operation(
-          "Toggle n_column enabled state by chart type",
+          "Toggle n_column enabled state by chart type and y-axis unit",
           code = {
             ct <- input$chart_type %||% "run"
             enabled <- chart_type_requires_denominator(ct)
+
+            # FIX: Special handling for run charts - check y-axis unit too
+            # Run charts don't REQUIRE denominator, but support it with percent y-axis
+            qic_ct <- get_qic_chart_type(ct)
+            if (identical(qic_ct, "run")) {
+              # For run charts, n_column state depends on y-axis unit
+              current_ui <- input$y_axis_unit %||% "count"
+              enabled <- identical(current_ui, "percent") # Enable only for percent, disable for count
+            }
 
             if (enabled) {
               shinyjs::enable("n_column")
@@ -758,7 +767,7 @@ register_chart_type_events <- function(app_state, emit, input, session, register
     shiny::observeEvent(input$y_axis_unit,
       {
         safe_operation(
-          "Auto-select chart type from y-axis UI type",
+          "Auto-select chart type from y-axis UI type and toggle n_column state",
           code = {
             # Consume programmatic token if from updateSelectizeInput
             pending_token <- app_state$ui$pending_programmatic_inputs[["y_axis_unit"]]
@@ -767,6 +776,38 @@ register_chart_type_events <- function(app_state, emit, input, session, register
               return(invisible(NULL))
             }
             ui_type <- input$y_axis_unit %||% "count"
+
+            # FIX: Toggle n_column enabled state for run charts based on y-axis unit
+            # Run chart + "Tal" (count) → n_column DISABLED (because run charts only support numerator OR ratio, not both)
+            # Run chart + "Procent" (percent) → n_column ENABLED (because ratio data requires denominator)
+            ct <- get_qic_chart_type(input$chart_type %||% "run")
+            if (identical(ct, "run")) {
+              if (identical(ui_type, "count")) {
+                # "Tal" enhed valgt - disable n_column
+                shinyjs::disable("n_column")
+                shinyjs::show("n_column_hint")
+                shinyjs::show("n_column_ignore_tt")
+
+                log_debug_kv(
+                  message = "Y-axis changed to count in run chart; disabled n_column",
+                  chart_type = ct,
+                  y_axis_unit = ui_type,
+                  .context = "[Y_AXIS_UI]"
+                )
+              } else if (identical(ui_type, "percent")) {
+                # "Procent" enhed valgt - enable n_column
+                shinyjs::enable("n_column")
+                shinyjs::hide("n_column_hint")
+                shinyjs::hide("n_column_ignore_tt")
+
+                log_debug_kv(
+                  message = "Y-axis changed to percent in run chart; enabled n_column",
+                  chart_type = ct,
+                  y_axis_unit = ui_type,
+                  .context = "[Y_AXIS_UI]"
+                )
+              }
+            }
 
             y_col <- shiny::isolate(app_state$columns$y_column)
             data <- shiny::isolate(app_state$data$current_data)
