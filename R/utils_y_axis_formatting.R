@@ -118,17 +118,30 @@ format_y_axis_count <- function() {
         x <- x_coerced
       }
 
-      # TIDYVERSE: purrr::map_chr + dplyr::case_when replaces sapply + nested if-else
-      x |>
-        purrr::map_chr(~ {
-          dplyr::case_when(
-            is.na(.x) ~ NA_character_,
-            abs(.x) >= 1e9 ~ format_scaled_number(.x, 1e9, " mia."),
-            abs(.x) >= 1e6 ~ format_scaled_number(.x, 1e6, "M"),
-            abs(.x) >= 1e3 ~ format_scaled_number(.x, 1e3, "K"),
-            TRUE ~ format_unscaled_number(.x)
-          )
-        })
+      formatted <- character(length(x))
+
+      for (idx in seq_along(x)) {
+        value <- x[[idx]]
+
+        if (is.na(value)) {
+          formatted[[idx]] <- NA_character_
+          next
+        }
+
+        abs_value <- abs(value)
+
+        formatted[[idx]] <- if (abs_value >= 1e9) {
+          format_scaled_number(value, 1e9, " mia.")
+        } else if (abs_value >= 1e6) {
+          format_scaled_number(value, 1e6, "M")
+        } else if (abs_value >= 1e3) {
+          format_scaled_number(value, 1e3, "K")
+        } else {
+          format_unscaled_number(value)
+        }
+      }
+
+      formatted
     }
   )
 }
