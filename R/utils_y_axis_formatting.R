@@ -101,17 +101,47 @@ format_y_axis_count <- function() {
   ggplot2::scale_y_continuous(
     expand = ggplot2::expansion(mult = c(.25, .25)),
     labels = function(x) {
-      # TIDYVERSE: purrr::map_chr + dplyr::case_when replaces sapply + nested if-else
-      x |>
-        purrr::map_chr(~ {
-          dplyr::case_when(
-            is.na(.x) ~ NA_character_,
-            abs(.x) >= 1e9 ~ format_scaled_number(.x, 1e9, " mia."),
-            abs(.x) >= 1e6 ~ format_scaled_number(.x, 1e6, "M"),
-            abs(.x) >= 1e3 ~ format_scaled_number(.x, 1e3, "K"),
-            TRUE ~ format_unscaled_number(.x)
-          )
-        })
+      # DEFENSIVE INPUT VALIDATION: Handle waiver objects and non-numeric inputs
+      # ggplot2 passes waiver() objects during scale training, which must be returned unchanged
+      # This prevents purrr_error_indexed when processing non-numeric scale inputs
+      if (inherits(x, "waiver")) {
+        return(x)
+      }
+
+      # Coerce to numeric if not already (defensive against character/factor inputs)
+      if (!is.numeric(x)) {
+        x_coerced <- suppressWarnings(as.numeric(as.character(x)))
+        if (all(is.na(x_coerced))) {
+          # If coercion fails completely, return original input unchanged
+          return(x)
+        }
+        x <- x_coerced
+      }
+
+      formatted <- character(length(x))
+
+      for (idx in seq_along(x)) {
+        value <- x[[idx]]
+
+        if (is.na(value)) {
+          formatted[[idx]] <- NA_character_
+          next
+        }
+
+        abs_value <- abs(value)
+
+        formatted[[idx]] <- if (abs_value >= 1e9) {
+          format_scaled_number(value, 1e9, " mia.")
+        } else if (abs_value >= 1e6) {
+          format_scaled_number(value, 1e6, "M")
+        } else if (abs_value >= 1e3) {
+          format_scaled_number(value, 1e3, "K")
+        } else {
+          format_unscaled_number(value)
+        }
+      }
+
+      formatted
     }
   )
 }
@@ -125,6 +155,16 @@ format_y_axis_rate <- function() {
   ggplot2::scale_y_continuous(
     expand = ggplot2::expansion(mult = c(.25, .25)),
     labels = function(x) {
+      # DEFENSIVE INPUT VALIDATION: Handle waiver objects
+      if (inherits(x, "waiver")) {
+        return(x)
+      }
+
+      # Coerce to numeric if needed
+      if (!is.numeric(x)) {
+        x <- suppressWarnings(as.numeric(as.character(x)))
+      }
+
       ifelse(x == round(x),
         format(round(x), decimal.mark = ","),
         format(x, decimal.mark = ",", nsmall = 1)
@@ -164,6 +204,16 @@ format_y_axis_time <- function(qic_data) {
   ggplot2::scale_y_continuous(
     expand = ggplot2::expansion(mult = c(.25, .25)),
     labels = function(x) {
+      # DEFENSIVE INPUT VALIDATION: Handle waiver objects
+      if (inherits(x, "waiver")) {
+        return(x)
+      }
+
+      # Coerce to numeric if needed
+      if (!is.numeric(x)) {
+        x <- suppressWarnings(as.numeric(as.character(x)))
+      }
+
       sapply(x, function(val) format_time_with_unit(val, time_unit))
     }
   )

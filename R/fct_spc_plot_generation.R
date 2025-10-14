@@ -654,12 +654,31 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Extract X-axis data
   x_data <- extract_x_axis_data(data, config$x_col)
 
+  # DEBUG: Log data processing decision
+  log_debug_kv(
+    message = "DATA PROCESSING DECISION",
+    chart_type = chart_type,
+    chart_type_requires_denominator = chart_type_requires_denominator(chart_type),
+    config_n_col = config$n_col %||% "NULL",
+    n_col_in_data = if (!is.null(config$n_col)) config$n_col %in% names(data) else FALSE,
+    y_axis_unit = y_axis_unit,
+    .context = "[DEBUG_PLOT_GEN]"
+  )
+
   # Process data based on chart type
   if (chart_type_requires_denominator(chart_type) && !is.null(config$n_col) && config$n_col %in% names(data)) {
     # Ratio charts (with numerator/denominator)
+    log_debug_kv(
+      message = "Using RATIO chart data processing",
+      .context = "[DEBUG_PLOT_GEN]"
+    )
     data_result <- process_ratio_chart_data(data, config, chart_type, y_axis_unit)
   } else {
     # Standard numeric charts (single value)
+    log_debug_kv(
+      message = "Using STANDARD chart data processing",
+      .context = "[DEBUG_PLOT_GEN]"
+    )
     data_result <- process_standard_chart_data(data, config, chart_type, y_axis_unit)
   }
 
@@ -757,27 +776,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   part_positions <- phase_freeze_config$part_positions
   freeze_position <- phase_freeze_config$freeze_position
 
-  # Build qic call arguments dynamically
-  call_args <- build_qic_call_arguments(
-    x_data = x_data,
-    y_data = y_data,
-    chart_type = chart_type,
-    title_text = title_text,
-    ylab_text = ylab_text,
-    n_data = if (exists("n_data")) n_data else NULL,
-    freeze_position = freeze_position,
-    part_positions = part_positions,
-    target_value = target_value
-  )
-
-  # Clean data and prepare arguments for QIC call
-  call_args <- clean_qic_call_args(call_args)
-
-  if (length(call_args$y) < 3) {
-    stop("For få datapunkter efter rensning (minimum 3 påkrævet)")
-  }
-
-  # Generate SPC data using qicharts2
+  # REMOVED LEGACY CODE PATH (build_qic_call_arguments + clean_qic_call_args)
+  # This caused purrr_error_indexed when processing part positions with wrong data structure
+  # The correct NSE-based code path is executed below in the safe_operation block
 
   # Generate SPC data using qicharts2 and build custom ggplot
   return(safe_operation(
@@ -903,7 +904,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
           # Labels and scale configuration ----
           plot_layers <- c(plot_layers, list(
-            ggplot2::labs(title = call_args$title, x = NULL, y = NULL),
+            ggplot2::labs(title = title_text, x = NULL, y = NULL),
             ggplot2::scale_linetype_manual(
               values = c("FALSE" = "solid", "TRUE" = "12"),
               guide = "none" # Skjul legend

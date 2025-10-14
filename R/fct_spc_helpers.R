@@ -585,19 +585,45 @@ process_phase_freeze_config <- function(data, show_phases, skift_column, frys_co
 validateDataForChart <- function(data, config, chart_type) {
   warnings <- character(0)
 
+  # DEBUG: Log validation inputs
+  log_debug_kv(
+    message = "VALIDATION INPUTS",
+    chart_type = chart_type %||% "NULL",
+    has_data = !is.null(data),
+    data_rows = if (!is.null(data)) nrow(data) else 0,
+    y_col = config$y_col %||% "NULL",
+    n_col = config$n_col %||% "NULL",
+    .context = "[DEBUG_VALIDATION]"
+  )
+
   if (is.null(data) || !is.data.frame(data) || nrow(data) == 0) {
     warnings <- c(warnings, "Ingen data tilgængelig")
+    log_debug_kv(
+      message = "VALIDATION FAILED: No data",
+      .context = "[DEBUG_VALIDATION]"
+    )
     return(list(valid = FALSE, warnings = warnings))
   }
 
   if (is.null(config$y_col) || !config$y_col %in% names(data)) {
     warnings <- c(warnings, "Ingen numerisk kolonne fundet til Y-akse")
+    log_debug_kv(
+      message = "VALIDATION FAILED: No y_col",
+      y_col = config$y_col %||% "NULL",
+      .context = "[DEBUG_VALIDATION]"
+    )
     return(list(valid = FALSE, warnings = warnings))
   }
 
   if (chart_type %in% c("p", "pp", "u", "up")) {
     if (is.null(config$n_col) || !config$n_col %in% names(data)) {
       warnings <- c(warnings, paste("Chart type", chart_type, "kræver en nævner-kolonne"))
+      log_debug_kv(
+        message = "VALIDATION FAILED: Chart type requires denominator",
+        chart_type = chart_type,
+        n_col = config$n_col %||% "NULL",
+        .context = "[DEBUG_VALIDATION]"
+      )
       return(list(valid = FALSE, warnings = warnings))
     }
   }
