@@ -904,7 +904,7 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
 
           # Labels and scale configuration ----
           plot_layers <- c(plot_layers, list(
-            ggplot2::labs(title = call_args$title, x = NULL, y = NULL),
+            ggplot2::labs(title = title_text, x = NULL, y = NULL),
             ggplot2::scale_linetype_manual(
               values = c("FALSE" = "solid", "TRUE" = "12"),
               guide = "none" # Skjul legend
