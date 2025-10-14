@@ -101,6 +101,23 @@ format_y_axis_count <- function() {
   ggplot2::scale_y_continuous(
     expand = ggplot2::expansion(mult = c(.25, .25)),
     labels = function(x) {
+      # DEFENSIVE INPUT VALIDATION: Handle waiver objects and non-numeric inputs
+      # ggplot2 passes waiver() objects during scale training, which must be returned unchanged
+      # This prevents purrr_error_indexed when processing non-numeric scale inputs
+      if (inherits(x, "waiver")) {
+        return(x)
+      }
+
+      # Coerce to numeric if not already (defensive against character/factor inputs)
+      if (!is.numeric(x)) {
+        x_coerced <- suppressWarnings(as.numeric(as.character(x)))
+        if (all(is.na(x_coerced))) {
+          # If coercion fails completely, return original input unchanged
+          return(x)
+        }
+        x <- x_coerced
+      }
+
       # TIDYVERSE: purrr::map_chr + dplyr::case_when replaces sapply + nested if-else
       x |>
         purrr::map_chr(~ {
@@ -125,6 +142,16 @@ format_y_axis_rate <- function() {
   ggplot2::scale_y_continuous(
     expand = ggplot2::expansion(mult = c(.25, .25)),
     labels = function(x) {
+      # DEFENSIVE INPUT VALIDATION: Handle waiver objects
+      if (inherits(x, "waiver")) {
+        return(x)
+      }
+
+      # Coerce to numeric if needed
+      if (!is.numeric(x)) {
+        x <- suppressWarnings(as.numeric(as.character(x)))
+      }
+
       ifelse(x == round(x),
         format(round(x), decimal.mark = ","),
         format(x, decimal.mark = ",", nsmall = 1)
@@ -164,6 +191,16 @@ format_y_axis_time <- function(qic_data) {
   ggplot2::scale_y_continuous(
     expand = ggplot2::expansion(mult = c(.25, .25)),
     labels = function(x) {
+      # DEFENSIVE INPUT VALIDATION: Handle waiver objects
+      if (inherits(x, "waiver")) {
+        return(x)
+      }
+
+      # Coerce to numeric if needed
+      if (!is.numeric(x)) {
+        x <- suppressWarnings(as.numeric(as.character(x)))
+      }
+
       sapply(x, function(val) format_time_with_unit(val, time_unit))
     }
   )
