@@ -233,36 +233,45 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
         col_choices <- setNames(col_names, col_names)
         col_choices <- c("Vælg kolonne" = "", col_choices)
 
+        # Hent nuværende værdier fra app_state (autodetected eller manuelt sat)
+        # Fallback til input$ hvis app_state ikke har værdi
+        current_x <- app_state$columns$mappings$x_column %||% input$x_column
+        current_y <- app_state$columns$mappings$y_column %||% input$y_column
+        current_n <- app_state$columns$mappings$n_column %||% input$n_column
+        current_skift <- app_state$columns$mappings$skift_column %||% input$skift_column
+        current_frys <- app_state$columns$mappings$frys_column %||% input$frys_column
+        current_kommentar <- app_state$columns$mappings$kommentar_column %||% input$kommentar_column
+
         # Opdater hver selectizeInput med nuværende choices og selected værdier
         shiny::updateSelectizeInput(
           session, "x_column",
           choices = col_choices,
-          selected = input$x_column
+          selected = current_x
         )
         shiny::updateSelectizeInput(
           session, "y_column",
           choices = col_choices,
-          selected = input$y_column
+          selected = current_y
         )
         shiny::updateSelectizeInput(
           session, "n_column",
           choices = col_choices,
-          selected = input$n_column
+          selected = current_n
         )
         shiny::updateSelectizeInput(
           session, "skift_column",
           choices = col_choices,
-          selected = input$skift_column
+          selected = current_skift
         )
         shiny::updateSelectizeInput(
           session, "frys_column",
           choices = col_choices,
-          selected = input$frys_column
+          selected = current_frys
         )
         shiny::updateSelectizeInput(
           session, "kommentar_column",
           choices = col_choices,
-          selected = input$kommentar_column
+          selected = current_kommentar
         )
       }
     })
