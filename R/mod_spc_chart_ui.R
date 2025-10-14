@@ -49,7 +49,7 @@ visualizationStatusUI <- function(id) {
   # Value Box Layout --------------------------------------------------------
   # Brug layout_column_wrap for korrekt value box visning
   bslib::layout_column_wrap(
-    width = 1 / 2,
+    width = 1,
     heights_equal = "row",
 
     ## Anhøj Rules Value Boxes

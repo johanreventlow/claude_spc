@@ -809,7 +809,21 @@ register_chart_type_events <- function(app_state, emit, input, session, register
         safe_operation(
           "Adjust y-axis when denominator changed in run chart",
           code = {
-            # Ignore programmatic change of n_column
+            # PHASE 1: MODAL PAUSE GUARD - Prevent observer firing during modal operations
+            # This prevents plot regeneration when modal populates fields programmatically
+            if (isTRUE(shiny::isolate(app_state$ui$modal_column_mapping_active))) {
+              # Modal is open - skip all observer logic
+              return(invisible(NULL))
+            }
+
+            # CRITICAL: Skip ALL logic during programmatic UI updates
+            # Token-based check alone is insufficient because updateSelectizeInput
+            # may trigger intermediate states (e.g., cleared then set)
+            if (isTRUE(shiny::isolate(app_state$ui$updating_programmatically))) {
+              return(invisible(NULL))
+            }
+
+            # Legacy token consumption for backwards compatibility
             pending_token <- app_state$ui$pending_programmatic_inputs[["n_column"]]
             if (!is.null(pending_token) && identical(pending_token$value, input$n_column)) {
               app_state$ui$pending_programmatic_inputs[["n_column"]] <- NULL

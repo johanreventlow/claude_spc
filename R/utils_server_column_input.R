@@ -66,6 +66,17 @@ handle_column_input <- function(col_name, new_value, app_state, emit) {
   input_received_time <- Sys.time()
 
   # ============================================================================
+  # STEP 0: MODAL PAUSE GUARD - Prevent observer firing during modal operations
+  # ============================================================================
+  # PHASE 1: If modal is active, skip all processing
+  # This prevents plot regeneration when modal populates fields programmatically
+
+  if (isTRUE(shiny::isolate(app_state$ui$modal_column_mapping_active))) {
+    # Modal is open - skip all observer logic
+    return(invisible(NULL))
+  }
+
+  # ============================================================================
   # STEP 1: TOKEN CONSUMPTION - Primary loop protection mechanism
   # ============================================================================
   # Check if this input change was triggered by programmatic updateSelectizeInput
@@ -78,7 +89,8 @@ handle_column_input <- function(col_name, new_value, app_state, emit) {
     app_state$ui$pending_programmatic_inputs[[col_name]] <- NULL
 
     # Normalize and update state (still needed for consistency)
-    app_state$columns[[col_name]] <- normalize_column_input(new_value)
+    # CRITICAL FIX: Write to hierarchical mappings structure (app_state$columns$mappings)
+    app_state$columns$mappings[[col_name]] <- normalize_column_input(new_value)
 
     # Track metrics (optional performance monitoring)
     shiny::isolate({
@@ -102,8 +114,9 @@ handle_column_input <- function(col_name, new_value, app_state, emit) {
   # ============================================================================
   # Update app_state to keep it synchronized with UI
   # This ensures app_state always reflects current UI state
+  # CRITICAL FIX: Write to hierarchical mappings structure (app_state$columns$mappings)
 
-  app_state$columns[[col_name]] <- normalized_value
+  app_state$columns$mappings[[col_name]] <- normalized_value
 
   # ============================================================================
   # STEP 4: CACHE INVALIDATION

@@ -217,6 +217,81 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
     show_upload_modal()
   })
 
+  # Column mapping modal handler
+  shiny::observeEvent(input$show_column_mapping_modal, {
+    # PHASE 1: Emit modal opened event to pause observers
+    emit$column_mapping_modal_opened()
+
+    # Vis modalen først
+    shiny::showModal(create_column_mapping_modal())
+
+    # Opdater inputfelterne med nuværende værdier efter modal er åbnet
+    # CRITICAL: Wrap in safe_programmatic_ui_update to prevent reactive loops
+    # NOTE: Do NOT use isolate() here - safe_programmatic_ui_update handles isolation
+
+    # Hent aktuelle data for choices (use isolate only for reading state)
+    current_data <- shiny::isolate(app_state$data$current_data)
+
+    if (!is.null(current_data) && ncol(current_data) > 0) {
+      col_names <- names(current_data)
+      col_choices <- setNames(col_names, col_names)
+      col_choices <- c("Vælg kolonne" = "", col_choices)
+
+      # Hent nuværende værdier fra app_state (autodetected eller manuelt sat)
+      # Fallback til input$ hvis app_state ikke har værdi
+      current_x <- shiny::isolate(app_state$columns$mappings$x_column %||% input$x_column)
+      current_y <- shiny::isolate(app_state$columns$mappings$y_column %||% input$y_column)
+      current_n <- shiny::isolate(app_state$columns$mappings$n_column %||% input$n_column)
+      current_skift <- shiny::isolate(app_state$columns$mappings$skift_column %||% input$skift_column)
+      current_frys <- shiny::isolate(app_state$columns$mappings$frys_column %||% input$frys_column)
+      current_kommentar <- shiny::isolate(app_state$columns$mappings$kommentar_column %||% input$kommentar_column)
+
+      # Wrap all updateSelectizeInput calls in safe_programmatic_ui_update
+      # This adds token protection to prevent observers from firing inappropriately
+      safe_programmatic_ui_update(session, app_state, function() {
+        shiny::updateSelectizeInput(
+          session, "x_column",
+          choices = col_choices,
+          selected = current_x
+        )
+        shiny::updateSelectizeInput(
+          session, "y_column",
+          choices = col_choices,
+          selected = current_y
+        )
+        shiny::updateSelectizeInput(
+          session, "n_column",
+          choices = col_choices,
+          selected = current_n
+        )
+        shiny::updateSelectizeInput(
+          session, "skift_column",
+          choices = col_choices,
+          selected = current_skift
+        )
+        shiny::updateSelectizeInput(
+          session, "frys_column",
+          choices = col_choices,
+          selected = current_frys
+        )
+        shiny::updateSelectizeInput(
+          session, "kommentar_column",
+          choices = col_choices,
+          selected = current_kommentar
+        )
+      })
+    }
+
+    # PHASE 1: PRAGMATIC WORKAROUND - Emit modal close after 1 second
+    # This ensures observers resume even if user closes modal immediately
+    # TODO: Replace with proper JavaScript hidden.bs.modal event handler
+    later::later(function() {
+      if (isTRUE(shiny::isolate(app_state$ui$modal_column_mapping_active))) {
+        emit$column_mapping_modal_closed()
+      }
+    }, delay = 1.0)
+  })
+
   # Confirm clear saved handler
   shiny::observeEvent(input$confirm_clear_saved, {
     handle_confirm_clear_saved(session, app_state, emit, ui_service)
