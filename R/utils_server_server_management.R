@@ -219,7 +219,53 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
 
   # Column mapping modal handler
   shiny::observeEvent(input$show_column_mapping_modal, {
+    # Vis modalen først
     shiny::showModal(create_column_mapping_modal())
+
+    # Opdater inputfelterne med nuværende værdier efter modal er åbnet
+    # Brug isolate for at undgå at triggere reactive afhængigheder
+    shiny::isolate({
+      # Hent aktuelle data for choices
+      current_data <- app_state$data$current_data
+
+      if (!is.null(current_data) && ncol(current_data) > 0) {
+        col_names <- names(current_data)
+        col_choices <- setNames(col_names, col_names)
+        col_choices <- c("Vælg kolonne" = "", col_choices)
+
+        # Opdater hver selectizeInput med nuværende choices og selected værdier
+        shiny::updateSelectizeInput(
+          session, "x_column",
+          choices = col_choices,
+          selected = input$x_column
+        )
+        shiny::updateSelectizeInput(
+          session, "y_column",
+          choices = col_choices,
+          selected = input$y_column
+        )
+        shiny::updateSelectizeInput(
+          session, "n_column",
+          choices = col_choices,
+          selected = input$n_column
+        )
+        shiny::updateSelectizeInput(
+          session, "skift_column",
+          choices = col_choices,
+          selected = input$skift_column
+        )
+        shiny::updateSelectizeInput(
+          session, "frys_column",
+          choices = col_choices,
+          selected = input$frys_column
+        )
+        shiny::updateSelectizeInput(
+          session, "kommentar_column",
+          choices = col_choices,
+          selected = input$kommentar_column
+        )
+      }
+    })
   })
 
   # Confirm clear saved handler
