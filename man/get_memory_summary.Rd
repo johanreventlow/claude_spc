@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_profiling.R
 \name{get_memory_summary}
 \alias{get_memory_summary}
-\title{Get Memory Usage Summary}
+\title{Gets Memory Usage Summary}
 \usage{
 get_memory_summary(memory_log)
 }

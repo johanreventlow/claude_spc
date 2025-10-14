@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_data_signatures.R
 \name{generate_autodetect_cache_key_optimized}
 \alias{generate_autodetect_cache_key_optimized}
-\title{Generate Auto-Detect Cache Key (Optimized)}
+\title{Generates Auto-Detect Cache Key (Optimized)}
 \usage{
 generate_autodetect_cache_key_optimized(data)
 }

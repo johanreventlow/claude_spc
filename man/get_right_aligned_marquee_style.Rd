@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_label_helpers.R
 \name{get_right_aligned_marquee_style}
 \alias{get_right_aligned_marquee_style}
-\title{Get cached right-aligned marquee style}
+\title{Gets cached right-aligned marquee style}
 \usage{
 get_right_aligned_marquee_style(lineheight = 0.9)
 }

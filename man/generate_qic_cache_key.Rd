@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_qic_caching.R
 \name{generate_qic_cache_key}
 \alias{generate_qic_cache_key}
-\title{Generate QIC Cache Key}
+\title{Generates QIC Cache Key}
 \usage{
 generate_qic_cache_key(data, params)
 }

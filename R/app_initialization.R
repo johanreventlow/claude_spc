@@ -234,9 +234,9 @@ verify_initialization_completeness <- function() {
   return(verification)
 }
 
-#' Get Initialization Status Report
+#' Gets Initialization Status Report
 #'
-#' Generate comprehensive report of initialization status.
+#' Generates comprehensive report of initialization status.
 #' Simplified for package-based approach.
 #'
 #' @param init_results Results from initialize_app()

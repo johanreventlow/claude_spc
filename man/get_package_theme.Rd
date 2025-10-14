@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{get_package_theme}
 \alias{get_package_theme}
-\title{Get hospital theme from package environment}
+\title{Gets hospital theme from package environment}
 \usage{
 get_package_theme()
 }
@@ -10,5 +10,5 @@ get_package_theme()
 Bootstrap theme object
 }
 \description{
-Get hospital theme from package environment
+Gets hospital theme from package environment
 }

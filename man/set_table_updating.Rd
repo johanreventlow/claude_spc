@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_table_updating}
 \alias{set_table_updating}
-\title{Set Table Updating Flag}
+\title{Sets Table Updating Flag}
 \usage{
 set_table_updating(app_state, value)
 }

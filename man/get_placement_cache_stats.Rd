@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_label_placement.R
 \name{get_placement_cache_stats}
 \alias{get_placement_cache_stats}
-\title{Get combined placement cache statistics}
+\title{Gets combined placement cache statistics}
 \usage{
 get_placement_cache_stats()
 }

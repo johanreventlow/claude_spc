@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{get_test_mode_auto_load}
 \alias{get_test_mode_auto_load}
-\title{Get test mode auto load setting}
+\title{Gets test mode auto load setting}
 \usage{
 get_test_mode_auto_load()
 }
@@ -10,5 +10,5 @@ get_test_mode_auto_load()
 Boolean indicating if test mode auto load is enabled
 }
 \description{
-Get test mode auto load setting
+Gets test mode auto load setting
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_test_mode_startup_phase}
 \alias{set_test_mode_startup_phase}
-\title{Set Test Mode Startup Phase}
+\title{Sets Test Mode Startup Phase}
 \usage{
 set_test_mode_startup_phase(app_state, phase)
 }

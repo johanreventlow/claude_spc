@@ -12,7 +12,7 @@
 #' @keywords internal
 .data_signature_cache <- new.env(parent = emptyenv())
 
-#' Generate Data Signature (Shared)
+#' Generates Data Signature (Shared)
 #'
 #' Creates a consistent signature for data that can be reused across
 #' multiple caching systems. Uses xxhash64 for speed and caches results.
@@ -115,7 +115,7 @@ generate_shared_data_signature <- function(data, include_structure = TRUE) {
   return(signature)
 }
 
-#' Generate QIC Cache Key (Optimized)
+#' Generates QIC Cache Key (Optimized)
 #'
 #' Creates cache key for QIC results using shared data signatures.
 #' Replaces redundant MD5 hashing with shared xxhash64 signatures.
@@ -161,7 +161,7 @@ generate_qic_cache_key_optimized <- function(data, params) {
   paste0("qic_", data_signature, "_", param_digest)
 }
 
-#' Generate Auto-Detect Cache Key (Optimized)
+#' Generates Auto-Detect Cache Key (Optimized)
 #'
 #' Creates cache key for auto-detection results using shared signatures.
 #'
@@ -192,7 +192,7 @@ clear_data_signature_cache <- function() {
   log_debug("Data signature cache cleared", .context = "DATA_SIGNATURE")
 }
 
-#' Get Data Signature Cache Stats
+#' Gets Data Signature Cache Stats
 #'
 #' Returns statistics about signature cache usage.
 #'

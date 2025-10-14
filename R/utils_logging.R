@@ -465,9 +465,9 @@ set_log_level_info <- function() {
   invisible(NULL)
 }
 
-#' Set custom log level
+#' Sets custom log level
 #'
-#' Set any custom log level by name. Validates input and provides helpful
+#' Sets any custom log level by name. Validates input and provides helpful
 #' error messages for invalid levels.
 #'
 #' @param level Log level string: "DEBUG", "INFO", "WARN", or "ERROR"
@@ -499,7 +499,7 @@ set_log_level <- function(level) {
   }
 }
 
-#' Get current log level name
+#' Gets current log level name
 #'
 #' Returns the current log level as a string for easy checking
 #' and debugging purposes.

@@ -2,7 +2,7 @@
 # Centraliserede validation guard functions for NULL checks og data validation
 # Reducerer 685+ is.null() checks til genbrug patterns
 
-#' Validate Data or Return Fallback
+#' Validates Data or Return Fallback
 #'
 #' Konsolideret guard for data validation med fallback.
 #' Erstatter mønstret: if (!is.null(data) && nrow(data) > 0) { ... }
@@ -84,7 +84,7 @@ value_or_default <- function(value,
   return(value)
 }
 
-#' Validate Column Exists
+#' Validates Column Exists
 #'
 #' Konsolideret guard for kolonne validering.
 #' Erstatter mønstret: if (!is.null(col) && col %in% names(data)) { ... }
@@ -130,7 +130,7 @@ validate_column_exists <- function(data,
   }
 }
 
-#' Validate Function Exists
+#' Validates Function Exists
 #'
 #' Konsolideret guard for function existence check.
 #' Erstatter mønstret: if (exists("func_name", mode = "function") && !is.null(func_name)) { ... }
@@ -152,7 +152,7 @@ validate_function_exists <- function(func_name, envir = .GlobalEnv) {
   return(exists(func_name, mode = "function", envir = envir))
 }
 
-#' Validate Config Value
+#' Validates Config Value
 #'
 #' Konsolideret guard for config value extraction med validation.
 #' Erstatter mønstret: if (!is.null(config$field) && config$field != "") { ... }
@@ -203,7 +203,7 @@ validate_config_value <- function(config,
   return(value)
 }
 
-#' Validate Reactive Value
+#' Validates Reactive Value
 #'
 #' Konsolideret guard for reactive value extraction med safety.
 #' Erstatter mønstret: shiny::isolate(app_state$section$field) %||% default
@@ -257,7 +257,7 @@ validate_reactive_value <- function(reactive_value,
   )
 }
 
-#' Validate State Transition
+#' Validates State Transition
 #'
 #' Konsolideret guard for state transition validation med logging.
 #' Erstatter scattered state checks med centraliseret validation.

@@ -19,7 +19,7 @@
 #' ## Architecture Note (SPRINT 4 Update)
 #'
 #' Event listeners are organized into category-specific registration functions
-#' for better maintainability, but all are orchestrated by setup_event_listeners()
+#' Intended for better maintainability, but all are orchestrated by setup_event_listeners()
 #' to maintain visibility of event ordering and prevent race conditions.
 #'
 #' @name utils_event_system

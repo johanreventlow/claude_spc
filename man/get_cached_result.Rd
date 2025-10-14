@@ -13,7 +13,7 @@ get_cached_result(cache_key)
 Cached result eller NULL hvis ikke fundet/expired
 }
 \description{
-Get Cached Result
+Gets Cached Result
 }
 \details{
 Henter cached result hvis det eksisterer og ikke er expired.

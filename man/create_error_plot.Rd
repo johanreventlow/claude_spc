@@ -7,5 +7,5 @@
 create_error_plot(error_message)
 }
 \description{
-Generate standardized error plot
+Generates standardized error plot
 }

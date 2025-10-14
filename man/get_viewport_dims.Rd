@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_viewport_dims}
 \alias{get_viewport_dims}
-\title{Get Viewport Dimensions}
+\title{Gets Viewport Dimensions}
 \usage{
 get_viewport_dims(app_state)
 }

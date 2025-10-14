@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_autodetect_status}
 \alias{get_autodetect_status}
-\title{Get Auto-Detection Status}
+\title{Gets Auto-Detection Status}
 \usage{
 get_autodetect_status(app_state)
 }

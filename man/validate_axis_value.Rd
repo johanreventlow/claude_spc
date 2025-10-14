@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_y_axis_scaling.R
 \name{validate_axis_value}
 \alias{validate_axis_value}
-\title{Validate normalized axis value}
+\title{Validates normalized axis value}
 \usage{
 validate_axis_value(value, internal_unit)
 }
@@ -15,6 +15,6 @@ validate_axis_value(value, internal_unit)
 List with valid (logical) and message (character)
 }
 \description{
-Validate normalized axis value
+Validates normalized axis value
 }
 \keyword{internal}

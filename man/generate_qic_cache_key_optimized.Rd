@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_data_signatures.R
 \name{generate_qic_cache_key_optimized}
 \alias{generate_qic_cache_key_optimized}
-\title{Generate QIC Cache Key (Optimized)}
+\title{Generates QIC Cache Key (Optimized)}
 \usage{
 generate_qic_cache_key_optimized(data, params)
 }

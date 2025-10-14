@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_error_count}
 \alias{get_error_count}
-\title{Get Error Count}
+\title{Gets Error Count}
 \usage{
 get_error_count(app_state)
 }

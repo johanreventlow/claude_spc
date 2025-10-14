@@ -14,6 +14,6 @@ Sanitized character string
 }
 \description{
 Escaper specialtegn der har betydning i marquee markup
-for at forhindre injection attacks
+Intended for at forhindre injection attacks
 }
 \keyword{internal}

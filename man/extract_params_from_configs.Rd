@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_config_objects.R
 \name{extract_params_from_configs}
 \alias{extract_params_from_configs}
-\title{Extract Individual Parameters from Config Objects}
+\title{Extracts Individual Parameters from Config Objects}
 \usage{
 extract_params_from_configs(plot_cfg, viewport, phases)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_validation_guards.R
 \name{validate_function_exists}
 \alias{validate_function_exists}
-\title{Validate Function Exists}
+\title{Validates Function Exists}
 \usage{
 validate_function_exists(func_name, envir = .GlobalEnv)
 }

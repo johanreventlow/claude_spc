@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_autodetect_unified.R
 \name{update_all_column_mappings}
 \alias{update_all_column_mappings}
-\title{Update All Column Mappings in Unified State}
+\title{Updates All Column Mappings in Unified State}
 \usage{
 update_all_column_mappings(results, existing_columns = NULL, app_state = NULL)
 }

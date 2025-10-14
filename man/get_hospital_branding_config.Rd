@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_cache_generators.R
 \name{get_hospital_branding_config}
 \alias{get_hospital_branding_config}
-\title{Get hospital branding configuration for caching}
+\title{Gets hospital branding configuration for caching}
 \usage{
 get_hospital_branding_config()
 }
@@ -10,5 +10,5 @@ get_hospital_branding_config()
 List with hospital branding configuration
 }
 \description{
-Extract all hospital branding data that can be cached for faster startup
+Extracts all hospital branding data that can be cached for faster startup
 }

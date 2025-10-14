@@ -2,7 +2,7 @@
 % Please edit documentation in R/app_initialization.R
 \name{get_initialization_status_report}
 \alias{get_initialization_status_report}
-\title{Get Initialization Status Report}
+\title{Gets Initialization Status Report}
 \usage{
 get_initialization_status_report(init_results)
 }
@@ -13,6 +13,6 @@ get_initialization_status_report(init_results)
 Data frame with initialization status
 }
 \description{
-Generate comprehensive report of initialization status.
+Generates comprehensive report of initialization status.
 Simplified for package-based approach.
 }

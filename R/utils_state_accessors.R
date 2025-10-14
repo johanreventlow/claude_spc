@@ -33,7 +33,7 @@ NULL
 # DATA ACCESSORS
 # ============================================================================
 
-#' Get Current Data
+#' Gets Current Data
 #'
 #' Safely retrieves the current data from app_state.
 #'
@@ -46,7 +46,7 @@ get_current_data <- function(app_state) {
   shiny::isolate(app_state$data$current_data)
 }
 
-#' Set Current Data
+#' Sets Current Data
 #'
 #' Safely sets the current data in app_state.
 #'
@@ -60,7 +60,7 @@ set_current_data <- function(app_state, value) {
   })
 }
 
-#' Get Original Data
+#' Gets Original Data
 #'
 #' Safely retrieves the original (backup) data from app_state.
 #'
@@ -73,7 +73,7 @@ get_original_data <- function(app_state) {
   shiny::isolate(app_state$data$original_data)
 }
 
-#' Set Original Data
+#' Sets Original Data
 #'
 #' Safely sets the original (backup) data in app_state.
 #'
@@ -100,7 +100,7 @@ is_table_updating <- function(app_state) {
   shiny::isolate(app_state$data$updating_table %||% FALSE)
 }
 
-#' Set Table Updating Flag
+#' Sets Table Updating Flag
 #'
 #' Safely sets the table updating flag.
 #'
@@ -118,7 +118,7 @@ set_table_updating <- function(app_state, value) {
 # COLUMN MANAGEMENT ACCESSORS
 # ============================================================================
 
-#' Get Auto-Detection Status
+#' Gets Auto-Detection Status
 #'
 #' Retrieves the current auto-detection status.
 #'
@@ -138,7 +138,7 @@ get_autodetect_status <- function(app_state) {
   })
 }
 
-#' Set Auto-Detection In Progress
+#' Sets Auto-Detection In Progress
 #'
 #' Safely sets the auto-detection in_progress flag.
 #'
@@ -152,7 +152,7 @@ set_autodetect_in_progress <- function(app_state, value) {
   })
 }
 
-#' Set Auto-Detection Completed
+#' Sets Auto-Detection Completed
 #'
 #' Safely sets the auto-detection completed flag.
 #'
@@ -166,7 +166,7 @@ set_autodetect_completed <- function(app_state, value) {
   })
 }
 
-#' Set Auto-Detection Results
+#' Sets Auto-Detection Results
 #'
 #' Safely stores auto-detection results.
 #'
@@ -181,7 +181,7 @@ set_autodetect_results <- function(app_state, results) {
   })
 }
 
-#' Set Auto-Detection Frozen
+#' Sets Auto-Detection Frozen
 #'
 #' Safely sets the frozen_until_next_trigger flag.
 #'
@@ -195,7 +195,7 @@ set_autodetect_frozen <- function(app_state, value) {
   })
 }
 
-#' Get Column Mappings
+#' Gets Column Mappings
 #'
 #' Retrieves all current column mappings.
 #'
@@ -218,7 +218,7 @@ get_column_mappings <- function(app_state) {
   })
 }
 
-#' Get Specific Column Mapping
+#' Gets Specific Column Mapping
 #'
 #' Retrieves a specific column mapping value.
 #'
@@ -243,7 +243,7 @@ get_column_mapping <- function(app_state, column) {
   })
 }
 
-#' Update Column Mapping
+#' Updates Column Mapping
 #'
 #' Safely updates a single column mapping.
 #'
@@ -277,7 +277,7 @@ update_column_mapping <- function(app_state, column, value) {
   })
 }
 
-#' Update All Column Mappings
+#' Updates All Column Mappings
 #'
 #' Safely updates multiple column mappings at once.
 #'
@@ -317,7 +317,7 @@ is_plot_ready <- function(app_state) {
   shiny::isolate(app_state$visualization$plot_ready %||% FALSE)
 }
 
-#' Set Plot Ready Flag
+#' Sets Plot Ready Flag
 #'
 #' Safely sets the plot ready flag.
 #'
@@ -331,7 +331,7 @@ set_plot_ready <- function(app_state, value) {
   })
 }
 
-#' Get Plot Warnings
+#' Gets Plot Warnings
 #'
 #' Retrieves current plot warnings.
 #'
@@ -344,7 +344,7 @@ get_plot_warnings <- function(app_state) {
   shiny::isolate(app_state$visualization$plot_warnings %||% character(0))
 }
 
-#' Set Plot Warnings
+#' Sets Plot Warnings
 #'
 #' Safely sets plot warnings.
 #'
@@ -358,7 +358,7 @@ set_plot_warnings <- function(app_state, warnings) {
   })
 }
 
-#' Get Plot Object
+#' Gets Plot Object
 #'
 #' Retrieves the current plot object.
 #'
@@ -371,7 +371,7 @@ get_plot_object <- function(app_state) {
   shiny::isolate(app_state$visualization$plot_object)
 }
 
-#' Set Plot Object
+#' Sets Plot Object
 #'
 #' Safely stores the plot object.
 #'
@@ -400,7 +400,7 @@ is_plot_generating <- function(app_state) {
   )
 }
 
-#' Set Plot Generation Flag
+#' Sets Plot Generation Flag
 #'
 #' Sets the circuit breaker flag for plot generation.
 #'
@@ -414,7 +414,7 @@ set_plot_generating <- function(app_state, value) {
   })
 }
 
-#' Get Viewport Dimensions
+#' Gets Viewport Dimensions
 #'
 #' Safely retrieves viewport dimensions with fallback to defaults.
 #'
@@ -445,7 +445,7 @@ get_viewport_dims <- function(app_state) {
   })
 }
 
-#' Set Viewport Dimensions
+#' Sets Viewport Dimensions
 #'
 #' Safely updates viewport dimensions and triggers visualization update.
 #'
@@ -489,7 +489,7 @@ is_file_uploaded <- function(app_state) {
   shiny::isolate(app_state$session$file_uploaded %||% FALSE)
 }
 
-#' Set File Uploaded Flag
+#' Sets File Uploaded Flag
 #'
 #' Safely sets the file uploaded flag.
 #'
@@ -516,7 +516,7 @@ is_user_session_started <- function(app_state) {
   shiny::isolate(app_state$session$user_started_session %||% FALSE)
 }
 
-#' Set User Session Started Flag
+#' Sets User Session Started Flag
 #'
 #' Safely sets the user session started flag.
 #'
@@ -534,7 +534,7 @@ set_user_session_started <- function(app_state, value) {
 # ERROR STATE ACCESSORS
 # ============================================================================
 
-#' Get Last Error
+#' Gets Last Error
 #'
 #' Retrieves the last error details.
 #'
@@ -547,7 +547,7 @@ get_last_error <- function(app_state) {
   shiny::isolate(app_state$errors$last_error)
 }
 
-#' Set Last Error
+#' Sets Last Error
 #'
 #' Safely records error details.
 #'
@@ -562,7 +562,7 @@ set_last_error <- function(app_state, error_info) {
   })
 }
 
-#' Get Error Count
+#' Gets Error Count
 #'
 #' Retrieves the total error count for this session.
 #'
@@ -592,7 +592,7 @@ is_test_mode_enabled <- function(app_state) {
   shiny::isolate(app_state$test_mode$enabled %||% FALSE)
 }
 
-#' Set Test Mode Enabled
+#' Sets Test Mode Enabled
 #'
 #' Safely sets the test mode enabled flag.
 #'
@@ -606,7 +606,7 @@ set_test_mode_enabled <- function(app_state, value) {
   })
 }
 
-#' Get Test Mode Startup Phase
+#' Gets Test Mode Startup Phase
 #'
 #' Retrieves the current test mode startup phase.
 #'
@@ -619,7 +619,7 @@ get_test_mode_startup_phase <- function(app_state) {
   shiny::isolate(app_state$test_mode$startup_phase %||% "initializing")
 }
 
-#' Set Test Mode Startup Phase
+#' Sets Test Mode Startup Phase
 #'
 #' Safely sets the test mode startup phase.
 #'
@@ -662,7 +662,7 @@ is_anhoej_rules_hidden <- function(app_state) {
   shiny::isolate(app_state$ui$hide_anhoej_rules %||% FALSE)
 }
 
-#' Set Anhoej Rules Hidden Flag
+#' Sets Anhoej Rules Hidden Flag
 #'
 #' Safely sets the hide Anhoej rules flag.
 #'
@@ -689,7 +689,7 @@ is_y_axis_autoset_done <- function(app_state) {
   shiny::isolate(app_state$ui$y_axis_unit_autoset_done %||% FALSE)
 }
 
-#' Set Y-Axis Auto-Set Done Flag
+#' Sets Y-Axis Auto-Set Done Flag
 #'
 #' Safely sets the Y-axis auto-set done flag.
 #'

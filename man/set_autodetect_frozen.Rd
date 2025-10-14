@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_autodetect_frozen}
 \alias{set_autodetect_frozen}
-\title{Set Auto-Detection Frozen}
+\title{Sets Auto-Detection Frozen}
 \usage{
 set_autodetect_frozen(app_state, value)
 }

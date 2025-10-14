@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{update_column_mappings}
 \alias{update_column_mappings}
-\title{Update All Column Mappings}
+\title{Updates All Column Mappings}
 \usage{
 update_column_mappings(app_state, mappings)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_validation_guards.R
 \name{validate_reactive_value}
 \alias{validate_reactive_value}
-\title{Validate Reactive Value}
+\title{Validates Reactive Value}
 \usage{
 validate_reactive_value(
   reactive_value,

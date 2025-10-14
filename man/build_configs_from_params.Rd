@@ -55,6 +55,6 @@ Named list with plot_cfg, viewport, phases objects
 }
 \description{
 Internal helper to build config objects from individual parameters
-for backward compatibility.
+Intended for backward compatibility.
 }
 \keyword{internal}

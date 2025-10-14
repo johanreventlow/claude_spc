@@ -14,5 +14,5 @@ List with validation results containing valid, errors, warnings, potential colum
 }
 \description{
 Performs comprehensive validation of uploaded data to ensure it is suitable
-for SPC (Statistical Process Control) analysis. Integrated from validateDataStructure.
+Intended for SPC (Statistical Process Control) analysis. Integrated from validateDataStructure.
 }

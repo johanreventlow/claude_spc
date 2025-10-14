@@ -479,7 +479,7 @@ safe_update_cache_stat <- function(stat_name, value, cache_type = "grob", increm
   )
 }
 
-#' Get grob cache statistics
+#' Gets grob cache statistics
 #'
 #' @return List with cache_size, hits, misses, hit_rate, memory_estimate
 #' @keywords internal
@@ -696,7 +696,7 @@ clear_panel_height_cache <- function() {
   invisible(NULL)
 }
 
-#' Get panel height cache statistics
+#' Gets panel height cache statistics
 #'
 #' @return List with cache_size, hits, misses, hit_rate, memory_estimate
 #' @keywords internal
@@ -920,7 +920,7 @@ unlock_placement_cache_bindings <- function() {
   invisible(success)
 }
 
-#' Get combined placement cache statistics
+#' Gets combined placement cache statistics
 #'
 #' Returns statistics from both panel height and grob height caches in a unified format.
 #'

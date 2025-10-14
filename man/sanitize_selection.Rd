@@ -15,7 +15,7 @@ Sanitized value or NULL if invalid/empty
 \description{
 Centralized input sanitization function that handles character(0),
 NA values, empty strings, and vectors. Used throughout the app
-for consistent dropdown and input validation.
+Intended for consistent dropdown and input validation.
 }
 \details{
 Handles the following cases:

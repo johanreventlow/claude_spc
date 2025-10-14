@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_server_plot_optimization.R
 \name{get_plot_cache_stats}
 \alias{get_plot_cache_stats}
-\title{Get Plot Cache Statistics (K7: Observability)}
+\title{Gets Plot Cache Statistics (K7: Observability)}
 \usage{
 get_plot_cache_stats()
 }

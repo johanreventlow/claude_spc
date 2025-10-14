@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_autodetect_completed}
 \alias{set_autodetect_completed}
-\title{Set Auto-Detection Completed}
+\title{Sets Auto-Detection Completed}
 \usage{
 set_autodetect_completed(app_state, value)
 }

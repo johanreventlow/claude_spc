@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_config_objects.R
 \name{generateSPCPlot_v2}
 \alias{generateSPCPlot_v2}
-\title{Generate SPC Plot (New Parameter Objects API)}
+\title{Generates SPC Plot (New Parameter Objects API)}
 \usage{
 generateSPCPlot_v2(data, config, plot_cfg, viewport, phases)
 }

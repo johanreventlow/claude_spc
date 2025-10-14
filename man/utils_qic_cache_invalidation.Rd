@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_qic_cache_invalidation.R
 \name{utils_qic_cache_invalidation}
 \alias{utils_qic_cache_invalidation}
-\title{QIC Cache Invalidation Utilities}
+\title{QIC: Cache Invalidation Utilities}
 \description{
 Smart, context-aware cache invalidation for QIC plot generation.
 Only clears cache when necessary to optimize performance.

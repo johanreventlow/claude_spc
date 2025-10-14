@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_performance.R
 \name{get_session_cache}
 \alias{get_session_cache}
-\title{Get eller opret session-local cache environment}
+\title{Gets eller opret session-local cache environment}
 \usage{
 get_session_cache(session = NULL)
 }

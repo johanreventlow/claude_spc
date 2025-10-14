@@ -94,7 +94,7 @@ calculate_plot_data_hash <- function(data, config) {
 #' @export
 #'
 #' @details
-#' Update types:
+#' Updates types:
 #' - "none": No changes detected
 #' - "metadata_only": Only metadata changed (title, target, etc.)
 #' - "data_changed": Data or config changed, full regeneration needed

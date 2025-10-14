@@ -13,7 +13,7 @@
 # This prevents pollution of .GlobalEnv
 .claudespc_env <- NULL
 
-#' Get or create the SPCify package environment
+#' Gets or create the SPCify package environment
 #'
 #' Returns the package-level environment used for storing configuration
 #' and global variables. Creates it if it doesn't exist.
@@ -27,7 +27,7 @@ get_claudespc_environment <- function() {
   return(.claudespc_env)
 }
 
-#' Get configuration value from package environment
+#' Gets configuration value from package environment
 #'
 #' @param key Configuration key to retrieve
 #' @param default Default value if key not found
@@ -42,7 +42,7 @@ get_package_config <- function(key, default = NULL) {
   }
 }
 
-#' Get the complete runtime configuration
+#' Gets the complete runtime configuration
 #'
 #' @return Runtime configuration list or NULL
 #' @export
@@ -50,7 +50,7 @@ get_runtime_config <- function() {
   get_package_config("runtime_config", default = NULL)
 }
 
-#' Get test mode auto load setting
+#' Gets test mode auto load setting
 #'
 #' @return Boolean indicating if test mode auto load is enabled
 #' @export
@@ -58,7 +58,7 @@ get_test_mode_auto_load <- function() {
   get_package_config("TEST_MODE_AUTO_LOAD", default = FALSE)
 }
 
-#' Get auto restore enabled setting
+#' Gets auto restore enabled setting
 #'
 #' @return Boolean indicating if auto restore is enabled
 #' @export
@@ -66,7 +66,7 @@ get_auto_restore_enabled <- function() {
   get_package_config("AUTO_RESTORE_ENABLED", default = FALSE)
 }
 
-#' Get hospital name from package environment
+#' Gets hospital name from package environment
 #'
 #' @return Hospital name string
 #' @export
@@ -74,7 +74,7 @@ get_package_hospital_name <- function() {
   get_package_config("HOSPITAL_NAME", default = "Unknown Hospital")
 }
 
-#' Get hospital theme from package environment
+#' Gets hospital theme from package environment
 #'
 #' @return Bootstrap theme object
 #' @export
@@ -82,7 +82,7 @@ get_package_theme <- function() {
   get_package_config("my_theme", default = NULL)
 }
 
-#' Get test mode file path
+#' Gets test mode file path
 #'
 #' @return Test file path string
 #' @export
@@ -90,7 +90,7 @@ get_test_mode_file_path <- function() {
   get_package_config("TEST_MODE_FILE_PATH", default = NULL)
 }
 
-#' Get QIC call counter value
+#' Gets QIC call counter value
 #'
 #' Returns current value of the QIC call counter for performance monitoring.
 #'
@@ -120,7 +120,7 @@ increment_qic_call_counter <- function() {
   return(claudespc_env$qic_call_counter)
 }
 
-#' Get actual QIC call counter value
+#' Gets actual QIC call counter value
 #'
 #' Returns current value of actual qicharts2::qic() calls for performance monitoring.
 #'
@@ -264,7 +264,7 @@ setup_package_runtime_config <- function() {
 }
 
 
-#' Set up resource paths for static files
+#' Sets up resource paths for static files
 #'
 #' @noRd
 setup_resource_paths <- function() {

@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_spc_helpers.R
 \name{validate_spc_inputs}
 \alias{validate_spc_inputs}
-\title{Validate input parameters for SPC plot generation}
+\title{Validates input parameters for SPC plot generation}
 \usage{
 validate_spc_inputs(data, config)
 }
@@ -12,5 +12,5 @@ validate_spc_inputs(data, config)
 \item{config}{Chart configuration}
 }
 \description{
-Validate input parameters for SPC plot generation
+Validates input parameters for SPC plot generation
 }

@@ -2,7 +2,7 @@
 # Ekstraherede data processing utilities fra fct_spc_plot_generation.R
 # Forbedrer modularity og testability
 
-#' Validate SPC plot configuration
+#' Validates SPC plot configuration
 #'
 #' Validerer input-konfiguration for SPC plot generation.
 #' Ekstraeret fra generateSPCPlot for bedre testability.
@@ -218,7 +218,7 @@ calculate_y_axis_data <- function(chart_type, y_data, n_data = NULL) {
   )
 }
 
-#' Generate Y-axis label based on chart type and configuration
+#' Generates Y-axis label based on chart type and configuration
 #'
 #' Genererer Y-axis label baseret på chart type, enheder og kolonnenavne.
 #' Ekstraeret fra generateSPCPlot for consistency og testability.
@@ -263,7 +263,7 @@ generate_y_axis_label <- function(chart_type, y_unit_label, y_col, n_col = NULL)
   )
 }
 
-#' Get unit label with fallback handling
+#' Gets unit label with fallback handling
 #'
 #' Henter unit label fra konfiguration med robust fallback.
 #' Helper function til Y-axis label generation.
@@ -296,7 +296,7 @@ get_safe_unit_label <- function(y_axis_unit, units_config = NULL) {
   )
 }
 
-#' Extract X-axis data with type safety
+#' Extracts X-axis data with type safety
 #'
 #' Ekstraherer X-axis data fra data frame med type safety.
 #' Helper function for plot generation.

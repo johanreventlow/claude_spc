@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_logging.R
 \name{get_log_level_name}
 \alias{get_log_level_name}
-\title{Get current log level name}
+\title{Gets current log level name}
 \usage{
 get_log_level_name()
 }

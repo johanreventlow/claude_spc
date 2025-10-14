@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_logging.R
 \name{set_log_level}
 \alias{set_log_level}
-\title{Set custom log level}
+\title{Sets custom log level}
 \usage{
 set_log_level(level)
 }
@@ -10,7 +10,7 @@ set_log_level(level)
 \item{level}{Log level string: "DEBUG", "INFO", "WARN", or "ERROR"}
 }
 \description{
-Set any custom log level by name. Validates input and provides helpful
+Sets any custom log level by name. Validates input and provides helpful
 error messages for invalid levels.
 }
 \examples{

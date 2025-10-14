@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_performance_monitoring.R
 \name{set_startup_phase}
 \alias{set_startup_phase}
-\title{Set startup phase}
+\title{Sets startup phase}
 \usage{
 set_startup_phase(phase)
 }
@@ -10,5 +10,5 @@ set_startup_phase(phase)
 \item{phase}{Character. Current startup phase}
 }
 \description{
-Set startup phase
+Sets startup phase
 }

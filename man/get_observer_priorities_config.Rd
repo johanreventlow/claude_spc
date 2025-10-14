@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_cache_generators.R
 \name{get_observer_priorities_config}
 \alias{get_observer_priorities_config}
-\title{Get observer priorities configuration for caching}
+\title{Gets observer priorities configuration for caching}
 \usage{
 get_observer_priorities_config()
 }
@@ -10,5 +10,5 @@ get_observer_priorities_config()
 List with observer priorities
 }
 \description{
-Extract observer priorities that can be cached
+Extracts observer priorities that can be cached
 }

@@ -3,7 +3,7 @@
 \docType{data}
 \name{UI_UPDATE_CONFIG}
 \alias{UI_UPDATE_CONFIG}
-\title{UI Update Configuration}
+\title{UI: Update Configuration}
 \format{
 An object of class \code{list} of length 4.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_user_session_started}
 \alias{set_user_session_started}
-\title{Set User Session Started Flag}
+\title{Sets User Session Started Flag}
 \usage{
 set_user_session_started(app_state, value)
 }

@@ -5,7 +5,7 @@
 #' Initialize App Infrastructure
 #'
 #' Sets up core app infrastructure including state management, event system,
-#' UI service, and logging.
+#' UI: service, and logging.
 #'
 #' @param session Shiny session object
 #' @param hashed_token Hashed session token for logging

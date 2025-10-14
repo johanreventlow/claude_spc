@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_qic_preparation.R
 \name{validate_qic_inputs}
 \alias{validate_qic_inputs}
-\title{Validate qic inputs for consistency}
+\title{Validates qic inputs for consistency}
 \usage{
 validate_qic_inputs(
   y,

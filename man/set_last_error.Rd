@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_last_error}
 \alias{set_last_error}
-\title{Set Last Error}
+\title{Sets Last Error}
 \usage{
 set_last_error(app_state, error_info)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_plot_ready}
 \alias{set_plot_ready}
-\title{Set Plot Ready Flag}
+\title{Sets Plot Ready Flag}
 \usage{
 set_plot_ready(app_state, value)
 }

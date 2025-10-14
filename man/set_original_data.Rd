@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_original_data}
 \alias{set_original_data}
-\title{Set Original Data}
+\title{Sets Original Data}
 \usage{
 set_original_data(app_state, value)
 }

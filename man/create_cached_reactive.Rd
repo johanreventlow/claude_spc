@@ -39,7 +39,7 @@ Cached reactive expression
 }
 \description{
 Wrapper omkring shiny::reactive() der tilføjer intelligent caching
-for expensive operations. Cache invalideres automatisk
+Intended for expensive operations. Cache invalideres automatisk
 når dependencies ændres. Bruger session-local cache for isolation.
 
 Wrapper around reactive expressions med caching til expensive operations.

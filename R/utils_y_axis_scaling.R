@@ -443,7 +443,7 @@ normalize_axis_value <- function(x, user_unit = NULL, col_unit = NULL,
 
 # VALIDATION ==================================================================
 
-#' Validate normalized axis value
+#' Validates normalized axis value
 #' @param value Numeric value to validate
 #' @param internal_unit Character. Expected internal unit
 #' @return List with valid (logical) and message (character)

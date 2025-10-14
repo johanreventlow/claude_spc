@@ -1,4 +1,4 @@
-#' UI Column Synchronization Utilities
+#' UI: Column Synchronization Utilities
 #'
 #' Ekstraheret fra utils_server_event_system.R for bedre modularity.
 #' Denne fil indeholder UI synchronization functions for column choice management.
@@ -89,7 +89,7 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
   )
 }
 
-#' Update Column Choices (Unified Event Version)
+#' Updates Column Choices (Unified Event Version)
 #'
 #' Unified version of column choice updates that handles
 #' data changes through the event system.

@@ -31,7 +31,7 @@ Generer responsive marquee label med skalerede font-størrelser
 }
 \details{
 Funktionen bruger \code{label_size} semantik (baseline = 6) frem for \code{base_size} (baseline = 14)
-for at matche legacy SPC plot sizing konventioner.
+Intended for at matche legacy SPC plot sizing konventioner.
 }
 \examples{
 \dontrun{

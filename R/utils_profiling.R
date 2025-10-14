@@ -293,7 +293,7 @@ track_memory_usage <- function(session, interval_seconds = 60, max_samples = 100
   return(memory_log)
 }
 
-#' Get Memory Usage Summary
+#' Gets Memory Usage Summary
 #'
 #' Genererer summary statistik fra memory tracking log.
 #'

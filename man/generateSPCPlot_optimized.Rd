@@ -29,7 +29,7 @@ generateSPCPlot_optimized(
 }
 \description{
 Wrapper around generateSPCPlot that adds intelligent caching
-for significant performance improvements.
+Intended for significant performance improvements.
 }
 \details{
 Performance improvements:

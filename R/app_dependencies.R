@@ -313,9 +313,9 @@ verify_critical_dependencies <- function() {
   return(TRUE)
 }
 
-#' Get Dependency Status Report
+#' Gets Dependency Status Report
 #'
-#' Generate a comprehensive report of all loaded dependencies.
+#' Generates a comprehensive report of all loaded dependencies.
 #'
 #' @return Data frame with dependency status
 get_dependency_status_report <- function() {

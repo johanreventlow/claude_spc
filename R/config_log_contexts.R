@@ -203,7 +203,7 @@ LOG_CONTEXTS <- list(
   )
 )
 
-#' Get log context by category and name
+#' Gets log context by category and name
 #'
 #' Helper function to get a specific log context with validation.
 #'

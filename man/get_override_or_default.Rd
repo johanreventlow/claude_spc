@@ -2,7 +2,7 @@
 % Please edit documentation in R/app_runtime_config.R
 \name{get_override_or_default}
 \alias{get_override_or_default}
-\title{Get Override Value or Default}
+\title{Gets Override Value or Default}
 \usage{
 get_override_or_default(override_options, key, default)
 }

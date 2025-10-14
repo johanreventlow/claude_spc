@@ -2,7 +2,7 @@
 % Please edit documentation in R/config_observer_priorities.R
 \name{get_priority}
 \alias{get_priority}
-\title{Get Observer Priority by Name}
+\title{Gets Observer Priority by Name}
 \usage{
 get_priority(priority_name)
 }

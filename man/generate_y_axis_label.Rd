@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_spc_data_processing.R
 \name{generate_y_axis_label}
 \alias{generate_y_axis_label}
-\title{Generate Y-axis label based on chart type and configuration}
+\title{Generates Y-axis label based on chart type and configuration}
 \usage{
 generate_y_axis_label(chart_type, y_unit_label, y_col, n_col = NULL)
 }

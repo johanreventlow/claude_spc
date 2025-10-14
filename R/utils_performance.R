@@ -47,7 +47,7 @@ measure_reactive_performance <- function(expr, operation_name = "unknown") {
 #' Create cached reactive expression with session-local cache
 #'
 #' Wrapper omkring shiny::reactive() der tilføjer intelligent caching
-#' for expensive operations. Cache invalideres automatisk
+#' Intended for expensive operations. Cache invalideres automatisk
 #' når dependencies ændres. Bruger session-local cache for isolation.
 #'
 #' @param expr Reactive expression der skal caches
@@ -402,7 +402,7 @@ clear_performance_cache <- function(cache_pattern = NULL, session = NULL) {
   }
 }
 
-#' Get performance statistics
+#' Gets performance statistics
 #'
 #' Hent performance statistik for monitoring og debugging.
 #' Returnerer data om cache hits, execution times etc.
@@ -673,7 +673,7 @@ setup_cache_invalidation <- function(cache_key, events, cache_env, session) {
   }
 }
 
-#' Get eller opret session-local cache environment
+#' Gets eller opret session-local cache environment
 #'
 #' Internal helper til at få session-specific cache environment.
 #' Fallback til global cache hvis session ikke er tilgængelig.

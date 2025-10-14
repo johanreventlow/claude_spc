@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_autodetect_in_progress}
 \alias{set_autodetect_in_progress}
-\title{Set Auto-Detection In Progress}
+\title{Sets Auto-Detection In Progress}
 \usage{
 set_autodetect_in_progress(app_state, value)
 }

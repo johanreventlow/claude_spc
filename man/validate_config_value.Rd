@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_validation_guards.R
 \name{validate_config_value}
 \alias{validate_config_value}
-\title{Validate Config Value}
+\title{Validates Config Value}
 \usage{
 validate_config_value(config, field, default = NULL, allow_empty = FALSE)
 }

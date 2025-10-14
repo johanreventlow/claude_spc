@@ -14,7 +14,7 @@
   if (!is.null(lhs)) lhs else rhs
 }
 
-#' Set Application Options (Golem-style)
+#' Sets Application Options (Golem-style)
 #'
 #' Centralized options management following golem patterns. Allows runtime
 #' configuration of app behavior without modifying global state directly.
@@ -70,7 +70,7 @@ set_app_options <- function(options = list()) {
   return(invisible(merged_options))
 }
 
-#' Get Application Option (Golem-style)
+#' Gets Application Option (Golem-style)
 #'
 #' Retrieve application options with fallback to defaults.
 #'
@@ -235,7 +235,7 @@ run_prod <- function(port = NULL,
   return(app_result)
 }
 
-#' Get Application Information (Golem-style)
+#' Gets Application Information (Golem-style)
 #'
 #' Retrieve information about the current application configuration.
 #'
@@ -450,7 +450,7 @@ detect_golem_environment <- function() {
   return("default")
 }
 
-#' Get Fallback Golem Configuration
+#' Gets Fallback Golem Configuration
 #'
 #' Provide fallback configuration when YAML loading fails.
 #'
@@ -536,9 +536,9 @@ apply_golem_config <- function(golem_config) {
   return(invisible(TRUE))
 }
 
-#' Get Current Golem Configuration Summary
+#' Gets Current Golem Configuration Summary
 #'
-#' Get human-readable summary af current golem configuration.
+#' Gets human-readable summary af current golem configuration.
 #'
 #' @return Character vector with configuration summary
 #' @export

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_ui_column_sync.R
 \name{utils_ui_column_sync}
 \alias{utils_ui_column_sync}
-\title{UI Column Synchronization Utilities}
+\title{UI: Column Synchronization Utilities}
 \description{
 Ekstraheret fra utils_server_event_system.R for bedre modularity.
 Denne fil indeholder UI synchronization functions for column choice management.

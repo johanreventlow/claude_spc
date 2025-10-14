@@ -357,7 +357,7 @@ detect_columns_full_analysis <- function(data, app_state = NULL) {
   return(results)
 }
 
-#' Update All Column Mappings in Unified State
+#' Updates All Column Mappings in Unified State
 #'
 #' Centralized function to update all column mappings consistently.
 #'

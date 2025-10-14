@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_viewport_dims}
 \alias{set_viewport_dims}
-\title{Set Viewport Dimensions}
+\title{Sets Viewport Dimensions}
 \usage{
 set_viewport_dims(app_state, width, height, emit = NULL)
 }

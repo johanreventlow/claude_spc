@@ -942,7 +942,7 @@ comprehensive_system_cleanup <- function(app_state) {
   invisible(NULL)
 }
 
-#' Get Performance Report
+#' Gets Performance Report
 #'
 #' Returns a formatted performance report for monitoring system health.
 #'

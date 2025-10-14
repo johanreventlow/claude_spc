@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_performance_caching.R
 \name{generate_data_cache_key}
 \alias{generate_data_cache_key}
-\title{Generate Data-Based Cache Key}
+\title{Generates Data-Based Cache Key}
 \usage{
 generate_data_cache_key(data, prefix = "data", include_names = FALSE)
 }

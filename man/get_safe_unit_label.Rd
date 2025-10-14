@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_spc_data_processing.R
 \name{get_safe_unit_label}
 \alias{get_safe_unit_label}
-\title{Get unit label with fallback handling}
+\title{Gets unit label with fallback handling}
 \usage{
 get_safe_unit_label(y_axis_unit, units_config = NULL)
 }

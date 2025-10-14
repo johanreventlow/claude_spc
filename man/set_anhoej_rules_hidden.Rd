@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_anhoej_rules_hidden}
 \alias{set_anhoej_rules_hidden}
-\title{Set Anhoej Rules Hidden Flag}
+\title{Sets Anhoej Rules Hidden Flag}
 \usage{
 set_anhoej_rules_hidden(app_state, value)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_data_signatures.R
 \name{get_data_signature_cache_stats}
 \alias{get_data_signature_cache_stats}
-\title{Get Data Signature Cache Stats}
+\title{Gets Data Signature Cache Stats}
 \usage{
 get_data_signature_cache_stats()
 }

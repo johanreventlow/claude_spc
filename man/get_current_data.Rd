@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_current_data}
 \alias{get_current_data}
-\title{Get Current Data}
+\title{Gets Current Data}
 \usage{
 get_current_data(app_state)
 }

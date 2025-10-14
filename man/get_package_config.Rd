@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{get_package_config}
 \alias{get_package_config}
-\title{Get configuration value from package environment}
+\title{Gets configuration value from package environment}
 \usage{
 get_package_config(key, default = NULL)
 }
@@ -15,5 +15,5 @@ get_package_config(key, default = NULL)
 Configuration value or default
 }
 \description{
-Get configuration value from package environment
+Gets configuration value from package environment
 }

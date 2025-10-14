@@ -96,7 +96,7 @@ sanitize_column_name <- function(column_name) {
   )
 }
 
-#' Validate and Sanitize File Extensions
+#' Validates and Sanitize File Extensions
 #'
 #' Sikker validation af file extensions med whitelist approach.
 #'

@@ -79,7 +79,7 @@ OBSERVER_PRIORITIES <- list(
 
 ## Observer Priority Helpers -----
 
-#' Get Observer Priority by Name
+#' Gets Observer Priority by Name
 #'
 #' Standardised priority access function for safe retrieval of priority values.
 #'

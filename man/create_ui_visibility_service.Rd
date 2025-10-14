@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_ui_form_helpers.R
 \name{create_ui_visibility_service}
 \alias{create_ui_visibility_service}
-\title{UI Element Visibility Manager}
+\title{UI: Element Visibility Manager}
 \usage{
 create_ui_visibility_service(session)
 }

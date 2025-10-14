@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{get_actual_qic_call_counter}
 \alias{get_actual_qic_call_counter}
-\title{Get actual QIC call counter value}
+\title{Gets actual QIC call counter value}
 \usage{
 get_actual_qic_call_counter()
 }

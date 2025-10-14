@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_data_signatures.R
 \name{generate_shared_data_signature}
 \alias{generate_shared_data_signature}
-\title{Generate Data Signature (Shared)}
+\title{Generates Data Signature (Shared)}
 \usage{
 generate_shared_data_signature(data, include_structure = TRUE)
 }

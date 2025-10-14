@@ -102,7 +102,7 @@ create_card_config <- function(title, height = NULL, full_screen = FALSE) {
 #'
 #' Centralized input sanitization function that handles character(0),
 #' NA values, empty strings, and vectors. Used throughout the app
-#' for consistent dropdown and input validation.
+#' Intended for consistent dropdown and input validation.
 #'
 #' @param input_value Input value to sanitize (can be any type)
 #'

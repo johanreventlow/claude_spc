@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_spc_data_processing.R
 \name{extract_x_axis_data}
 \alias{extract_x_axis_data}
-\title{Extract X-axis data with type safety}
+\title{Extracts X-axis data with type safety}
 \usage{
 extract_x_axis_data(data, x_col)
 }

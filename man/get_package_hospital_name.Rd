@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{get_package_hospital_name}
 \alias{get_package_hospital_name}
-\title{Get hospital name from package environment}
+\title{Gets hospital name from package environment}
 \usage{
 get_package_hospital_name()
 }
@@ -10,5 +10,5 @@ get_package_hospital_name()
 Hospital name string
 }
 \description{
-Get hospital name from package environment
+Gets hospital name from package environment
 }

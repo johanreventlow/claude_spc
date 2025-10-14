@@ -11,7 +11,7 @@
 # Eliminerer redundant style creation når samme lineheight genbruges
 .marquee_style_cache <- new.env(parent = emptyenv())
 
-#' Get cached right-aligned marquee style
+#' Gets cached right-aligned marquee style
 #'
 #' PERFORMANCE: Returnerer cached style object hvis tilgængelig.
 #' Style creation er relativt dyrt (~1-2ms), og styles er immutable baseret
@@ -56,7 +56,7 @@ clear_marquee_style_cache <- function() {
 #' Sanitize text for marquee markup
 #'
 #' Escaper specialtegn der har betydning i marquee markup
-#' for at forhindre injection attacks
+#' Intended for at forhindre injection attacks
 #'
 #' @param text Character string to sanitize
 #' @return Sanitized character string
@@ -241,7 +241,7 @@ format_target_prefix <- function(target_text) {
 #'
 #' @details
 #' Funktionen bruger `label_size` semantik (baseline = 6) frem for `base_size` (baseline = 14)
-#' for at matche legacy SPC plot sizing konventioner.
+#' Intended for at matche legacy SPC plot sizing konventioner.
 #'
 #' @examples
 #' \dontrun{

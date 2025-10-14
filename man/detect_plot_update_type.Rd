@@ -19,7 +19,7 @@ Analyzes changes between current and previous plot state to determine
 the minimum update needed (none, metadata only, or full regeneration).
 }
 \details{
-Update types:
+Updates types:
 \itemize{
 \item "none": No changes detected
 \item "metadata_only": Only metadata changed (title, target, etc.)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_qic_caching.R
 \name{get_or_init_qic_cache}
 \alias{get_or_init_qic_cache}
-\title{Get or Initialize QIC Cache}
+\title{Gets or Initialize QIC Cache}
 \usage{
 get_or_init_qic_cache(app_state)
 }

@@ -4,7 +4,7 @@
 # Dependencies ----------------------------------------------------------------
 # Bruger readxl og readr til fil-import
 
-#' Validate safe file path for uploads
+#' Validates safe file path for uploads
 #' Enhanced path traversal protection for file uploads
 #' @param uploaded_path Path from file upload input
 #' @return Validated safe file path

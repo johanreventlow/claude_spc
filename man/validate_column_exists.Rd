@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_validation_guards.R
 \name{validate_column_exists}
 \alias{validate_column_exists}
-\title{Validate Column Exists}
+\title{Validates Column Exists}
 \usage{
 validate_column_exists(
   data,

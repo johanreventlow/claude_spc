@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_server_plot_optimization.R
 \name{get_y_axis_label_optimized}
 \alias{get_y_axis_label_optimized}
-\title{Get Y-Axis Label with Optimization}
+\title{Gets Y-Axis Label with Optimization}
 \usage{
 get_y_axis_label_optimized(y_axis_unit, y_column)
 }

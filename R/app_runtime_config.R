@@ -276,7 +276,7 @@ apply_runtime_config <- function(config) {
 
 # HELPER FUNCTIONS FOR CONFIGURATION LOGIC ===================================
 
-#' Get Override Value or Default
+#' Gets Override Value or Default
 #'
 #' Utility function to get override value fra options eller return default.
 #'

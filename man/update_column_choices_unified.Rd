@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_ui_column_sync.R
 \name{update_column_choices_unified}
 \alias{update_column_choices_unified}
-\title{Update Column Choices (Unified Event Version)}
+\title{Updates Column Choices (Unified Event Version)}
 \usage{
 update_column_choices_unified(
   app_state,

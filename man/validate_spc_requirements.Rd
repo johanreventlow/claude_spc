@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_server_performance.R
 \name{validate_spc_requirements}
 \alias{validate_spc_requirements}
-\title{Validate SPC Requirements}
+\title{Validates SPC Requirements}
 \usage{
 validate_spc_requirements(data)
 }
@@ -13,5 +13,5 @@ validate_spc_requirements(data)
 Validated data frame or error
 }
 \description{
-Validate that data meets basic SPC requirements
+Validates that data meets basic SPC requirements
 }

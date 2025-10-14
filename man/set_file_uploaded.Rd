@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_file_uploaded}
 \alias{set_file_uploaded}
-\title{Set File Uploaded Flag}
+\title{Sets File Uploaded Flag}
 \usage{
 set_file_uploaded(app_state, value)
 }

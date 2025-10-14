@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_plot_warnings}
 \alias{get_plot_warnings}
-\title{Get Plot Warnings}
+\title{Gets Plot Warnings}
 \usage{
 get_plot_warnings(app_state)
 }

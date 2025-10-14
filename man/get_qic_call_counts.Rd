@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_performance_monitoring.R
 \name{get_qic_call_counts}
 \alias{get_qic_call_counts}
-\title{Get current QIC call counts}
+\title{Gets current QIC call counts}
 \usage{
 get_qic_call_counts()
 }

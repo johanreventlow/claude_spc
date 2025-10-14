@@ -139,7 +139,7 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
   )
 }
 
-#' Validate required objects exist before operation
+#' Validates required objects exist before operation
 #'
 #' Helper function to check that required objects/variables exist
 #' before attempting operations. Prevents common "object not found" errors.

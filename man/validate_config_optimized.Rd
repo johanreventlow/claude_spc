@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_server_plot_optimization.R
 \name{validate_config_optimized}
 \alias{validate_config_optimized}
-\title{Validate Configuration with Optimization}
+\title{Validates Configuration with Optimization}
 \usage{
 validate_config_optimized(config)
 }

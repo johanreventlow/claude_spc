@@ -2,7 +2,7 @@
 % Please edit documentation in R/golem_utils.R
 \name{get_fallback_golem_config}
 \alias{get_fallback_golem_config}
-\title{Get Fallback Golem Configuration}
+\title{Gets Fallback Golem Configuration}
 \usage{
 get_fallback_golem_config(env)
 }

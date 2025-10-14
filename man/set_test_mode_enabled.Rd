@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_test_mode_enabled}
 \alias{set_test_mode_enabled}
-\title{Set Test Mode Enabled}
+\title{Sets Test Mode Enabled}
 \usage{
 set_test_mode_enabled(app_state, value)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_label_placement.R
 \name{get_panel_height_cache_stats}
 \alias{get_panel_height_cache_stats}
-\title{Get panel height cache statistics}
+\title{Gets panel height cache statistics}
 \usage{
 get_panel_height_cache_stats()
 }
@@ -10,6 +10,6 @@ get_panel_height_cache_stats()
 List with cache_size, hits, misses, hit_rate, memory_estimate
 }
 \description{
-Get panel height cache statistics
+Gets panel height cache statistics
 }
 \keyword{internal}

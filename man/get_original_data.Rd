@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_original_data}
 \alias{get_original_data}
-\title{Get Original Data}
+\title{Gets Original Data}
 \usage{
 get_original_data(app_state)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_error_handling.R
 \name{validate_exists}
 \alias{validate_exists}
-\title{Validate required objects exist before operation}
+\title{Validates required objects exist before operation}
 \usage{
 validate_exists(..., error_message = "Required objects not found")
 }

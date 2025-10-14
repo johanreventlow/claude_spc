@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_qic_cache_invalidation.R
 \name{get_cache_invalidation_context}
 \alias{get_cache_invalidation_context}
-\title{Get Cache Invalidation Context}
+\title{Gets Cache Invalidation Context}
 \usage{
 get_cache_invalidation_context(
   update_context = NULL,

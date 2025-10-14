@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_column_mapping}
 \alias{get_column_mapping}
-\title{Get Specific Column Mapping}
+\title{Gets Specific Column Mapping}
 \usage{
 get_column_mapping(app_state, column)
 }

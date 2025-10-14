@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_qic_caching.R
 \name{get_qic_cache_stats}
 \alias{get_qic_cache_stats}
-\title{Get QIC Cache Statistics}
+\title{Gets QIC Cache Statistics}
 \usage{
 get_qic_cache_stats(cache)
 }

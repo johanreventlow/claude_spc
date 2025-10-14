@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_validation_guards.R
 \name{validate_state_transition}
 \alias{validate_state_transition}
-\title{Validate State Transition}
+\title{Validates State Transition}
 \usage{
 validate_state_transition(
   app_state,

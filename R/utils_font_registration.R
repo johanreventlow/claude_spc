@@ -185,7 +185,7 @@ is_roboto_available <- function() {
   )
 }
 
-#' Get Font Registration Status
+#' Gets Font Registration Status
 #'
 #' Returnerer detaljeret status om font-registrering.
 #' Nyttigt til debugging og system-diagnostik.

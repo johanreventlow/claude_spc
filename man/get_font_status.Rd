@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_font_registration.R
 \name{get_font_status}
 \alias{get_font_status}
-\title{Get Font Registration Status}
+\title{Gets Font Registration Status}
 \usage{
 get_font_status()
 }

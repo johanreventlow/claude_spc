@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_input_sanitization.R
 \name{validate_file_extension}
 \alias{validate_file_extension}
-\title{Validate and Sanitize File Extensions}
+\title{Validates and Sanitize File Extensions}
 \usage{
 validate_file_extension(file_ext, allowed_extensions = c("csv", "xlsx", "xls"))
 }

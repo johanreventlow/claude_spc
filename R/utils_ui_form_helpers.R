@@ -141,7 +141,7 @@ create_form_update_service <- function(session) {
   )
 }
 
-#' UI Element Visibility Manager
+#' UI: Element Visibility Manager
 #'
 #' Utility for managing UI element visibility with consistent patterns.
 #' Ekstraeret fra utils_ui_ui_updates.R for bedre separation of concerns.

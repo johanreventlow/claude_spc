@@ -19,7 +19,7 @@
 # Package environment for storing initialized branding
 claudespc_branding <- new.env(parent = emptyenv())
 
-#' Get Brand Configuration File Path
+#' Gets Brand Configuration File Path
 #'
 #' @noRd
 get_brand_config_path <- function() {
@@ -161,7 +161,7 @@ initialize_branding <- function() {
   invisible()
 }
 
-#' Get Hospital Name
+#' Gets Hospital Name
 #'
 #' @return Character string with hospital name
 #' @noRd
@@ -172,7 +172,7 @@ get_hospital_name <- function() {
   claudespc_branding$hospital_name %||% "SPC Hospital"
 }
 
-#' Get Hospital Logo Path
+#' Gets Hospital Logo Path
 #'
 #' @return Character string with logo path
 #' @noRd
@@ -183,7 +183,7 @@ get_hospital_logo_path <- function() {
   claudespc_branding$logo_path %||% "www/SPCify.png"
 }
 
-#' Get Bootstrap Theme
+#' Gets Bootstrap Theme
 #'
 #' @return bslib bootstrap theme object
 #' @noRd
@@ -194,7 +194,7 @@ get_bootstrap_theme <- function() {
   claudespc_branding$theme %||% bslib::bs_theme(version = 5, preset = "flatly")
 }
 
-#' Get Hospital Colors
+#' Gets Hospital Colors
 #'
 #' @return List of hospital colors
 #' @noRd
@@ -209,7 +209,7 @@ get_hospital_colors <- function() {
   )
 }
 
-#' Get Full Brand Configuration
+#' Gets Full Brand Configuration
 #'
 #' @return Complete brand configuration list
 #' @noRd

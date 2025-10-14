@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_server_performance.R
 \name{validate_numeric_column}
 \alias{validate_numeric_column}
-\title{Validate Numeric Column}
+\title{Validates Numeric Column}
 \usage{
 validate_numeric_column(data, column_name)
 }

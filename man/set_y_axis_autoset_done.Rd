@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_y_axis_autoset_done}
 \alias{set_y_axis_autoset_done}
-\title{Set Y-Axis Auto-Set Done Flag}
+\title{Sets Y-Axis Auto-Set Done Flag}
 \usage{
 set_y_axis_autoset_done(app_state, value)
 }

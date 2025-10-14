@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_plot_object}
 \alias{get_plot_object}
-\title{Get Plot Object}
+\title{Gets Plot Object}
 \usage{
 get_plot_object(app_state)
 }

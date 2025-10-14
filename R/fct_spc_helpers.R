@@ -400,7 +400,7 @@ process_chart_title <- function(chart_title_reactive, config) {
   return(title_result)
 }
 
-#' Validate input parameters for SPC plot generation
+#' Validates input parameters for SPC plot generation
 #'
 #' @param data Input data frame
 #' @param config Chart configuration
@@ -423,7 +423,7 @@ validate_spc_inputs <- function(data, config) {
 #' Comprehensive Data Structure Validation for SPC Analysis
 #'
 #' Performs comprehensive validation of uploaded data to ensure it is suitable
-#' for SPC (Statistical Process Control) analysis. Integrated from validateDataStructure.
+#' Intended for SPC (Statistical Process Control) analysis. Integrated from validateDataStructure.
 #'
 #' @param data Data frame with uploaded data to validate
 #' @return List with validation results containing valid, errors, warnings, potential columns

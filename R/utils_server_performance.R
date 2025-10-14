@@ -170,7 +170,7 @@ ensure_standard_columns <- function(data) {
   return(data)
 }
 
-#' Validate Numeric Column
+#' Validates Numeric Column
 #'
 #' Check if a column contains valid numeric data
 #'
@@ -250,9 +250,9 @@ safe_date_parse <- function(date_vector) {
   )
 }
 
-#' Validate SPC Requirements
+#' Validates SPC Requirements
 #'
-#' Validate that data meets basic SPC requirements
+#' Validates that data meets basic SPC requirements
 #'
 #' @param data Data frame to validate
 #' @return Validated data frame or error
@@ -405,7 +405,7 @@ end_perf_timer <- function(start_time, operation_name) {
 
 #' Cache Statistics
 #'
-#' Get statistics about cache usage
+#' Gets statistics about cache usage
 #'
 get_cache_statistics <- function() {
   # Count cache entries

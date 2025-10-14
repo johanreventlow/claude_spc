@@ -16,7 +16,7 @@ reset_qic_counters <- function() {
   log_debug("QIC performance counters reset", .context = "PERFORMANCE_MONITOR")
 }
 
-#' Get current QIC call counts
+#' Gets current QIC call counts
 #'
 #' Returns the current state of QIC calculation counters
 #' M1: Updated to use package environment instead of .GlobalEnv
@@ -252,7 +252,7 @@ track_event <- function(event_name, context = "unknown") {
   log_debug(paste("Event tracked:", event_name), "PERFORMANCE_MONITORING")
 }
 
-#' Set startup phase
+#' Sets startup phase
 #'
 #' @param phase Character. Current startup phase
 #' @export
@@ -277,7 +277,7 @@ set_startup_phase <- function(phase) {
   )
 }
 
-#' Get enhanced startup metrics
+#' Gets enhanced startup metrics
 #'
 #' @return List with all performance metrics
 #' @export

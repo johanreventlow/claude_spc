@@ -8,7 +8,7 @@
 #'
 #' Opretter det centraliserede state management schema for SPC App.
 #' Dette implementerer Phase 4 arkitekturen med single source of truth
-#' for al applikations tilstand.
+#' Intended for al applikations tilstand.
 #'
 #' @return Liste med følgende hovedsektioner:
 #' \describe{

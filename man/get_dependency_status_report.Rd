@@ -2,7 +2,7 @@
 % Please edit documentation in R/app_dependencies.R
 \name{get_dependency_status_report}
 \alias{get_dependency_status_report}
-\title{Get Dependency Status Report}
+\title{Gets Dependency Status Report}
 \usage{
 get_dependency_status_report()
 }
@@ -10,5 +10,5 @@ get_dependency_status_report()
 Data frame with dependency status
 }
 \description{
-Generate a comprehensive report of all loaded dependencies.
+Generates a comprehensive report of all loaded dependencies.
 }

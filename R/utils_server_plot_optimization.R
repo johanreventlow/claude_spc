@@ -4,7 +4,7 @@
 #' Optimized SPC Plot Generation with Caching
 #'
 #' Wrapper around generateSPCPlot that adds intelligent caching
-#' for significant performance improvements.
+#' Intended for significant performance improvements.
 #'
 #' @param data Input data frame
 #' @param config Plot configuration
@@ -175,7 +175,7 @@ parse_columns_batch_optimized <- function(data, config) {
   return(data)
 }
 
-#' Validate Configuration with Optimization
+#' Validates Configuration with Optimization
 #'
 #' Cached configuration validation
 #'
@@ -318,7 +318,7 @@ apply_plot_styling_optimized <- function(plot, config, chart_title_reactive, y_a
   return(styled_plot)
 }
 
-#' Get Y-Axis Label with Optimization
+#' Gets Y-Axis Label with Optimization
 #'
 #' Cached Y-axis label generation
 #'
@@ -510,7 +510,7 @@ setup_plot_cache_maintenance <- function(session = NULL, app_state = NULL) {
   log_debug("Plot cache maintenance scheduled", .context = "CACHE_INIT")
 }
 
-#' Get Plot Cache Statistics (K7: Observability)
+#' Gets Plot Cache Statistics (K7: Observability)
 #'
 #' Returns cache health metrics for monitoring dashboards.
 #'
@@ -548,7 +548,7 @@ get_plot_cache_stats <- function() {
 
 #' Create Plot Cache Key
 #'
-#' Generate unique cache key for plot parameters
+#' Generates unique cache key for plot parameters
 #'
 create_plot_cache_key <- function(data, config, chart_type, target_value, centerline_value, show_phases, skift_column, frys_column, chart_title_reactive, y_axis_unit, kommentar_column) {
   # Create hash of all parameters that affect plot output
@@ -571,7 +571,7 @@ create_plot_cache_key <- function(data, config, chart_type, target_value, center
 
 #' Create Error Plot
 #'
-#' Generate standardized error plot
+#' Generates standardized error plot
 #'
 create_error_plot <- function(error_message) {
   ggplot2::ggplot() +

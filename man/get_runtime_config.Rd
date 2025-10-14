@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{get_runtime_config}
 \alias{get_runtime_config}
-\title{Get the complete runtime configuration}
+\title{Gets the complete runtime configuration}
 \usage{
 get_runtime_config()
 }
@@ -10,5 +10,5 @@ get_runtime_config()
 Runtime configuration list or NULL
 }
 \description{
-Get the complete runtime configuration
+Gets the complete runtime configuration
 }

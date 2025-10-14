@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_label_placement.R
 \name{get_grob_cache_stats}
 \alias{get_grob_cache_stats}
-\title{Get grob cache statistics}
+\title{Gets grob cache statistics}
 \usage{
 get_grob_cache_stats()
 }
@@ -10,6 +10,6 @@ get_grob_cache_stats()
 List with cache_size, hits, misses, hit_rate, memory_estimate
 }
 \description{
-Get grob cache statistics
+Gets grob cache statistics
 }
 \keyword{internal}

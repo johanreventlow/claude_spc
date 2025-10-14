@@ -19,5 +19,5 @@ create_plot_cache_key(
 )
 }
 \description{
-Generate unique cache key for plot parameters
+Generates unique cache key for plot parameters
 }

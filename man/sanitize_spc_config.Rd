@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_spc_data_processing.R
 \name{sanitize_spc_config}
 \alias{sanitize_spc_config}
-\title{Validate SPC plot configuration}
+\title{Validates SPC plot configuration}
 \usage{
 sanitize_spc_config(config)
 }

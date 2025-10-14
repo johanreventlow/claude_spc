@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_last_error}
 \alias{get_last_error}
-\title{Get Last Error}
+\title{Gets Last Error}
 \usage{
 get_last_error(app_state)
 }

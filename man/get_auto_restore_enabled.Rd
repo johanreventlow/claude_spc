@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{get_auto_restore_enabled}
 \alias{get_auto_restore_enabled}
-\title{Get auto restore enabled setting}
+\title{Gets auto restore enabled setting}
 \usage{
 get_auto_restore_enabled()
 }
@@ -10,5 +10,5 @@ get_auto_restore_enabled()
 Boolean indicating if auto restore is enabled
 }
 \description{
-Get auto restore enabled setting
+Gets auto restore enabled setting
 }

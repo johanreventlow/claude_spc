@@ -1,4 +1,4 @@
-#' QIC Cache Invalidation Utilities
+#' QIC: Cache Invalidation Utilities
 #'
 #' Smart, context-aware cache invalidation for QIC plot generation.
 #' Only clears cache when necessary to optimize performance.
@@ -166,7 +166,7 @@ invalidate_qic_cache_smart <- function(app_state, update_context = NULL) {
 }
 
 
-#' Get Cache Invalidation Context
+#' Gets Cache Invalidation Context
 #'
 #' Helper to extract or infer cache invalidation context from various sources.
 #'

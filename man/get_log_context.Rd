@@ -2,7 +2,7 @@
 % Please edit documentation in R/config_log_contexts.R
 \name{get_log_context}
 \alias{get_log_context}
-\title{Get log context by category and name}
+\title{Gets log context by category and name}
 \usage{
 get_log_context(category, context)
 }

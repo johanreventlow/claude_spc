@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_cache_generators.R
 \name{get_chart_types_config}
 \alias{get_chart_types_config}
-\title{Get chart types configuration for caching}
+\title{Gets chart types configuration for caching}
 \usage{
 get_chart_types_config()
 }
@@ -10,5 +10,5 @@ get_chart_types_config()
 List with chart types configuration
 }
 \description{
-Extract chart types configuration that can be cached
+Extracts chart types configuration that can be cached
 }

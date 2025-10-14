@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_validation_guards.R
 \name{validate_data_or_return}
 \alias{validate_data_or_return}
-\title{Validate Data or Return Fallback}
+\title{Validates Data or Return Fallback}
 \usage{
 validate_data_or_return(data, fallback = NULL, min_rows = 1, min_cols = 1)
 }

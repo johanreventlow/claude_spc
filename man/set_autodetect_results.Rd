@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_autodetect_results}
 \alias{set_autodetect_results}
-\title{Set Auto-Detection Results}
+\title{Sets Auto-Detection Results}
 \usage{
 set_autodetect_results(app_state, results)
 }

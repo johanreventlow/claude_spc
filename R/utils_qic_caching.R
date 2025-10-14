@@ -2,7 +2,7 @@
 # QIC Result Caching
 # Sprint 4 Fase 2 - Memoization for expensive QIC calculations
 
-#' Get or Initialize QIC Cache
+#' Gets or Initialize QIC Cache
 #'
 #' Lazily initializes QIC cache if not already created.
 #' This avoids dependency issues with CACHE_CONFIG during app_state initialization.
@@ -160,7 +160,7 @@ create_qic_cache <- function(max_size = 50) {
   )
 }
 
-#' Generate QIC Cache Key
+#' Generates QIC Cache Key
 #'
 #' Creates unique key based on data + parameters.
 #'
@@ -203,7 +203,7 @@ generate_qic_cache_key <- function(data, params) {
 # Caching is now handled via log_qic_call_wrapper() in utils_qic_debug_logging.R
 # This provides better integration with the existing call chain and debug logging
 
-#' Get QIC Cache Statistics
+#' Gets QIC Cache Statistics
 #'
 #' Returns comprehensive statistics about cache usage.
 #'

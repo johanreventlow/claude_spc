@@ -2,7 +2,7 @@
 % Please edit documentation in R/golem_utils.R
 \name{get_golem_config_summary}
 \alias{get_golem_config_summary}
-\title{Get Current Golem Configuration Summary}
+\title{Gets Current Golem Configuration Summary}
 \usage{
 get_golem_config_summary()
 }
@@ -10,5 +10,5 @@ get_golem_config_summary()
 Character vector with configuration summary
 }
 \description{
-Get human-readable summary af current golem configuration.
+Gets human-readable summary af current golem configuration.
 }

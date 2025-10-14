@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_performance_monitoring.R
 \name{get_enhanced_startup_metrics}
 \alias{get_enhanced_startup_metrics}
-\title{Get enhanced startup metrics}
+\title{Gets enhanced startup metrics}
 \usage{
 get_enhanced_startup_metrics()
 }
@@ -10,5 +10,5 @@ get_enhanced_startup_metrics()
 List with all performance metrics
 }
 \description{
-Get enhanced startup metrics
+Gets enhanced startup metrics
 }

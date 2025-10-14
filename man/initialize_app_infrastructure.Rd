@@ -18,7 +18,7 @@ List with app_state, emit, ui_service components
 }
 \description{
 Sets up core app infrastructure including state management, event system,
-UI service, and logging.
+UI: service, and logging.
 }
 \details{
 This function initializes the core infrastructure needed for the SPC app:

@@ -7,5 +7,5 @@
 get_cache_statistics()
 }
 \description{
-Get statistics about cache usage
+Gets statistics about cache usage
 }

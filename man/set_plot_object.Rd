@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_plot_object}
 \alias{set_plot_object}
-\title{Set Plot Object}
+\title{Sets Plot Object}
 \usage{
 set_plot_object(app_state, plot)
 }

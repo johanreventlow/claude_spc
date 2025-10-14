@@ -169,8 +169,8 @@ lazy_load_modules <- function(force_all = FALSE) {
   return(loaded_modules)
 }
 
-#' Get lazy loading status
-#' Get current status of all lazy loaded modules
+#' Gets lazy loading status
+#' Gets current status of all lazy loaded modules
 #'
 #' @return List with module loading status
 #' @export

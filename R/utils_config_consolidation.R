@@ -227,7 +227,7 @@ create_config_registry <- function() {
   )
 }
 
-#' Get global configuration value with fallback
+#' Gets global configuration value with fallback
 #'
 #' Convenience function for accessing configuration values with
 #' automatic fallback handling and type conversion.

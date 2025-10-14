@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{set_plot_generating}
 \alias{set_plot_generating}
-\title{Set Plot Generation Flag}
+\title{Sets Plot Generation Flag}
 \usage{
 set_plot_generating(app_state, value)
 }

@@ -176,7 +176,7 @@ CACHE_CONFIG <- list(
   cleanup_interval_seconds = 300 # How often to run cache cleanup (5 min)
 )
 
-#' UI Update Configuration
+#' UI: Update Configuration
 #'
 #' SPRINT 3: Extracted UI update timing constants
 #'

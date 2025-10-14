@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_config_consolidation.R
 \name{get_config}
 \alias{get_config}
-\title{Get global configuration value with fallback}
+\title{Gets global configuration value with fallback}
 \usage{
 get_config(path, default = NULL, type = "character", config_registry = NULL)
 }

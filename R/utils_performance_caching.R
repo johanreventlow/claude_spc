@@ -112,7 +112,7 @@ create_cached_reactive <- function(reactive_expr, cache_key, cache_timeout = CAC
   }))
 }
 
-#' Generate Data-Based Cache Key
+#' Generates Data-Based Cache Key
 #'
 #' Genererer cache key baseret på data content ved hjælp af digest.
 #' Sikrer at cache keys ændres når data ændres.
@@ -225,7 +225,7 @@ cache_auto_detection_results <- function(data, app_state, force_refresh = FALSE)
 #' Cache Management Functions
 #'
 
-#' Get Cached Result
+#' Gets Cached Result
 #'
 #' Henter cached result hvis det eksisterer og ikke er expired.
 #'

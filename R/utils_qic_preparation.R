@@ -194,7 +194,7 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
 
 # VALIDATION HELPERS ==========================================================
 
-#' Validate qic inputs for consistency
+#' Validates qic inputs for consistency
 #'
 #' Performs sanity checks to catch 100×-mismatch before it reaches qicharts2
 #'

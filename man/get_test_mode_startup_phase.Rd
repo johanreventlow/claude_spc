@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_state_accessors.R
 \name{get_test_mode_startup_phase}
 \alias{get_test_mode_startup_phase}
-\title{Get Test Mode Startup Phase}
+\title{Gets Test Mode Startup Phase}
 \usage{
 get_test_mode_startup_phase(app_state)
 }

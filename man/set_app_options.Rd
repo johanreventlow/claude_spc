@@ -2,7 +2,7 @@
 % Please edit documentation in R/golem_utils.R
 \name{set_app_options}
 \alias{set_app_options}
-\title{Set Application Options (Golem-style)}
+\title{Sets Application Options (Golem-style)}
 \usage{
 set_app_options(options = list())
 }

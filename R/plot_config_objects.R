@@ -316,7 +316,7 @@ print.phase_config <- function(x, ...) {
 # HELPER FUNCTIONS
 # ============================================================================
 
-#' Extract Individual Parameters from Config Objects
+#' Extracts Individual Parameters from Config Objects
 #'
 #' Internal helper to extract parameters from config objects back
 #' to individual values for backward compatibility.
@@ -355,7 +355,7 @@ extract_params_from_configs <- function(plot_cfg, viewport, phases) {
 #' Build Config Objects from Individual Parameters
 #'
 #' Internal helper to build config objects from individual parameters
-#' for backward compatibility.
+#' Intended for backward compatibility.
 #'
 #' @param chart_type Chart type
 #' @param y_axis_unit Y-axis unit
@@ -418,7 +418,7 @@ build_configs_from_params <- function(
 # BACKWARD COMPATIBILITY WRAPPER
 # ============================================================================
 
-#' Generate SPC Plot (New Parameter Objects API)
+#' Generates SPC Plot (New Parameter Objects API)
 #'
 #' Generates an SPC plot using parameter objects instead of individual parameters.
 #' This is the new preferred API that reduces function signature complexity.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/golem_utils.R
 \name{get_app_option}
 \alias{get_app_option}
-\title{Get Application Option (Golem-style)}
+\title{Gets Application Option (Golem-style)}
 \usage{
 get_app_option(option_name, default = NULL)
 }

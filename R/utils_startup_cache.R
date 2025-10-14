@@ -277,8 +277,8 @@ load_cached_startup_data <- function() {
   return(loaded_data)
 }
 
-#' Get startup cache status
-#' Get information about the current startup cache state
+#' Gets startup cache status
+#' Gets information about the current startup cache state
 #'
 #' @return List with cache status information
 #' @export

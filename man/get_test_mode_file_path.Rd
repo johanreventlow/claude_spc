@@ -2,7 +2,7 @@
 % Please edit documentation in R/zzz.R
 \name{get_test_mode_file_path}
 \alias{get_test_mode_file_path}
-\title{Get test mode file path}
+\title{Gets test mode file path}
 \usage{
 get_test_mode_file_path()
 }
@@ -10,5 +10,5 @@ get_test_mode_file_path()
 Test file path string
 }
 \description{
-Get test mode file path
+Gets test mode file path
 }

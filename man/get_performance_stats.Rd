@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils_performance.R
 \name{get_performance_stats}
 \alias{get_performance_stats}
-\title{Get performance statistics}
+\title{Gets performance statistics}
 \usage{
 get_performance_stats()
 }

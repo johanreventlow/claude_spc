@@ -2,7 +2,7 @@
 % Please edit documentation in R/golem_utils.R
 \name{get_app_info}
 \alias{get_app_info}
-\title{Get Application Information (Golem-style)}
+\title{Gets Application Information (Golem-style)}
 \usage{
 get_app_info()
 }
