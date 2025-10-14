@@ -322,9 +322,9 @@ prepare_qic_data_parameters <- function(data, config, x_validation, chart_type) 
       }
     } else {
       # CHARACTER COLUMN: Convert to factor with original row order to prevent alphabetical sorting
-      # Create factor with levels in dataset order using tidyverse approach
-      data[[x_col_name]] <- data[[x_col_name]] |>
-        forcats::fct_inorder()
+      # Create factor with levels in dataset order
+      # BUGFIX: Use base R factor() instead of forcats::fct_inorder() to avoid purrr_error_indexed
+      data[[x_col_name]] <- factor(data[[x_col_name]], levels = unique(data[[x_col_name]]))
       x_col_for_qic <- x_col_name
     }
   } else {
