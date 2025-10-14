@@ -776,27 +776,9 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   part_positions <- phase_freeze_config$part_positions
   freeze_position <- phase_freeze_config$freeze_position
 
-  # Build qic call arguments dynamically
-  call_args <- build_qic_call_arguments(
-    x_data = x_data,
-    y_data = y_data,
-    chart_type = chart_type,
-    title_text = title_text,
-    ylab_text = ylab_text,
-    n_data = if (exists("n_data")) n_data else NULL,
-    freeze_position = freeze_position,
-    part_positions = part_positions,
-    target_value = target_value
-  )
-
-  # Clean data and prepare arguments for QIC call
-  call_args <- clean_qic_call_args(call_args)
-
-  if (length(call_args$y) < 3) {
-    stop("For få datapunkter efter rensning (minimum 3 påkrævet)")
-  }
-
-  # Generate SPC data using qicharts2
+  # REMOVED LEGACY CODE PATH (build_qic_call_arguments + clean_qic_call_args)
+  # This caused purrr_error_indexed when processing part positions with wrong data structure
+  # The correct NSE-based code path is executed below in the safe_operation block
 
   # Generate SPC data using qicharts2 and build custom ggplot
   return(safe_operation(
