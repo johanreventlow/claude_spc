@@ -223,7 +223,7 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
     shiny::showModal(create_column_mapping_modal())
 
     # Opdater inputfelterne med nuværende værdier efter modal er åbnet
-    # Brug isolate for at undgå at triggere reactive afhængigheder
+    # CRITICAL: Wrap in safe_programmatic_ui_update to prevent reactive loops
     shiny::isolate({
       # Hent aktuelle data for choices
       current_data <- app_state$data$current_data
@@ -242,37 +242,40 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
         current_frys <- app_state$columns$mappings$frys_column %||% input$frys_column
         current_kommentar <- app_state$columns$mappings$kommentar_column %||% input$kommentar_column
 
-        # Opdater hver selectizeInput med nuværende choices og selected værdier
-        shiny::updateSelectizeInput(
-          session, "x_column",
-          choices = col_choices,
-          selected = current_x
-        )
-        shiny::updateSelectizeInput(
-          session, "y_column",
-          choices = col_choices,
-          selected = current_y
-        )
-        shiny::updateSelectizeInput(
-          session, "n_column",
-          choices = col_choices,
-          selected = current_n
-        )
-        shiny::updateSelectizeInput(
-          session, "skift_column",
-          choices = col_choices,
-          selected = current_skift
-        )
-        shiny::updateSelectizeInput(
-          session, "frys_column",
-          choices = col_choices,
-          selected = current_frys
-        )
-        shiny::updateSelectizeInput(
-          session, "kommentar_column",
-          choices = col_choices,
-          selected = current_kommentar
-        )
+        # Wrap all updateSelectizeInput calls in safe_programmatic_ui_update
+        # This adds token protection to prevent observers from firing inappropriately
+        safe_programmatic_ui_update(session, app_state, function() {
+          shiny::updateSelectizeInput(
+            session, "x_column",
+            choices = col_choices,
+            selected = current_x
+          )
+          shiny::updateSelectizeInput(
+            session, "y_column",
+            choices = col_choices,
+            selected = current_y
+          )
+          shiny::updateSelectizeInput(
+            session, "n_column",
+            choices = col_choices,
+            selected = current_n
+          )
+          shiny::updateSelectizeInput(
+            session, "skift_column",
+            choices = col_choices,
+            selected = current_skift
+          )
+          shiny::updateSelectizeInput(
+            session, "frys_column",
+            choices = col_choices,
+            selected = current_frys
+          )
+          shiny::updateSelectizeInput(
+            session, "kommentar_column",
+            choices = col_choices,
+            selected = current_kommentar
+          )
+        })
       }
     })
   })
