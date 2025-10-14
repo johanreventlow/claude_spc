@@ -269,6 +269,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
       # FIX: Hent y_axis_unit tidligt for at afgøre om n_col skal cleares
       unit_value <- if (!is.null(y_axis_unit_reactive)) y_axis_unit_reactive() else "count"
 
+      # DEBUG: Log config BEFORE n_col clearing
+      log_debug_kv(
+        message = "CONFIG BEFORE n_col clearing",
+        chart_type = config$chart_type %||% "run",
+        y_axis_unit = unit_value,
+        x_col = config$x_col %||% "NULL",
+        y_col = config$y_col %||% "NULL",
+        n_col = config$n_col %||% "NULL",
+        .context = "[DEBUG_CONFIG]"
+      )
+
       # FIX: For run charts med y_axis_unit = "count", clear n_col fra config
       # Run charts kan kun bruge nævner (denominator) når y_axis_unit = "percent"
       # Dette forhindrer plot generation failure når bruger skifter fra percent til count
@@ -282,6 +293,17 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           .context = "[SPC_CONFIG]"
         )
       }
+
+      # DEBUG: Log config AFTER n_col clearing
+      log_debug_kv(
+        message = "CONFIG AFTER n_col clearing",
+        chart_type = config$chart_type %||% "run",
+        y_axis_unit = unit_value,
+        x_col = config$x_col %||% "NULL",
+        y_col = config$y_col %||% "NULL",
+        n_col = config$n_col %||% "NULL",
+        .context = "[DEBUG_CONFIG]"
+      )
 
       skift_config <- skift_config_reactive()
       if (is.null(skift_config) || !is.list(skift_config)) {

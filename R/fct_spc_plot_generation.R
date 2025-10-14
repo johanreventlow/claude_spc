@@ -654,12 +654,31 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
   # Extract X-axis data
   x_data <- extract_x_axis_data(data, config$x_col)
 
+  # DEBUG: Log data processing decision
+  log_debug_kv(
+    message = "DATA PROCESSING DECISION",
+    chart_type = chart_type,
+    chart_type_requires_denominator = chart_type_requires_denominator(chart_type),
+    config_n_col = config$n_col %||% "NULL",
+    n_col_in_data = if (!is.null(config$n_col)) config$n_col %in% names(data) else FALSE,
+    y_axis_unit = y_axis_unit,
+    .context = "[DEBUG_PLOT_GEN]"
+  )
+
   # Process data based on chart type
   if (chart_type_requires_denominator(chart_type) && !is.null(config$n_col) && config$n_col %in% names(data)) {
     # Ratio charts (with numerator/denominator)
+    log_debug_kv(
+      message = "Using RATIO chart data processing",
+      .context = "[DEBUG_PLOT_GEN]"
+    )
     data_result <- process_ratio_chart_data(data, config, chart_type, y_axis_unit)
   } else {
     # Standard numeric charts (single value)
+    log_debug_kv(
+      message = "Using STANDARD chart data processing",
+      .context = "[DEBUG_PLOT_GEN]"
+    )
     data_result <- process_standard_chart_data(data, config, chart_type, y_axis_unit)
   }
 
