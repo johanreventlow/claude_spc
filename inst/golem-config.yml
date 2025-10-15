@@ -77,6 +77,12 @@ default:
     enable_session_debugging: false
     cleanup_on_disconnect: true
 
+  # Migration and experimental features
+  features:
+    use_bfhchart: false                    # BFHchart backend (default: qicharts2)
+    bfhchart_version_required: "0.1.0"
+    bfhchart_supported_types: ["run", "i", "p", "c", "u"]  # Validated chart types
+
 # DEVELOPMENT CONFIGURATION ==================================================
 # Optimized for developer productivity and debugging
 
