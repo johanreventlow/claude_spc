@@ -28,7 +28,7 @@ Imports:
     ggpp (>= 0.5.0),
     ggrepel (>= 0.9.0),
     geomtextpath (>= 0.1.0),
-    BFHchart (>= 0.1.0),
+    BFHcharts (>= 0.1.0),
     readr (>= 2.0.0),
     readxl (>= 1.4.0),
     scales (>= 1.2.0),
@@ -66,7 +66,7 @@ Suggests:
     covr (>= 3.6.0),
     qicharts2 (>= 0.7.0)
 Config/testthat/edition: 3
-Config/Notes: qicharts2 moved to Suggests for regression testing during BFHchart migration
+Config/Notes: qicharts2 moved to Suggests for regression testing during BFHcharts migration
 VignetteBuilder: knitr
 RemoteType: local
 RemotePkgRef: local::.

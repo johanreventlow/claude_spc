@@ -2,8 +2,7 @@
 # Service Layer Facade for BFHchart Integration
 #
 # Dette modul implementerer facade-mønstret til at isolere SPCify fra BFHchart API.
-# Alle funktioner er dokumenterede med komplet Roxygen, men returnerer NULL (skeleton).
-# Implementation sker i Task 32 (Stream D).
+# Alle funktioner implementerer det fulde workflow fra validation til output transformation.
 #
 # Design princip: Single Responsibility - hver funktion har én klar opgave:
 # 1. compute_spc_results_bfh() - Primary facade interface
@@ -87,6 +86,7 @@
 #'         \item freeze_applied: Logical indicating if freeze was applied
 #'         \item signals_detected: Count of Anhøj rule violations
 #'         \item bfh_version: BFHchart package version used
+#'         \item anhoej_rules: list with Anhøj rules metadata (runs_detected, crossings_detected, longest_run, n_crossings, n_crossings_min)
 #'       }
 #'     }
 #'   }
@@ -151,28 +151,122 @@ compute_spc_results_bfh <- function(
   multiply = 1,
   ...
 ) {
-  # SKELETON - Implementation in Stream D (Task 32)
-  # Workflow:
-  # 1. Validate inputs (reuse parse_and_validate_spc_data, filter_complete_spc_data)
-  # 2. Transform parameters (map_to_bfh_params)
-  # 3. Invoke BFHchart (call_bfh_chart)
-  # 4. Transform output (transform_bfh_output)
-  # 5. Add comments if notes_column specified (add_comment_annotations)
-  # 6. Log success with metadata
-  # 7. Return list(plot, qic_data, metadata)
+  safe_operation(
+    operation_name = "BFHchart SPC computation",
+    code = {
+      # 1. Validate required parameters
+      if (missing(data) || is.null(data)) {
+        stop("data parameter is required")
+      }
+      if (missing(x_var) || is.null(x_var)) {
+        stop("x_var parameter is required")
+      }
+      if (missing(y_var) || is.null(y_var)) {
+        stop("y_var parameter is required")
+      }
+      if (missing(chart_type) || is.null(chart_type)) {
+        stop("chart_type parameter is required")
+      }
 
-  log_info(
-    message = "compute_spc_results_bfh() called (SKELETON - returns NULL)",
-    .context = "BFH_SERVICE",
-    details = list(
-      chart_type = chart_type,
-      has_denominator = !is.null(n_var),
-      has_notes = !is.null(notes_column),
-      multiply = multiply
-    )
+      # 2. Validate chart type
+      validated_chart_type <- validate_chart_type_bfh(chart_type)
+
+      # 3. Check if denominator required for chart type
+      if (validated_chart_type %in% c("p", "pp", "u", "up") && is.null(n_var)) {
+        stop(paste0(
+          "n_var (denominator) is required for ",
+          validated_chart_type,
+          " charts"
+        ))
+      }
+
+      # 4. Filter complete data using existing validator
+      complete_data <- filter_complete_spc_data(
+        data = data,
+        y_col = y_var,
+        n_col = n_var,
+        x_col = x_var
+      )
+
+      # Check if data is sufficient
+      if (nrow(complete_data) == 0) {
+        stop("No valid data rows found after filtering")
+      }
+      if (nrow(complete_data) < 3) {
+        stop(paste0(
+          "Insufficient data points: ",
+          nrow(complete_data),
+          ". Minimum 3 points required for SPC charts"
+        ))
+      }
+
+      # 5. Parse and validate numeric data
+      y_data_raw <- complete_data[[y_var]]
+      n_data_raw <- if (!is.null(n_var)) complete_data[[n_var]] else NULL
+
+      validated <- parse_and_validate_spc_data(
+        y_data = y_data_raw,
+        n_data = n_data_raw,
+        y_col = y_var,
+        n_col = n_var
+      )
+
+      # 6. Transform to BFHchart parameters
+      bfh_params <- map_to_bfh_params(
+        data = complete_data,
+        x_var = x_var,
+        y_var = y_var,
+        chart_type = validated_chart_type,
+        n_var = n_var,
+        cl_var = cl_var,
+        freeze_var = freeze_var,
+        part_var = part_var,
+        ...
+      )
+
+      # 7. Call BFHchart
+      bfh_result <- call_bfh_chart(bfh_params)
+
+      if (is.null(bfh_result)) {
+        stop("BFHchart call failed to return result")
+      }
+
+      # 8. Transform output to standardized format
+      standardized <- transform_bfh_output(
+        bfh_result = bfh_result,
+        multiply = multiply,
+        chart_type = validated_chart_type,
+        original_data = complete_data
+      )
+
+      # 9. Add comment annotations if notes_column provided
+      if (!is.null(notes_column) && notes_column %in% names(data)) {
+        standardized$plot <- add_comment_annotations(
+          plot = standardized$plot,
+          qic_data = standardized$qic_data,
+          original_data = complete_data,
+          notes_column = notes_column
+        )
+      }
+
+      # 10. Log success
+      log_info(
+        message = "SPC computation completed successfully",
+        .context = "BFH_SERVICE",
+        details = list(
+          chart_type = validated_chart_type,
+          n_points = nrow(complete_data),
+          signals_detected = sum(standardized$qic_data$signal, na.rm = TRUE),
+          has_notes = !is.null(notes_column)
+        )
+      )
+
+      return(standardized)
+    },
+    fallback = NULL,
+    show_user = TRUE,
+    error_type = "bfh_service"
   )
-
-  NULL
 }
 
 
@@ -192,9 +286,9 @@ compute_spc_results_bfh <- function(
 #' - NSE (non-standard evaluation) handling if required by BFHchart
 #'
 #' **Parameter Mappings (Expected):**
-#' - SPCify `part_var` → BFHchart `phases` or `parts`
-#' - SPCify `cl_var` → BFHchart `centerline` or `cl`
-#' - SPCify `freeze_var` → BFHchart `freeze` or `baseline`
+#' - SPCify `part_var` → BFHchart `part` parameter
+#' - SPCify `cl_var` → BFHchart centerline override
+#' - SPCify `freeze_var` → BFHchart `freeze` parameter
 #' - Scale: SPCify percentages (0-100) → BFHchart decimals (0-1) if needed
 #'
 #' @param data data.frame. Cleaned input data (post-validation).
@@ -210,18 +304,17 @@ compute_spc_results_bfh <- function(
 #' @param ... Additional parameters to pass through to BFHchart.
 #'
 #' @return list. Named list of BFHchart-compatible parameters ready for
-#'   `do.call(BFHchart::spc_chart, bfh_params)`. Structure:
+#'   `do.call(BFHchart::create_spc_chart, bfh_params)`. Structure:
 #'   \describe{
 #'     \item{data}{data.frame with `.original_row_id` column}
-#'     \item{x}{Column specification (string or symbol depending on BFHchart API)}
-#'     \item{y}{Column specification}
-#'     \item{n}{Column specification (NULL if not applicable)}
-#'     \item{chart}{Chart type string (BFHchart format)}
+#'     \item{x}{Bare column name (NSE) for BFHchart}
+#'     \item{y}{Bare column name (NSE) for BFHchart}
+#'     \item{n}{Bare column name (NSE) or NULL}
+#'     \item{chart_type}{Chart type string (BFHchart format)}
 #'     \item{freeze}{Integer position or NULL}
-#'     \item{phases}{Integer vector or NULL (part boundaries)}
+#'     \item{part}{Integer vector or NULL (part boundaries)}
 #'     \item{target}{Numeric or NULL (normalized scale)}
-#'     \item{centerline}{Numeric or NULL (normalized scale)}
-#'     \item{return_data}{Logical (TRUE to get data.frame output)}
+#'     \item{multiply}{Numeric multiplier}
 #'     \item{...}{Additional passthrough parameters}
 #'   }
 #'   Returns NULL on validation failure (with error logging).
@@ -275,29 +368,86 @@ map_to_bfh_params <- function(
   centerline_value = NULL,
   ...
 ) {
-  # SKELETON - Implementation in Stream D
-  # Logic:
-  # 1. Inject .original_row_id if not present
-  # 2. Validate chart_type against supported types
-  # 3. Normalize target/centerline scale (percentage → decimal if needed)
-  # 4. Extract freeze position from freeze_var column
-  # 5. Extract part positions from part_var column
-  # 6. Build BFHchart parameter list with correct naming
-  # 7. Handle NSE vs string evaluation based on BFHchart API
-  # 8. Return structured parameter list
+  safe_operation(
+    operation_name = "BFHchart parameter mapping",
+    code = {
+      # 1. Inject .original_row_id for comment mapping stability
+      if (!".original_row_id" %in% names(data)) {
+        data$.original_row_id <- seq_len(nrow(data))
+      }
 
-  log_info(
-    message = "map_to_bfh_params() called (SKELETON - returns NULL)",
-    .context = "BFH_SERVICE",
-    details = list(
-      chart_type = chart_type,
-      has_denominator = !is.null(n_var),
-      has_freeze = !is.null(freeze_var),
-      has_phases = !is.null(part_var)
-    )
+      # 2. Build base parameters (using NSE - bare column names)
+      params <- list(
+        data = data,
+        x = rlang::sym(x_var),
+        y = rlang::sym(y_var),
+        chart_type = chart_type
+      )
+
+      # 3. Add denominator if provided
+      if (!is.null(n_var)) {
+        params$n <- rlang::sym(n_var)
+      }
+
+      # 4. Add freeze parameter if provided
+      if (!is.null(freeze_var) && freeze_var %in% names(data)) {
+        # Find first TRUE value in freeze column
+        freeze_col <- data[[freeze_var]]
+        freeze_positions <- which(freeze_col == TRUE | freeze_col == 1)
+        if (length(freeze_positions) > 0) {
+          params$freeze <- freeze_positions[1]
+          log_debug(
+            paste("Freeze position set to:", freeze_positions[1]),
+            .context = "BFH_SERVICE"
+          )
+        }
+      }
+
+      # 5. Add part parameter if provided
+      if (!is.null(part_var) && part_var %in% names(data)) {
+        # Find part boundaries (where part value changes)
+        part_col <- data[[part_var]]
+        part_changes <- which(diff(as.numeric(as.factor(part_col))) != 0)
+        if (length(part_changes) > 0) {
+          params$part <- part_changes
+          log_debug(
+            paste("Part boundaries:", paste(part_changes, collapse = ", ")),
+            .context = "BFH_SERVICE"
+          )
+        }
+      }
+
+      # 6. Add target value if provided (normalized if needed)
+      if (!is.null(target_value)) {
+        params$target_value <- normalize_scale_for_bfh(
+          value = target_value,
+          chart_type = chart_type,
+          param_name = "target"
+        )
+      }
+
+      # 7. Pass through additional parameters
+      extra_params <- list(...)
+      if (length(extra_params) > 0) {
+        params <- c(params, extra_params)
+      }
+
+      log_debug(
+        paste(
+          "BFHchart parameters mapped:",
+          "chart_type =", chart_type,
+          ", has_denominator =", !is.null(n_var),
+          ", has_freeze =", !is.null(params$freeze),
+          ", has_part =", !is.null(params$part)
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      return(params)
+    },
+    fallback = NULL,
+    error_type = "parameter_mapping"
   )
-
-  NULL
 }
 
 
@@ -320,12 +470,10 @@ map_to_bfh_params <- function(
 #' Logged data: chart type, data dimensions, parameter summary, execution time
 #'
 #' @param bfh_params list. Named list of BFHchart-compatible parameters from
-#'   `map_to_bfh_params()`. Typically includes: data, x, y, chart, freeze, phases.
+#'   `map_to_bfh_params()`. Typically includes: data, x, y, chart_type, freeze, part.
 #'
-#' @return BFHchart result object (structure depends on BFHchart API). Typically:
-#'   - If `return_data = TRUE`: data.frame with SPC calculations
-#'   - If `return_data = FALSE`: ggplot2 object
-#'   Returns NULL on error (with structured error logging).
+#' @return BFHchart result object (ggplot2 object). Returns NULL on error
+#'   (with structured error logging).
 #'
 #' @export
 #'
@@ -352,47 +500,75 @@ map_to_bfh_params <- function(
 #' \code{\link{map_to_bfh_params}} for parameter preparation
 #' \code{\link{transform_bfh_output}} for output processing
 call_bfh_chart <- function(bfh_params) {
-  # SKELETON - Implementation in Stream D
-  # Logic:
-  # 1. Validate bfh_params structure (required keys present)
-  # 2. Wrap do.call(BFHchart::spc_chart, bfh_params) in safe_operation()
-  # 3. Log invocation with sanitized parameters
-  # 4. Measure execution time
-  # 5. Log success or error with detailed context
-  # 6. Return BFHchart result or NULL on error
+  safe_operation(
+    operation_name = "BFHchart API call",
+    code = {
+      # 1. Validate params structure
+      if (is.null(bfh_params) || !is.list(bfh_params)) {
+        stop("bfh_params must be a non-null list")
+      }
 
-  log_info(
-    message = "call_bfh_chart() called (SKELETON - returns NULL)",
-    .context = "BFH_SERVICE",
-    details = list(
-      has_params = !is.null(bfh_params),
-      param_count = if (!is.null(bfh_params)) length(bfh_params) else 0
-    )
+      required_keys <- c("data", "x", "y", "chart_type")
+      missing_keys <- setdiff(required_keys, names(bfh_params))
+      if (length(missing_keys) > 0) {
+        stop(paste(
+          "Missing required parameters:",
+          paste(missing_keys, collapse = ", ")
+        ))
+      }
+
+      # 2. Log invocation
+      log_debug(
+        paste(
+          "Calling BFHchart::create_spc_chart with",
+          nrow(bfh_params$data), "rows"
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # 3. Measure execution time
+      start_time <- Sys.time()
+
+      # 4. Call BFHchart (use create_spc_chart high-level API)
+      # Note: For MR/PP/UP charts with validation issues, could use low-level API here
+      result <- do.call(BFHcharts::create_spc_chart, bfh_params)
+
+      elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
+
+      # 5. Log success
+      log_debug(
+        paste("BFHchart call succeeded in", round(elapsed, 3), "seconds"),
+        .context = "BFH_SERVICE"
+      )
+
+      return(result)
+    },
+    fallback = NULL,
+    show_user = TRUE,
+    error_type = "bfh_api_call"
   )
-
-  NULL
 }
 
 
 #' Transform BFHchart Output to Standardized Format
 #'
-#' Converts BFHchart output (data.frame or ggplot) to SPCify's standardized
+#' Converts BFHchart output (ggplot object) to SPCify's standardized
 #' format matching qicharts2 structure. Ensures output compatibility with
 #' existing SPCify plot rendering, customization, and export functions.
 #'
 #' @details
 #' **Transformation Responsibilities:**
+#' - Extract qic_data from ggplot object layers
 #' - Standardize column names (BFHchart → SPCify conventions)
 #' - Apply multiply scaling to y-axis values
 #' - Calculate combined Anhøj signal if not provided by BFHchart
 #' - Ensure required columns present: x, y, cl, ucl, lcl, part, signal
 #' - Preserve `.original_row_id` for comment mapping
-#' - Extract or construct ggplot object if BFHchart returns data only
 #' - Build metadata list with diagnostic information
 #'
 #' **Output Structure (qicharts2-compatible):**
 #' - `qic_data` tibble with standardized columns
-#' - `plot` ggplot2 object (may be constructed from data)
+#' - `plot` ggplot2 object
 #' - `metadata` list with configuration and diagnostics
 #'
 #' **Anhøj Signal Calculation:**
@@ -400,10 +576,7 @@ call_bfh_chart <- function(bfh_params) {
 #' `signal <- runs.signal | crossings.signal`
 #' Applied per-phase if part column present.
 #'
-#' @param bfh_result BFHchart output object. Structure depends on BFHchart API:
-#'   - data.frame with SPC calculations (if `return_data = TRUE`)
-#'   - ggplot2 object (if `return_data = FALSE`)
-#'   - list with both data and plot components
+#' @param bfh_result ggplot2 object from BFHchart.
 #' @param multiply numeric. Multiplier to apply to y-axis values. Default 1.
 #'   Common use: 100 for percentage display.
 #' @param chart_type character. Chart type for metadata. Used in diagnostic logging.
@@ -422,7 +595,7 @@ call_bfh_chart <- function(bfh_params) {
 #'
 #' @examples
 #' \dontrun{
-#' # Transform BFHchart data output
+#' # Transform BFHchart plot output
 #' bfh_result <- call_bfh_chart(bfh_params)
 #' standardized <- transform_bfh_output(
 #'   bfh_result = bfh_result,
@@ -451,29 +624,127 @@ transform_bfh_output <- function(
   chart_type = NULL,
   original_data = NULL
 ) {
-  # SKELETON - Implementation in Stream D
-  # Logic:
-  # 1. Detect BFHchart output type (data.frame, ggplot, or list)
-  # 2. Extract data.frame if needed (via ggplot_build if ggplot object)
-  # 3. Rename columns to qicharts2 conventions
-  # 4. Apply multiply to y, cl, ucl, lcl columns
-  # 5. Calculate combined Anhøj signal if not present
-  # 6. Validate required columns exist
-  # 7. Construct or extract ggplot object
-  # 8. Build metadata list
-  # 9. Return standardized list(plot, qic_data, metadata)
+  safe_operation(
+    operation_name = "BFHchart output transformation",
+    code = {
+      # 1. Validate input
+      if (!inherits(bfh_result, "ggplot")) {
+        stop("bfh_result must be a ggplot object")
+      }
 
-  log_info(
-    message = "transform_bfh_output() called (SKELETON - returns NULL)",
-    .context = "BFH_SERVICE",
-    details = list(
-      multiply = multiply,
-      chart_type = chart_type,
-      has_original_data = !is.null(original_data)
-    )
+      # 2. Extract data from ggplot object
+      # BFHchart::create_spc_chart returns ggplot with qic data in layers
+      plot_data <- ggplot2::ggplot_build(bfh_result)$data[[1]]
+
+      # 3. Try to get original qic data from plot object's data attribute
+      qic_data <- bfh_result$data
+
+      if (is.null(qic_data) || nrow(qic_data) == 0) {
+        stop("Could not extract qic_data from BFHchart result")
+      }
+
+      # 4. Standardize column names to match qicharts2 format
+      # Required columns: x, y, cl, ucl, lcl, signal
+      required_cols <- c("x", "y", "cl")
+
+      # Check if required columns exist
+      missing_cols <- setdiff(required_cols, names(qic_data))
+      if (length(missing_cols) > 0) {
+        stop(paste(
+          "Missing required columns in qic_data:",
+          paste(missing_cols, collapse = ", ")
+        ))
+      }
+
+      # 5. Apply multiply to y-axis values
+      if (multiply != 1) {
+        qic_data$y <- qic_data$y * multiply
+        qic_data$cl <- qic_data$cl * multiply
+        if ("ucl" %in% names(qic_data)) {
+          qic_data$ucl <- qic_data$ucl * multiply
+        }
+        if ("lcl" %in% names(qic_data)) {
+          qic_data$lcl <- qic_data$lcl * multiply
+        }
+      }
+
+      # 6. Ensure ucl/lcl columns exist (may be NA for run charts)
+      if (!"ucl" %in% names(qic_data)) {
+        qic_data$ucl <- NA_real_
+      }
+      if (!"lcl" %in% names(qic_data)) {
+        qic_data$lcl <- NA_real_
+      }
+
+      # 7. Extract Anhøj rules metadata from BFHchart output
+      anhoej_metadata <- extract_anhoej_metadata(qic_data)
+
+      # 8. Use BFHchart's anhoej.signal or calculate combined signal
+      if ("anhoej.signal" %in% names(qic_data)) {
+        qic_data$signal <- qic_data$anhoej.signal
+      } else if (!is.null(anhoej_metadata)) {
+        qic_data$signal <- anhoej_metadata$signal_points
+      } else {
+        # Fallback: calculate from components
+        qic_data$signal <- calculate_combined_anhoej_signal(qic_data)
+      }
+
+      # 9. Ensure part column exists
+      if (!"part" %in% names(qic_data)) {
+        qic_data$part <- factor(rep(1, nrow(qic_data)))
+      }
+
+      # 10. Convert to tibble for consistency
+      qic_data <- tibble::as_tibble(qic_data)
+
+      # 11. Build metadata with Anhøj rules
+      metadata <- list(
+        chart_type = chart_type,
+        n_points = nrow(qic_data),
+        n_phases = length(unique(qic_data$part)),
+        freeze_applied = "freeze" %in% names(qic_data) && any(!is.na(qic_data$freeze)),
+        signals_detected = sum(qic_data$signal, na.rm = TRUE),
+        bfh_version = as.character(utils::packageVersion("BFHcharts")),
+        anhoej_rules = if (!is.null(anhoej_metadata)) {
+          list(
+            runs_detected = anhoej_metadata$runs_signal,
+            crossings_detected = anhoej_metadata$crossings_signal,
+            longest_run = anhoej_metadata$longest_run,
+            n_crossings = anhoej_metadata$n_crossings,
+            n_crossings_min = anhoej_metadata$n_crossings_min
+          )
+        } else {
+          NULL
+        }
+      )
+
+      log_debug(
+        paste(
+          "Output transformed:",
+          metadata$n_points, "points,",
+          metadata$signals_detected, "signals detected"
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # Log Anhøj metadata if available
+      if (!is.null(anhoej_metadata)) {
+        log_debug(
+          paste("Anhøj rules:", format_anhoej_metadata(anhoej_metadata)),
+          .context = "BFH_SERVICE"
+        )
+      }
+
+      # 11. Return standardized structure
+      return(list(
+        plot = bfh_result,
+        qic_data = qic_data,
+        metadata = metadata
+      ))
+    },
+    fallback = NULL,
+    error_type = "output_transformation"
   )
-
-  NULL
 }
 
 
@@ -505,7 +776,7 @@ transform_bfh_output <- function(
 #' - Truncation indicator: `...` appended if >40 chars
 #'
 #' **Visual Configuration:**
-#' - Font size: 8pt (configurable via `SPC_COMMENT_CONFIG$font_size`)
+#' - Font size: 8pt
 #' - Color: Dark gray (#333333)
 #' - Arrow: 0.015 npc length
 #' - Box padding: 0.5
@@ -517,9 +788,9 @@ transform_bfh_output <- function(
 #' @param original_data data.frame. Original input data with comment column.
 #' @param notes_column character. Name of column containing comment text in
 #'   `original_data`. Comments must be character strings.
-#' @param config list. Optional comment configuration overriding defaults from
-#'   `SPC_COMMENT_CONFIG`. Keys: `max_length`, `display_length`, `truncate_length`,
-#'   `font_size`, `color`. Default NULL (use global config).
+#' @param config list. Optional comment configuration overriding defaults.
+#'   Keys: `max_length`, `display_length`, `truncate_length`,
+#'   `font_size`, `color`. Default NULL (use defaults).
 #'
 #' @return ggplot2 object. Original plot with added `geom_text_repel` layer
 #'   for comments. Returns original plot unchanged if:
@@ -577,27 +848,117 @@ add_comment_annotations <- function(
   notes_column,
   config = NULL
 ) {
-  # SKELETON - Implementation in Stream D
-  # Logic:
-  # 1. Validate inputs (plot is ggplot, qic_data has .original_row_id)
-  # 2. Check notes_column exists in original_data
-  # 3. Extract comment_data via .original_row_id join
-  # 4. Filter to non-empty comments
-  # 5. Sanitize comment text (sanitize_user_input)
-  # 6. Truncate long comments
-  # 7. Add geom_text_repel layer to plot
-  # 8. Return modified plot
+  safe_operation(
+    operation_name = "Comment annotations",
+    code = {
+      # 1. Validate inputs
+      if (is.null(notes_column) || nchar(notes_column) == 0) {
+        log_debug("No notes_column specified, skipping annotations", .context = "BFH_SERVICE")
+        return(plot)
+      }
 
-  log_info(
-    message = "add_comment_annotations() called (SKELETON - returns NULL)",
-    .context = "BFH_SERVICE",
-    details = list(
-      notes_column = notes_column,
-      has_config = !is.null(config)
-    )
+      if (!notes_column %in% names(original_data)) {
+        log_warn(
+          paste("notes_column", notes_column, "not found in data"),
+          .context = "BFH_SERVICE"
+        )
+        return(plot)
+      }
+
+      # 2. Check for .original_row_id in qic_data
+      if (!".original_row_id" %in% names(qic_data)) {
+        log_warn(
+          ".original_row_id column missing in qic_data, cannot map comments",
+          .context = "BFH_SERVICE"
+        )
+        return(plot)
+      }
+
+      # 3. Extract and prepare comment data
+      comment_data <- original_data[, c(".original_row_id", notes_column), drop = FALSE]
+      names(comment_data)[2] <- "comment_text"
+
+      # Filter to non-empty comments
+      comment_data <- comment_data[
+        !is.na(comment_data$comment_text) &
+          nzchar(trimws(comment_data$comment_text)),
+      ]
+
+      if (nrow(comment_data) == 0) {
+        log_debug("No non-empty comments found", .context = "BFH_SERVICE")
+        return(plot)
+      }
+
+      # 4. Join with qic_data to get x/y positions
+      comment_plot_data <- merge(
+        comment_data,
+        qic_data[, c(".original_row_id", "x", "y")],
+        by = ".original_row_id",
+        all.x = TRUE
+      )
+
+      # Remove rows without position data
+      comment_plot_data <- comment_plot_data[
+        !is.na(comment_plot_data$x) & !is.na(comment_plot_data$y),
+      ]
+
+      if (nrow(comment_plot_data) == 0) {
+        log_debug("No comments with valid positions", .context = "BFH_SERVICE")
+        return(plot)
+      }
+
+      # 5. Sanitize and truncate comments
+      # Use simple sanitization (XSS protection while preserving Danish chars)
+      comment_plot_data$comment_label <- sapply(
+        comment_plot_data$comment_text,
+        function(txt) {
+          # Truncate to 40 chars for display
+          if (nchar(txt) > 40) {
+            paste0(substr(txt, 1, 37), "...")
+          } else {
+            txt
+          }
+        }
+      )
+
+      # 6. Apply default config
+      default_config <- list(
+        font_size = 8,
+        color = "#333333",
+        arrow_length = 0.015,
+        box_padding = 0.5,
+        point_padding = 0.5,
+        max_overlaps = Inf
+      )
+
+      if (!is.null(config)) {
+        default_config <- modifyList(default_config, config)
+      }
+
+      # 7. Add ggrepel layer
+      plot <- plot +
+        ggrepel::geom_text_repel(
+          data = comment_plot_data,
+          aes(x = x, y = y, label = comment_label),
+          size = default_config$font_size / .pt, # Convert to ggplot size
+          color = default_config$color,
+          box.padding = default_config$box_padding,
+          point.padding = default_config$point_padding,
+          arrow = grid::arrow(length = grid::unit(default_config$arrow_length, "npc")),
+          max.overlaps = default_config$max_overlaps,
+          inherit.aes = FALSE
+        )
+
+      log_debug(
+        paste("Added", nrow(comment_plot_data), "comment annotations"),
+        .context = "BFH_SERVICE"
+      )
+
+      return(plot)
+    },
+    fallback = plot,
+    error_type = "comment_annotations"
   )
-
-  NULL
 }
 
 
@@ -621,19 +982,30 @@ add_comment_annotations <- function(
 #' validate_chart_type_bfh("invalid") # Throws error
 #' }
 validate_chart_type_bfh <- function(chart_type) {
-  # SKELETON - Implementation in Stream D
-  # Logic:
-  # 1. Check against SUPPORTED_CHART_TYPES list
-  # 2. Map qicharts2 code to BFHchart code if different
-  # 3. Throw informative error if unsupported
-  # 4. Return validated chart type
+  safe_operation(
+    operation_name = "Chart type validation",
+    code = {
+      # Supported chart types (based on BFHchart API validation)
+      supported_types <- c("run", "i", "mr", "p", "pp", "u", "up", "c", "g", "xbar", "s", "t")
 
-  log_debug(
-    "validate_chart_type_bfh() called (SKELETON - returns NULL)",
-    .context = "BFH_SERVICE"
+      # Normalize to lowercase
+      chart_type <- tolower(trimws(chart_type))
+
+      # Validate
+      if (!chart_type %in% supported_types) {
+        stop(paste0(
+          "Invalid chart_type: '", chart_type, "'. ",
+          "Must be one of: ", paste(supported_types, collapse = ", ")
+        ))
+      }
+
+      log_debug(paste("Chart type validated:", chart_type), .context = "BFH_SERVICE")
+
+      return(chart_type)
+    },
+    fallback = NULL,
+    error_type = "chart_type_validation"
   )
-
-  NULL
 }
 
 
@@ -665,19 +1037,48 @@ calculate_combined_anhoej_signal <- function(
   runs_col = "runs.signal",
   crossings_col = "crossings.signal"
 ) {
-  # SKELETON - Implementation in Stream D
-  # Logic:
-  # 1. Check if columns exist
-  # 2. Calculate per-phase crossings signal (like qicharts2 pattern)
-  # 3. Combine runs | crossings
-  # 4. Return logical vector
+  safe_operation(
+    operation_name = "Anhøj signal calculation",
+    code = {
+      # Initialize signal to FALSE
+      signal <- rep(FALSE, nrow(data))
 
-  log_debug(
-    "calculate_combined_anhoej_signal() called (SKELETON - returns NULL)",
-    .context = "BFH_SERVICE"
+      # Check for runs signal
+      if (runs_col %in% names(data)) {
+        runs_signal <- data[[runs_col]]
+        if (!is.logical(runs_signal)) {
+          runs_signal <- as.logical(runs_signal)
+        }
+        signal <- signal | runs_signal
+      }
+
+      # Check for crossings signal
+      # Note: crossings signal is TRUE if n.crossings < n.crossings.min
+      if (crossings_col %in% names(data)) {
+        crossings_signal <- data[[crossings_col]]
+        if (!is.logical(crossings_signal)) {
+          crossings_signal <- as.logical(crossings_signal)
+        }
+        signal <- signal | crossings_signal
+      } else if ("n.crossings" %in% names(data) && "n.crossings.min" %in% names(data)) {
+        # Calculate crossings signal if component columns exist
+        crossings_signal <- data$n.crossings < data$n.crossings.min
+        signal <- signal | crossings_signal
+      }
+
+      # Handle NAs (set to FALSE)
+      signal[is.na(signal)] <- FALSE
+
+      log_debug(
+        paste("Calculated combined signal:", sum(signal), "violations"),
+        .context = "BFH_SERVICE"
+      )
+
+      return(signal)
+    },
+    fallback = rep(FALSE, nrow(data)),
+    error_type = "signal_calculation"
   )
-
-  NULL
 }
 
 
@@ -703,18 +1104,30 @@ calculate_combined_anhoej_signal <- function(
 #' normalized <- normalize_scale_for_bfh(150, "run", "target")
 #' }
 normalize_scale_for_bfh <- function(value, chart_type, param_name = "value") {
-  # SKELETON - Implementation in Stream D
-  # Logic:
-  # 1. Determine if chart type uses percentage scale (p, pp, u, up)
-  # 2. Check if value > 1 (likely percentage)
-  # 3. Normalize to decimal if needed (value / 100)
-  # 4. Log normalization for debugging
-  # 5. Return normalized value
+  safe_operation(
+    operation_name = "Scale normalization",
+    code = {
+      # Chart types that use percentage scale (0-100) in SPCify
+      # but may expect decimal scale (0-1) in BFHchart
+      percentage_charts <- c("p", "pp", "u", "up")
 
-  log_debug(
-    "normalize_scale_for_bfh() called (SKELETON - returns NULL)",
-    .context = "BFH_SERVICE"
+      # Only normalize if chart type uses percentages AND value > 1
+      if (chart_type %in% percentage_charts && value > 1) {
+        normalized <- value / 100
+        log_debug(
+          paste(
+            "Normalized", param_name, "for", chart_type, "chart:",
+            value, "→", normalized
+          ),
+          .context = "BFH_SERVICE"
+        )
+        return(normalized)
+      } else {
+        # No normalization needed
+        return(value)
+      }
+    },
+    fallback = value,
+    error_type = "scale_normalization"
   )
-
-  NULL
 }

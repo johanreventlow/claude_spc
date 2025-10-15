@@ -24,6 +24,6 @@ Quick access functions for commonly used priority levels.
 }
 \examples{
 \dontrun{
-observeEvent(input$data, priority = priority_high(), { })
+observeEvent(input$data, priority = priority_high(), {})
 }
 }
