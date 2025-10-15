@@ -527,8 +527,7 @@ process_phase_freeze_config <- function(data, show_phases, skift_column, frys_co
   part_positions <- NULL
   if (show_phases && !is.null(skift_column)) {
     # DEFENSIVE: Check for character(0) before using %in%
-    if (length(skift_column) == 0 || identical(skift_column, character(0))) {
-    } else if (skift_column %in% names(data)) {
+    if (length(skift_column) == 0 || identical(skift_column, character(0))) {} else if (skift_column %in% names(data)) {
       skift_data <- data[[skift_column]]
 
       # Convert to logical if needed

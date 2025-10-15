@@ -617,10 +617,11 @@ auto_purge_grob_cache <- function() {
 #' @return Invisible: Previous configuration
 #' @export
 configure_grob_cache <- function(
-    enabled = NULL,
-    ttl_seconds = NULL,
-    max_cache_size = NULL,
-    purge_check_interval = NULL) {
+  enabled = NULL,
+  ttl_seconds = NULL,
+  max_cache_size = NULL,
+  purge_check_interval = NULL
+) {
   old_config <- .grob_cache_config
 
   if (!is.null(enabled)) {
@@ -835,10 +836,11 @@ auto_purge_panel_cache <- function() {
 #' @return Invisible: Previous configuration
 #' @export
 configure_panel_cache <- function(
-    enabled = NULL,
-    ttl_seconds = NULL,
-    max_cache_size = NULL,
-    purge_check_interval = NULL) {
+  enabled = NULL,
+  ttl_seconds = NULL,
+  max_cache_size = NULL,
+  purge_check_interval = NULL
+) {
   old_config <- .panel_cache_config
 
   if (!is.null(enabled)) {
@@ -1004,9 +1006,10 @@ clear_all_placement_caches <- function() {
 #' # Configure for long-running sessions (10 minutes TTL, larger cache)
 #' configure_placement_cache(ttl_seconds = 600, max_cache_size = 200)
 configure_placement_cache <- function(
-    ttl_seconds = NULL,
-    max_cache_size = NULL,
-    purge_check_interval = NULL) {
+  ttl_seconds = NULL,
+  max_cache_size = NULL,
+  purge_check_interval = NULL
+) {
   old_configs <- list(
     panel_cache = configure_panel_cache(
       ttl_seconds = ttl_seconds,
@@ -1267,15 +1270,16 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
 #'
 #' @keywords internal
 .estimate_label_height_npc_internal <- function(
-    text,
-    style,
-    panel_height_inches = NULL,
-    device_width = NULL,
-    device_height = NULL,
-    marquee_size = NULL,
-    fallback_npc = 0.13,
-    use_cache = TRUE,
-    return_details = FALSE) {
+  text,
+  style,
+  panel_height_inches = NULL,
+  device_width = NULL,
+  device_height = NULL,
+  marquee_size = NULL,
+  fallback_npc = 0.13,
+  use_cache = TRUE,
+  return_details = FALSE
+) {
   # Generate cache key including height_safety_margin
   if (use_cache) {
     style_hash <- digest::digest(list(
@@ -1513,15 +1517,16 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
 #'
 #' @keywords internal
 estimate_label_heights_npc <- function(
-    texts,
-    style = NULL,
-    panel_height_inches = NULL,
-    device_width = NULL,
-    device_height = NULL,
-    marquee_size = NULL,
-    fallback_npc = 0.13,
-    use_cache = TRUE,
-    return_details = FALSE) {
+  texts,
+  style = NULL,
+  panel_height_inches = NULL,
+  device_width = NULL,
+  device_height = NULL,
+  marquee_size = NULL,
+  fallback_npc = 0.13,
+  use_cache = TRUE,
+  return_details = FALSE
+) {
   # Default style hvis ikke angivet
   if (is.null(style)) {
     style <- marquee::modify_style(
@@ -1666,12 +1671,13 @@ estimate_label_heights_npc <- function(
 #' height_details <- estimate_label_height_npc(label, style = style, return_details = TRUE)
 #' # Returns list(npc = 0.12, inches = 0.5, panel_height_inches = 4.2)
 estimate_label_height_npc <- function(
-    text,
-    style = NULL,
-    panel_height_inches = NULL,
-    fallback_npc = 0.13,
-    use_cache = TRUE,
-    return_details = FALSE) {
+  text,
+  style = NULL,
+  panel_height_inches = NULL,
+  fallback_npc = 0.13,
+  use_cache = TRUE,
+  return_details = FALSE
+) {
   tryCatch(
     {
       # Default style hvis ikke angivet
@@ -1979,17 +1985,18 @@ propose_single_label <- function(y_line_npc, pref_side, label_h, gap, pad_top, p
 #' )
 #' # Result: sideA = "under", sideB = "over"
 place_two_labels_npc <- function(
-    yA_npc,
-    yB_npc,
-    # label_height_npc = 0.035,
-    label_height_npc = 0.114,
-    gap_line = NULL, # NU: Auto-beregnes fra config
-    gap_labels = NULL, # NU: Auto-beregnes fra config
-    pad_top = NULL, # NU: Hentes fra config
-    pad_bot = NULL, # NU: Hentes fra config
-    priority = c("A", "B")[1],
-    pref_pos = c("under", "under"),
-    debug = FALSE) {
+  yA_npc,
+  yB_npc,
+  # label_height_npc = 0.035,
+  label_height_npc = 0.114,
+  gap_line = NULL, # NU: Auto-beregnes fra config
+  gap_labels = NULL, # NU: Auto-beregnes fra config
+  pad_top = NULL, # NU: Hentes fra config
+  pad_bot = NULL, # NU: Hentes fra config
+  priority = c("A", "B")[1],
+  pref_pos = c("under", "under"),
+  debug = FALSE
+) {
   # ============================================================================
   # INPUT VALIDATION & PARSING
   # ============================================================================

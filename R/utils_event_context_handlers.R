@@ -358,13 +358,14 @@ handle_general_context <- function(app_state, emit, input, output, session, ui_s
 #'
 #' @export
 handle_data_update_by_context <- function(
-    update_context,
-    app_state,
-    emit,
-    input,
-    output,
-    session,
-    ui_service) {
+  update_context,
+  app_state,
+  emit,
+  input,
+  output,
+  session,
+  ui_service
+) {
   # Classify context type
   context_type <- classify_update_context(update_context)
 

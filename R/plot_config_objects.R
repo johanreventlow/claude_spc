@@ -78,14 +78,15 @@ NULL
 #'
 #' @export
 spc_plot_config <- function(
-    chart_type = "run",
-    y_axis_unit = "count",
-    target_value = NULL,
-    target_text = NULL,
-    centerline_value = NULL,
-    kommentar_column = NULL,
-    chart_title = NULL,
-    qic_cache = NULL) {
+  chart_type = "run",
+  y_axis_unit = "count",
+  target_value = NULL,
+  target_text = NULL,
+  centerline_value = NULL,
+  kommentar_column = NULL,
+  chart_title = NULL,
+  qic_cache = NULL
+) {
   # Validation
   valid_chart_types <- c("run", "i", "mr", "xbar", "s", "t", "p", "c", "u", "g")
   if (!chart_type %in% valid_chart_types) {
@@ -172,9 +173,10 @@ print.spc_plot_config <- function(x, ...) {
 #'
 #' @export
 viewport_dims <- function(
-    width = NULL,
-    height = NULL,
-    base_size = 14) {
+  width = NULL,
+  height = NULL,
+  base_size = 14
+) {
   # Validation
   if (!is.null(width) && (!is.numeric(width) || width <= 0)) {
     if (exists("log_warn", mode = "function")) {
@@ -254,9 +256,10 @@ print.viewport_dims <- function(x, ...) {
 #'
 #' @export
 phase_config <- function(
-    show_phases = FALSE,
-    skift_column = NULL,
-    frys_column = NULL) {
+  show_phases = FALSE,
+  skift_column = NULL,
+  frys_column = NULL
+) {
   # Validation
   if (!is.logical(show_phases)) {
     if (exists("log_warn", mode = "function")) {
@@ -376,20 +379,21 @@ extract_params_from_configs <- function(plot_cfg, viewport, phases) {
 #'
 #' @keywords internal
 build_configs_from_params <- function(
-    chart_type = "run",
-    y_axis_unit = "count",
-    target_value = NULL,
-    target_text = NULL,
-    centerline_value = NULL,
-    kommentar_column = NULL,
-    chart_title_reactive = NULL,
-    qic_cache = NULL,
-    viewport_width = NULL,
-    viewport_height = NULL,
-    base_size = 14,
-    show_phases = FALSE,
-    skift_column = NULL,
-    frys_column = NULL) {
+  chart_type = "run",
+  y_axis_unit = "count",
+  target_value = NULL,
+  target_text = NULL,
+  centerline_value = NULL,
+  kommentar_column = NULL,
+  chart_title_reactive = NULL,
+  qic_cache = NULL,
+  viewport_width = NULL,
+  viewport_height = NULL,
+  base_size = 14,
+  show_phases = FALSE,
+  skift_column = NULL,
+  frys_column = NULL
+) {
   list(
     plot_cfg = spc_plot_config(
       chart_type = chart_type,

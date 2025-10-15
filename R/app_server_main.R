@@ -192,7 +192,6 @@ main_app_server <- function(input, output, session) {
   }
 
 
-
   # Observer Management ------------------------------------------------------
   # Initialiser observer manager til tracking af alle observers
   obs_manager <- observer_manager()
