@@ -791,7 +791,47 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           return(invisible(NULL))
         }
 
-        print(plot_result)
+        # CRITICAL: BFHcharts plots need special handling for rendering
+        # BFHcharts' label layers are incompatible with standard ggplot2 print/build
+        # Try standard print first, fall back to grid rendering if that fails
+        tryCatch(
+          {
+            print(plot_result)
+          },
+          error = function(e) {
+            # If standard print fails (likely BFHcharts label incompatibility),
+            # try rendering via grid directly
+            if (grepl("unused argument|label", e$message, ignore.case = TRUE)) {
+              log_warn(
+                paste("Standard ggplot print failed, using grid fallback:", e$message),
+                .context = "VISUALIZATION"
+              )
+              # Convert to grob and draw
+              tryCatch(
+                {
+                  grid::grid.newpage()
+                  grid::grid.draw(ggplot2::ggplotGrob(plot_result))
+                },
+                error = function(e2) {
+                  # If even grid rendering fails, show error message
+                  graphics::plot.new()
+                  graphics::text(
+                    0.5, 0.5,
+                    "Plot rendering fejlede\n(inkompatibel plot type)",
+                    cex = 1.1, col = "#dc3545"
+                  )
+                  log_error(
+                    paste("Both print and grid rendering failed:", e2$message),
+                    .context = "VISUALIZATION"
+                  )
+                }
+              )
+            } else {
+              # Unknown error - re-raise
+              stop(e)
+            }
+          }
+        )
         invisible(plot_result)
       }
     )
