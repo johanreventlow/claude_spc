@@ -360,6 +360,31 @@ test_that("compute_spc_results_bfh() accepts optional cl_var", {
   expect_true("cl_var" %in% names(result$metadata))
 })
 
+test_that("compute_spc_results_bfh() resolves reactive chart title before BFHcharts call", {
+  set.seed(20251015)
+  data <- create_test_data(n_rows = 15)
+
+  reactive_title <- function() {
+    "BFHcharts Reactive Title"
+  }
+
+  result <- NULL
+  expect_error(
+    result <- compute_spc_results_bfh(
+      data = data,
+      x_var = "month",
+      y_var = "value",
+      chart_type = "run",
+      chart_title_reactive = reactive_title
+    ),
+    NA
+  )
+
+  expect_s3_class(result$plot, "ggplot")
+  expect_true(is.list(result$metadata))
+  expect_equal(result$metadata$backend, "bfhcharts")
+})
+
 # Integration Tests: Validator Integration ====================================
 
 context("Integration Tests - Validator Integration")

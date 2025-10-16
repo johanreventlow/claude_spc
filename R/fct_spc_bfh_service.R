@@ -317,7 +317,9 @@ compute_spc_results_bfh <- function(
 
       # 7b. Extract parameters for BFHcharts rendering
       y_axis_unit <- extra_params$y_axis_unit %||% "count"
-      chart_title <- extra_params$chart_title_reactive %||% extra_params$chart_title
+      chart_title <- resolve_bfh_chart_title(
+        extra_params$chart_title_reactive %||% extra_params$chart_title
+      )
       target_value <- extra_params$target_value
       target_text <- extra_params$target_text
       centerline_value <- extra_params$centerline_value
@@ -666,6 +668,9 @@ map_to_bfh_params <- function(
       # 7. Pass through additional parameters
       extra_params <- list(...)
       if (length(extra_params) > 0) {
+        if ("chart_title" %in% names(extra_params)) {
+          extra_params$chart_title <- resolve_bfh_chart_title(extra_params$chart_title)
+        }
         params <- c(params, extra_params)
       }
 
@@ -684,6 +689,49 @@ map_to_bfh_params <- function(
     },
     fallback = NULL,
     error_type = "parameter_mapping"
+  )
+}
+
+resolve_bfh_chart_title <- function(title_candidate) {
+  safe_operation(
+    operation_name = "BFHchart chart title resolution",
+    code = {
+      if (is.null(title_candidate)) {
+        return(NULL)
+      }
+
+      value <- title_candidate
+
+      if (is.function(value)) {
+        value <- value()
+      }
+
+      if (is.null(value) || length(value) == 0) {
+        return(NULL)
+      }
+
+      if (is.list(value) && !is.atomic(value)) {
+        value <- value[[1]]
+      } else {
+        value <- value[1]
+      }
+
+      if (is.null(value)) {
+        return(NULL)
+      }
+
+      if (!is.character(value)) {
+        value <- as.character(value)
+      }
+
+      if (length(value) == 0) {
+        return(NULL)
+      }
+
+      value[1]
+    },
+    fallback = NULL,
+    error_type = "bfh_title_resolution"
   )
 }
 
