@@ -32,76 +32,142 @@ mod_export_server <- function(id, app_state) {
 
     # PREVIEW GENERATION ======================================================
 
-    # Preview reactive - generates plot for live preview
-    # Returns current SPC plot from app_state visualization
-    preview_plot <- shiny::reactive({
+    # Export plot reactive - generates plot with export metadata applied
+    # Debounced to prevent excessive re-rendering when user types metadata
+    export_plot <- shiny::reactive({
       # Defensive checks - require valid app_state and data
       shiny::req(app_state)
       shiny::req(app_state$data$current_data)
+      shiny::req(app_state$columns$mappings$y_column)
 
-      # Check if visualization plot is ready
-      plot_ready <- app_state$visualization$plot_ready %||% FALSE
-      shiny::req(plot_ready)
+      # Get existing plot from visualization state
+      base_plot <- app_state$visualization$plot_object
+      shiny::req(base_plot)
 
-      # Get plot object from visualization state
-      plot_obj <- app_state$visualization$plot_object
+      # Read export metadata inputs (triggers reactive dependency)
+      title_input <- input$export_title
+      dept_input <- input$export_department
 
-      # Validate plot object exists
-      shiny::req(plot_obj)
+      # Construct chart title with export metadata
+      title_parts <- c()
 
-      log_debug(
-        component = "[EXPORT_MODULE]",
-        message = "Preview plot generated successfully"
+      if (!is.null(title_input) && nchar(trimws(title_input)) > 0) {
+        title_parts <- c(title_parts, trimws(title_input))
+      }
+
+      if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
+        title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
+      }
+
+      # If no metadata, use existing plot title or empty
+      export_title <- if (length(title_parts) > 0) {
+        paste(title_parts, collapse = " ")
+      } else {
+        "" # Empty title if no metadata
+      }
+
+      # Clone plot and update title
+      safe_operation(
+        operation_name = "Generate export preview plot",
+        code = {
+          # Clone plot to avoid modifying original
+          preview_plot <- base_plot
+
+          # Update plot title with export metadata
+          preview_plot <- preview_plot + ggplot2::labs(title = export_title)
+
+          log_debug(
+            component = "[EXPORT_MODULE]",
+            message = "Export preview plot generated with metadata",
+            details = list(
+              title = export_title,
+              has_title = nchar(trimws(title_input %||% "")) > 0,
+              has_dept = nchar(trimws(dept_input %||% "")) > 0
+            )
+          )
+
+          return(preview_plot)
+        },
+        fallback = function(e) {
+          log_error(
+            component = "[EXPORT_MODULE]",
+            message = "Failed to generate export preview plot",
+            details = list(error = e$message)
+          )
+          return(NULL)
+        },
+        error_type = "processing"
       )
+    }) %>% shiny::debounce(millis = 500) # Debounce metadata changes for performance
 
-      return(plot_obj)
-    })
-
-    # Preview plot output
-    output$preview_plot <- shiny::renderPlot(
+    # Export preview renderPlot - displays plot with export metadata
+    output$export_preview <- shiny::renderPlot(
       {
-        plot <- preview_plot()
+        plot <- export_plot()
 
         if (is.null(plot)) {
-          # Display placeholder when no plot available
-          graphics::plot.new()
-          graphics::text(
-            0.5, 0.5,
-            "Ingen plot tilgængeligt\n\nGenerer først et SPC chart i hovedvinduet",
-            cex = 1.1,
-            col = "#6c757d"
+          # Display placeholder using ggplot2 for consistency
+          return(
+            ggplot2::ggplot() +
+              ggplot2::annotate(
+                "text",
+                x = 0.5,
+                y = 0.5,
+                label = "Ingen graf tilgængelig.\nGå til hovedsiden for at oprette en SPC-graf.",
+                size = 6,
+                color = "#858585"
+              ) +
+              ggplot2::theme_void()
           )
-          return(invisible(NULL))
         }
 
-        # Render plot
+        # Apply hospital theme to preview
         safe_operation(
-          operation_name = "Render export preview plot",
+          operation_name = "Render export preview with hospital theme",
           code = {
-            print(plot)
-            invisible(plot)
+            # Apply hospital theme (matches main app styling)
+            if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
+              themed_plot <- applyHospitalTheme(plot, base_size = 14)
+              return(themed_plot)
+            } else {
+              # Fallback: return plot without theme if function not available
+              log_warn(
+                component = "[EXPORT_MODULE]",
+                message = "applyHospitalTheme function not found, using plot without theme"
+              )
+              return(plot)
+            }
           },
           fallback = function(e) {
             log_error(
               component = "[EXPORT_MODULE]",
-              message = "Failed to render preview plot",
+              message = "Failed to apply hospital theme to preview plot",
               details = list(error = e$message)
             )
-            # Show error message in plot area
-            graphics::plot.new()
-            graphics::text(
-              0.5, 0.5,
-              paste("Fejl ved preview:\n", e$message),
-              cex = 1.0,
-              col = "#dc3545"
-            )
-            invisible(NULL)
+            # Fallback: show error message in ggplot
+            ggplot2::ggplot() +
+              ggplot2::annotate(
+                "text",
+                x = 0.5,
+                y = 0.5,
+                label = paste("Fejl ved preview:\n", e$message),
+                size = 5,
+                color = "#dc3545"
+              ) +
+              ggplot2::theme_void()
           },
           error_type = "processing"
         )
       },
-      res = 96 # Standard screen resolution
+      res = 96 # Standard screen resolution for preview
     )
+
+    # Plot availability reactive - for conditional UI
+    output$plot_available <- shiny::reactive({
+      !is.null(app_state$data$current_data) &&
+        !is.null(app_state$columns$mappings$y_column)
+    })
+    outputOptions(output, "plot_available", suspendWhenHidden = FALSE)
 
     # DOWNLOAD HANDLER ========================================================
 
@@ -153,12 +219,17 @@ mod_export_server <- function(id, app_state) {
         safe_operation(
           operation_name = paste("Export", toupper(format)),
           code = {
-            # Get plot from visualization state
-            plot <- app_state$visualization$plot_object
+            # Get plot with export metadata applied
+            plot <- export_plot()
 
             # Validate plot exists
             if (is.null(plot)) {
               stop("Ingen plot tilgængeligt til eksport")
+            }
+
+            # Apply hospital theme for consistent export styling
+            if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
+              plot <- applyHospitalTheme(plot, base_size = 14)
             }
 
             # Export logic based on format
@@ -252,9 +323,9 @@ mod_export_server <- function(id, app_state) {
     # Return module status for parent scope
     return(
       list(
-        # Preview ready indicator
+        # Export preview ready indicator
         preview_ready = shiny::reactive({
-          !is.null(preview_plot())
+          !is.null(export_plot())
         })
       )
     )

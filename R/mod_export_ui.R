@@ -213,13 +213,29 @@ mod_export_ui <- function(id) {
       ),
       bslib::card_body(
         fill = TRUE,
-        # Plot preview area
-        shiny::div(
-          style = "height: 100%; display: flex; align-items: center; justify-content: center;",
-          shiny::plotOutput(
-            ns("preview_plot"),
-            width = "100%",
-            height = "600px"
+        # Conditional panels for preview availability
+        # Show warning when no plot available
+        shiny::conditionalPanel(
+          condition = "output.plot_available == false",
+          ns = ns,
+          shiny::div(
+            class = "alert alert-warning",
+            style = "margin: 20px; padding: 20px;",
+            shiny::icon("exclamation-triangle"),
+            " Ingen graf er genereret endnu. Gå til hovedsiden for at oprette en SPC-graf først."
+          )
+        ),
+        # Show preview when plot available
+        shiny::conditionalPanel(
+          condition = "output.plot_available == true",
+          ns = ns,
+          shiny::div(
+            style = "height: 100%; display: flex; align-items: center; justify-content: center;",
+            shiny::plotOutput(
+              ns("export_preview"),
+              width = "100%",
+              height = "600px"
+            )
           )
         )
       )
