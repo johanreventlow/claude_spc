@@ -791,64 +791,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           return(invisible(NULL))
         }
 
-        # CRITICAL: BFHcharts plots use custom "Mari" font which causes "invalid font type" errors
-        # Solution: Reset all text elements to standard sans font family before rendering
-        result_metadata <- spc_results()$metadata
-        is_bfhcharts <- !is.null(result_metadata$backend) &&
-          result_metadata$backend == "bfhcharts"
+        # NOTE: BFHcharts font handling is now done in BFHthemes package
+        # Mari font fallback logic moved to source (BFHthemes) for proper fix
+        # If Mari font is not available, BFHthemes will automatically use sans fallback
 
-        if (is_bfhcharts) {
-          # BFHcharts plots need font family reset to avoid "invalid font type" errors
-          tryCatch(
-            {
-              # Create a copy of the plot to modify
-              plot_copy <- plot_result
-
-              # Reset all text elements to safe default font family
-              # This fixes the "Mari" font issue that causes "invalid font type" errors
-              plot_copy <- plot_copy + ggplot2::theme(
-                text = ggplot2::element_text(family = "sans"),
-                plot.title = ggplot2::element_text(family = "sans"),
-                axis.title = ggplot2::element_text(family = "sans"),
-                axis.text = ggplot2::element_text(family = "sans"),
-                legend.text = ggplot2::element_text(family = "sans"),
-                legend.title = ggplot2::element_text(family = "sans"),
-                strip.text = ggplot2::element_text(family = "sans")
-              )
-
-              # Try to print the modified plot
-              print(plot_copy)
-              log_info(
-                "BFHcharts plot rendered after resetting font family to sans",
-                .context = "VISUALIZATION"
-              )
-            },
-            error = function(e) {
-              # If even that fails, show informative message
-              graphics::plot.new()
-              graphics::text(
-                0.5, 0.6,
-                "BFHcharts plot genereret",
-                cex = 1.3, col = "#28a745", font = 2
-              )
-              graphics::text(
-                0.5, 0.4,
-                sprintf(
-                  "Rendering fejlede: %s\nBrug qicharts2 backend indtil videre",
-                  substr(e$message, 1, 50)
-                ),
-                cex = 0.9, col = "#dc3545"
-              )
-              log_error(
-                paste("BFHcharts plot rendering failed:", e$message),
-                .context = "VISUALIZATION"
-              )
-            }
-          )
-        } else {
-          # Standard qicharts2 plot - render normally
-          print(plot_result)
-        }
+        # Simple unified rendering for all plots
+        print(plot_result)
         invisible(plot_result)
       }
     )
