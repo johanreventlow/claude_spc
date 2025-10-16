@@ -43,6 +43,35 @@ qic_data <- qic(..., target = 110, return.data = TRUE)
 
 **Konklusion:** Target line rendering er sandsynligvis ikke implementeret i BFHcharts endnu. Dette skal håndteres i BFHcharts pakken, ikke i SPCify integration layer.
 
+### ⚠️ Bug #2: centerline_value
+**Status:** IKKE IMPLEMENTERET I BFHCHARTS
+
+**Finding:** BFHcharts accepterer ikke `centerline_value` parameter (custom baseline for control limits).
+
+**SPCify Implementation:**
+- ✅ Parameter ekstraheres fra `extra_params$centerline_value`
+- ✅ Passes til `map_to_bfh_params()` (line 332)
+- ✅ Scale normalisering virker (90 → 0.9 for percentage charts)
+- ✅ Inkluderet i conservative filter `fields_to_keep`
+- ✅ Debug logging bekræfter parameter sendes
+
+**Test Resultat:**
+```r
+# SPCify sender korrekt:
+[23:40:08] DEBUG: [BFH_SERVICE] Centerline parameter included: centerline_value = 0.9
+
+# BFHcharts afviser:
+[23:40:08] ERROR: [ERROR_HANDLING_BFH_API_CALL] BFHchart API call fejlede:
+  unused argument (centerline_value = 0.9)
+```
+
+**Implementering i SPCify:**
+- `R/fct_spc_bfh_service.R` lines 663-670: centerline_value tilføjet til params
+- `R/fct_spc_bfh_service.R` line 825: centerline_value i conservative filter
+- `R/fct_spc_bfh_service.R` lines 847-855: Debug logging
+
+**Konklusion:** Centerline (baseline) parameter er ikke implementeret i BFHcharts API endnu. SPCify sender parameteren korrekt, men BFHcharts::create_spc_chart() understøtter ikke argumentet. Dette skal håndteres i BFHcharts pakken.
+
 ### ⚠️ Bug #4: y_axis_unit Validation
 **Status:** BREAKING CHANGE I BFHCHARTS API
 
@@ -137,11 +166,17 @@ log_debug(
 - Danish language support: "procent", "andel", "tid", "varighed"
 - Graceful fallback til "count" for fri-tekst input (fx "Patienter")
 
-#### 2. Target Value Handling
-Siden BFHcharts ikke renderer target line endnu:
+#### 2. Target Value & Centerline Handling
+Siden BFHcharts ikke renderer target line eller centerline endnu:
 - **Option A:** Vent på BFHcharts implementering (anbefalet)
-- **Option B:** Tilføj target line i SPCify (duplikation af ansvar)
-- **Option C:** Fallback til qicharts2 når target er sat
+- **Option B:** Tilføj target/centerline i SPCify (duplikation af ansvar)
+- **Option C:** Fallback til qicharts2 når target/centerline er sat
+
+**Status:**
+- ✅ SPCify sender `target_value` korrekt (feat/target-line-rendering)
+- ✅ SPCify sender `centerline_value` korrekt (fix/bfhcharts-core-features)
+- ❌ BFHcharts renderer ikke target line endnu
+- ❌ BFHcharts accepterer ikke centerline_value parameter endnu
 
 Anbefaling: **Option A** - Dette er BFHcharts ansvar
 
@@ -149,6 +184,7 @@ Anbefaling: **Option A** - Dette er BFHcharts ansvar
 
 - [x] Mari font fallback
 - [x] target_value overførsel (fungerer delvist - data korrekt, rendering mangler)
+- [x] centerline_value overførsel (SPCify korrekt, BFHcharts accepterer ikke parameter)
 - [x] y_axis_unit validation (breaking change identificeret)
 - [x] chart_title overførsel (fungerer)
 - [x] Bug #3: Chart type switching (IKKE reproducerbar i isolation - BFHcharts OK)
@@ -164,7 +200,8 @@ Anbefaling: **Option A** - Dette er BFHcharts ansvar
 
 ### Mellemlang Sigt (BFHcharts)
 1. Implementér target line rendering fra `target` data kolonne
-2. Overvej at tillade custom y_axis_unit strings (eller returner user input som label)
+2. Implementér `centerline_value` parameter support for custom baseline
+3. Overvej at tillade custom y_axis_unit strings (eller returner user input som label)
 
 ### Lang Sigt
 1. Fuld migration fra qicharts2 til BFHcharts efter stabilisering

@@ -660,7 +660,16 @@ map_to_bfh_params <- function(
         )
       }
 
-      # 7. Pass through additional parameters
+      # 7. Add centerline value if provided (normalized if needed)
+      if (!is.null(centerline_value)) {
+        params$centerline_value <- normalize_scale_for_bfh(
+          value = centerline_value,
+          chart_type = chart_type,
+          param_name = "centerline"
+        )
+      }
+
+      # 8. Pass through additional parameters
       extra_params <- list(...)
       if (length(extra_params) > 0) {
         if ("chart_title" %in% names(extra_params)) {
@@ -809,10 +818,11 @@ call_bfh_chart <- function(bfh_params) {
 
       # 3b. CONSERVATIVE APPROACH: Only send core parameters to BFHcharts
       # Testing shows BFHcharts may not accept all documented parameters
-      # Keep only: data, x, y, n, chart_type, freeze, part, multiply, target_value
+      # Keep only: data, x, y, n, chart_type, freeze, part, multiply, target_value, centerline_value
       # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_text, notes
       # NOTE: target_value added for target line rendering (feat/target-line-rendering)
-      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value")
+      # NOTE: centerline_value added for baseline rendering (fix/bfhcharts-core-features)
+      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value", "centerline_value")
       bfh_params_clean <- bfh_params[names(bfh_params) %in% fields_to_keep]
 
       removed_fields <- setdiff(names(bfh_params), fields_to_keep)
@@ -829,6 +839,16 @@ call_bfh_chart <- function(bfh_params) {
         log_debug(
           paste(
             "Target parameter included: target_value =", bfh_params_clean$target_value
+          ),
+          .context = "BFH_SERVICE"
+        )
+      }
+
+      # Log centerline_value if present
+      if ("centerline_value" %in% names(bfh_params_clean)) {
+        log_debug(
+          paste(
+            "Centerline parameter included: centerline_value =", bfh_params_clean$centerline_value
           ),
           .context = "BFH_SERVICE"
         )
