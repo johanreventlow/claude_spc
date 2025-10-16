@@ -29,10 +29,19 @@ app_ui <- function(request) {
       # Sidebar
       sidebar = create_ui_sidebar(),
 
-      # Hovedindhold
+      # Navigation tabs
+      # Hovedindhold - SPC Chart arbejdsområde
       bslib::nav_panel(
-        title = NULL,
+        title = "Analyse",
+        icon = shiny::icon("chart-line"),
         create_ui_main_content()
+      ),
+
+      # Eksport tab - SPC Chart eksport modul
+      bslib::nav_panel(
+        title = "Eksport",
+        icon = shiny::icon("file-export"),
+        mod_export_ui("export")
       )
     )
   )
