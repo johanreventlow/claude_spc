@@ -174,27 +174,16 @@ mod_export_server <- function(id, app_state) {
     # Download handler - generates export file based on format
     output$download_export <- shiny::downloadHandler(
       filename = function() {
-        # Generate filename based on format and title
+        # Generate filename using utility function
         format <- input$export_format %||% "pdf"
-        title <- input$export_title %||% "SPC_Chart"
+        title <- input$export_title %||% ""
+        department <- input$export_department %||% ""
 
-        # Sanitize title for filename (replace spaces and special chars)
-        safe_title <- gsub("[^a-zA-Z0-9_-]", "_", title)
-        safe_title <- gsub("_{2,}", "_", safe_title) # Replace multiple underscores
-        safe_title <- substr(safe_title, 1, 50) # Limit length
-
-        # Generate timestamp
-        timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-
-        # Construct filename
-        filename <- paste0(
-          EXPORT_FILENAME_PREFIX,
-          EXPORT_FILENAME_SEPARATOR,
-          safe_title,
-          EXPORT_FILENAME_SEPARATOR,
-          timestamp,
-          ".",
-          format
+        # Use centralized filename generation
+        filename <- generate_export_filename(
+          format = format,
+          title = title,
+          department = department
         )
 
         log_info(
@@ -250,25 +239,88 @@ mod_export_server <- function(id, app_state) {
               print(plot)
               grDevices::dev.off()
             } else if (format == "png") {
-              # PNG export - placeholder for actual implementation
+              # PNG export - full implementation with size presets and DPI
               log_debug(
                 component = "[EXPORT_MODULE]",
-                message = "PNG export - placeholder implementation"
+                message = "PNG export with configurable size/DPI"
               )
-              # Get size preset
-              dpi <- as.numeric(input$png_dpi %||% 96)
-              # TODO: Parse size preset and apply custom dimensions
-              # For now, use medium preset defaults
-              grDevices::png(
-                filename = file,
-                width = EXPORT_SIZE_PRESETS$medium$width,
-                height = EXPORT_SIZE_PRESETS$medium$height,
-                res = dpi,
-                type = EXPORT_PNG_CONFIG$type,
-                bg = EXPORT_PNG_CONFIG$bg
+
+              # Get DPI from input (default 96)
+              dpi <- as.numeric(input$export_dpi %||% 96)
+
+              # Get size preset or custom dimensions
+              size_preset <- input$export_size_preset %||% "medium"
+
+              if (size_preset == "custom") {
+                # Use custom dimensions from input
+                width_px <- as.numeric(input$export_custom_width %||% 1200)
+                height_px <- as.numeric(input$export_custom_height %||% 900)
+
+                # Convert pixels to inches for generate_png_export
+                width_inches <- width_px / dpi
+                height_inches <- height_px / dpi
+
+                log_debug(
+                  paste(
+                    "Custom PNG dimensions:",
+                    sprintf("%dx%d pixels @ %d DPI", width_px, height_px, dpi),
+                    sprintf("(%.2f×%.2f inches)", width_inches, height_inches)
+                  ),
+                  .context = "EXPORT_MODULE"
+                )
+              } else {
+                # Use preset dimensions
+                preset <- get_size_from_preset(size_preset)
+
+                # Convert pixels to inches if preset uses pixels
+                if (preset$unit == "px") {
+                  width_inches <- preset$width / preset$dpi
+                  height_inches <- preset$height / preset$dpi
+                } else {
+                  # Preset already in inches (e.g., powerpoint)
+                  width_inches <- preset$width
+                  height_inches <- preset$height
+                }
+
+                log_debug(
+                  paste(
+                    "Using size preset:",
+                    size_preset,
+                    sprintf("(%.2f×%.2f inches @ %d DPI)", width_inches, height_inches, dpi)
+                  ),
+                  .context = "EXPORT_MODULE"
+                )
+              }
+
+              # Validate export inputs before generating
+              validate_export_inputs(
+                format = "png",
+                title = input$export_title,
+                department = input$export_department,
+                width = round(width_inches * dpi),
+                height = round(height_inches * dpi)
               )
-              print(plot)
-              grDevices::dev.off()
+
+              # Generate PNG using dedicated export function
+              result <- generate_png_export(
+                plot_object = plot,
+                width_inches = width_inches,
+                height_inches = height_inches,
+                dpi = dpi,
+                output_path = file
+              )
+
+              # Verify successful generation
+              if (is.null(result) || !file.exists(file)) {
+                stop("PNG generation failed - file not created")
+              }
+
+              # Success notification
+              shiny::showNotification(
+                "PNG genereret og downloadet",
+                type = "message",
+                duration = 3
+              )
             } else if (format == "pptx") {
               # PowerPoint export - placeholder for actual implementation
               log_debug(
