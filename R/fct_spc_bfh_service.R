@@ -660,7 +660,17 @@ map_to_bfh_params <- function(
         )
       }
 
-      # 7. Pass through additional parameters
+      # 7. Add centerline value if provided (normalized if needed)
+      # BFHcharts parameter name: cl (not centerline_value)
+      if (!is.null(centerline_value)) {
+        params$cl <- normalize_scale_for_bfh(
+          value = centerline_value,
+          chart_type = chart_type,
+          param_name = "centerline"
+        )
+      }
+
+      # 8. Pass through additional parameters
       extra_params <- list(...)
       if (length(extra_params) > 0) {
         if ("chart_title" %in% names(extra_params)) {
@@ -809,9 +819,11 @@ call_bfh_chart <- function(bfh_params) {
 
       # 3b. CONSERVATIVE APPROACH: Only send core parameters to BFHcharts
       # Testing shows BFHcharts may not accept all documented parameters
-      # Keep only: data, x, y, n, chart_type, freeze, part, multiply
-      # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_value, target_text, notes
-      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply")
+      # Keep only: data, x, y, n, chart_type, freeze, part, multiply, target_value, cl
+      # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_text, notes
+      # NOTE: target_value added for target line rendering (feat/target-line-rendering)
+      # NOTE: cl (centerline) added for baseline rendering (fix/bfhcharts-core-features)
+      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value", "cl")
       bfh_params_clean <- bfh_params[names(bfh_params) %in% fields_to_keep]
 
       removed_fields <- setdiff(names(bfh_params), fields_to_keep)
@@ -822,6 +834,26 @@ call_bfh_chart <- function(bfh_params) {
         ),
         .context = "BFH_SERVICE"
       )
+
+      # Log target_value if present
+      if ("target_value" %in% names(bfh_params_clean)) {
+        log_debug(
+          paste(
+            "Target parameter included: target_value =", bfh_params_clean$target_value
+          ),
+          .context = "BFH_SERVICE"
+        )
+      }
+
+      # Log cl (centerline) if present
+      if ("cl" %in% names(bfh_params_clean)) {
+        log_debug(
+          paste(
+            "Centerline parameter included: cl =", bfh_params_clean$cl
+          ),
+          .context = "BFH_SERVICE"
+        )
+      }
 
       # 3c. DEBUG: Log data types being sent to BFHcharts
       if (!is.null(bfh_params_clean$data)) {
