@@ -809,9 +809,10 @@ call_bfh_chart <- function(bfh_params) {
 
       # 3b. CONSERVATIVE APPROACH: Only send core parameters to BFHcharts
       # Testing shows BFHcharts may not accept all documented parameters
-      # Keep only: data, x, y, n, chart_type, freeze, part, multiply
-      # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_value, target_text, notes
-      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply")
+      # Keep only: data, x, y, n, chart_type, freeze, part, multiply, target_value
+      # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_text, notes
+      # NOTE: target_value added for target line rendering (feat/target-line-rendering)
+      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value")
       bfh_params_clean <- bfh_params[names(bfh_params) %in% fields_to_keep]
 
       removed_fields <- setdiff(names(bfh_params), fields_to_keep)
@@ -822,6 +823,16 @@ call_bfh_chart <- function(bfh_params) {
         ),
         .context = "BFH_SERVICE"
       )
+
+      # Log target_value if present
+      if ("target_value" %in% names(bfh_params_clean)) {
+        log_debug(
+          paste(
+            "Target parameter included: target_value =", bfh_params_clean$target_value
+          ),
+          .context = "BFH_SERVICE"
+        )
+      }
 
       # 3c. DEBUG: Log data types being sent to BFHcharts
       if (!is.null(bfh_params_clean$data)) {
