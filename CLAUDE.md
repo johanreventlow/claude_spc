@@ -262,6 +262,36 @@ Sys.setenv(GOLEM_CONFIG_ACTIVE = "dev")  # dev/test/prod
 * **Namespace calls** – `pkg::fun()` fremfor `library()`
 * **Data integrity** – Bevar CSV encoding, delimiter, BOM uændret
 
+### 5.3 External Package Ownership
+
+✅ **VIGTIGT:** Project maintainer har fuld kontrol over følgende pakker:
+
+* **BFHcharts** – SPC chart rendering og visualisering
+* **BFHthemes** – Hospital branding, themes og fonts
+
+**Konsekvens for SPCify udvikling:**
+
+❌ **ALDRIG implementer funktionalitet i SPCify som hører hjemme i BFHcharts eller BFHthemes**
+
+✅ **I STEDET:**
+1. Identificer manglende funktionalitet i ekstern pakke
+2. Dokumentér behovet (issue, ADR, eller docs/)
+3. Informér maintainer om feature request
+4. Implementér midlertidig workaround i SPCify HVIS kritisk (marker tydeligt som temporary)
+5. Fjern workaround når funktionalitet er tilgængelig i ekstern pakke
+
+**Eksempler:**
+* Target line rendering → BFHcharts ansvar (ikke SPCify)
+* Font fallback logic → BFHthemes ansvar (ikke SPCify)
+* Hospital branding colors → BFHthemes ansvar (ikke SPCify)
+* Chart styling defaults → BFHcharts ansvar (ikke SPCify)
+
+**Integration Pattern:**
+* SPCify er **integration layer** og **business logic**
+* BFHcharts er **visualization engine**
+* BFHthemes er **styling framework**
+* Bevar klar separation of concerns
+
 ---
 
 ## 6) Architecture
