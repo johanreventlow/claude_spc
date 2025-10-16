@@ -186,7 +186,7 @@ reset_qic_performance_counters <- function() {
   # Unlock cache statistics bindings for runtime modification
   # CRITICAL FIX: Package loading locks these bindings, preventing cache stats updates
   # This causes panel height measurement to fail with "cannot change value of locked binding"
-  unlock_cache_statistics()
+  unlock_cache_statistics(ns = environment())
 
   invisible()
 }
@@ -283,40 +283,59 @@ setup_resource_paths <- function() {
 #' "cannot change value of locked binding for '.panel_cache_stats'"
 #'
 #' @noRd
-unlock_cache_statistics <- function() {
-  # Get package namespace
-  ns <- asNamespace("SPCify")
+unlock_cache_statistics <- function(ns = NULL) {
+  # Resolve namespace without forcing recursive loading during .onLoad
+  if (is.null(ns)) {
+    ns <- environment()
+  }
+
+  if (is.null(ns) || !is.environment(ns)) {
+    ns <- tryCatch(
+      getNamespace("SPCify"),
+      error = function(e) NULL
+    )
+  }
+
+  if (is.null(ns) || !is.environment(ns)) {
+    warning("Failed to resolve SPCify namespace for cache unlocking")
+    return(invisible(FALSE))
+  }
 
   # Unlock cache statistics bindings if they exist
   tryCatch(
     {
-      if (exists(".panel_cache_stats", envir = ns, inherits = FALSE)) {
+      if (exists(".panel_cache_stats", envir = ns, inherits = FALSE) &&
+        bindingIsLocked(".panel_cache_stats", ns)) {
         unlockBinding(".panel_cache_stats", ns)
         message("[CACHE_INIT] Unlocked .panel_cache_stats binding for runtime updates")
       }
 
-      if (exists(".grob_cache_stats", envir = ns, inherits = FALSE)) {
+      if (exists(".grob_cache_stats", envir = ns, inherits = FALSE) &&
+        bindingIsLocked(".grob_cache_stats", ns)) {
         unlockBinding(".grob_cache_stats", ns)
         message("[CACHE_INIT] Unlocked .grob_cache_stats binding for runtime updates")
       }
 
       # Also unlock config bindings to allow dynamic configuration
-      if (exists(".panel_cache_config", envir = ns, inherits = FALSE)) {
+      if (exists(".panel_cache_config", envir = ns, inherits = FALSE) &&
+        bindingIsLocked(".panel_cache_config", ns)) {
         unlockBinding(".panel_cache_config", ns)
         message("[CACHE_INIT] Unlocked .panel_cache_config binding for runtime updates")
       }
 
-      if (exists(".grob_cache_config", envir = ns, inherits = FALSE)) {
+      if (exists(".grob_cache_config", envir = ns, inherits = FALSE) &&
+        bindingIsLocked(".grob_cache_config", ns)) {
         unlockBinding(".grob_cache_config", ns)
         message("[CACHE_INIT] Unlocked .grob_cache_config binding for runtime updates")
       }
     },
     error = function(e) {
       warning("Failed to unlock cache bindings: ", e$message)
+      return(invisible(FALSE))
     }
   )
 
-  invisible()
+  invisible(TRUE)
 }
 
 #' Package unload cleanup

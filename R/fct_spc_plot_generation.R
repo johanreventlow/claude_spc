@@ -924,7 +924,6 @@ generateSPCPlot <- function(data, config, chart_type, target_value = NULL, cente
       )
 
 
-
       # Beregn x-akse limits og breaks for extended area ----
       data_x_min <- min(qic_data$x, na.rm = TRUE)
       data_x_max <- max(qic_data$x, na.rm = TRUE)

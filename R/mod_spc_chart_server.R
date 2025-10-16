@@ -720,7 +720,6 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     # UI Output Funktioner ----------------------------------------------------
 
 
-
     ## Faktisk Plot Rendering
     # Separat renderPlot for det faktiske SPC plot med responsive font sizing
     # base_size beregnes automatisk i spc_inputs() reactive baseret på plot bredde

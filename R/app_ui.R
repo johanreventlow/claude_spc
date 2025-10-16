@@ -116,12 +116,13 @@ app_sys <- function(...) {
 #'
 #' @noRd
 get_golem_config <- function(
-    value,
-    config = Sys.getenv(
-      "GOLEM_CONFIG_ACTIVE",
-      "default"
-    ),
-    use_parent = TRUE) {
+  value,
+  config = Sys.getenv(
+    "GOLEM_CONFIG_ACTIVE",
+    "default"
+  ),
+  use_parent = TRUE
+) {
   # Avoid app_sys during package loading to prevent freeze
   config_file <- "inst/golem-config.yml"
   if (!file.exists(config_file)) {

@@ -23,27 +23,28 @@
 #'
 #' @export
 add_right_labels_marquee <- function(
-    p,
-    yA,
-    yB,
-    textA,
-    textB,
-    params = list(
-      label_height_npc = NULL, # Auto-beregnes
-      gap_line = NULL, # Auto-beregnes
-      gap_labels = NULL, # Auto-beregnes
-      pad_top = 0.01,
-      pad_bot = 0.01,
-      pref_pos = c("under", "under"),
-      priority = "A"
-    ),
-    gpA = grid::gpar(col = "#009CE8"),
-    gpB = grid::gpar(col = "#565656"),
-    label_size = 6,
-    viewport_width = NULL,
-    viewport_height = NULL,
-    verbose = TRUE,
-    debug_mode = FALSE) {
+  p,
+  yA,
+  yB,
+  textA,
+  textB,
+  params = list(
+    label_height_npc = NULL, # Auto-beregnes
+    gap_line = NULL, # Auto-beregnes
+    gap_labels = NULL, # Auto-beregnes
+    pad_top = 0.01,
+    pad_bot = 0.01,
+    pref_pos = c("under", "under"),
+    priority = "A"
+  ),
+  gpA = grid::gpar(col = "#009CE8"),
+  gpB = grid::gpar(col = "#565656"),
+  label_size = 6,
+  viewport_width = NULL,
+  viewport_height = NULL,
+  verbose = TRUE,
+  debug_mode = FALSE
+) {
   # Beregn responsive størrelser baseret på label_size (baseline = 6)
   scale_factor <- label_size / 6
 

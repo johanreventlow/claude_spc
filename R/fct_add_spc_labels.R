@@ -47,18 +47,19 @@
 #'
 #' @export
 add_spc_labels <- function(
-    plot,
-    qic_data,
-    y_axis_unit = "count",
-    label_size = 6,
-    viewport_width = NULL,
-    viewport_height = NULL,
-    target_text = NULL,
-    centerline_value = NULL,
-    has_frys_column = FALSE,
-    has_skift_column = FALSE,
-    verbose = FALSE,
-    debug_mode = FALSE) {
+  plot,
+  qic_data,
+  y_axis_unit = "count",
+  label_size = 6,
+  viewport_width = NULL,
+  viewport_height = NULL,
+  target_text = NULL,
+  centerline_value = NULL,
+  has_frys_column = FALSE,
+  has_skift_column = FALSE,
+  verbose = FALSE,
+  debug_mode = FALSE
+) {
   # Entry logging (conditional)
   if (verbose || getOption("spc.debug.label_placement", FALSE)) {
     log_debug("Function called", .context = "LABEL_PLACEMENT")

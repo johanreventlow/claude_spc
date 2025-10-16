@@ -108,7 +108,7 @@ get_priority <- function(priority_name) {
 #' @rdname priority_helpers
 #' @examples
 #' \dontrun{
-#' observeEvent(input$data, priority = priority_high(), { })
+#' observeEvent(input$data, priority = priority_high(), {})
 #' }
 priority_high <- function() OBSERVER_PRIORITIES$STATE_MANAGEMENT
 
