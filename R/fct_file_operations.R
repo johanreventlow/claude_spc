@@ -332,8 +332,7 @@ handle_excel_upload <- function(file_path, session, app_state, emit, ui_service 
     shiny::isolate({
       if (!is.null(ui_service)) {
         restore_metadata(session, metadata, ui_service)
-      } else {
-      }
+      } else {}
     })
 
     shiny::showNotification(

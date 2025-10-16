@@ -609,8 +609,7 @@ safe_programmatic_ui_update <- function(session, app_state, update_function, del
         function(session, inputId, choices = NULL, selected = NULL, ...) {
           # Operation completed
 
-          if (!is.null(choices) && length(choices) > 0) {
-          }
+          if (!is.null(choices) && length(choices) > 0) {}
 
           if (!is.null(selected)) {
             input_token <- paste0(session_token, "_", inputId)

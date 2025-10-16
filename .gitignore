@@ -47,10 +47,14 @@ Thumbs.db
 .quarto
 CLAUDE.md
 GEMINI.md
+AGENTS.md
 johans_notes_to_self.md
 ARCHITECTURE_ANALYSIS.md
 DEPENDENCY_AUDIT.md
 .Rlibs/
 Rplots.pdf
-canddidates_for_deletion
 candidates_for_deletion
+.claude/
+
+# CCPM (Claude Code PM) - local workspace
+.claude/epics/

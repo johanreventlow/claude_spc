@@ -31,10 +31,8 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
   # DROPDOWN DEBUGGING: Log autodetect results that will be used
   auto_detect_results <- shiny::isolate(app_state$columns$auto_detect$results)
   if (!is.null(auto_detect_results)) {
-    for (col_name in names(auto_detect_results)) {
-    }
-  } else {
-  }
+    for (col_name in names(auto_detect_results)) {}
+  } else {}
 
   # Use shiny::isolate() to access reactive values safely
   current_data <- shiny::isolate(app_state$data$current_data)
@@ -63,8 +61,7 @@ sync_ui_with_columns_unified <- function(app_state, input, output, session, ui_s
         )
 
         # DROPDOWN DEBUGGING: Log alle 6 kolonner eksplicit
-        for (col_name in names(selected_columns)) {
-        }
+        for (col_name in names(selected_columns)) {}
 
         ui_service$update_column_choices(
           choices = col_choices,
