@@ -511,7 +511,21 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             qic_cache = qic_cache
           )
 
-          plot <- applyHospitalTheme(spc_result$plot, base_size = inputs$base_size)
+          # CRITICAL: Skip applyHospitalTheme() for BFHcharts plots
+          # BFHcharts applies its own theme and label layers which are incompatible
+          # with our theme system. Check metadata$backend flag to determine if plot
+          # came from BFHcharts or qicharts2.
+          is_bfhcharts <- !is.null(spc_result$metadata$backend) &&
+            spc_result$metadata$backend == "bfhcharts"
+
+          plot <- if (is_bfhcharts) {
+            # BFHcharts plot - use as-is (already themed)
+            spc_result$plot
+          } else {
+            # qicharts2 plot - apply hospital theme
+            applyHospitalTheme(spc_result$plot, base_size = inputs$base_size)
+          }
+
           qic_data <- spc_result$qic_data
 
           set_plot_state("plot_object", plot)

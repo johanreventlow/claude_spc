@@ -295,55 +295,100 @@ compute_spc_results_bfh <- function(
         }
       }
 
-      # 7. Use adapter workflow: map → call → transform
+      # 7. TWO-STAGE WORKFLOW: qicharts2 data generation → BFHcharts rendering
+      # This approach bypasses NSE issues and enables full parameter support
       extra_params <- list(...)
 
-      # 7a. Map SPCify parameters to BFHcharts API
-      bfh_params <- map_to_bfh_params(
+      # 7a. STAGE 1: Call qicharts2 to generate qic_data (handles freeze, part, Danish columns)
+      qic_data <- call_qicharts2_for_data(
         data = complete_data,
         x_var = x_var,
         y_var = y_var,
         chart_type = validated_chart_type,
         n_var = n_var,
+        cl_var = cl_var,
         freeze_var = freeze_var,
-        part_var = part_var,
-        target_value = extra_params$target_value,
-        centerline_value = extra_params$centerline_value,
-        # Pass additional BFHcharts parameters
-        y_axis_unit = extra_params$y_axis_unit %||% "count",
-        chart_title = extra_params$chart_title_reactive %||% extra_params$chart_title,
-        target_text = extra_params$target_text,
-        notes = if (!is.null(notes_column) && notes_column %in% names(complete_data)) {
-          rlang::sym(notes_column)
-        } else {
-          NULL
-        },
-        multiply = multiply
+        part_var = part_var
       )
 
-      if (is.null(bfh_params)) {
-        stop("Parameter mapping failed")
+      if (is.null(qic_data)) {
+        stop("qicharts2 data generation failed")
       }
 
-      # 7b. Call BFHcharts with safe error handling
-      bfh_result <- call_bfh_chart(bfh_params)
+      # 7b. Extract parameters for BFHcharts rendering
+      y_axis_unit <- extra_params$y_axis_unit %||% "count"
+      chart_title <- extra_params$chart_title_reactive %||% extra_params$chart_title
+      target_value <- extra_params$target_value
+      target_text <- extra_params$target_text
+      centerline_value <- extra_params$centerline_value
+
+      log_debug(
+        paste(
+          "Two-stage workflow parameters:",
+          "y_axis_unit =", y_axis_unit,
+          ", has_target =", !is.null(target_value),
+          ", has_chart_title =", !is.null(chart_title)
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # 7c. STAGE 2: Call BFHcharts low-level API with qic_data and full parameter support
+      bfh_result <- call_bfh_spc_plot(
+        qic_data = qic_data,
+        chart_type = validated_chart_type,
+        chart_title = chart_title,
+        y_axis_unit = y_axis_unit,
+        target_value = target_value,
+        target_text = target_text,
+        centerline_value = centerline_value
+      )
 
       if (is.null(bfh_result)) {
-        stop("BFHcharts call failed to return result")
+        stop("BFHcharts rendering failed")
       }
 
-      # 7c. Transform output to standardized format
-      standardized <- transform_bfh_output(
-        bfh_result = bfh_result,
-        multiply = multiply,
-        chart_type = validated_chart_type,
-        original_data = complete_data,
-        freeze_applied = !is.null(bfh_params$freeze) # Pass freeze status from params
+      # 7d. Build standardized result structure
+      # Apply multiply to qic_data values for display scaling
+      # DEFENSIVE: Check multiply is not NULL before comparison
+      if (!is.null(multiply) && multiply != 1) {
+        qic_data$y <- qic_data$y * multiply
+        qic_data$cl <- qic_data$cl * multiply
+        if ("ucl" %in% names(qic_data)) {
+          qic_data$ucl <- qic_data$ucl * multiply
+        }
+        if ("lcl" %in% names(qic_data)) {
+          qic_data$lcl <- qic_data$lcl * multiply
+        }
+      }
+
+      # Extract Anhøj rules metadata
+      anhoej_metadata <- extract_anhoej_metadata(qic_data)
+
+      # Build metadata
+      standardized <- list(
+        plot = bfh_result,
+        qic_data = tibble::as_tibble(qic_data),
+        metadata = list(
+          chart_type = validated_chart_type,
+          n_points = nrow(qic_data),
+          n_phases = if ("part" %in% names(qic_data)) length(unique(qic_data$part)) else 1,
+          freeze_applied = !is.null(freeze_var) && freeze_var %in% names(complete_data),
+          signals_detected = if ("signal" %in% names(qic_data)) sum(qic_data$signal, na.rm = TRUE) else 0,
+          bfh_version = as.character(utils::packageVersion("BFHcharts")),
+          backend = "bfhcharts", # FLAG: Indicates BFHcharts backend - skip applyHospitalTheme()
+          anhoej_rules = if (!is.null(anhoej_metadata)) {
+            list(
+              runs_detected = anhoej_metadata$runs_signal,
+              crossings_detected = anhoej_metadata$crossings_signal,
+              longest_run = anhoej_metadata$longest_run,
+              n_crossings = anhoej_metadata$n_crossings,
+              n_crossings_min = anhoej_metadata$n_crossings_min
+            )
+          } else {
+            NULL
+          }
+        )
       )
-
-      if (is.null(standardized)) {
-        stop("Output transformation failed")
-      }
 
       # 8. Log success
       log_info(
@@ -1378,11 +1423,11 @@ call_qicharts2_for_data <- function(
       # DEBUG: Verify function is loading with latest changes
       message("[DEBUG] call_qicharts2_for_data() - VERSION WITH FREEZE FIX LOADED")
 
-      # Build qicharts2 call parameters
+      # Build qicharts2 call parameters using VECTORS (not NSE)
+      # qicharts2::qic() accepts vectors directly without data parameter
       qic_params <- list(
         x = data[[x_var]],
         y = data[[y_var]],
-        data = data,
         chart = chart_type,
         return.data = TRUE
       )
@@ -1435,7 +1480,6 @@ call_qicharts2_for_data <- function(
       # DEBUG: Log all parameters being passed to qicharts2::qic()
       message("[DEBUG] ========== qicharts2::qic() PARAMETERS ==========")
       message("[DEBUG] chart: ", qic_params$chart)
-      message("[DEBUG] data rows: ", nrow(qic_params$data))
       message("[DEBUG] x length: ", length(qic_params$x))
       message("[DEBUG] y length: ", length(qic_params$y))
       if (!is.null(qic_params$n)) message("[DEBUG] n length: ", length(qic_params$n))
@@ -1443,8 +1487,77 @@ call_qicharts2_for_data <- function(
       if (!is.null(qic_params$part)) message("[DEBUG] part length: ", length(qic_params$part))
       message("[DEBUG] =================================================")
 
-      # Call qicharts2
-      qic_data <- do.call(qicharts2::qic, qic_params)
+      # Call qicharts2 directly (NOT via do.call - NSE incompatibility)
+      # Build call conditionally based on which parameters are present
+      if (!is.null(qic_params$n) && !is.null(qic_params$freeze) && !is.null(qic_params$part)) {
+        qic_data <- qicharts2::qic(
+          x = qic_params$x,
+          y = qic_params$y,
+          n = qic_params$n,
+          chart = qic_params$chart,
+          freeze = qic_params$freeze,
+          part = qic_params$part,
+          return.data = TRUE
+        )
+      } else if (!is.null(qic_params$n) && !is.null(qic_params$freeze)) {
+        qic_data <- qicharts2::qic(
+          x = qic_params$x,
+          y = qic_params$y,
+          n = qic_params$n,
+          chart = qic_params$chart,
+          freeze = qic_params$freeze,
+          return.data = TRUE
+        )
+      } else if (!is.null(qic_params$n) && !is.null(qic_params$part)) {
+        qic_data <- qicharts2::qic(
+          x = qic_params$x,
+          y = qic_params$y,
+          n = qic_params$n,
+          chart = qic_params$chart,
+          part = qic_params$part,
+          return.data = TRUE
+        )
+      } else if (!is.null(qic_params$n)) {
+        qic_data <- qicharts2::qic(
+          x = qic_params$x,
+          y = qic_params$y,
+          n = qic_params$n,
+          chart = qic_params$chart,
+          return.data = TRUE
+        )
+      } else if (!is.null(qic_params$freeze) && !is.null(qic_params$part)) {
+        qic_data <- qicharts2::qic(
+          x = qic_params$x,
+          y = qic_params$y,
+          chart = qic_params$chart,
+          freeze = qic_params$freeze,
+          part = qic_params$part,
+          return.data = TRUE
+        )
+      } else if (!is.null(qic_params$freeze)) {
+        qic_data <- qicharts2::qic(
+          x = qic_params$x,
+          y = qic_params$y,
+          chart = qic_params$chart,
+          freeze = qic_params$freeze,
+          return.data = TRUE
+        )
+      } else if (!is.null(qic_params$part)) {
+        qic_data <- qicharts2::qic(
+          x = qic_params$x,
+          y = qic_params$y,
+          chart = qic_params$chart,
+          part = qic_params$part,
+          return.data = TRUE
+        )
+      } else {
+        qic_data <- qicharts2::qic(
+          x = qic_params$x,
+          y = qic_params$y,
+          chart = qic_params$chart,
+          return.data = TRUE
+        )
+      }
 
       if (is.null(qic_data) || !is.data.frame(qic_data)) {
         stop("qicharts2::qic() did not return valid data frame")
