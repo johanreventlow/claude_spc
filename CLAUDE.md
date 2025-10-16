@@ -2,7 +2,7 @@
 
 ## 1) Projektoversigt
 
-R Shiny applikation til **Statistical Process Control (SPC)** med qicharts2. Anvendes i klinisk kvalitetsarbejde med krav om stabilitet, forståelighed og dansk sprog.
+R Shiny applikation til **Statistical Process Control (SPC)**. Anvendes i klinisk kvalitetsarbejde med krav om stabilitet, forståelighed og dansk sprog.
 
 **Udviklingsstatus:** Industristandard mønstre med test-driven development, centraliseret state management, robust error handling og moden build-/deploy-automation.
 
@@ -262,6 +262,36 @@ Sys.setenv(GOLEM_CONFIG_ACTIVE = "dev")  # dev/test/prod
 * **Namespace calls** – `pkg::fun()` fremfor `library()`
 * **Data integrity** – Bevar CSV encoding, delimiter, BOM uændret
 
+### 5.3 External Package Ownership
+
+✅ **VIGTIGT:** Project maintainer har fuld kontrol over følgende pakker:
+
+* **BFHcharts** – SPC chart rendering og visualisering
+* **BFHthemes** – Hospital branding, themes og fonts
+
+**Konsekvens for SPCify udvikling:**
+
+❌ **ALDRIG implementer funktionalitet i SPCify som hører hjemme i BFHcharts eller BFHthemes**
+
+✅ **I STEDET:**
+1. Identificer manglende funktionalitet i ekstern pakke
+2. Dokumentér behovet (issue, ADR, eller docs/)
+3. Informér maintainer om feature request
+4. Implementér midlertidig workaround i SPCify HVIS kritisk (marker tydeligt som temporary)
+5. Fjern workaround når funktionalitet er tilgængelig i ekstern pakke
+
+**Eksempler:**
+* Target line rendering → BFHcharts ansvar (ikke SPCify)
+* Font fallback logic → BFHthemes ansvar (ikke SPCify)
+* Hospital branding colors → BFHthemes ansvar (ikke SPCify)
+* Chart styling defaults → BFHcharts ansvar (ikke SPCify)
+
+**Integration Pattern:**
+* SPCify er **integration layer** og **business logic**
+* BFHcharts er **visualization engine**
+* BFHthemes er **styling framework**
+* Bevar klar separation of concerns
+
 ---
 
 ## 6) Architecture
@@ -469,6 +499,157 @@ app_state$columns$x_column               # Brug mappings$x_column
 * Retningsklarhed – fokusér på projektets langsigtede kvalitet
 
 **Succeskriterium:** Fremmer dette produktiv tænkning eller standser det?
+
+---
+
+## 13) Large Codebase Analysis with Gemini CLI
+
+### 13.1 Hvornår Brug Gemini CLI
+
+Brug `gemini -p` når du skal:
+
+* **Analysere hele R- eller Shiny-kodebaser** på tværs af mange filer
+* **Forstå sammenhængen mellem moduler, reaktive kæder og helpers**
+* **Finde duplikerede mønstre eller anti-patterns** (fx ukontrollerede `observe()`-kald)
+* Arbejde med **mange filer (>100 KB samlet)** eller **komplekse Shiny-projekter**
+* **Sammenligne implementeringer** (fx ny vs. gammel logging, caching, theme-pakke)
+* **Verificere arkitektur, moduler og funktionalitet** på tværs af hele projektet
+* **Få et overblik over afhængigheder, imports og pakke-struktur**
+
+Gemini har et **meget stort kontekstvindue** og kan håndtere **hele R-pakker eller Shiny-apps** der ville overstige andre modellers grænser.
+
+### 13.2 Basis Kommando og Fil-inklusion
+
+**Basis kommando:**
+```bash
+gemini -p "din prompt her"
+```
+
+**`@`-syntaks til fil-inklusion:**
+Brug `@` til at inkludere filer eller mapper direkte i prompten. Stier skal være relative til arbejdsmappen.
+
+**Enkeltfil-analyse:**
+```bash
+gemini -p "@app.R Forklar hvordan denne Shiny-app er struktureret og hvilke reaktive elementer den indeholder"
+```
+
+**Flere filer:**
+```bash
+gemini -p "@R/server.R @R/ui.R Beskriv hvordan input, reaktive udtryk og outputs hænger sammen"
+```
+
+**Hele pakken eller appen:**
+```bash
+gemini -p "@R/ @inst/ Summarize the architecture and modular structure of this Shiny package"
+```
+
+**Inkluder tests og hjælpefiler:**
+```bash
+gemini -p "@R/ @tests/testthat/ Analyze unit test coverage and identify missing test areas"
+```
+
+**Analyse af hele projektet:**
+```bash
+gemini -p "@./ Give me an overview of this R Shiny project – main modules, dependencies, and architecture"
+
+# Alternativt:
+gemini --all_files -p "Analyze project structure, dependencies, and logging implementation"
+```
+
+### 13.3 Implementerings-tjek Eksempler
+
+**Tjek om specifikke features er implementeret:**
+```bash
+gemini -p "@R/ @modules/ Has the new SPC chart export feature been implemented? Show relevant functions and files"
+```
+
+**Verificér logging:**
+```bash
+gemini -p "@R/utils_logging.R @server.R Is structured logging (using lgr or similar) implemented consistently across modules?"
+```
+
+**Reaktivitet og performance:**
+```bash
+gemini -p "@R/ Is reactive chain management handled properly to avoid circular dependencies or redundant computations?"
+```
+
+**Fejlhåndtering:**
+```bash
+gemini -p "@R/ Are tryCatch or safe_call used consistently to handle runtime errors in Shiny observers and reactives?"
+```
+
+**Caching og datalagring:**
+```bash
+gemini -p "@R/ @data/ Is any caching mechanism (e.g. memoise or duckdb caching) implemented for heavy computations?"
+```
+
+**Testdækning:**
+```bash
+gemini -p "@tests/ @R/ Are critical modules like data transformation and SPC chart rendering covered by unit tests?"
+```
+
+**Sikkerhed:**
+```bash
+gemini -p "@app.R @R/ Check for potential security issues – are user inputs validated and sanitized before database operations?"
+```
+
+### 13.4 Avancerede Analyse Prompts
+
+**Dependency graph:**
+```bash
+gemini -p "@R/ @modules/ @tests/ Create a dependency graph of all modules and explain their interrelations"
+```
+
+**Helper functions oversigt:**
+```bash
+gemini -p "@R/utils/ Summarize all helper functions and classify them by purpose (logging, data, plotting, etc.)"
+```
+
+**Code quality evaluering:**
+```bash
+gemini -p "@R/ @inst/theme/ Evaluate code quality and naming consistency for this custom ggplot theme package"
+```
+
+**Data flow mapping:**
+```bash
+gemini -p "@R/ @data/ Identify where SPC data is loaded, transformed, and visualized; map out the data flow"
+```
+
+**Detect unused code:**
+```bash
+gemini -p "@R/ Detect unused or redundant functions in the codebase"
+```
+
+### 13.5 Vigtige Noter
+
+* `@`-stier er **relative til din aktuelle arbejdsmappe** når du kører `gemini`
+* CLI'en **indsætter filindhold direkte i konteksten**
+* Du behøver **ikke** `--yolo`-flag for læse-analyse
+* Gemini's kontekstvindue kan håndtere **hele R-pakker eller Shiny-apps**
+* **Vær præcis** i prompten for at få brugbare resultater
+
+### 13.6 Integration med SPCify Workflow
+
+Brug Gemini CLI til:
+
+1. **Arkitektur verification** før større refaktorering
+2. **Code review** på tværs af moduler
+3. **Pattern detection** for at identificere inconsistencies
+4. **Dependency analysis** før nye features
+5. **Test coverage gaps** identifikation
+6. **Security audit** af hele codebase
+
+**Eksempel workflow:**
+```bash
+# 1. Analysér før refaktorering
+gemini -p "@R/ Analyze current state management patterns and identify areas for centralization"
+
+# 2. Verificér efter implementation
+gemini -p "@R/state_management.R @R/utils_event_system.R Has centralized app_state been implemented consistently?"
+
+# 3. Test coverage check
+gemini -p "@tests/ @R/ Are all critical paths (data load, plot generation, state sync) covered by tests?"
+```
 
 ---
 
