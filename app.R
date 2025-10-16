@@ -1,9 +1,10 @@
 # app.R
 # Development entry point for SPC App
 # options(spc.debug.label_placement = TRUE)
-options(spc.debug.source_loading = TRUE)
+# options(spc.debug.source_loading = TRUE)
 # Load package
 devtools::load_all(reset = TRUE, recompile = FALSE, helpers = FALSE)
+get_golem_config("features")$use_bfhchart
 
 # Run app with test mode enabled for development
 run_app(enable_test_mode = TRUE, log_level = "DEBUG")

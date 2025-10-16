@@ -79,7 +79,7 @@ default:
 
   # Migration and experimental features
   features:
-    use_bfhchart: false                    # BFHchart backend (default: qicharts2)
+    use_bfhchart: true                    # BFHchart backend (default: qicharts2)
     bfhchart_version_required: "0.1.0"
     bfhchart_supported_types: ["run", "i", "p", "c", "u"]  # Validated chart types
 
@@ -157,6 +157,12 @@ development:
     enable_session_debugging: true
     cleanup_on_disconnect: true
 
+  # Migration and experimental features (inherited from default, can override)
+  features:
+    use_bfhchart: true                     # BFHchart backend (enabled for development testing)
+    bfhchart_version_required: "0.1.0"
+    bfhchart_supported_types: ["run", "i", "p", "c", "u"]  # Validated chart types
+
 # PRODUCTION CONFIGURATION ===================================================
 # Optimized for security, stability and performance
 
@@ -224,6 +230,12 @@ production:
     save_session_on_exit: true
     enable_session_debugging: false
     cleanup_on_disconnect: false    # Preserve user work
+
+  # Migration and experimental features
+  features:
+    use_bfhchart: true                    # BFHchart backend (default: qicharts2)
+    bfhchart_version_required: "0.1.0"
+    bfhchart_supported_types: ["run", "i", "p", "c", "u"]  # Validated chart types
 
 # TESTING CONFIGURATION ======================================================
 # Optimized for controlled test conditions and reproducibility
@@ -299,3 +311,9 @@ testing:
     save_session_on_exit: false
     enable_session_debugging: true
     cleanup_on_disconnect: true     # Clean up after tests
+
+  # Migration and experimental features
+  features:
+    use_bfhchart: true                    # BFHchart backend (default: qicharts2)
+    bfhchart_version_required: "0.1.0"
+    bfhchart_supported_types: ["run", "i", "p", "c", "u"]  # Validated chart types

@@ -76,8 +76,6 @@ safe_eval_benchmark <- function(expr, operation_name = "unknown") {
 #' @param capture_result Capture and return the result of the last expression evaluation (default: FALSE)
 #'
 #' @return List with summary statistics or full microbenchmark results
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Benchmark autodetect engine
@@ -98,6 +96,7 @@ safe_eval_benchmark <- function(expr, operation_name = "unknown") {
 #'   }
 #' ), operation_name = "implementation_comparison")
 #' }
+#' @export
 benchmark_spc_operation <- function(expr, times = 100, operation_name = "unknown_operation",
                                     log_results = TRUE, return_full_results = FALSE,
                                     capture_result = FALSE) {

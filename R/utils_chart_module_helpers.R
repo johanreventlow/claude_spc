@@ -21,10 +21,9 @@ create_chart_state_manager <- function(app_state) {
   }
 
   list(
-    #' Set plot state value safely
-    #'
-    #' @param key State key to update
-    #' @param value New value
+    # Set plot state value safely
+    # key: State key to update
+    # value: New value
     set_plot_state = function(key, value) {
       safe_operation(
         paste("Set plot state:", key),
@@ -36,10 +35,9 @@ create_chart_state_manager <- function(app_state) {
       )
     },
 
-    #' Get plot state value safely
-    #'
-    #' @param key State key to retrieve
-    #' @param default Default value if key not found
+    # Get plot state value safely
+    # key: State key to retrieve
+    # default: Default value if key not found
     get_plot_state = function(key, default = NULL) {
       safe_operation(
         paste("Get plot state:", key),
@@ -51,7 +49,7 @@ create_chart_state_manager <- function(app_state) {
       )
     },
 
-    #' Reset plot state to initial values
+    # Reset plot state to initial values
     reset_plot_state = function() {
       safe_operation(
         "Reset plot state",
@@ -79,9 +77,7 @@ create_chart_state_manager <- function(app_state) {
       )
     },
 
-    #' Check if plot is ready for display
-    #'
-    #' @return Logical indicating plot readiness
+    # Check if plot is ready for display
     is_plot_ready = function() {
       safe_operation(
         "Check plot readiness",
@@ -107,9 +103,7 @@ create_chart_state_manager <- function(app_state) {
 #' @export
 create_module_data_manager <- function(app_state) {
   list(
-    #' Get module data with reactive safety
-    #'
-    #' @return Current data with attributes or NULL
+    # Get module data with reactive safety
     get_module_data = function() {
       safe_operation(
         "Get module data",
@@ -149,9 +143,7 @@ create_module_data_manager <- function(app_state) {
       )
     },
 
-    #' Cache module data
-    #'
-    #' @param data Data to cache
+    # Cache module data
     cache_module_data = function(data) {
       safe_operation(
         "Cache module data",
@@ -163,9 +155,7 @@ create_module_data_manager <- function(app_state) {
       )
     },
 
-    #' Get cached module data
-    #'
-    #' @return Cached data or NULL
+    # Get cached module data
     get_cached_data = function() {
       safe_operation(
         "Get cached module data",
@@ -177,7 +167,7 @@ create_module_data_manager <- function(app_state) {
       )
     },
 
-    #' Clear cached data
+    # Clear cached data
     clear_cache = function() {
       safe_operation(
         "Clear module data cache",
@@ -199,11 +189,7 @@ create_module_data_manager <- function(app_state) {
 #' @export
 create_spc_results_processor <- function() {
   list(
-    #' Extract QIC results from plot data
-    #'
-    #' @param qic_data QIC data object from qicharts2
-    #' @param chart_type Chart type for context-specific messages
-    #' @return List med SPC metrics og beskeder
+    # Extract QIC results from plot data
     extract_qic_results = function(qic_data, chart_type = "run") {
       safe_operation(
         "Extract QIC results",
@@ -292,20 +278,7 @@ create_spc_results_processor <- function() {
       )
     },
 
-    #' Generate SPC plot with full error handling
-    #'
-    #' @param data Chart data
-    #' @param config Chart configuration
-    #' @param chart_type Chart type
-    #' @param target_value Optional target value
-    #' @param centerline_value Optional centerline value
-    #' @param skift_config Phase configuration
-    #' @param frys_column Freeze column
-    #' @param chart_title_reactive Chart title reactive
-    #' @param y_unit Y-axis unit
-    #' @param kommentar_col Comment column
-    #' @param qic_cache QIC cache object for performance optimization (SPRINT 4)
-    #' @return List med plot object og QIC data
+    # Generate SPC plot with full error handling
     generate_plot_safely = function(data, config, chart_type, target_value = NULL,
                                     centerline_value = NULL, skift_config = NULL,
                                     frys_column = NULL, chart_title_reactive = NULL,
@@ -362,12 +335,7 @@ create_spc_results_processor <- function() {
 #' @export
 create_chart_validator <- function() {
   list(
-    #' Validate data and configuration for chart generation
-    #'
-    #' @param data Chart data
-    #' @param config Chart configuration
-    #' @param chart_type Chart type
-    #' @return List med validation status og warnings
+    # Validate data and configuration for chart generation
     validate_for_chart = function(data, config, chart_type) {
       safe_operation(
         "Validate data for chart generation",

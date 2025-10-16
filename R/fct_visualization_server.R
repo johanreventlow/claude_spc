@@ -199,7 +199,12 @@ setup_visualization <- function(input, output, session, app_state) {
       # Tjek om bruger har valgt en Skift kolonne - brug robust sanitization
       skift_col <- sanitize_selection(input$skift_column)
 
-      # Hvis ingen Skift kolonne valgt, ingen faser
+      # BUG FIX: Fallback til auto-detected Skift kolonne hvis bruger ikke har valgt noget
+      if (is.null(skift_col)) {
+        skift_col <- app_state$columns$mappings$skift_column
+      }
+
+      # Hvis ingen Skift kolonne valgt eller auto-detected, ingen faser
       if (is.null(skift_col) || !skift_col %in% names(data)) {
         return(list(show_phases = FALSE, skift_column = NULL))
       }
@@ -233,7 +238,12 @@ setup_visualization <- function(input, output, session, app_state) {
       # Tjek om bruger har valgt en Frys kolonne - brug robust sanitization
       frys_col <- sanitize_selection(input$frys_column)
 
-      # Hvis ingen Frys kolonne valgt eller ikke i data, returner NULL
+      # BUG FIX: Fallback til auto-detected Frys kolonne hvis bruger ikke har valgt noget
+      if (is.null(frys_col)) {
+        frys_col <- app_state$columns$mappings$frys_column
+      }
+
+      # Hvis ingen Frys kolonne valgt eller auto-detected, eller ikke i data, returner NULL
       if (is.null(frys_col) || !frys_col %in% names(data)) {
         return(NULL)
       }

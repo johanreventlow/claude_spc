@@ -605,18 +605,38 @@ add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "c
 generateSPCPlot_with_backend <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL, target_text = NULL, qic_cache = NULL) {
   # Read feature flag configuration
   features_config <- tryCatch(
-    golem::get_golem_options("features"),
-    error = function(e) {
+    {
+      cfg <- golem::get_golem_options("features")
       log_debug(
         component = "[BACKEND_WRAPPER]",
-        message = "Failed to read features config, defaulting to qicharts2",
-        details = list(error = e$message)
+        message = "Successfully read features config from golem",
+        details = list(
+          use_bfhchart = cfg$use_bfhchart,
+          supported_types = paste(cfg$bfhchart_supported_types %||% c(), collapse = ", ")
+        )
+      )
+      cfg
+    },
+    error = function(e) {
+      log_warn(
+        component = "[BACKEND_WRAPPER]",
+        message = "Failed to read features config from golem, defaulting to qicharts2",
+        details = list(
+          error = e$message,
+          GOLEM_CONFIG_ACTIVE = Sys.getenv("GOLEM_CONFIG_ACTIVE", "not_set")
+        )
       )
       list(use_bfhchart = FALSE)
     }
   )
 
   use_bfhchart <- isTRUE(features_config$use_bfhchart)
+
+  log_debug(
+    component = "[BACKEND_WRAPPER]",
+    message = sprintf("Backend selection: use_bfhchart = %s", use_bfhchart),
+    details = list(chart_type = chart_type)
+  )
 
   # Backend selection logic
   if (use_bfhchart) {
@@ -647,22 +667,24 @@ generateSPCPlot_with_backend <- function(data, config, chart_type, target_value 
     result <- tryCatch(
       {
         # Call BFHchart backend (compute_spc_results_bfh from Task #31)
+        # Adapter: Map config object to individual parameters
         compute_spc_results_bfh(
           data = data,
-          config = config,
+          x_var = config$x_col,
+          y_var = config$y_col,
           chart_type = chart_type,
+          n_var = config$n_col,
+          cl_var = NULL, # Not currently supported in SPCify
+          freeze_var = frys_column,
+          part_var = if (isTRUE(show_phases) && !is.null(skift_column)) skift_column else NULL,
+          notes_column = kommentar_column,
+          multiply = 1, # No scaling needed, handled in y_axis_unit
+          # Pass through additional BFHcharts parameters from config
           target_value = target_value,
+          target_text = target_text,
           centerline_value = centerline_value,
-          show_phases = show_phases,
-          skift_column = skift_column,
-          frys_column = frys_column,
           chart_title_reactive = chart_title_reactive,
-          y_axis_unit = y_axis_unit,
-          kommentar_column = kommentar_column,
-          base_size = base_size,
-          viewport_width = viewport_width,
-          viewport_height = viewport_height,
-          target_text = target_text
+          y_axis_unit = y_axis_unit
         )
       },
       error = function(e) {

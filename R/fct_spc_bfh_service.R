@@ -91,9 +91,6 @@
 #'     }
 #'   }
 #'   Returns NULL on error (with structured logging).
-#'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Basic run chart
@@ -138,6 +135,7 @@
 #' \code{\link{map_to_bfh_params}} for parameter transformation logic
 #' \code{\link{transform_bfh_output}} for output standardization
 #' \code{\link{add_comment_annotations}} for notes column handling
+#' @export
 compute_spc_results_bfh <- function(
   data,
   x_var,
@@ -188,6 +186,15 @@ compute_spc_results_bfh <- function(
         x_col = x_var
       )
 
+      # DEBUG: Check x column type after filtering
+      log_debug(
+        paste(
+          "After filter_complete_spc_data - x column type:",
+          "x(", x_var, ")=", class(complete_data[[x_var]])[1]
+        ),
+        .context = "BFH_SERVICE"
+      )
+
       # Check if data is sufficient
       if (nrow(complete_data) == 0) {
         stop("No valid data rows found after filtering")
@@ -211,51 +218,140 @@ compute_spc_results_bfh <- function(
         n_col = n_var
       )
 
-      # 6. Transform to BFHchart parameters
+      # 6. Apply parsed numeric data back to complete_data
+      # CRITICAL: BFHcharts needs numeric data, not character strings from CSV
+      complete_data[[y_var]] <- validated$y_data
+      if (!is.null(n_var)) {
+        complete_data[[n_var]] <- validated$n_data
+      }
+
+      # 6b. DEBUG: Verify numeric data was applied correctly
+      log_debug(
+        paste(
+          "After numeric parsing - Data types:",
+          "y(", y_var, ")=", class(complete_data[[y_var]])[1],
+          if (!is.null(n_var)) paste0(", n(", n_var, ")=", class(complete_data[[n_var]])[1]) else "",
+          " | First 3 y values:", paste(head(complete_data[[y_var]], 3), collapse = ", ")
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # 6c. CRITICAL FIX: Parse x-axis to Date/POSIXct if it's character
+      # BFHcharts requires proper date types for x-axis, not character strings
+      if (!inherits(complete_data[[x_var]], c("Date", "POSIXct", "POSIXt"))) {
+        log_debug(
+          paste("X column is character, attempting to parse to Date:", x_var),
+          .context = "BFH_SERVICE"
+        )
+
+        # Try to parse as date using lubridate
+        parsed_x <- tryCatch(
+          {
+            x_raw <- complete_data[[x_var]]
+
+            # Try multiple date formats
+            parsed <- lubridate::parse_date_time(
+              x_raw,
+              orders = c("dmy", "ymd", "mdy", "dmy HMS", "ymd HMS", "mdy HMS"),
+              quiet = TRUE
+            )
+
+            # If parsing succeeded, convert to Date if no time component
+            if (!is.null(parsed) && !all(is.na(parsed))) {
+              # Check if all times are midnight (no time component)
+              if (all(lubridate::hour(parsed) == 0 & lubridate::minute(parsed) == 0)) {
+                as.Date(parsed)
+              } else {
+                parsed # Keep as POSIXct if time component present
+              }
+            } else {
+              NULL
+            }
+          },
+          error = function(e) {
+            log_warn(
+              paste("Failed to parse x column as date:", e$message),
+              .context = "BFH_SERVICE"
+            )
+            NULL
+          }
+        )
+
+        if (!is.null(parsed_x)) {
+          complete_data[[x_var]] <- parsed_x
+          log_info(
+            paste(
+              "X column parsed successfully:",
+              x_var, "→", class(complete_data[[x_var]])[1],
+              "| First value:", as.character(complete_data[[x_var]][1])
+            ),
+            .context = "BFH_SERVICE"
+          )
+        } else {
+          log_warn(
+            paste("X column remains character - BFHcharts may fail:", x_var),
+            .context = "BFH_SERVICE"
+          )
+        }
+      }
+
+      # 7. Use adapter workflow: map → call → transform
+      extra_params <- list(...)
+
+      # 7a. Map SPCify parameters to BFHcharts API
       bfh_params <- map_to_bfh_params(
         data = complete_data,
         x_var = x_var,
         y_var = y_var,
         chart_type = validated_chart_type,
         n_var = n_var,
-        cl_var = cl_var,
         freeze_var = freeze_var,
         part_var = part_var,
-        ...
+        target_value = extra_params$target_value,
+        centerline_value = extra_params$centerline_value,
+        # Pass additional BFHcharts parameters
+        y_axis_unit = extra_params$y_axis_unit %||% "count",
+        chart_title = extra_params$chart_title_reactive %||% extra_params$chart_title,
+        target_text = extra_params$target_text,
+        notes = if (!is.null(notes_column) && notes_column %in% names(complete_data)) {
+          rlang::sym(notes_column)
+        } else {
+          NULL
+        },
+        multiply = multiply
       )
 
-      # 7. Call BFHchart
+      if (is.null(bfh_params)) {
+        stop("Parameter mapping failed")
+      }
+
+      # 7b. Call BFHcharts with safe error handling
       bfh_result <- call_bfh_chart(bfh_params)
 
       if (is.null(bfh_result)) {
-        stop("BFHchart call failed to return result")
+        stop("BFHcharts call failed to return result")
       }
 
-      # 8. Transform output to standardized format
+      # 7c. Transform output to standardized format
       standardized <- transform_bfh_output(
         bfh_result = bfh_result,
         multiply = multiply,
         chart_type = validated_chart_type,
-        original_data = complete_data
+        original_data = complete_data,
+        freeze_applied = !is.null(bfh_params$freeze) # Pass freeze status from params
       )
 
-      # 9. Add comment annotations if notes_column provided
-      if (!is.null(notes_column) && notes_column %in% names(data)) {
-        standardized$plot <- add_comment_annotations(
-          plot = standardized$plot,
-          qic_data = standardized$qic_data,
-          original_data = complete_data,
-          notes_column = notes_column
-        )
+      if (is.null(standardized)) {
+        stop("Output transformation failed")
       }
 
-      # 10. Log success
+      # 8. Log success
       log_info(
         message = "SPC computation completed successfully",
         .context = "BFH_SERVICE",
         details = list(
           chart_type = validated_chart_type,
-          n_points = nrow(complete_data),
+          n_points = nrow(standardized$qic_data),
           signals_detected = sum(standardized$qic_data$signal, na.rm = TRUE),
           has_notes = !is.null(notes_column)
         )
@@ -318,9 +414,6 @@ compute_spc_results_bfh <- function(
 #'     \item{...}{Additional passthrough parameters}
 #'   }
 #'   Returns NULL on validation failure (with error logging).
-#'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Basic parameter mapping
@@ -355,6 +448,7 @@ compute_spc_results_bfh <- function(
 #' @seealso
 #' \code{\link{compute_spc_results_bfh}} for facade interface
 #' \code{\link{call_bfh_chart}} for BFHchart invocation
+#' @export
 map_to_bfh_params <- function(
   data,
   x_var,
@@ -376,24 +470,111 @@ map_to_bfh_params <- function(
         data$.original_row_id <- seq_len(nrow(data))
       }
 
-      # 2. Build base parameters (using NSE - bare column names)
+      # DEBUG: Check x column type BEFORE sanitization
+      log_debug(
+        paste(
+          "BEFORE sanitization - x column type:",
+          "x(", x_var, ")=", class(data[[x_var]])[1]
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # 1b. CRITICAL FIX: BFHcharts rejects Danish characters (æøå) in column names
+      # Temporarily sanitize column names to ASCII-safe versions
+      # Strategy: Create mapping of original → sanitized names, rename data, use sanitized in params
+
+      sanitize_column_name <- function(name) {
+        # Replace Danish characters with ASCII equivalents
+        name <- gsub("æ", "ae", name, ignore.case = TRUE)
+        name <- gsub("ø", "oe", name, ignore.case = TRUE)
+        name <- gsub("å", "aa", name, ignore.case = TRUE)
+        # Remove any remaining non-ASCII characters
+        name <- iconv(name, to = "ASCII//TRANSLIT")
+        # Remove spaces and special chars (keep only alphanumeric and underscore)
+        name <- gsub("[^A-Za-z0-9_]", "_", name)
+        return(name)
+      }
+
+      # Create column name mapping (original → sanitized)
+      col_mapping <- setNames(
+        sapply(names(data), sanitize_column_name, USE.NAMES = FALSE),
+        names(data)
+      )
+
+      # Store original names for later reversal
+      original_names <- names(data)
+
+      # DEBUG: Check col_mapping structure before renaming
+      log_debug(
+        paste(
+          "col_mapping check:",
+          "class =", class(col_mapping),
+          "| length =", length(col_mapping),
+          "| example:", if (length(col_mapping) > 0) paste(names(col_mapping)[1], "→", col_mapping[1]) else "empty"
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # Rename data columns to sanitized names
+      # CRITICAL: Use unname() to get just the values, not named character vector
+      names(data) <- unname(col_mapping[names(data)])
+
+      # Map SPCify variable names to sanitized versions
+      x_var_sanitized <- col_mapping[x_var]
+      y_var_sanitized <- col_mapping[y_var]
+      n_var_sanitized <- if (!is.null(n_var)) col_mapping[n_var] else NULL
+
+      log_debug(
+        paste(
+          "Column name sanitization:",
+          if (x_var != x_var_sanitized) paste(x_var, "→", x_var_sanitized) else "none",
+          if (y_var != y_var_sanitized) paste(y_var, "→", y_var_sanitized) else "none"
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # DEBUG: Verify data types after column renaming
+      log_debug(
+        paste(
+          "After column renaming - Data types:",
+          "x(", x_var_sanitized, ")=", class(data[[x_var_sanitized]])[1],
+          ", y(", y_var_sanitized, ")=", class(data[[y_var_sanitized]])[1],
+          if (!is.null(n_var_sanitized)) paste0(", n(", n_var_sanitized, ")=", class(data[[n_var_sanitized]])[1]) else "",
+          " | First 3 y values:", paste(head(data[[y_var_sanitized]], 3), collapse = ", ")
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # 2. Build base parameters (using NSE - bare column names with SANITIZED names)
       params <- list(
         data = data,
-        x = rlang::sym(x_var),
-        y = rlang::sym(y_var),
-        chart_type = chart_type
+        x = rlang::sym(x_var_sanitized),
+        y = rlang::sym(y_var_sanitized),
+        chart_type = chart_type,
+        .column_mapping = col_mapping, # Store mapping for potential reversal
+        .original_names = original_names
       )
 
       # 3. Add denominator if provided
-      if (!is.null(n_var)) {
-        params$n <- rlang::sym(n_var)
+      if (!is.null(n_var_sanitized)) {
+        params$n <- rlang::sym(n_var_sanitized)
       }
 
       # 4. Add freeze parameter if provided
-      if (!is.null(freeze_var) && freeze_var %in% names(data)) {
-        # Find first TRUE value in freeze column
-        freeze_col <- data[[freeze_var]]
-        freeze_positions <- which(freeze_col == TRUE | freeze_col == 1)
+      # NOTE: freeze_var and part_var still reference ORIGINAL names, need to look up in sanitized data
+      freeze_var_sanitized <- if (!is.null(freeze_var)) col_mapping[freeze_var] else NULL
+      part_var_sanitized <- if (!is.null(part_var)) col_mapping[part_var] else NULL
+
+      if (!is.null(freeze_var_sanitized) && freeze_var_sanitized %in% names(data)) {
+        # Find first TRUE value in freeze column (using SANITIZED name)
+        freeze_col <- data[[freeze_var_sanitized]]
+        # Convert to logical vector, handling both TRUE/FALSE and 0/1 values
+        logical_vec <- suppressWarnings(as.logical(freeze_col))
+        numeric_vec <- suppressWarnings(as.numeric(freeze_col))
+        # Combine: TRUE if either logical TRUE or numeric 1
+        is_freeze <- (!is.na(logical_vec) & logical_vec == TRUE) |
+          (!is.na(numeric_vec) & numeric_vec == 1)
+        freeze_positions <- which(is_freeze)
         if (length(freeze_positions) > 0) {
           params$freeze <- freeze_positions[1]
           log_debug(
@@ -404,14 +585,25 @@ map_to_bfh_params <- function(
       }
 
       # 5. Add part parameter if provided
-      if (!is.null(part_var) && part_var %in% names(data)) {
-        # Find part boundaries (where part value changes)
-        part_col <- data[[part_var]]
-        part_changes <- which(diff(as.numeric(as.factor(part_col))) != 0)
-        if (length(part_changes) > 0) {
-          params$part <- part_changes
+      if (!is.null(part_var_sanitized) && part_var_sanitized %in% names(data)) {
+        # BUG FIX: Each TRUE in Skift column marks a part boundary directly
+        # Previous implementation used diff() which found BOTH TRUE→FALSE and FALSE→TRUE changes,
+        # resulting in double boundaries (e.g., marking row 13 gave boundaries at 12 AND 13)
+        part_col <- data[[part_var_sanitized]]
+
+        # Convert to logical vector, handling both TRUE/FALSE and 0/1 values
+        logical_vec <- suppressWarnings(as.logical(part_col))
+        numeric_vec <- suppressWarnings(as.numeric(part_col))
+
+        # Combine: TRUE if either logical TRUE or numeric 1
+        is_part_boundary <- (!is.na(logical_vec) & logical_vec == TRUE) |
+          (!is.na(numeric_vec) & numeric_vec == 1)
+
+        part_positions <- which(is_part_boundary)
+        if (length(part_positions) > 0) {
+          params$part <- part_positions
           log_debug(
-            paste("Part boundaries:", paste(part_changes, collapse = ", ")),
+            paste("Part boundaries:", paste(part_positions, collapse = ", ")),
             .context = "BFH_SERVICE"
           )
         }
@@ -474,9 +666,6 @@ map_to_bfh_params <- function(
 #'
 #' @return BFHchart result object (ggplot2 object). Returns NULL on error
 #'   (with structured error logging).
-#'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Basic invocation
@@ -499,6 +688,7 @@ map_to_bfh_params <- function(
 #' \code{\link{compute_spc_results_bfh}} for facade interface
 #' \code{\link{map_to_bfh_params}} for parameter preparation
 #' \code{\link{transform_bfh_output}} for output processing
+#' @export
 call_bfh_chart <- function(bfh_params) {
   safe_operation(
     operation_name = "BFHchart API call",
@@ -529,9 +719,42 @@ call_bfh_chart <- function(bfh_params) {
       # 3. Measure execution time
       start_time <- Sys.time()
 
+      # 3b. CONSERVATIVE APPROACH: Only send core parameters to BFHcharts
+      # Testing shows BFHcharts may not accept all documented parameters
+      # Keep only: data, x, y, n, chart_type, freeze, part, multiply
+      # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_value, target_text, notes
+      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply")
+      bfh_params_clean <- bfh_params[names(bfh_params) %in% fields_to_keep]
+
+      removed_fields <- setdiff(names(bfh_params), fields_to_keep)
+      log_debug(
+        paste(
+          "Conservative param filtering - removed:",
+          paste(removed_fields, collapse = ", ")
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      # 3c. DEBUG: Log data types being sent to BFHcharts
+      if (!is.null(bfh_params_clean$data)) {
+        x_col_name <- as.character(bfh_params_clean$x)
+        y_col_name <- as.character(bfh_params_clean$y)
+        n_col_name <- if (!is.null(bfh_params_clean$n)) as.character(bfh_params_clean$n) else NULL
+
+        log_debug(
+          paste(
+            "BFHcharts data types:",
+            "x(", x_col_name, ")=", class(bfh_params_clean$data[[x_col_name]])[1],
+            ", y(", y_col_name, ")=", class(bfh_params_clean$data[[y_col_name]])[1],
+            if (!is.null(n_col_name)) paste0(", n(", n_col_name, ")=", class(bfh_params_clean$data[[n_col_name]])[1]) else ""
+          ),
+          .context = "BFH_SERVICE"
+        )
+      }
+
       # 4. Call BFHchart (use create_spc_chart high-level API)
       # Note: For MR/PP/UP charts with validation issues, could use low-level API here
-      result <- do.call(BFHcharts::create_spc_chart, bfh_params)
+      result <- do.call(BFHcharts::create_spc_chart, bfh_params_clean)
 
       elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
 
@@ -582,6 +805,9 @@ call_bfh_chart <- function(bfh_params) {
 #' @param chart_type character. Chart type for metadata. Used in diagnostic logging.
 #' @param original_data data.frame. Original input data for comment mapping and
 #'   row count validation. Optional but recommended.
+#' @param freeze_applied logical. Whether freeze was applied in parameter mapping.
+#'   Default FALSE. Used to set metadata correctly since BFHcharts doesn't return
+#'   a freeze column.
 #'
 #' @return list with three components:
 #'   \describe{
@@ -590,9 +816,6 @@ call_bfh_chart <- function(bfh_params) {
 #'     \item{metadata}{list with chart configuration and diagnostics}
 #'   }
 #'   Returns NULL on transformation failure (with error logging).
-#'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Transform BFHchart plot output
@@ -618,11 +841,13 @@ call_bfh_chart <- function(bfh_params) {
 #' \code{\link{compute_spc_results_bfh}} for facade interface
 #' \code{\link{call_bfh_chart}} for BFHchart invocation
 #' \code{\link{add_comment_annotations}} for comment layer
+#' @export
 transform_bfh_output <- function(
   bfh_result,
   multiply = 1,
   chart_type = NULL,
-  original_data = NULL
+  original_data = NULL,
+  freeze_applied = FALSE
 ) {
   safe_operation(
     operation_name = "BFHchart output transformation",
@@ -702,7 +927,7 @@ transform_bfh_output <- function(
         chart_type = chart_type,
         n_points = nrow(qic_data),
         n_phases = length(unique(qic_data$part)),
-        freeze_applied = "freeze" %in% names(qic_data) && any(!is.na(qic_data$freeze)),
+        freeze_applied = freeze_applied, # Use parameter passed from compute_spc_results_bfh
         signals_detected = sum(qic_data$signal, na.rm = TRUE),
         bfh_version = as.character(utils::packageVersion("BFHcharts")),
         anhoej_rules = if (!is.null(anhoej_metadata)) {
@@ -799,9 +1024,6 @@ transform_bfh_output <- function(
 #'   - No non-empty comments found
 #'   - `.original_row_id` column missing (with warning)
 #'   Returns NULL on error (with structured logging).
-#'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Add comments to SPC plot
@@ -841,6 +1063,7 @@ transform_bfh_output <- function(
 #' @seealso
 #' \code{\link{compute_spc_results_bfh}} for facade interface with integrated comments
 #' \code{\link{transform_bfh_output}} for output standardization
+#' @export
 add_comment_annotations <- function(
   plot,
   qic_data,
@@ -1129,5 +1352,171 @@ normalize_scale_for_bfh <- function(value, chart_type, param_name = "value") {
     },
     fallback = value,
     error_type = "scale_normalization"
+  )
+}
+
+
+#' Call qicharts2 to Get QIC Data (Stage 1 of Two-Stage Workflow)
+#'
+#' Calls qicharts2::qic() directly to get qic_data with Danish column support.
+#' This is Stage 1 of the two-stage workflow that bypasses BFHcharts NSE issues.
+#'
+#' @keywords internal
+call_qicharts2_for_data <- function(
+  data,
+  x_var,
+  y_var,
+  chart_type,
+  n_var = NULL,
+  cl_var = NULL,
+  freeze_var = NULL,
+  part_var = NULL
+) {
+  safe_operation(
+    operation_name = "qicharts2 data generation",
+    code = {
+      # DEBUG: Verify function is loading with latest changes
+      message("[DEBUG] call_qicharts2_for_data() - VERSION WITH FREEZE FIX LOADED")
+
+      # Build qicharts2 call parameters
+      qic_params <- list(
+        x = data[[x_var]],
+        y = data[[y_var]],
+        data = data,
+        chart = chart_type,
+        return.data = TRUE
+      )
+
+      # Add optional parameters
+      if (!is.null(n_var)) {
+        qic_params$n <- data[[n_var]]
+      }
+
+      if (!is.null(freeze_var) && freeze_var %in% names(data)) {
+        message("[DEBUG] Processing freeze_var: ", freeze_var)
+        freeze_col <- data[[freeze_var]]
+        message("[DEBUG] freeze_col class: ", class(freeze_col))
+        message("[DEBUG] freeze_col first 5 values: ", paste(head(freeze_col, 5), collapse = ", "))
+
+        # Convert to logical vector, handling both TRUE/FALSE and 0/1 values
+        # Use suppressWarnings to avoid warnings from as.logical conversion
+        logical_vec <- suppressWarnings(as.logical(freeze_col))
+        numeric_vec <- suppressWarnings(as.numeric(freeze_col))
+
+        message("[DEBUG] logical_vec: ", paste(head(logical_vec, 5), collapse = ", "))
+        message("[DEBUG] numeric_vec: ", paste(head(numeric_vec, 5), collapse = ", "))
+
+        # Combine: TRUE if either logical TRUE or numeric 1
+        # Use parentheses to avoid operator precedence issues
+        is_freeze <- (!is.na(logical_vec) & logical_vec == TRUE) |
+          (!is.na(numeric_vec) & numeric_vec == 1)
+
+        message("[DEBUG] is_freeze: ", paste(head(is_freeze, 5), collapse = ", "))
+        message("[DEBUG] is_freeze length: ", length(is_freeze))
+
+        freeze_positions <- which(is_freeze)
+        message("[DEBUG] freeze_positions: ", paste(freeze_positions, collapse = ", "))
+
+        if (length(freeze_positions) > 0) {
+          qic_params$freeze <- freeze_positions[1]
+          message("[DEBUG] Set freeze to position: ", freeze_positions[1])
+        }
+      }
+
+      if (!is.null(part_var) && part_var %in% names(data)) {
+        qic_params$part <- data[[part_var]]
+      }
+
+      log_debug(
+        paste("Calling qicharts2::qic() for chart type:", chart_type),
+        .context = "BFH_SERVICE"
+      )
+
+      # DEBUG: Log all parameters being passed to qicharts2::qic()
+      message("[DEBUG] ========== qicharts2::qic() PARAMETERS ==========")
+      message("[DEBUG] chart: ", qic_params$chart)
+      message("[DEBUG] data rows: ", nrow(qic_params$data))
+      message("[DEBUG] x length: ", length(qic_params$x))
+      message("[DEBUG] y length: ", length(qic_params$y))
+      if (!is.null(qic_params$n)) message("[DEBUG] n length: ", length(qic_params$n))
+      if (!is.null(qic_params$freeze)) message("[DEBUG] freeze: ", qic_params$freeze, " (class: ", class(qic_params$freeze), ")")
+      if (!is.null(qic_params$part)) message("[DEBUG] part length: ", length(qic_params$part))
+      message("[DEBUG] =================================================")
+
+      # Call qicharts2
+      qic_data <- do.call(qicharts2::qic, qic_params)
+
+      if (is.null(qic_data) || !is.data.frame(qic_data)) {
+        stop("qicharts2::qic() did not return valid data frame")
+      }
+
+      log_info(
+        paste("qicharts2 returned", nrow(qic_data), "rows"),
+        .context = "BFH_SERVICE"
+      )
+
+      return(qic_data)
+    },
+    fallback = NULL,
+    show_user = TRUE,
+    error_type = "qicharts2_call"
+  )
+}
+
+
+#' Call BFHcharts Low-Level API (Stage 2 of Two-Stage Workflow)
+#'
+#' Calls BFHcharts::bfh_spc_plot() with qic_data from qicharts2.
+#' This is Stage 2 of the two-stage workflow that bypasses NSE issues.
+#'
+#' @keywords internal
+call_bfh_spc_plot <- function(
+  qic_data,
+  chart_type,
+  chart_title = NULL,
+  y_axis_unit = "count",
+  target_value = NULL,
+  target_text = NULL,
+  centerline_value = NULL,
+  ...
+) {
+  safe_operation(
+    operation_name = "BFHcharts low-level API call",
+    code = {
+      # Build plot configuration with all SPCify parameters
+      plot_config <- BFHcharts::spc_plot_config(
+        chart_type = chart_type,
+        y_axis_unit = y_axis_unit,
+        target_value = target_value,
+        target_text = target_text,
+        centerline_value = centerline_value,
+        chart_title = chart_title
+      )
+
+      log_debug(
+        paste("Calling BFHcharts::bfh_spc_plot() with", nrow(qic_data), "rows"),
+        .context = "BFH_SERVICE"
+      )
+
+      # Call BFHcharts low-level API
+      plot_result <- BFHcharts::bfh_spc_plot(
+        qic_data = qic_data,
+        plot_config = plot_config
+      )
+
+      if (is.null(plot_result) || !inherits(plot_result, "ggplot")) {
+        stop("BFHcharts::bfh_spc_plot() did not return valid ggplot object")
+      }
+
+      log_info(
+        "BFHcharts::bfh_spc_plot() returned ggplot successfully",
+        .context = "BFH_SERVICE"
+      )
+
+      return(plot_result)
+    },
+    fallback = NULL,
+    show_user = TRUE,
+    error_type = "bfh_low_level_call"
   )
 }

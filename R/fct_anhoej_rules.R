@@ -52,8 +52,6 @@
 #'   }
 #'   Returns NULL if required columns missing (with warning).
 #'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Extract from BFHchart result
@@ -76,6 +74,7 @@
 #' @seealso
 #' \code{\link{validate_anhoej_columns}} for input validation
 #' \code{\link{compute_spc_results_bfh}} for integration in service layer
+#' @export
 extract_anhoej_metadata <- function(qic_data) {
   # 1. Validate input
   if (is.null(qic_data) || !is.data.frame(qic_data)) {
@@ -263,14 +262,13 @@ calculate_combined_anhoej_signal <- function(qic_data) {
 #'   Example: "Runs: Ja (8 punkter), Crossings: Nej (9/13)"
 #'   Returns "Ingen Anhøj violations" if no signals detected.
 #'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' anhoej_meta <- extract_anhoej_metadata(qic_data)
 #' message(format_anhoej_metadata(anhoej_meta))
 #' # Output: "Runs: Ja (8 punkter), Crossings: Nej (9/13)"
 #' }
+#' @export
 format_anhoej_metadata <- function(anhoej_meta) {
   if (is.null(anhoej_meta)) {
     return("Anhøj metadata ikke tilgængelig")

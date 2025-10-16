@@ -15,8 +15,6 @@
 #' @param error_type Character string categorizing the error type for logging
 #'
 #' @return Result of code execution, or fallback value if error occurs
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Basic usage
@@ -39,6 +37,7 @@
 #'   show_user = TRUE
 #' )
 #' }
+#' @export
 safe_operation <- function(operation_name, code, fallback = NULL, session = NULL, show_user = FALSE, error_type = "general", ...) {
   tryCatch(
     {
@@ -148,8 +147,6 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
 #' @param error_message Custom error message if validation fails
 #'
 #' @return TRUE if all objects exist, throws error otherwise
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' validate_exists(
@@ -158,6 +155,7 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
 #'   error_message = "Required objects missing for data processing"
 #' )
 #' }
+#' @export
 validate_exists <- function(..., error_message = "Required objects not found") {
   args <- list(...)
 
@@ -181,11 +179,10 @@ validate_exists <- function(..., error_message = "Required objects not found") {
 #' @param type Expected type: "character", "logical", "numeric"
 #'
 #' @return Environment variable value converted to specified type, or default
-#' @export
-#'
 #' @examples
 #' safe_getenv("DEBUG_MODE", FALSE, "logical")
 #' safe_getenv("MAX_ROWS", 1000, "numeric")
+#' @export
 safe_getenv <- function(var_name, default = "", type = "character") {
   value <- Sys.getenv(var_name, unset = default)
 

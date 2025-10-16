@@ -885,12 +885,11 @@ configure_panel_cache <- function(
 #' get re-locked.
 #'
 #' @return Invisible: TRUE if successful, FALSE otherwise
-#' @export
-#'
 #' @examples
 #' # In tests:
 #' unlock_placement_cache_bindings()
 #' configure_panel_cache(enabled = FALSE)
+#' @export
 unlock_placement_cache_bindings <- function() {
   ns <- asNamespace("SPCify")
 
@@ -927,8 +926,6 @@ unlock_placement_cache_bindings <- function() {
 #' Returns statistics from both panel height and grob height caches in a unified format.
 #'
 #' @return List with panel_cache and grob_cache statistics
-#' @export
-#'
 #' @examples
 #' stats <- get_placement_cache_stats()
 #' cat(
@@ -939,6 +936,7 @@ unlock_placement_cache_bindings <- function() {
 #'   "Grob cache:", stats$grob_cache$cache_size, "entries,",
 #'   round(stats$grob_cache$hit_rate * 100, 1), "% hit rate\n"
 #' )
+#' @export
 get_placement_cache_stats <- function() {
   list(
     panel_cache = get_panel_height_cache_stats(),
@@ -954,8 +952,6 @@ get_placement_cache_stats <- function() {
 #'
 #' @param force Logical: If TRUE, purge all entries regardless of TTL
 #' @return Named list with purge counts for each cache
-#' @export
-#'
 #' @examples
 #' # TTL-based purge (removes only expired entries)
 #' purged <- purge_expired_cache_entries()
@@ -966,6 +962,7 @@ get_placement_cache_stats <- function() {
 #'
 #' # Force purge (clears all caches)
 #' purged <- purge_expired_cache_entries(force = TRUE)
+#' @export
 purge_expired_cache_entries <- function(force = FALSE) {
   list(
     panel_cache = purge_panel_cache_expired(force = force),
@@ -978,10 +975,9 @@ purge_expired_cache_entries <- function(force = FALSE) {
 #' Removes all cached entries and resets statistics for both panel height
 #' and grob height caches. Use for testing or troubleshooting.
 #'
-#' @export
-#'
 #' @examples
 #' clear_all_placement_caches()
+#' @export
 clear_all_placement_caches <- function() {
   clear_panel_height_cache()
   clear_grob_height_cache()
@@ -997,14 +993,13 @@ clear_all_placement_caches <- function() {
 #' @param max_cache_size Maximum number of cache entries per cache (default 100)
 #' @param purge_check_interval Operations between purge checks (default 50)
 #' @return Invisible: Named list with previous configurations
-#' @export
-#'
 #' @examples
 #' # Configure for short-lived Shiny sessions (1 minute TTL)
 #' configure_placement_cache(ttl_seconds = 60, max_cache_size = 50)
 #'
 #' # Configure for long-running sessions (10 minutes TTL, larger cache)
 #' configure_placement_cache(ttl_seconds = 600, max_cache_size = 200)
+#' @export
 configure_placement_cache <- function(
   ttl_seconds = NULL,
   max_cache_size = NULL,
