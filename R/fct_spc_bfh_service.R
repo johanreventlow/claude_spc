@@ -299,7 +299,11 @@ compute_spc_results_bfh <- function(
       # This approach bypasses NSE issues and enables full parameter support
       extra_params <- list(...)
 
-      # 7a. STAGE 1: Call qicharts2 to generate qic_data (handles freeze, part, Danish columns)
+      # 7a. Extract target and centerline BEFORE calling qicharts2
+      target_value <- extra_params$target_value
+      centerline_value <- extra_params$centerline_value
+
+      # 7a. STAGE 1: Call qicharts2 to generate qic_data (handles freeze, part, Danish columns, target, cl)
       qic_data <- call_qicharts2_for_data(
         data = complete_data,
         x_var = x_var,
@@ -308,21 +312,22 @@ compute_spc_results_bfh <- function(
         n_var = n_var,
         cl_var = cl_var,
         freeze_var = freeze_var,
-        part_var = part_var
+        part_var = part_var,
+        target_value = target_value,
+        centerline_value = centerline_value
       )
 
       if (is.null(qic_data)) {
         stop("qicharts2 data generation failed")
       }
 
-      # 7b. Extract parameters for BFHcharts rendering
+      # 7b. Extract additional parameters for BFHcharts rendering
+      # (target_value and centerline_value already extracted above for qicharts2)
       y_axis_unit <- extra_params$y_axis_unit %||% "count"
       chart_title <- resolve_bfh_chart_title(
         extra_params$chart_title_reactive %||% extra_params$chart_title
       )
-      target_value <- extra_params$target_value
       target_text <- extra_params$target_text
-      centerline_value <- extra_params$centerline_value
 
       log_debug(
         paste(
@@ -1463,7 +1468,9 @@ call_qicharts2_for_data <- function(
   n_var = NULL,
   cl_var = NULL,
   freeze_var = NULL,
-  part_var = NULL
+  part_var = NULL,
+  target_value = NULL,
+  centerline_value = NULL
 ) {
   safe_operation(
     operation_name = "qicharts2 data generation",
@@ -1520,6 +1527,20 @@ call_qicharts2_for_data <- function(
         qic_params$part <- data[[part_var]]
       }
 
+      # Add target value if provided
+      # qicharts2 expects target parameter, which creates target column in qic_data
+      if (!is.null(target_value) && is.numeric(target_value)) {
+        qic_params$target <- target_value
+        message("[DEBUG] Added target to qic_params: ", target_value)
+      }
+
+      # Add centerline value if provided
+      # qicharts2 expects cl parameter to override centerline calculation
+      if (!is.null(centerline_value) && is.numeric(centerline_value)) {
+        qic_params$cl <- centerline_value
+        message("[DEBUG] Added cl to qic_params: ", centerline_value)
+      }
+
       log_debug(
         paste("Calling qicharts2::qic() for chart type:", chart_type),
         .context = "BFH_SERVICE"
@@ -1533,79 +1554,21 @@ call_qicharts2_for_data <- function(
       if (!is.null(qic_params$n)) message("[DEBUG] n length: ", length(qic_params$n))
       if (!is.null(qic_params$freeze)) message("[DEBUG] freeze: ", qic_params$freeze, " (class: ", class(qic_params$freeze), ")")
       if (!is.null(qic_params$part)) message("[DEBUG] part length: ", length(qic_params$part))
+      if (!is.null(qic_params$target)) message("[DEBUG] target: ", qic_params$target)
+      if (!is.null(qic_params$cl)) message("[DEBUG] cl: ", qic_params$cl)
       message("[DEBUG] =================================================")
 
-      # Call qicharts2 directly (NOT via do.call - NSE incompatibility)
-      # Build call conditionally based on which parameters are present
-      if (!is.null(qic_params$n) && !is.null(qic_params$freeze) && !is.null(qic_params$part)) {
-        qic_data <- qicharts2::qic(
-          x = qic_params$x,
-          y = qic_params$y,
-          n = qic_params$n,
-          chart = qic_params$chart,
-          freeze = qic_params$freeze,
-          part = qic_params$part,
-          return.data = TRUE
-        )
-      } else if (!is.null(qic_params$n) && !is.null(qic_params$freeze)) {
-        qic_data <- qicharts2::qic(
-          x = qic_params$x,
-          y = qic_params$y,
-          n = qic_params$n,
-          chart = qic_params$chart,
-          freeze = qic_params$freeze,
-          return.data = TRUE
-        )
-      } else if (!is.null(qic_params$n) && !is.null(qic_params$part)) {
-        qic_data <- qicharts2::qic(
-          x = qic_params$x,
-          y = qic_params$y,
-          n = qic_params$n,
-          chart = qic_params$chart,
-          part = qic_params$part,
-          return.data = TRUE
-        )
-      } else if (!is.null(qic_params$n)) {
-        qic_data <- qicharts2::qic(
-          x = qic_params$x,
-          y = qic_params$y,
-          n = qic_params$n,
-          chart = qic_params$chart,
-          return.data = TRUE
-        )
-      } else if (!is.null(qic_params$freeze) && !is.null(qic_params$part)) {
-        qic_data <- qicharts2::qic(
-          x = qic_params$x,
-          y = qic_params$y,
-          chart = qic_params$chart,
-          freeze = qic_params$freeze,
-          part = qic_params$part,
-          return.data = TRUE
-        )
-      } else if (!is.null(qic_params$freeze)) {
-        qic_data <- qicharts2::qic(
-          x = qic_params$x,
-          y = qic_params$y,
-          chart = qic_params$chart,
-          freeze = qic_params$freeze,
-          return.data = TRUE
-        )
-      } else if (!is.null(qic_params$part)) {
-        qic_data <- qicharts2::qic(
-          x = qic_params$x,
-          y = qic_params$y,
-          chart = qic_params$chart,
-          part = qic_params$part,
-          return.data = TRUE
-        )
-      } else {
-        qic_data <- qicharts2::qic(
-          x = qic_params$x,
-          y = qic_params$y,
-          chart = qic_params$chart,
-          return.data = TRUE
-        )
-      }
+      # Call qicharts2 using do.call() for dynamic parameter passing
+      # NOTE: We use vectors (not NSE), so do.call() works fine here
+      # This approach avoids complex conditional branching for all parameter combinations
+
+      # CRITICAL: Remove NULL values from qic_params before calling qicharts2
+      # qicharts2 may have issues with explicitly passed NULL values
+      qic_params <- qic_params[!sapply(qic_params, is.null)]
+
+      message("[DEBUG] Final qic_params after NULL removal: ", paste(names(qic_params), collapse = ", "))
+
+      qic_data <- do.call(qicharts2::qic, qic_params)
 
       if (is.null(qic_data) || !is.data.frame(qic_data)) {
         stop("qicharts2::qic() did not return valid data frame")
