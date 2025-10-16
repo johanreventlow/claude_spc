@@ -38,14 +38,13 @@ LOG_LEVELS <- list(
 #' Fald tilbage til `INFO` ved ugyldig værdi.
 #'
 #' @return Heltalsværdi svarende til log-niveau (se `LOG_LEVELS`)
-#' @export
-#'
 #' @examples
 #' get_log_level()
 #' Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
 #' get_log_level()
 #' Sys.setenv(SPC_LOG_LEVEL = "1")
 #' get_log_level()
+#' @export
 get_log_level <- function() {
   env_raw <- safe_getenv("SPC_LOG_LEVEL", "INFO", "character")
   env_val <- trimws(toupper(as.character(env_raw)))
@@ -149,13 +148,12 @@ get_log_level <- function() {
 #' @param component Valgfrit komponent-tag for organisering (f.eks. `"AUTO_DETECT"`, `"FILE_UPLOAD"`)
 #'
 #' @return `invisible(NULL)`. Beskeder skrives til konsol hvis niveauet tillader det.
-#' @export
-#'
 #' @examples
 #' log_msg("System startet", "INFO")
 #' log_msg("Data læst", "INFO", "FILE_UPLOAD")
 #' Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
 #' log_msg("Detaljer", "DEBUG", "DATA_PROC")
+#' @export
 log_msg <- function(message, level = "INFO", component = NULL) {
   if (!.should_log(level)) {
     return(invisible(NULL))
@@ -185,11 +183,10 @@ log_msg <- function(message, level = "INFO", component = NULL) {
 #' @param .context Valgfri kontekst-tag (f.eks. `"RENDER_PLOT"`, `"AUTO_DETECT"`)
 #'
 #' @return `invisible(NULL)`.
-#' @export
-#'
 #' @examples
 #' log_debug("Status:", TRUE, .context = "RENDER_PLOT")
 #' log_debug("Række:", 42, list(a = 1), .context = "DATA_PROC")
+#' @export
 log_debug <- function(..., .context = NULL) {
   if (!.should_log("DEBUG")) {
     return(invisible(NULL))
@@ -236,11 +233,10 @@ log_debug <- function(..., .context = NULL) {
 #' @param details Valgfri liste med struktureret data der skal logges sammen med beskeden
 #'
 #' @return `invisible(NULL)`.
-#' @export
-#'
 #' @examples
 #' log_info("Fil uploaded succesfuldt", .context = "FILE_UPLOAD")
 #' log_info(message = "Data processeret", component = "[DATA_PROCESSING]", details = list(rows = 100))
+#' @export
 log_info <- function(message = NULL, component = NULL, .context = NULL, details = NULL) {
   # Support both component and .context for consistency with log_debug
   context <- .context %||% component
@@ -272,11 +268,10 @@ log_info <- function(message = NULL, component = NULL, .context = NULL, details 
 #' @param details Valgfri liste med struktureret data der skal logges sammen med beskeden
 #'
 #' @return `invisible(NULL)`.
-#' @export
-#'
 #' @examples
 #' log_warn("Manglende data i kolonne", .context = "DATA_VALIDATION")
 #' log_warn(message = "Input sanitized", component = "[INPUT_SANITIZATION]", details = list(original_length = 100))
+#' @export
 log_warn <- function(message = NULL, component = NULL, .context = NULL, details = NULL) {
   # Support both component and .context for consistency with log_debug
   context <- .context %||% component
@@ -309,14 +304,13 @@ log_warn <- function(message = NULL, component = NULL, .context = NULL, details 
 #' @param details Valgfri liste med struktureret data der skal logges sammen med beskeden
 #'
 #' @return `invisible(NULL)`.
-#' @export
-#'
 #' @examples
 #' log_error("Kunne ikke læse fil", .context = "FILE_UPLOAD")
 #' log_error(message = "File validation failed", component = "[FILE_VALIDATION]", details = list(filename = "test.txt"))
 #' \dontrun{
 #' tryCatch(stop("Boom"), error = function(e) log_error(e, .context = "PIPELINE"))
 #' }
+#' @export
 log_error <- function(message = NULL, component = NULL, .context = NULL, details = NULL) {
   # Support both component and .context for consistency with log_debug
   context <- .context %||% component
@@ -349,12 +343,11 @@ log_error <- function(message = NULL, component = NULL, .context = NULL, details
 #' @param type Type af markering: `"start"`, `"stop"`, eller `"both"` (default `"start"`)
 #'
 #' @return `invisible(NULL)`.
-#' @export
-#'
 #' @examples
 #' log_debug_block("COLUMN_MGMT", "Starting column detection")
 #' # ... kode ...
 #' log_debug_block("COLUMN_MGMT", "Column detection completed", type = "stop")
+#' @export
 log_debug_block <- function(context, action, type = "start") {
   if (!.should_log("DEBUG")) {
     return(invisible(NULL))
@@ -388,11 +381,10 @@ log_debug_block <- function(context, action, type = "start") {
 #' @param .list_data Valgfri liste med key-value data
 #'
 #' @return `invisible(NULL)`.
-#' @export
-#'
 #' @examples
 #' log_debug_kv(trigger_value = 1, status = "active", .context = "DATA_TABLE")
 #' log_debug_kv(.list_data = list(rows = 100, cols = 5), .context = "DATA_PROC")
+#' @export
 log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
   if (!.should_log("DEBUG")) {
     return(invisible(NULL))
@@ -429,12 +421,11 @@ log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
 #' variable for the current R session.
 #'
 #' @return invisible(NULL). The environment variable is set as a side effect.
-#' @export
-#'
 #' @examples
 #' set_log_level_development() # Enables all DEBUG messages
 #' set_log_level_production() # Only WARN and ERROR in production
 #' set_log_level_quiet() # Only ERROR messages
+#' @export
 set_log_level_development <- function() {
   Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
   cat("[LOG_CONFIG] Log level set to DEBUG (development mode)\n")
@@ -528,8 +519,6 @@ get_log_level_name <- function() {
 #' @param session_token Character string containing the session token to sanitize
 #'
 #' @return First 8 characters of SHA256 hash (e.g., "a1b2c3d4") or "NO_SESSION"
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' sanitize_session_token("abc123def456ghi789")
@@ -538,6 +527,7 @@ get_log_level_name <- function() {
 #' sanitize_session_token(NULL)
 #' # Returns: "NO_SESSION"
 #' }
+#' @export
 sanitize_session_token <- function(session_token) {
   # Handle NULL or empty tokens
   if (is.null(session_token) || !is.character(session_token) || length(session_token) == 0) {

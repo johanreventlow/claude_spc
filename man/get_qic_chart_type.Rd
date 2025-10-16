@@ -11,11 +11,9 @@ get_qic_chart_type(danish_selection)
 }
 \value{
 Engelsk qicharts2 kode (fx "i", "run", "p")
+get_qic_chart_type("I-kort (Individuelle værdier)") # Returns "i"
+get_qic_chart_type("i") # Returns "i" (already English)
 }
 \description{
 Konverterer danske displaynavne til engelske qicharts2-koder for plot generation.
-}
-\examples{
-get_qic_chart_type("I-kort (Individuelle værdier)") # Returns "i"
-get_qic_chart_type("i") # Returns "i" (already English)
 }

@@ -18,8 +18,6 @@
 #'   \item{session}{Session management (save state, file upload status)}
 #'   \item{ui}{UI preferencer og indstillinger}
 #' }
-#' @export
-#'
 #' @details
 #' Centraliseret state structure:
 #'

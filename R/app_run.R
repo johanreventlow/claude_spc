@@ -266,6 +266,40 @@ run_app <- function(port = NULL,
   # Configure logging level using YAML as single source of truth (AFTER env config)
   configure_logging_from_yaml(log_level)
 
+  # Load config values from YAML and merge with passed options
+  config_from_yaml <- tryCatch(
+    {
+      cfg <- list()
+
+      # Read features config using our custom get_golem_config
+      features_cfg <- get_golem_config("features")
+      if (!is.null(features_cfg)) {
+        cfg$features <- features_cfg
+        log_debug(
+          component = "[RUN_APP]",
+          message = "Successfully loaded features config from YAML",
+          details = list(
+            use_bfhchart = features_cfg$use_bfhchart,
+            supported_types = paste(features_cfg$bfhchart_supported_types, collapse = ", ")
+          )
+        )
+      }
+
+      cfg
+    },
+    error = function(e) {
+      log_warn(
+        component = "[RUN_APP]",
+        message = "Failed to read config from YAML",
+        details = list(error = e$message)
+      )
+      list()
+    }
+  )
+
+  # Merge YAML config with passed options (passed options take precedence)
+  merged_options <- c(config_from_yaml, options)
+
   # Create the Shiny app using golem pattern
   # Load golem function directly to avoid package conflicts
   if (!exists("with_golem_options")) {
@@ -277,7 +311,7 @@ run_app <- function(port = NULL,
       ui = app_ui,
       server = app_server
     ),
-    golem_opts = options
+    golem_opts = merged_options
   )
 
   # Set default browser behavior if not specified

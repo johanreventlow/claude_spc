@@ -9,8 +9,6 @@
 #'
 #' @param metadata Named list with plot metadata fields
 #' @return Character hash of metadata state
-#' @export
-#'
 #' @examples
 #' meta <- list(title = "SPC Chart", target = 10, centerline = 8)
 #' hash1 <- calculate_plot_metadata_hash(meta)
@@ -18,6 +16,7 @@
 #' meta$title <- "Updated Chart"
 #' hash2 <- calculate_plot_metadata_hash(meta)
 #' identical(hash1, hash2) # FALSE - metadata changed
+#' @export
 calculate_plot_metadata_hash <- function(metadata) {
   # Extract relevant metadata fields for hashing
   relevant_fields <- c(
@@ -50,12 +49,11 @@ calculate_plot_metadata_hash <- function(metadata) {
 #' @param data Data frame with plot data
 #' @param config Chart configuration with column mappings
 #' @return Character hash of data state
-#' @export
-#'
 #' @examples
 #' data <- data.frame(x = 1:10, y = rnorm(10))
 #' config <- list(x_col = "x", y_col = "y")
 #' hash1 <- calculate_plot_data_hash(data, config)
+#' @export
 calculate_plot_data_hash <- function(data, config) {
   if (is.null(data) || nrow(data) == 0) {
     return("EMPTY_DATA")
@@ -91,8 +89,6 @@ calculate_plot_data_hash <- function(data, config) {
 #' @param current_state List with current plot state (data, metadata, config)
 #' @param previous_state List with previous plot state (data, metadata, config)
 #' @return List with update_type and changed_fields
-#' @export
-#'
 #' @details
 #' Update types:
 #' - "none": No changes detected
@@ -112,6 +108,7 @@ calculate_plot_data_hash <- function(data, config) {
 #' diff <- detect_plot_update_type(current, previous)
 #' diff$update_type # "metadata_only"
 #' diff$changed_fields # c("title")
+#' @export
 detect_plot_update_type <- function(current_state, previous_state) {
   # Handle missing previous state
   if (is.null(previous_state)) {
@@ -230,8 +227,6 @@ identify_changed_metadata_fields <- function(current_meta, previous_meta) {
 #' @param metadata New metadata to apply
 #' @param changed_fields Character vector of changed field names
 #' @return Updated plot object
-#' @export
-#'
 #' @details
 #' This function modifies plot layers in-place for metadata changes:
 #' - title: Updates plot title via labs()
@@ -250,6 +245,7 @@ identify_changed_metadata_fields <- function(current_meta, previous_meta) {
 #' # Update only title
 #' new_meta <- list(title = "Updated Title")
 #' plot <- apply_metadata_update(plot, new_meta, changed_fields = "title")
+#' @export
 apply_metadata_update <- function(plot, metadata, changed_fields) {
   if (is.null(plot) || length(changed_fields) == 0) {
     return(plot)
@@ -299,8 +295,6 @@ apply_metadata_update <- function(plot, metadata, changed_fields) {
 #' @param metadata Current plot metadata
 #' @param config Current plot configuration
 #' @return List with state snapshot and hashes
-#' @export
-#'
 #' @examples
 #' data <- data.frame(x = 1:10, y = rnorm(10))
 #' metadata <- list(title = "SPC Chart", target = 10)
@@ -309,6 +303,7 @@ apply_metadata_update <- function(plot, metadata, changed_fields) {
 #' snapshot <- create_plot_state_snapshot(data, metadata, config)
 #' snapshot$data_hash
 #' snapshot$metadata_hash
+#' @export
 create_plot_state_snapshot <- function(data, metadata, config) {
   safe_operation(
     "Create plot state snapshot",

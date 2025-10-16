@@ -59,10 +59,9 @@ CHART_TYPES_EN <- list(
 #'
 #' @param danish_selection Valgt chart type (dansk label eller engelsk kode)
 #' @return Engelsk qicharts2 kode (fx "i", "run", "p")
-#' @export
-#' @examples
 #' get_qic_chart_type("I-kort (Individuelle værdier)") # Returns "i"
 #' get_qic_chart_type("i") # Returns "i" (already English)
+#' @export
 get_qic_chart_type <- function(danish_selection) {
   if (is.null(danish_selection) || danish_selection == "") {
     return("run") # standard

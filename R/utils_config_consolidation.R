@@ -139,12 +139,7 @@ create_config_registry <- function() {
 
   # Public interface
   list(
-    #' Get configuration for specific domain
-    #'
-    #' @param domain Configuration domain: "charts", "system", "ui", "branding", "spc"
-    #' @param key Optional specific key within domain
-    #' @param default Default value if key not found
-    #' @return Configuration value or full domain config
+    # Get configuration for specific domain
     get = function(domain, key = NULL, default = NULL) {
       # Load domain config if not cached
       if (!exists(domain, envir = .config_loaded)) {
@@ -181,9 +176,7 @@ create_config_registry <- function() {
       }
     },
 
-    #' Reload specific configuration domain
-    #'
-    #' @param domain Domain to reload, or NULL for all domains
+    # Reload specific configuration domain
     reload = function(domain = NULL) {
       if (is.null(domain)) {
         # Reload all domains
@@ -203,16 +196,12 @@ create_config_registry <- function() {
       }
     },
 
-    #' List available configuration domains
-    #'
-    #' @return Character vector of available domains
+    # List available configuration domains
     domains = function() {
       names(.config_loaders)
     },
 
-    #' Get configuration summary
-    #'
-    #' @return List with loading status and cache info
+    # Get configuration summary
     summary = function() {
       loaded_domains <- ls(.config_loaded)
       cached_domains <- ls(.config_cache)
@@ -238,11 +227,10 @@ create_config_registry <- function() {
 #' @param config_registry Optional config registry, uses global if NULL
 #'
 #' @return Configuration value converted to specified type
-#' @export
-#'
 #' @examples
 #' get_config("charts.default_chart", "i")
 #' get_config("system.observer_priorities.HIGH", 1000, "numeric")
+#' @export
 get_config <- function(path, default = NULL, type = "character", config_registry = NULL) {
   if (is.null(config_registry)) {
     # Use global registry if available
@@ -286,10 +274,9 @@ get_config <- function(path, default = NULL, type = "character", config_registry
 #' Sets up the global configuration registry for use throughout the application.
 #' Should be called once during app initialization.
 #'
-#' @export
-#'
 #' @examples
 #' init_global_config_registry()
+#' @export
 init_global_config_registry <- function() {
   .spc_config_registry <- create_config_registry()
   assign(".spc_config_registry", .spc_config_registry, envir = .GlobalEnv)

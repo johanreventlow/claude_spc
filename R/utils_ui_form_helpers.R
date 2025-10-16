@@ -12,11 +12,10 @@
 #' @return List med form update funktioner
 #' @export
 create_form_update_service <- function(session) {
-  #' Update individual form field based on type
-  #'
-  #' @param field_id Field identifier
-  #' @param value New value
-  #' @param field_type Type of field: "text", "select", "textarea"
+  # Update individual form field based on type
+  # field_id: Field identifier
+  # value: New value
+  # field_type: "text", "select", "textarea"
   update_field_by_type <- function(field_id, value, field_type = "text") {
     safe_operation(
       paste("Update form field:", field_id),
@@ -42,7 +41,7 @@ create_form_update_service <- function(session) {
     )
   }
 
-  #' Field type mapping for form fields
+  # Field type mapping for form fields
   .field_types <- list(
     indicator_title = "text",
     unit_custom = "text",
@@ -57,7 +56,7 @@ create_form_update_service <- function(session) {
     y_axis_unit = "select"
   )
 
-  #' Default values for form reset
+  # Default values for form reset
   .default_values <- list(
     indicator_title = "",
     unit_custom = "",
@@ -73,10 +72,7 @@ create_form_update_service <- function(session) {
   )
 
   list(
-    #' Update multiple form fields from metadata
-    #'
-    #' @param metadata Named list med field values
-    #' @param fields Specific fields to update (NULL for all)
+    # Update multiple form fields from metadata
     update_from_metadata = function(metadata, fields = NULL) {
       if (is.null(fields)) {
         fields <- names(.field_types)
@@ -97,7 +93,7 @@ create_form_update_service <- function(session) {
       })
     },
 
-    #' Reset all form fields to defaults
+    # Reset all form fields to defaults
     reset_to_defaults = function() {
       shiny::isolate({
         safe_operation(
@@ -114,27 +110,18 @@ create_form_update_service <- function(session) {
       })
     },
 
-    #' Update single field
-    #'
-    #' @param field_id Field identifier
-    #' @param value New value
+    # Update single field
     update_field = function(field_id, value) {
       field_type <- .field_types[[field_id]] %||% "text"
       update_field_by_type(field_id, value, field_type)
     },
 
-    #' Get field type for a given field ID
-    #'
-    #' @param field_id Field identifier
-    #' @return Field type string
+    # Get field type for a given field ID
     get_field_type = function(field_id) {
       .field_types[[field_id]] %||% "text"
     },
 
-    #' Get default value for a field
-    #'
-    #' @param field_id Field identifier
-    #' @return Default value
+    # Get default value for a field
     get_default_value = function(field_id) {
       .default_values[[field_id]] %||% ""
     }
@@ -151,10 +138,7 @@ create_form_update_service <- function(session) {
 #' @export
 create_ui_visibility_service <- function(session) {
   list(
-    #' Toggle single UI element visibility
-    #'
-    #' @param element_id Element ID to toggle
-    #' @param show Logical, whether to show or hide
+    # Toggle single UI element visibility
     toggle_element = function(element_id, show = TRUE) {
       safe_operation(
         paste("Toggle UI element:", element_id),
@@ -174,27 +158,21 @@ create_ui_visibility_service <- function(session) {
       )
     },
 
-    #' Show multiple UI elements
-    #'
-    #' @param element_ids Character vector of element IDs
+    # Show multiple UI elements
     show_elements = function(element_ids) {
       for (element_id in element_ids) {
         toggle_element(element_id, show = TRUE)
       }
     },
 
-    #' Hide multiple UI elements
-    #'
-    #' @param element_ids Character vector of element IDs
+    # Hide multiple UI elements
     hide_elements = function(element_ids) {
       for (element_id in element_ids) {
         toggle_element(element_id, show = FALSE)
       }
     },
 
-    #' Toggle multiple elements based on conditions
-    #'
-    #' @param element_conditions Named list: element_id = show_condition
+    # Toggle multiple elements based on conditions
     toggle_conditional = function(element_conditions) {
       safe_operation(
         "Conditional UI element toggle",
@@ -225,9 +203,7 @@ create_column_choice_service <- function(session, app_state) {
   .standard_columns <- c("x_column", "y_column", "n_column", "skift_column", "frys_column", "kommentar_column")
 
   list(
-    #' Generate choices from current data
-    #'
-    #' @return Named vector of choices for column inputs
+    # Generate choices from current data
     generate_choices_from_data = function() {
       safe_operation(
         "Generate column choices from current data",
@@ -248,12 +224,7 @@ create_column_choice_service <- function(session, app_state) {
       )
     },
 
-    #' Update column choices for specific columns
-    #'
-    #' @param choices Named vector of choices (NULL to auto-generate)
-    #' @param selected Named list of selected values
-    #' @param columns Vector of column IDs to update
-    #' @param clear_selections Whether to clear all selections
+    # Update column choices for specific columns
     update_column_choices = function(choices = NULL, selected = NULL, columns = .standard_columns, clear_selections = FALSE) {
       safe_operation(
         "Update column choices",
@@ -285,11 +256,7 @@ create_column_choice_service <- function(session, app_state) {
       )
     },
 
-    #' Update single column choice
-    #'
-    #' @param column_id Column input ID
-    #' @param selected Selected value
-    #' @param choices Optional custom choices
+    # Update single column choice
     update_single_column = function(column_id, selected, choices = NULL) {
       if (is.null(choices)) {
         choices <- generate_choices_from_data()
@@ -310,14 +277,12 @@ create_column_choice_service <- function(session, app_state) {
       )
     },
 
-    #' Clear all column selections
+    # Clear all column selections
     clear_all_selections = function() {
       update_column_choices(clear_selections = TRUE)
     },
 
-    #' Update from auto-detection results
-    #'
-    #' @param detection_results Auto-detection results from app_state
+    # Update from auto-detection results
     update_from_detection = function(detection_results) {
       if (is.null(detection_results)) {
         return()

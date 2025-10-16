@@ -21,8 +21,6 @@
 #'
 #' @param options List of options to set
 #' @return Invisibly returns the updated options
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Set development options
@@ -39,6 +37,7 @@
 #'   auto_restore = TRUE
 #' ))
 #' }
+#' @export
 set_app_options <- function(options = list()) {
   if (length(options) == 0) {
     return(invisible(NULL))
@@ -77,8 +76,6 @@ set_app_options <- function(options = list()) {
 #' @param option_name Name of the option to retrieve
 #' @param default Default value if option is not set
 #' @return Option value or default
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Get with default
@@ -87,6 +84,7 @@ set_app_options <- function(options = list()) {
 #' # Check if in test mode
 #' is_test_mode <- get_app_option("test_mode", FALSE)
 #' }
+#' @export
 get_app_option <- function(option_name, default = NULL) {
   option_key <- paste0("claudespc.", option_name)
   return(getOption(option_key, default))
@@ -148,8 +146,6 @@ is_prod_mode <- function() {
 #' @param debug_level Debug level for development
 #' @param ... Additional arguments passed to run_app()
 #' @return Shiny app object
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Basic development run
@@ -158,6 +154,7 @@ is_prod_mode <- function() {
 #' # Development with specific settings
 #' run_dev(port = 5050, debug_level = "DEBUG")
 #' }
+#' @export
 run_dev <- function(port = 4040,
                     host = "127.0.0.1",
                     reload = FALSE,

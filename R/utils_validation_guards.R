@@ -12,14 +12,13 @@
 #' @param min_rows Minimum required rows (default: 1)
 #' @param min_cols Minimum required columns (default: 1)
 #' @return Data if valid, otherwise fallback
-#' @export
-#'
 #' @examples
 #' # Basic usage
 #' validated_data <- validate_data_or_return(input_data, fallback = data.frame())
 #'
 #' # Custom thresholds
 #' validated_data <- validate_data_or_return(input_data, min_rows = 10, min_cols = 3)
+#' @export
 validate_data_or_return <- function(data,
                                     fallback = NULL,
                                     min_rows = 1,
@@ -48,14 +47,13 @@ validate_data_or_return <- function(data,
 #' @param default Default value if NULL (default: "")
 #' @param allowed_types Character vector of allowed types (optional)
 #' @return Value if not NULL and valid type, otherwise default
-#' @export
-#'
 #' @examples
 #' # Basic usage
 #' safe_value <- value_or_default(input$field, default = "")
 #'
 #' # With type checking
 #' safe_numeric <- value_or_default(input$number, default = 0, allowed_types = "numeric")
+#' @export
 value_or_default <- function(value,
                              default = "",
                              allowed_types = NULL) {
@@ -94,14 +92,13 @@ value_or_default <- function(value,
 #' @param return_column If TRUE, return column data; if FALSE, return logical (default: FALSE)
 #' @param fallback Value to return if validation fails (default: NULL for column data, FALSE for logical)
 #' @return Column data, logical, or fallback depending on parameters
-#' @export
-#'
 #' @examples
 #' # Check if column exists
 #' has_column <- validate_column_exists(data, "Dato")
 #'
 #' # Get column data if exists
 #' column_data <- validate_column_exists(data, "Dato", return_column = TRUE, fallback = numeric(0))
+#' @export
 validate_column_exists <- function(data,
                                    column_name,
                                    return_column = FALSE,
@@ -138,12 +135,11 @@ validate_column_exists <- function(data,
 #' @param func_name Function name as string
 #' @param envir Environment to search (default: .GlobalEnv)
 #' @return Logical indicating if function exists and is callable
-#' @export
-#'
 #' @examples
 #' if (validate_function_exists("emit$data_loaded")) {
 #'   emit$data_loaded()
 #' }
+#' @export
 validate_function_exists <- function(func_name, envir = .GlobalEnv) {
   if (is.null(func_name) || !is.character(func_name) || trimws(func_name) == "") {
     return(FALSE)
@@ -162,11 +158,10 @@ validate_function_exists <- function(func_name, envir = .GlobalEnv) {
 #' @param default Default value if validation fails
 #' @param allow_empty If FALSE, treats empty strings as invalid (default: FALSE)
 #' @return Config value if valid, otherwise default
-#' @export
-#'
 #' @examples
 #' x_col <- validate_config_value(config, "x_col", default = "Dato")
 #' y_unit <- validate_config_value(config, "y_axis_unit", default = "count")
+#' @export
 validate_config_value <- function(config,
                                   field,
                                   default = NULL,
@@ -213,8 +208,6 @@ validate_config_value <- function(config,
 #' @param default Default value if NULL or error
 #' @param use_isolate If TRUE, wraps in shiny::isolate() (default: TRUE)
 #' @return Reactive value if accessible, otherwise default
-#' @export
-#'
 #' @examples
 #' # Single reactive value
 #' current_data <- validate_reactive_value(app_state$data$current_data, default = NULL)
@@ -225,6 +218,7 @@ validate_config_value <- function(config,
 #'   field = "frozen_until_next_trigger",
 #'   default = FALSE
 #' )
+#' @export
 validate_reactive_value <- function(reactive_value,
                                     field = NULL,
                                     default = NULL,
@@ -267,8 +261,6 @@ validate_reactive_value <- function(reactive_value,
 #' @param operation_name Operation name for logging
 #' @param allow_proceed If TRUE, proceeds even if checks fail (default: FALSE)
 #' @return List with valid (logical) and failed_checks (character vector)
-#' @export
-#'
 #' @examples
 #' validation <- validate_state_transition(
 #'   app_state,
@@ -283,6 +275,7 @@ validate_reactive_value <- function(reactive_value,
 #' if (validation$valid) {
 #'   # Proceed with operation
 #' }
+#' @export
 validate_state_transition <- function(app_state,
                                       checks,
                                       operation_name = "State transition",

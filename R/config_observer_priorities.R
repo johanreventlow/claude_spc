@@ -39,13 +39,13 @@
 #' Compatibility aliases: HIGH, MEDIUM, LOW, LOWEST
 #' Legacy aliases (deprecated): highest, high, medium, low, lowest
 #'
-#' @export
 #' @examples
 #' \dontrun{
 #' observeEvent(input$data, priority = OBSERVER_PRIORITIES$STATE_MANAGEMENT, {
 #'   # Critical state update
 #' })
 #' }
+#' @export
 OBSERVER_PRIORITIES <- list(
   # Høj prioritet - kritisk state management
   STATE_MANAGEMENT = 2000, # Critical state operations
@@ -85,11 +85,11 @@ OBSERVER_PRIORITIES <- list(
 #'
 #' @param priority_name Character string indicating priority level
 #' @return Numeric priority value
-#' @export
 #' @examples
 #' \dontrun{
 #' get_priority("STATE_MANAGEMENT") # Returns 2000
 #' }
+#' @export
 get_priority <- function(priority_name) {
   priority_value <- OBSERVER_PRIORITIES[[priority_name]]
   if (is.null(priority_value)) {
@@ -104,12 +104,12 @@ get_priority <- function(priority_name) {
 #'
 #' @name priority_helpers
 #' @return Numeric priority value
-#' @export
 #' @rdname priority_helpers
 #' @examples
 #' \dontrun{
 #' observeEvent(input$data, priority = priority_high(), {})
 #' }
+#' @export
 priority_high <- function() OBSERVER_PRIORITIES$STATE_MANAGEMENT
 
 #' @rdname priority_helpers
