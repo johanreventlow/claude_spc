@@ -319,71 +319,100 @@ get_enhanced_startup_metrics <- function() {
   return(result)
 }
 
-#' Print enhanced startup performance summary
+#' Format enhanced startup performance summary to string
 #'
-#' @export
-print_enhanced_startup_summary <- function() {
-  metrics <- get_enhanced_startup_metrics()
+#' Internal helper function that formats performance metrics as a string
+#' without printing to console.
+#'
+#' @param metrics List. Output from get_enhanced_startup_metrics()
+#'
+#' @return Formatted character string
+#' @keywords internal
+format_enhanced_startup_summary <- function(metrics) {
+  lines <- c()
 
   if (!is.null(metrics$error)) {
-    cat("ERROR:", metrics$error, "\n")
-    return(invisible())
+    return(paste0("ERROR: ", metrics$error))
   }
 
-  cat("=== ENHANCED STARTUP PERFORMANCE SUMMARY ===\n")
-  cat("Total Duration:", round(metrics$total_duration_seconds, 3), "seconds\n")
-  cat("Current Phase:", metrics$current_phase, "\n\n")
+  lines <- c(lines, "=== ENHANCED STARTUP PERFORMANCE SUMMARY ===")
+  lines <- c(lines, sprintf("Total Duration: %.3f seconds", metrics$total_duration_seconds))
+  lines <- c(lines, sprintf("Current Phase: %s\n", metrics$current_phase))
 
-  cat("FUNCTION CALLS:\n")
-  cat("  QIC calls:", metrics$qic_calls, "\n")
-  cat("  generateSPCPlot calls:", metrics$generateSPCPlot_calls, "\n\n")
+  lines <- c(lines, "FUNCTION CALLS:")
+  lines <- c(lines, sprintf("  QIC calls: %d", metrics$qic_calls))
+  lines <- c(lines, sprintf("  generateSPCPlot calls: %d\n", metrics$generateSPCPlot_calls))
 
-  # Phase 4: Memory usage summary
+  # Memory usage summary
   if (!is.null(.startup_metrics$memory_snapshots) && length(.startup_metrics$memory_snapshots) > 0) {
-    cat("MEMORY USAGE:\n")
-    cat("  Initial memory:", .startup_metrics$initial_memory_mb, "MB\n")
+    lines <- c(lines, "MEMORY USAGE:")
+    lines <- c(lines, sprintf("  Initial memory: %.2f MB", .startup_metrics$initial_memory_mb))
     latest_memory <- .startup_metrics$memory_snapshots[[length(.startup_metrics$memory_snapshots)]]
-    cat("  Current memory:", latest_memory$memory_mb, "MB\n")
-    cat("  Memory increase:", latest_memory$memory_diff_mb, "MB\n\n")
+    lines <- c(lines, sprintf("  Current memory: %.2f MB", latest_memory$memory_mb))
+    lines <- c(lines, sprintf("  Memory increase: %.2f MB\n", latest_memory$memory_diff_mb))
   }
 
-  cat("EVENTS FIRED:\n")
+  # Events fired
+  lines <- c(lines, "EVENTS FIRED:")
   if (length(metrics$events_fired) > 0) {
     for (event_name in names(metrics$events_fired)) {
-      cat("  ", event_name, ":", metrics$events_fired[[event_name]], "\n")
+      lines <- c(lines, sprintf("  %s: %d", event_name, metrics$events_fired[[event_name]]))
     }
   } else {
-    cat("  No events recorded\n")
+    lines <- c(lines, "  No events recorded")
   }
 
-  cat("\nEVENT SEQUENCE:\n")
+  # Event sequence
+  lines <- c(lines, "\nEVENT SEQUENCE:")
   if (length(metrics$event_sequence) > 0) {
     for (i in seq_along(metrics$event_sequence)) {
       event <- metrics$event_sequence[[i]]
-      cat(sprintf(
-        "  %2d. %s (%.3fs) - %s\n",
+      lines <- c(lines, sprintf(
+        "  %2d. %s (%.3fs) - %s",
         i, event$event, event$time_since_start, event$context
       ))
     }
   } else {
-    cat("  No event sequence recorded\n")
+    lines <- c(lines, "  No event sequence recorded")
   }
 
   # Performance assessment
-  cat("\n=== PERFORMANCE ASSESSMENT ===\n")
+  lines <- c(lines, "\n=== PERFORMANCE ASSESSMENT ===")
   if (metrics$qic_calls <= 3) {
-    cat("✅ QIC calls: EXCELLENT (≤3)\n")
+    lines <- c(lines, "✅ QIC calls: EXCELLENT (≤3)")
   } else if (metrics$qic_calls <= 5) {
-    cat("⚡ QIC calls: ACCEPTABLE (4-5)\n")
+    lines <- c(lines, "⚡ QIC calls: ACCEPTABLE (4-5)")
   } else {
-    cat("⚠️  QIC calls: NEEDS OPTIMIZATION (>5)\n")
+    lines <- c(lines, "⚠️  QIC calls: NEEDS OPTIMIZATION (>5)")
   }
 
   if (metrics$total_duration_seconds <= 2) {
-    cat("✅ Startup time: FAST (≤2s)\n")
+    lines <- c(lines, "✅ Startup time: FAST (≤2s)")
   } else if (metrics$total_duration_seconds <= 5) {
-    cat("⚡ Startup time: ACCEPTABLE (2-5s)\n")
+    lines <- c(lines, "⚡ Startup time: ACCEPTABLE (2-5s)")
   } else {
-    cat("⚠️  Startup time: SLOW (>5s)\n")
+    lines <- c(lines, "⚠️  Startup time: SLOW (>5s)")
   }
+
+  paste(lines, collapse = "\n")
+}
+
+#' Print enhanced startup performance summary
+#'
+#' Formats and displays startup performance metrics using structured logging.
+#'
+#' @export
+print_enhanced_startup_summary <- function() {
+  metrics <- get_enhanced_startup_metrics()
+  summary_text <- format_enhanced_startup_summary(metrics)
+
+  if (!is.null(metrics$error)) {
+    log_error(summary_text, .context = "PERFORMANCE_MONITORING")
+  } else {
+    # Use message for console output to follow R standards
+    message(summary_text)
+    log_info("Startup performance summary generated", .context = "PERFORMANCE_MONITORING")
+  }
+
+  invisible(metrics)
 }

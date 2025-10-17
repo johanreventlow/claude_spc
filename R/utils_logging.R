@@ -198,11 +198,7 @@ log_debug <- function(..., .context = NULL) {
   tryCatch(
     {
       msg <- .safe_collapse(list(...))
-      if (exists("log_msg", mode = "function")) {
-        log_msg(msg, "DEBUG", component = component)
-      } else {
-        cat(sprintf("[%s] DEBUG: [%s] %s\n", .timestamp(), component, msg))
-      }
+      log_msg(msg, "DEBUG", component = component)
     },
     error = function(e) {
       # Forbedret fejlsikker fallback med debugging information
@@ -210,9 +206,11 @@ log_debug <- function(..., .context = NULL) {
         {
           args_count <- length(list(...))
           context_val <- if (is.null(.context)) "NULL" else as.character(.context)
+          # Use structured fallback matching log_msg pattern
+          ts <- .timestamp()
           cat(sprintf(
-            "[LOGGING_ERROR] Could not format debug message - args_count=%d context=%s error=%s\n",
-            args_count, context_val, conditionMessage(e)
+            "[%s] DEBUG: [%s] [LOGGING_ERROR] Could not format message (args=%d, error=%s)\n",
+            ts, component, args_count, conditionMessage(e)
           ))
         },
         silent = TRUE
@@ -428,7 +426,7 @@ log_debug_kv <- function(..., .context = NULL, .list_data = NULL) {
 #' @export
 set_log_level_development <- function() {
   Sys.setenv(SPC_LOG_LEVEL = "DEBUG")
-  cat("[LOG_CONFIG] Log level set to DEBUG (development mode)\n")
+  message("[LOG_CONFIG] Log level set to DEBUG (development mode)")
   invisible(NULL)
 }
 
@@ -436,7 +434,7 @@ set_log_level_development <- function() {
 #' @export
 set_log_level_production <- function() {
   Sys.setenv(SPC_LOG_LEVEL = "WARN")
-  cat("[LOG_CONFIG] Log level set to WARN (production mode)\n")
+  message("[LOG_CONFIG] Log level set to WARN (production mode)")
   invisible(NULL)
 }
 
@@ -444,7 +442,7 @@ set_log_level_production <- function() {
 #' @export
 set_log_level_quiet <- function() {
   Sys.setenv(SPC_LOG_LEVEL = "ERROR")
-  cat("[LOG_CONFIG] Log level set to ERROR (quiet mode)\n")
+  message("[LOG_CONFIG] Log level set to ERROR (quiet mode)")
   invisible(NULL)
 }
 
@@ -452,7 +450,7 @@ set_log_level_quiet <- function() {
 #' @export
 set_log_level_info <- function() {
   Sys.setenv(SPC_LOG_LEVEL = "INFO")
-  cat("[LOG_CONFIG] Log level set to INFO (standard mode)\n")
+  message("[LOG_CONFIG] Log level set to INFO (standard mode)")
   invisible(NULL)
 }
 
@@ -477,7 +475,7 @@ set_log_level <- function(level) {
 
   if (level %in% valid_levels) {
     Sys.setenv(SPC_LOG_LEVEL = level)
-    cat(sprintf("[LOG_CONFIG] Log level set to %s\n", level))
+    message(sprintf("[LOG_CONFIG] Log level set to %s", level))
     invisible(NULL)
   } else {
     stop(

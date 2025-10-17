@@ -90,15 +90,15 @@ safe_operation <- function(operation_name, code, fallback = NULL, session = NULL
         )
       }
 
-      # LEVEL 3: Absolute fallback - minimal cat() only if all logging failed
+      # LEVEL 3: Absolute fallback - minimal output only if all logging failed
       if (!logging_succeeded) {
         # Use minimal structured format matching log_msg pattern
         # This should rarely happen in production
         tryCatch(
           {
-            cat(sprintf(
-              "[%s] ERROR: [ERROR_HANDLING_%s] %s\n",
-              format(Sys.time(), "%H:%M:%S"),
+            # Use message() for last-resort fallback (standard R approach)
+            message(sprintf(
+              "[ERROR_HANDLING_%s] %s",
               toupper(error_type),
               error_msg
             ))

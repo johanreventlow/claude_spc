@@ -952,7 +952,7 @@ call_bfh_chart <- function(bfh_params) {
       # 3b. CONSERVATIVE APPROACH: Only send core parameters to BFHcharts
       # Testing shows BFHcharts may not accept all documented parameters
       # Keep only: data, x, y, n, chart_type, freeze, part, multiply, target_value, cl
-      # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_text, notes
+      # TODO(#51): Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_text, notes
       # NOTE: target_value added for target line rendering (feat/target-line-rendering)
       # NOTE: cl (centerline) added for baseline rendering (fix/bfhcharts-core-features)
       fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value", "cl")
