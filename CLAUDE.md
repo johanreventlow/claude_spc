@@ -292,6 +292,33 @@ Sys.setenv(GOLEM_CONFIG_ACTIVE = "dev")  # dev/test/prod
 * BFHthemes er **styling framework**
 * Bevar klar separation of concerns
 
+### Cross-Repository Coordination
+
+Se omfattende koordinationsdokumentation:
+
+**Primær guide:**
+* `docs/CROSS_REPO_COORDINATION.md` - Fuld koordinationsguide med workflows, versioning, tests, og eksempler
+
+**Quick references:**
+* `.claude/ISSUE_ESCALATION_DECISION_TREE.md` - Beslutningsdiagram for issue eskalering
+* `.github/ISSUE_TEMPLATE/bfhchart-feature-request.md` - Issue template til BFHcharts eskalering
+
+**Hvornår eskalere til BFHcharts:**
+* Core chart rendering bugs
+* Statistiske beregningsfejl
+* Manglende chart types eller features
+* BFHcharts API design limitations
+* Performance issues i BFHcharts algoritmer
+
+**Hvornår fixe i SPCify:**
+* Parameter mapping (qicharts2 → BFHcharts)
+* UI integration og Shiny reaktivitet
+* Data preprocessing og validering
+* Fejlbeskeder og dansk lokalisering
+* SPCify-specifik caching
+
+Se decision tree for detaljeret guidance.
+
 ---
 
 ## 6) Architecture
