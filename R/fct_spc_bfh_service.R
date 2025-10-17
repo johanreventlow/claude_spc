@@ -1476,20 +1476,44 @@ call_qicharts2_for_data <- function(
     operation_name = "qicharts2 data generation",
     code = {
       # DEBUG: Verify function is loading with latest changes
-      message("[DEBUG] call_qicharts2_for_data() - VERSION WITH FREEZE FIX LOADED")
+      message("[DEBUG] call_qicharts2_for_data() - VERSION WITH NSE FIX LOADED")
 
-      # Build qicharts2 call parameters using VECTORS (not NSE)
-      # qicharts2::qic() accepts vectors directly without data parameter
-      qic_params <- list(
+      # CRITICAL FIX: Build temporary data frame with processed data to avoid qicharts2 NSE bug
+      # Issue: do.call() with pre-evaluated vectors triggers "condition has length > 1" error
+      # Solution: Pass data + column names (as symbols) instead of pre-evaluated vectors
+      # See: test-qic-docall-nse-fix.R for regression tests
+      qic_data_temp <- data.frame(
         x = data[[x_var]],
-        y = data[[y_var]],
+        y = data[[y_var]]
+      )
+
+      # Add n column if available
+      if (!is.null(n_var)) {
+        qic_data_temp$n <- data[[n_var]]
+      }
+
+      # Add part column if available
+      if (!is.null(part_var) && part_var %in% names(data)) {
+        qic_data_temp$part <- data[[part_var]]
+      }
+
+      # Build qicharts2 call parameters with data + column names (NOT pre-evaluated vectors)
+      qic_params <- list(
+        data = qic_data_temp,
+        x = as.name("x"),
+        y = as.name("y"),
         chart = chart_type,
         return.data = TRUE
       )
 
-      # Add optional parameters
+      # Add n if available (as column name symbol)
       if (!is.null(n_var)) {
-        qic_params$n <- data[[n_var]]
+        qic_params$n <- as.name("n")
+      }
+
+      # Add part if available (as column name symbol)
+      if (!is.null(part_var) && part_var %in% names(data)) {
+        qic_params$part <- as.name("part")
       }
 
       if (!is.null(freeze_var) && freeze_var %in% names(data)) {
@@ -1521,10 +1545,6 @@ call_qicharts2_for_data <- function(
           qic_params$freeze <- freeze_positions[1]
           message("[DEBUG] Set freeze to position: ", freeze_positions[1])
         }
-      }
-
-      if (!is.null(part_var) && part_var %in% names(data)) {
-        qic_params$part <- data[[part_var]]
       }
 
       # Add target value if provided
