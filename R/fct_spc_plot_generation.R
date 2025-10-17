@@ -454,144 +454,8 @@ execute_qic_call <- function(qic_args, chart_type, config, qic_cache = NULL) {
 }
 
 # PLOT ENHANCEMENT UTILITIES ==================================================
-
-## Add Plot Enhancements
-# Tilføjer extended lines, phase separations og comment annotations
-# NOTE: Label placement er flyttet til add_spc_labels() funktion
-add_plot_enhancements <- function(plot, qic_data, comment_data, y_axis_unit = "count", cl_linewidth = 1, target_linewidth = 1, comment_size = 6, suppress_targetline = FALSE) {
-  # Get hospital colors using the proper package function
-  hospital_colors <- get_hospital_colors()
-
-  # Beregn y_range for time formatting context ----
-  y_range <- if (y_axis_unit == "time" && !is.null(qic_data$y)) {
-    range(qic_data$y, na.rm = TRUE)
-  } else {
-    NULL
-  }
-
-  # Beregn extended x position (20% ud over sidste datapunkt) ----
-  last_x <- max(qic_data$x, na.rm = TRUE)
-  first_x <- min(qic_data$x, na.rm = TRUE)
-
-  # Konverter Date objekter til POSIXct for uniform håndtering
-  if (inherits(last_x, "Date")) {
-    last_x <- as.POSIXct(last_x)
-    first_x <- as.POSIXct(first_x)
-  }
-
-  # Beregn 20% extension baseret på data range
-  if (inherits(last_x, c("POSIXct", "POSIXt"))) {
-    # For tidsobjekter: beregn i sekunder
-    range_secs <- as.numeric(difftime(last_x, first_x, units = "secs"))
-    extended_x <- last_x + range_secs * 0.20
-  } else {
-    # For numerisk
-    x_range <- last_x - first_x
-    extended_x <- last_x + (x_range * 0.20)
-  }
-
-  # Opret extended line data ----
-  # NOTE: Labels håndteres nu af add_spc_labels() funktion
-  extended_lines_data <- data.frame()
-
-  # Centerline extended line KUN for seneste part
-  cl_extension_linetype <- "solid" # Default linetype
-  if (!is.null(qic_data$cl) && any(!is.na(qic_data$cl))) {
-    # Find seneste part
-    latest_part <- max(qic_data$part, na.rm = TRUE)
-    part_data <- qic_data[qic_data$part == latest_part & !is.na(qic_data$part), ]
-
-    if (nrow(part_data) > 0) {
-      # Brug sidste punkt i seneste part
-      last_row <- part_data[nrow(part_data), ]
-      cl_value <- last_row$cl
-
-      # Bestem linetype baseret på anhoej.signal i seneste part
-      # Match formatering fra hovedplot centerline
-      if ("anhoej.signal" %in% names(last_row)) {
-        cl_extension_linetype <- if (isTRUE(last_row$anhoej.signal)) "12" else "solid"
-      }
-
-      if (!is.na(cl_value)) {
-        # Extended line fra sidste datapunkt til extended_x
-        extended_lines_data <- rbind(extended_lines_data, data.frame(
-          x = c(last_row$x, extended_x),
-          y = c(cl_value, cl_value),
-          type = "cl",
-          linetype = cl_extension_linetype,
-          stringsAsFactors = FALSE
-        ))
-      }
-    }
-  }
-
-  # Target extended line (only if not suppressed by arrow symbols)
-  if (!suppress_targetline && !is.null(qic_data$target) && any(!is.na(qic_data$target))) {
-    target_value <- qic_data$target[!is.na(qic_data$target)][1]
-
-    # Extended line fra sidste datapunkt til extended_x
-    extended_lines_data <- rbind(extended_lines_data, data.frame(
-      x = c(last_x, extended_x),
-      y = c(target_value, target_value),
-      type = "target",
-      linetype = "42", # Match target linetype
-      stringsAsFactors = FALSE
-    ))
-  }
-
-  # Extended CL og Target linjer tilføjes ----
-  if (!is.null(extended_lines_data) && nrow(extended_lines_data) > 0) {
-    # CL extension
-    if (any(extended_lines_data$type == "cl")) {
-      cl_ext <- extended_lines_data[extended_lines_data$type == "cl", ]
-      plot <- plot +
-        ggplot2::geom_line(
-          data = cl_ext,
-          ggplot2::aes(x = x, y = y),
-          color = hospital_colors$hospitalblue,
-          linewidth = cl_linewidth,
-          linetype = cl_ext$linetype[1], # Use captured linetype directly
-          inherit.aes = FALSE
-        )
-    }
-
-    # Target extension
-    if (any(extended_lines_data$type == "target")) {
-      target_ext <- extended_lines_data[extended_lines_data$type == "target", ]
-      plot <- plot +
-        ggplot2::geom_line(
-          data = target_ext,
-          ggplot2::aes(x = x, y = y),
-          color = "#565656",
-          linewidth = target_linewidth,
-          linetype = "42",
-          inherit.aes = FALSE
-        )
-    }
-  }
-
-  # Kommentarer tilføjes ----
-  if (!is.null(comment_data) && nrow(comment_data) > 0) {
-    plot <- plot +
-      ggrepel::geom_text_repel(
-        data = comment_data,
-        ggplot2::aes(x = x, y = y, label = comment),
-        size = comment_size,
-        color = hospital_colors$darkgrey,
-        box.padding = 0.5,
-        point.padding = 0.5,
-        segment.color = hospital_colors$mediumgrey,
-        segment.size = 0.3,
-        arrow = grid::arrow(length = grid::unit(0.015, "npc")),
-        max.overlaps = Inf
-      )
-  }
-
-  # NOTE: CL og Target labels håndteres nu af add_spc_labels() funktion
-  # som kaldes fra generate_spc_plot() efter add_plot_enhancements()
-
-  return(plot)
-}
+# Moved to BFHcharts - see BFHcharts:::add_plot_enhancements()
+# Removed legacy functions: add_plot_enhancements()
 
 #' Backend Wrapper for SPC Plot Generation
 #'
@@ -1300,14 +1164,9 @@ generateSPCPlot_qicharts2 <- function(data, config, chart_type, target_value = N
       # Reduces this function by ~126 lines and consolidates duplicated time formatting
       plot <- apply_y_axis_formatting(plot, y_axis_unit, qic_data)
 
-      # Add plot enhancements (extended lines, phase lines, comments)
-      plot <- add_plot_enhancements(
-        plot, qic_data, comment_data, y_axis_unit,
-        cl_linewidth = cl_linewidth,
-        target_linewidth = target_linewidth,
-        comment_size = comment_size,
-        suppress_targetline = suppress_targetline
-      )
+      # Plot enhancements (extended lines, phase lines, comments) now handled by BFHcharts
+      # Legacy local implementation removed - qicharts2 plots from this fallback path
+      # are meant to be returned unstyled for now (alternative: apply minimal styling)
 
       # Add SPC labels (CL og Target) med advanced placement system
       # Bestem BASELINE label logik: Tjek om Frys er markeret og om der er Skift EFTER Frys
@@ -1382,60 +1241,8 @@ generateSPCPlot_qicharts2 <- function(data, config, chart_type, target_value = N
 }
 
 # PLOT STYLING ===============================================================
-
-## Hospital Tema til Plots
-# Anvender hospital branding og farvepalette på SPC plots
-# base_size: Responsive base font size (default 14, automatisk beregnet i Shiny renderPlot)
-applyHospitalTheme <- function(plot, base_size = 14) {
-  if (is.null(plot) || !inherits(plot, "ggplot")) {
-    return(plot)
-  }
-
-  # Get hospital colors using the proper package function
-  hospital_colors <- get_hospital_colors()
-
-  safe_operation(
-    "Apply hospital theme to plot",
-    code = {
-      footer_text <- safe_operation(
-        "Create plot footer",
-        code = {
-          create_plot_footer(
-            afdeling = "",
-            data_kilde = "Upload",
-            dato = Sys.Date()
-          )
-        },
-        fallback = function(e) {
-          "SPC Analyse" # fallback text
-        },
-        error_type = "processing"
-      )
-
-      themed_plot <- plot +
-        ggplot2::theme_minimal(base_size = base_size) +
-        ggplot2::theme(
-          text = ggplot2::element_text(family = "Roboto Medium"),
-          plot.margin = ggplot2::unit(c(0, 0, 0, 10), "pt"),
-          panel.background = ggplot2::element_blank(),
-          axis.text.y = ggplot2::element_text(color = "#858585", size = ggplot2::rel(1.0), angle = 0, hjust = 1, family = "Roboto Medium"),
-          axis.text.x = ggplot2::element_text(color = "#858585", angle = 0, size = ggplot2::rel(0.85), family = "Roboto Medium"),
-          axis.line.x = ggplot2::element_line(color = "#D6D6D6"),
-          axis.ticks.x = ggplot2::element_line(color = "#D6D6D6"),
-          axis.ticks.y = ggplot2::element_line(color = "#D6D6D6"),
-          panel.grid.major = ggplot2::element_blank(),
-          panel.grid.minor = ggplot2::element_blank(),
-          legend.position = "none",
-        ) + lemon::coord_capped_cart(bottom = "right", gap = 0)
-
-      return(themed_plot)
-    },
-    fallback = function(e) {
-      return(plot)
-    },
-    error_type = "processing"
-  )
-}
+# Moved to BFHcharts/BFHtheme - see BFHcharts:::apply_spc_theme() and BFHtheme::theme_bfh()
+# Removed legacy functions: applyHospitalTheme()
 
 #' Generate SPC Plot (Legacy Alias)
 #'

@@ -308,12 +308,9 @@ create_spc_results_processor <- function() {
             qic_cache = qic_cache
           )
 
-          # Apply hospital theme if available
-          plot <- if (exists("applyHospitalTheme", mode = "function")) {
-            applyHospitalTheme(spc_result$plot)
-          } else {
-            spc_result$plot
-          }
+          # Hospital theme now handled by BFHcharts backend
+          # Legacy theme application removed - return plot as-is
+          plot <- spc_result$plot
 
           return(list(
             plot = plot,

@@ -518,13 +518,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           is_bfhcharts <- !is.null(spc_result$metadata$backend) &&
             spc_result$metadata$backend == "bfhcharts"
 
-          plot <- if (is_bfhcharts) {
-            # BFHcharts plot - use as-is (already themed)
-            spc_result$plot
-          } else {
-            # qicharts2 plot - apply hospital theme
-            applyHospitalTheme(spc_result$plot, base_size = inputs$base_size)
-          }
+          # Hospital theming now handled by BFHcharts backend
+          # qicharts2 fallback plots returned unstyled (theme handling moved to BFHcharts)
+          plot <- spc_result$plot
 
           qic_data <- spc_result$qic_data
 
