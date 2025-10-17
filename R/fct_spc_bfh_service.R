@@ -361,9 +361,9 @@ compute_spc_results_bfh <- function(
         # BFHcharts may have already applied multiply, check if values are in expected range
         # For percentage charts (p, pp, u, up), if values > 1, multiply hasn't been applied yet
         needs_multiply <- if (validated_chart_type %in% c("p", "pp", "u", "up")) {
-          max(qic_data$y, na.rm = TRUE) <= 1  # If max ≤ 1, data is in decimal form, needs multiply
+          max(qic_data$y, na.rm = TRUE) <= 1 # If max ≤ 1, data is in decimal form, needs multiply
         } else {
-          FALSE  # For non-percentage charts, assume BFHcharts handled it
+          FALSE # For non-percentage charts, assume BFHcharts handled it
         }
 
         if (needs_multiply) {
@@ -1444,5 +1444,3 @@ call_qicharts2_for_anhoej_metadata <- function(
     error_type = "qicharts2_call"
   )
 }
-
-
