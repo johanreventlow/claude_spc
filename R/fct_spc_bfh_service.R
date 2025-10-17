@@ -1492,11 +1492,6 @@ call_qicharts2_for_data <- function(
         qic_data_temp$n <- data[[n_var]]
       }
 
-      # Add part column if available
-      if (!is.null(part_var) && part_var %in% names(data)) {
-        qic_data_temp$part <- data[[part_var]]
-      }
-
       # Build qicharts2 call parameters with data + column names (NOT pre-evaluated vectors)
       qic_params <- list(
         data = qic_data_temp,
@@ -1511,9 +1506,34 @@ call_qicharts2_for_data <- function(
         qic_params$n <- as.name("n")
       }
 
-      # Add part if available (as column name symbol)
+      # CRITICAL: part parameter skal behandles som freeze - positions, ikke kolonnenavne
+      # qicharts2 forventer part = c(position1, position2, ...) for part boundaries
       if (!is.null(part_var) && part_var %in% names(data)) {
-        qic_params$part <- as.name("part")
+        message("[DEBUG] Processing part_var: ", part_var)
+        part_col <- data[[part_var]]
+        message("[DEBUG] part_col class: ", class(part_col))
+        message("[DEBUG] part_col first 5 values: ", paste(head(part_col, 5), collapse = ", "))
+
+        # Convert to logical vector, handling both TRUE/FALSE and 0/1 values
+        logical_vec <- suppressWarnings(as.logical(part_col))
+        numeric_vec <- suppressWarnings(as.numeric(part_col))
+
+        message("[DEBUG] logical_vec: ", paste(head(logical_vec, 5), collapse = ", "))
+        message("[DEBUG] numeric_vec: ", paste(head(numeric_vec, 5), collapse = ", "))
+
+        # Combine: TRUE if either logical TRUE or numeric 1
+        is_part_boundary <- (!is.na(logical_vec) & logical_vec == TRUE) |
+          (!is.na(numeric_vec) & numeric_vec == 1)
+
+        message("[DEBUG] is_part_boundary: ", paste(head(is_part_boundary, 5), collapse = ", "))
+
+        part_positions <- which(is_part_boundary)
+        message("[DEBUG] part_positions: ", paste(part_positions, collapse = ", "))
+
+        if (length(part_positions) > 0) {
+          qic_params$part <- part_positions
+          message("[DEBUG] Set part to positions: ", paste(part_positions, collapse = ", "))
+        }
       }
 
       if (!is.null(freeze_var) && freeze_var %in% names(data)) {
