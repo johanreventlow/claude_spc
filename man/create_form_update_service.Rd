@@ -8,30 +8,9 @@ create_form_update_service(session)
 }
 \arguments{
 \item{session}{Shiny session object}
-
-\item{field_type}{Type of field: "text", "select", "textarea"
-Field type mapping for form fields
-Default values for form reset
-Update multiple form fields from metadata}
-
-\item{metadata}{Named list med field values}
-
-\item{fields}{Specific fields to update (NULL for all)
-Reset all form fields to defaults
-Update single field}
-
-\item{value}{New value
-Get field type for a given field ID}
-
-\item{field_id}{Field identifier}
 }
 \value{
 List med form update funktioner
-
-Field type string
-Get default value for a field
-
-Default value
 }
 \description{
 Factory for creating form field update functions with standardized patterns.

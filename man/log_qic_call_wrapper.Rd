@@ -28,3 +28,19 @@ Resultat fra qic() kaldet
 Wrapper omkring qicharts2::qic() kald der automatisk logger
 input parametre og output resultater for debugging.
 }
+\details{
+VIGTIGT: qic_args skal indeholde data + kolonnenavne (as.name()),
+IKKE pre-evaluerede vektorer. qicharts2::qic() bruger NSE og fejler
+med "condition has length > 1" når do.call() kaldes med vektorer.
+
+Korrekt format:
+qic_args <- list(
+data = data_frame,
+x = as.name("x_col"),
+y = as.name("y_col"),
+n = as.name("n_col"),  # Valgfrit
+chart = "p",
+target = 0.1,          # Scalar værdier OK
+cl = 0.08              # Scalar værdier OK
+)
+}

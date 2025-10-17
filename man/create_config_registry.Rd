@@ -6,23 +6,6 @@
 \usage{
 create_config_registry()
 }
-\arguments{
-\item{key}{Optional specific key within domain}
-
-\item{default}{Default value if key not found}
-
-\item{domain}{Domain to reload, or NULL for all domains
-List available configuration domains}
-}
-\value{
-Configuration value or full domain config
-Reload specific configuration domain
-
-Character vector of available domains
-Get configuration summary
-
-List with loading status and cache info
-}
 \description{
 Centralt registry for applikationskonfiguration. Samler alle
 konfigurationsværdier fra spredte config-filer i et enkelt interface.

@@ -10,27 +10,9 @@ create_column_choice_service(session, app_state)
 \item{session}{Shiny session object}
 
 \item{app_state}{Application state for data access}
-
-\item{columns}{Vector of column IDs to update}
-
-\item{clear_selections}{Whether to clear all selections
-Update single column choice}
-
-\item{column_id}{Column input ID}
-
-\item{selected}{Selected value}
-
-\item{choices}{Optional custom choices
-Clear all column selections
-Update from auto-detection results}
-
-\item{detection_results}{Auto-detection results from app_state}
 }
 \value{
 List med column choice update funktioner
-
-Named vector of choices for column inputs
-Update column choices for specific columns
 }
 \description{
 Specialized service for updating column choice inputs with data-driven choices.

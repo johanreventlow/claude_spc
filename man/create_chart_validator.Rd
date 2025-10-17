@@ -6,16 +6,6 @@
 \usage{
 create_chart_validator()
 }
-\arguments{
-\item{data}{Chart data}
-
-\item{config}{Chart configuration}
-
-\item{chart_type}{Chart type}
-}
-\value{
-List med validation status og warnings
-}
 \description{
 Validering af chart data og konfiguration før plot generation.
 Ekstraeret fra mod_spc_chart_server.R for genbrug.

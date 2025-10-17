@@ -8,16 +8,6 @@ create_ui_visibility_service(session)
 }
 \arguments{
 \item{session}{Shiny session object}
-
-\item{element_id}{Element ID to toggle}
-
-\item{show}{Logical, whether to show or hide
-Show multiple UI elements}
-
-\item{element_ids}{Character vector of element IDs
-Toggle multiple elements based on conditions}
-
-\item{element_conditions}{Named list: element_id = show_condition}
 }
 \value{
 List med visibility control funktioner

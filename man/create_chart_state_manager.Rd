@@ -8,20 +8,9 @@ create_chart_state_manager(app_state)
 }
 \arguments{
 \item{app_state}{Application state object}
-
-\item{value}{New value
-Get plot state value safely}
-
-\item{key}{State key to retrieve}
-
-\item{default}{Default value if key not found
-Reset plot state to initial values
-Check if plot is ready for display}
 }
 \value{
 List med state management funktioner
-
-Logical indicating plot readiness
 }
 \description{
 Factory for managing chart module state with consistent patterns.

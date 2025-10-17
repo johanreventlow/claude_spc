@@ -6,37 +6,6 @@
 \usage{
 create_spc_results_processor()
 }
-\arguments{
-\item{qic_data}{QIC data object from qicharts2}
-
-\item{data}{Chart data}
-
-\item{config}{Chart configuration}
-
-\item{chart_type}{Chart type}
-
-\item{target_value}{Optional target value}
-
-\item{centerline_value}{Optional centerline value}
-
-\item{skift_config}{Phase configuration}
-
-\item{frys_column}{Freeze column}
-
-\item{chart_title_reactive}{Chart title reactive}
-
-\item{y_unit}{Y-axis unit}
-
-\item{kommentar_col}{Comment column}
-
-\item{qic_cache}{QIC cache object for performance optimization (SPRINT 4)}
-}
-\value{
-List med SPC metrics og beskeder
-Generate SPC plot with full error handling
-
-List med plot object og QIC data
-}
 \description{
 Processer SPC beregninger og ekstraherer relevante metrics.
 Ekstraeret fra mod_spc_chart_server.R for bedre testability.

@@ -8,8 +8,7 @@
 # 1. compute_spc_results_bfh() - Primary facade interface
 # 2. map_to_bfh_params() - Parameter transformation
 # 3. call_bfh_chart() - Safe BFHchart invocation
-# 4. transform_bfh_output() - Output standardization
-# 5. add_comment_annotations() - Comment layer integration
+# 4. add_comment_annotations() - Comment layer integration
 
 #' Compute SPC Results Using BFHchart Backend
 #'
@@ -133,7 +132,6 @@
 #'
 #' @seealso
 #' \code{\link{map_to_bfh_params}} for parameter transformation logic
-#' \code{\link{transform_bfh_output}} for output standardization
 #' \code{\link{add_comment_annotations}} for notes column handling
 #' @export
 compute_spc_results_bfh <- function(
@@ -295,16 +293,13 @@ compute_spc_results_bfh <- function(
         }
       }
 
-      # 7. TWO-STAGE WORKFLOW: qicharts2 data generation → BFHcharts rendering
-      # This approach bypasses NSE issues and enables full parameter support
+      # 7. HYBRID WORKFLOW: BFHcharts HIGH-LEVEL visualization + parallel qicharts2 Anhøj metadata
+      # BFHcharts handles ALL visualization with original data
+      # qicharts2 runs in parallel ONLY to extract Anhøj rules metadata
       extra_params <- list(...)
 
-      # 7a. Extract target and centerline BEFORE calling qicharts2
-      target_value <- extra_params$target_value
-      centerline_value <- extra_params$centerline_value
-
-      # 7a. STAGE 1: Call qicharts2 to generate qic_data (handles freeze, part, Danish columns, target, cl)
-      qic_data <- call_qicharts2_for_data(
+      # 7a. Map parameters for BFHcharts HIGH-LEVEL API
+      bfh_params <- map_to_bfh_params(
         data = complete_data,
         x_var = x_var,
         y_var = y_var,
@@ -313,63 +308,75 @@ compute_spc_results_bfh <- function(
         cl_var = cl_var,
         freeze_var = freeze_var,
         part_var = part_var,
-        target_value = target_value,
-        centerline_value = centerline_value
+        target_value = extra_params$target_value,
+        centerline_value = extra_params$centerline_value,
+        multiply = multiply
       )
 
-      if (is.null(qic_data)) {
-        stop("qicharts2 data generation failed")
+      if (is.null(bfh_params)) {
+        stop("BFHcharts parameter mapping failed")
       }
 
-      # 7b. Extract additional parameters for BFHcharts rendering
-      # (target_value and centerline_value already extracted above for qicharts2)
-      y_axis_unit <- extra_params$y_axis_unit %||% "count"
-      chart_title <- resolve_bfh_chart_title(
-        extra_params$chart_title_reactive %||% extra_params$chart_title
-      )
-      target_text <- extra_params$target_text
-
-      log_debug(
-        paste(
-          "Two-stage workflow parameters:",
-          "y_axis_unit =", y_axis_unit,
-          ", has_target =", !is.null(target_value),
-          ", has_chart_title =", !is.null(chart_title)
-        ),
-        .context = "BFH_SERVICE"
-      )
-
-      # 7c. STAGE 2: Call BFHcharts low-level API with qic_data and full parameter support
-      bfh_result <- call_bfh_spc_plot(
-        qic_data = qic_data,
-        chart_type = validated_chart_type,
-        chart_title = chart_title,
-        y_axis_unit = y_axis_unit,
-        target_value = target_value,
-        target_text = target_text,
-        centerline_value = centerline_value
-      )
+      # 7b. Call BFHcharts HIGH-LEVEL API for visualization
+      bfh_result <- call_bfh_chart(bfh_params)
 
       if (is.null(bfh_result)) {
-        stop("BFHcharts rendering failed")
+        stop("BFHcharts visualization failed")
       }
 
-      # 7d. Build standardized result structure
-      # Apply multiply to qic_data values for display scaling
+      # 7c. PARALLEL: Call qicharts2 for Anhøj rules metadata extraction ONLY
+      # This runs independently to get Anhøj signals (runs, crossings)
+      anhoej_qic_data <- call_qicharts2_for_anhoej_metadata(
+        data = complete_data,
+        x_var = x_var,
+        y_var = y_var,
+        chart_type = validated_chart_type,
+        n_var = n_var,
+        cl_var = cl_var,
+        freeze_var = freeze_var,
+        part_var = part_var,
+        target_value = extra_params$target_value,
+        centerline_value = extra_params$centerline_value
+      )
+
+      # Extract Anhøj rules metadata from qicharts2 result
+      anhoej_metadata <- if (!is.null(anhoej_qic_data)) {
+        extract_anhoej_metadata(anhoej_qic_data)
+      } else {
+        log_warn("qicharts2 Anhøj metadata extraction failed", .context = "BFH_SERVICE")
+        NULL
+      }
+
+      # 7d. Extract qic_data from BFHcharts result
+      # BFHcharts::create_spc_chart returns ggplot with embedded data
+      qic_data <- bfh_result$data
+
+      if (is.null(qic_data) || nrow(qic_data) == 0) {
+        stop("Could not extract qic_data from BFHcharts result")
+      }
+
+      # 7e. Apply multiply scaling to qic_data (if not already applied by BFHcharts)
       # DEFENSIVE: Check multiply is not NULL before comparison
       if (!is.null(multiply) && multiply != 1) {
-        qic_data$y <- qic_data$y * multiply
-        qic_data$cl <- qic_data$cl * multiply
-        if ("ucl" %in% names(qic_data)) {
-          qic_data$ucl <- qic_data$ucl * multiply
+        # BFHcharts may have already applied multiply, check if values are in expected range
+        # For percentage charts (p, pp, u, up), if values > 1, multiply hasn't been applied yet
+        needs_multiply <- if (validated_chart_type %in% c("p", "pp", "u", "up")) {
+          max(qic_data$y, na.rm = TRUE) <= 1  # If max ≤ 1, data is in decimal form, needs multiply
+        } else {
+          FALSE  # For non-percentage charts, assume BFHcharts handled it
         }
-        if ("lcl" %in% names(qic_data)) {
-          qic_data$lcl <- qic_data$lcl * multiply
+
+        if (needs_multiply) {
+          qic_data$y <- qic_data$y * multiply
+          qic_data$cl <- qic_data$cl * multiply
+          if ("ucl" %in% names(qic_data)) {
+            qic_data$ucl <- qic_data$ucl * multiply
+          }
+          if ("lcl" %in% names(qic_data)) {
+            qic_data$lcl <- qic_data$lcl * multiply
+          }
         }
       }
-
-      # Extract Anhøj rules metadata
-      anhoej_metadata <- extract_anhoej_metadata(qic_data)
 
       # Build metadata
       standardized <- list(
@@ -670,6 +677,19 @@ map_to_bfh_params <- function(
         )
       }
 
+      # 6b. Add centerline value if provided (normalized if needed)
+      if (!is.null(centerline_value)) {
+        params$cl <- normalize_scale_for_bfh(
+          value = centerline_value,
+          chart_type = chart_type,
+          param_name = "centerline"
+        )
+        log_debug(
+          paste("Centerline parameter set to:", params$cl),
+          .context = "BFH_SERVICE"
+        )
+      }
+
       # 7. Pass through additional parameters
       extra_params <- list(...)
       if (length(extra_params) > 0) {
@@ -785,7 +805,6 @@ resolve_bfh_chart_title <- function(title_candidate) {
 #' @seealso
 #' \code{\link{compute_spc_results_bfh}} for facade interface
 #' \code{\link{map_to_bfh_params}} for parameter preparation
-#' \code{\link{transform_bfh_output}} for output processing
 #' @export
 call_bfh_chart <- function(bfh_params) {
   safe_operation(
@@ -819,9 +838,9 @@ call_bfh_chart <- function(bfh_params) {
 
       # 3b. CONSERVATIVE APPROACH: Only send core parameters to BFHcharts
       # Testing shows BFHcharts may not accept all documented parameters
-      # Keep only: data, x, y, n, chart_type, freeze, part, multiply
-      # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_value, target_text, notes
-      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply")
+      # Keep only: data, x, y, n, chart_type, freeze, part, multiply, target_value, cl
+      # TODO: Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_text, notes
+      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value", "cl")
       bfh_params_clean <- bfh_params[names(bfh_params) %in% fields_to_keep]
 
       removed_fields <- setdiff(names(bfh_params), fields_to_keep)
@@ -867,206 +886,6 @@ call_bfh_chart <- function(bfh_params) {
     fallback = NULL,
     show_user = TRUE,
     error_type = "bfh_api_call"
-  )
-}
-
-
-#' Transform BFHchart Output to Standardized Format
-#'
-#' Converts BFHchart output (ggplot object) to SPCify's standardized
-#' format matching qicharts2 structure. Ensures output compatibility with
-#' existing SPCify plot rendering, customization, and export functions.
-#'
-#' @details
-#' **Transformation Responsibilities:**
-#' - Extract qic_data from ggplot object layers
-#' - Standardize column names (BFHchart → SPCify conventions)
-#' - Apply multiply scaling to y-axis values
-#' - Calculate combined Anhøj signal if not provided by BFHchart
-#' - Ensure required columns present: x, y, cl, ucl, lcl, part, signal
-#' - Preserve `.original_row_id` for comment mapping
-#' - Build metadata list with diagnostic information
-#'
-#' **Output Structure (qicharts2-compatible):**
-#' - `qic_data` tibble with standardized columns
-#' - `plot` ggplot2 object
-#' - `metadata` list with configuration and diagnostics
-#'
-#' **Anhøj Signal Calculation:**
-#' If BFHchart does not provide combined signal, calculate as:
-#' `signal <- runs.signal | crossings.signal`
-#' Applied per-phase if part column present.
-#'
-#' @param bfh_result ggplot2 object from BFHchart.
-#' @param multiply numeric. Multiplier to apply to y-axis values. Default 1.
-#'   Common use: 100 for percentage display.
-#' @param chart_type character. Chart type for metadata. Used in diagnostic logging.
-#' @param original_data data.frame. Original input data for comment mapping and
-#'   row count validation. Optional but recommended.
-#' @param freeze_applied logical. Whether freeze was applied in parameter mapping.
-#'   Default FALSE. Used to set metadata correctly since BFHcharts doesn't return
-#'   a freeze column.
-#'
-#' @return list with three components:
-#'   \describe{
-#'     \item{plot}{ggplot2 object compatible with SPCify customization}
-#'     \item{qic_data}{tibble with standardized SPC data (qicharts2 format)}
-#'     \item{metadata}{list with chart configuration and diagnostics}
-#'   }
-#'   Returns NULL on transformation failure (with error logging).
-#' @examples
-#' \dontrun{
-#' # Transform BFHchart plot output
-#' bfh_result <- call_bfh_chart(bfh_params)
-#' standardized <- transform_bfh_output(
-#'   bfh_result = bfh_result,
-#'   multiply = 100,
-#'   chart_type = "p",
-#'   original_data = clean_data
-#' )
-#'
-#' # Access standardized components
-#' print(standardized$plot)
-#' summary(standardized$qic_data)
-#' print(standardized$metadata$signals_detected)
-#'
-#' # Use with existing SPCify functions
-#' customized_plot <- apply_hospital_theme(standardized$plot)
-#' export_plot(customized_plot, filename = "spc_chart.png")
-#' }
-#'
-#' @seealso
-#' \code{\link{compute_spc_results_bfh}} for facade interface
-#' \code{\link{call_bfh_chart}} for BFHchart invocation
-#' \code{\link{add_comment_annotations}} for comment layer
-#' @export
-transform_bfh_output <- function(
-  bfh_result,
-  multiply = 1,
-  chart_type = NULL,
-  original_data = NULL,
-  freeze_applied = FALSE
-) {
-  safe_operation(
-    operation_name = "BFHchart output transformation",
-    code = {
-      # 1. Validate input
-      if (!inherits(bfh_result, "ggplot")) {
-        stop("bfh_result must be a ggplot object")
-      }
-
-      # 2. Extract data from ggplot object
-      # BFHchart::create_spc_chart returns ggplot with qic data in layers
-      plot_data <- ggplot2::ggplot_build(bfh_result)$data[[1]]
-
-      # 3. Try to get original qic data from plot object's data attribute
-      qic_data <- bfh_result$data
-
-      if (is.null(qic_data) || nrow(qic_data) == 0) {
-        stop("Could not extract qic_data from BFHchart result")
-      }
-
-      # 4. Standardize column names to match qicharts2 format
-      # Required columns: x, y, cl, ucl, lcl, signal
-      required_cols <- c("x", "y", "cl")
-
-      # Check if required columns exist
-      missing_cols <- setdiff(required_cols, names(qic_data))
-      if (length(missing_cols) > 0) {
-        stop(paste(
-          "Missing required columns in qic_data:",
-          paste(missing_cols, collapse = ", ")
-        ))
-      }
-
-      # 5. Apply multiply to y-axis values
-      if (multiply != 1) {
-        qic_data$y <- qic_data$y * multiply
-        qic_data$cl <- qic_data$cl * multiply
-        if ("ucl" %in% names(qic_data)) {
-          qic_data$ucl <- qic_data$ucl * multiply
-        }
-        if ("lcl" %in% names(qic_data)) {
-          qic_data$lcl <- qic_data$lcl * multiply
-        }
-      }
-
-      # 6. Ensure ucl/lcl columns exist (may be NA for run charts)
-      if (!"ucl" %in% names(qic_data)) {
-        qic_data$ucl <- NA_real_
-      }
-      if (!"lcl" %in% names(qic_data)) {
-        qic_data$lcl <- NA_real_
-      }
-
-      # 7. Extract Anhøj rules metadata from BFHchart output
-      anhoej_metadata <- extract_anhoej_metadata(qic_data)
-
-      # 8. Use BFHchart's anhoej.signal or calculate combined signal
-      if ("anhoej.signal" %in% names(qic_data)) {
-        qic_data$signal <- qic_data$anhoej.signal
-      } else if (!is.null(anhoej_metadata)) {
-        qic_data$signal <- anhoej_metadata$signal_points
-      } else {
-        # Fallback: calculate from components
-        qic_data$signal <- calculate_combined_anhoej_signal(qic_data)
-      }
-
-      # 9. Ensure part column exists
-      if (!"part" %in% names(qic_data)) {
-        qic_data$part <- factor(rep(1, nrow(qic_data)))
-      }
-
-      # 10. Convert to tibble for consistency
-      qic_data <- tibble::as_tibble(qic_data)
-
-      # 11. Build metadata with Anhøj rules
-      metadata <- list(
-        chart_type = chart_type,
-        n_points = nrow(qic_data),
-        n_phases = length(unique(qic_data$part)),
-        freeze_applied = freeze_applied, # Use parameter passed from compute_spc_results_bfh
-        signals_detected = sum(qic_data$signal, na.rm = TRUE),
-        bfh_version = as.character(utils::packageVersion("BFHcharts")),
-        anhoej_rules = if (!is.null(anhoej_metadata)) {
-          list(
-            runs_detected = anhoej_metadata$runs_signal,
-            crossings_detected = anhoej_metadata$crossings_signal,
-            longest_run = anhoej_metadata$longest_run,
-            n_crossings = anhoej_metadata$n_crossings,
-            n_crossings_min = anhoej_metadata$n_crossings_min
-          )
-        } else {
-          NULL
-        }
-      )
-
-      log_debug(
-        paste(
-          "Output transformed:",
-          metadata$n_points, "points,",
-          metadata$signals_detected, "signals detected"
-        ),
-        .context = "BFH_SERVICE"
-      )
-
-      # Log Anhøj metadata if available
-      if (!is.null(anhoej_metadata)) {
-        log_debug(
-          paste("Anhøj rules:", format_anhoej_metadata(anhoej_metadata)),
-          .context = "BFH_SERVICE"
-        )
-      }
-
-      # 11. Return standardized structure
-      return(list(
-        plot = bfh_result,
-        qic_data = qic_data,
-        metadata = metadata
-      ))
-    },
-    fallback = NULL,
-    error_type = "output_transformation"
   )
 }
 
@@ -1160,7 +979,6 @@ transform_bfh_output <- function(
 #'
 #' @seealso
 #' \code{\link{compute_spc_results_bfh}} for facade interface with integrated comments
-#' \code{\link{transform_bfh_output}} for output standardization
 #' @export
 add_comment_annotations <- function(
   plot,
@@ -1454,13 +1272,13 @@ normalize_scale_for_bfh <- function(value, chart_type, param_name = "value") {
 }
 
 
-#' Call qicharts2 to Get QIC Data (Stage 1 of Two-Stage Workflow)
+#' Call qicharts2 for Anhøj Rules Metadata Extraction
 #'
-#' Calls qicharts2::qic() directly to get qic_data with Danish column support.
-#' This is Stage 1 of the two-stage workflow that bypasses BFHcharts NSE issues.
+#' Calls qicharts2::qic() solely to extract Anhøj rules metadata (runs, crossings).
+#' Used in HYBRID workflow where BFHcharts handles visualization and qicharts2 provides Anhøj signals.
 #'
 #' @keywords internal
-call_qicharts2_for_data <- function(
+call_qicharts2_for_anhoej_metadata <- function(
   data,
   x_var,
   y_var,
@@ -1476,7 +1294,7 @@ call_qicharts2_for_data <- function(
     operation_name = "qicharts2 data generation",
     code = {
       # DEBUG: Verify function is loading with latest changes
-      message("[DEBUG] call_qicharts2_for_data() - VERSION WITH NSE FIX LOADED")
+      message("[DEBUG] call_qicharts2_for_anhoej_metadata() - VERSION WITH NSE FIX LOADED")
 
       # CRITICAL FIX: Build temporary data frame with processed data to avoid qicharts2 NSE bug
       # Issue: do.call() with pre-evaluated vectors triggers "condition has length > 1" error
@@ -1628,59 +1446,3 @@ call_qicharts2_for_data <- function(
 }
 
 
-#' Call BFHcharts Low-Level API (Stage 2 of Two-Stage Workflow)
-#'
-#' Calls BFHcharts::bfh_spc_plot() with qic_data from qicharts2.
-#' This is Stage 2 of the two-stage workflow that bypasses NSE issues.
-#'
-#' @keywords internal
-call_bfh_spc_plot <- function(
-  qic_data,
-  chart_type,
-  chart_title = NULL,
-  y_axis_unit = "count",
-  target_value = NULL,
-  target_text = NULL,
-  centerline_value = NULL,
-  ...
-) {
-  safe_operation(
-    operation_name = "BFHcharts low-level API call",
-    code = {
-      # Build plot configuration with all SPCify parameters
-      plot_config <- BFHcharts::spc_plot_config(
-        chart_type = chart_type,
-        y_axis_unit = y_axis_unit,
-        target_value = target_value,
-        target_text = target_text,
-        centerline_value = centerline_value,
-        chart_title = chart_title
-      )
-
-      log_debug(
-        paste("Calling BFHcharts::bfh_spc_plot() with", nrow(qic_data), "rows"),
-        .context = "BFH_SERVICE"
-      )
-
-      # Call BFHcharts low-level API
-      plot_result <- BFHcharts::bfh_spc_plot(
-        qic_data = qic_data,
-        plot_config = plot_config
-      )
-
-      if (is.null(plot_result) || !inherits(plot_result, "ggplot")) {
-        stop("BFHcharts::bfh_spc_plot() did not return valid ggplot object")
-      }
-
-      log_info(
-        "BFHcharts::bfh_spc_plot() returned ggplot successfully",
-        .context = "BFH_SERVICE"
-      )
-
-      return(plot_result)
-    },
-    fallback = NULL,
-    show_user = TRUE,
-    error_type = "bfh_low_level_call"
-  )
-}
