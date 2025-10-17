@@ -133,17 +133,32 @@ create_qic_plot_safe <- function(data, x_col, y_col, n_col = NULL, chart_type,
   target_value <- if (!is.null(target_input)) qic_inputs$normalize(target_input) else NULL
   centerline_value <- if (!is.null(centerline_input)) qic_inputs$normalize(centerline_input) else NULL
 
-  # Build qic arguments
-  qic_args <- list(
+  # CRITICAL: Build temporary data frame with processed data to avoid qicharts2 NSE bug
+  # Issue: do.call() with pre-evaluated vectors triggers "condition has length > 1" error
+  # Solution: Pass data + column names (as symbols) instead of pre-evaluated vectors
+  # See: fix/qic-docall-nse-bug for details
+  qic_data_temp <- data.frame(
     x = x_data,
-    y = qic_inputs$y,
+    y = qic_inputs$y
+  )
+
+  # Add n column if available
+  if (!is.null(qic_inputs$n)) {
+    qic_data_temp$n <- qic_inputs$n
+  }
+
+  # Build qic arguments with data + column names (NOT pre-evaluated vectors)
+  qic_args <- list(
+    data = qic_data_temp,
+    x = as.name("x"),
+    y = as.name("y"),
     chart = chart_type,
     title = title %||% paste("SPC Diagram:", toupper(chart_type))
   )
 
-  # Add n if available
+  # Add n if available (as column name symbol)
   if (!is.null(qic_inputs$n)) {
-    qic_args$n <- qic_inputs$n
+    qic_args$n <- as.name("n")
   }
 
   # Add target and centerline
