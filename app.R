@@ -4,7 +4,6 @@
 # options(spc.debug.source_loading = TRUE)
 # Load package
 devtools::load_all(reset = TRUE, recompile = FALSE, helpers = FALSE)
-get_golem_config("features")$use_bfhchart
 
 # Run app with test mode enabled for development
 run_app(enable_test_mode = TRUE, log_level = "DEBUG")
