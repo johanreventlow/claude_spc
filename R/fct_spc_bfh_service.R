@@ -1838,6 +1838,7 @@ compute_anhoej_metadata_local <- function(data, config) {
         ))
       }
 
+
       # Extract config values
       x_col <- config$x_col
       y_col <- config$y_col

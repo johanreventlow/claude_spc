@@ -1,4 +1,4 @@
-test_that("unlock_cache_statistics respekterer injiceret namespace og undgår global lookup", {
+test_that("unlock_cache_statistics uses provided namespace without global lookup", {
   fake_ns <- new.env(parent = emptyenv())
 
   assign(".panel_cache_stats", list(dummy = TRUE), envir = fake_ns)
@@ -30,26 +30,8 @@ test_that("unlock_cache_statistics respekterer injiceret namespace og undgår gl
     lockBinding("getNamespace", base_env)
   }, add = TRUE)
 
-  assign(
-    "asNamespace",
-    function(name, ...) {
-      if (identical(name, "SPCify")) {
-        stop("asNamespace må ikke blive kaldt for SPCify")
-      }
-      original_asNamespace(name, ...)
-    },
-    envir = base_env
-  )
-  assign(
-    "getNamespace",
-    function(name, ...) {
-      if (identical(name, "SPCify")) {
-        stop("getNamespace må ikke blive kaldt for SPCify")
-      }
-      original_getNamespace(name, ...)
-    },
-    envir = base_env
-  )
+  assign("asNamespace", function(...) stop("asNamespace should not be called"), envir = base_env)
+  assign("getNamespace", function(...) stop("getNamespace should not be called"), envir = base_env)
 
   expect_no_error(
     suppressMessages(
