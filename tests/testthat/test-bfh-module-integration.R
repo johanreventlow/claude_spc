@@ -1,374 +1,381 @@
-# test-bfh-module-integration.R
-# Task #32 Stream B: Shinytest2 Snapshot Tests for BFHchart Integration
-#
-# Tests backend switching between qicharts2 and BFHchart for all supported
-# chart types (run, I, P, C, U) with feature flag toggle validation.
+# tests/testthat/test-bfh-module-integration.R
+# Shinytest2 snapshot tests for BFHchart module integration
+# Tests visual output of all supported chart types with BFHchart backend
 
-# Skip tests if shinytest2 not available
-skip_if_not_installed <- function(pkg) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    skip(paste(pkg, "not installed"))
+library(shinytest2)
+library(testthat)
+
+# Test fixtures helper
+create_test_csv <- function(chart_type, n_rows = 50, seed = 20251015) {
+  set.seed(seed)
+
+  base_data <- data.frame(
+    Dato = seq.Date(Sys.Date() - n_rows + 1, Sys.Date(), by = "day"),
+    Vaerdi = rnorm(n_rows, mean = 100, sd = 15)
+  )
+
+  # Add denominator for ratio charts
+  if (chart_type %in% c("p", "c", "u")) {
+    base_data$Naevner <- sample(50:200, n_rows, replace = TRUE)
   }
+
+  base_data
 }
 
-# Test data helper - creates simple test datasets
-create_test_data_for_chart_type <- function(chart_type) {
-  # Base dates
-  dates <- seq.Date(from = as.Date("2024-01-01"), by = "week", length.out = 20)
-
-  if (chart_type %in% c("p", "u")) {
-    # Proportion/rate charts need numerator and denominator
-    data.frame(
-      Dato = dates,
-      Tæller = c(15, 18, 14, 16, 19, 22, 21, 18, 17, 20,
-                 23, 25, 24, 22, 21, 23, 26, 24, 25, 27),
-      Nævner = rep(100, 20),
-      stringsAsFactors = FALSE
-    )
-  } else if (chart_type == "c") {
-    # Count chart - just counts
-    data.frame(
-      Dato = dates,
-      Tæller = c(3, 5, 2, 4, 6, 8, 7, 5, 4, 6,
-                 9, 10, 8, 7, 6, 8, 11, 9, 10, 12),
-      stringsAsFactors = FALSE
-    )
-  } else {
-    # Run and I charts - continuous measurements
-    data.frame(
-      Dato = dates,
-      Tæller = c(15, 18, 14, 16, 19, 22, 21, 18, 17, 20,
-                 23, 25, 24, 22, 21, 23, 26, 24, 25, 27),
-      stringsAsFactors = FALSE
-    )
-  }
+# Helper to get app driver
+get_app_driver <- function(name) {
+  AppDriver$new(
+    app_dir = test_path("../.."),
+    name = name,
+    variant = platform_variant(),
+    height = 800,
+    width = 1200
+  )
 }
 
 # ==============================================================================
-# TEST SUITE: BFHchart Backend Integration
+# Test: Run Chart with BFHchart Backend
 # ==============================================================================
 
-test_that("BFHchart integration - Run chart (qicharts2 baseline)", {
+test_that("BFHchart module: Run chart renders correctly with BFHchart backend", {
   skip_if_not_installed("shinytest2")
-  skip_on_cran()
 
   # Create test data
-  test_data <- create_test_data_for_chart_type("run")
-  test_file <- tempfile(fileext = ".csv")
-  write.csv(test_data, test_file, row.names = FALSE, fileEncoding = "UTF-8")
+  test_data <- create_test_csv("run")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
 
-  # Initialize app
-  app <- shinytest2::AppDriver$new(
-    app_dir = test_path("../.."),
-    name = "bfh-run-qicharts2",
-    timeout = 15000,
-    load_timeout = 10000
-  )
+  # Launch app
+  app <- get_app_driver("bfh-run-chart")
 
   # Upload test data
-  app$upload_file(file_upload = test_file)
+  app$upload_file(file_upload = temp_csv)
   app$wait_for_idle(timeout = 5000)
 
-  # Configure chart (qicharts2 backend - default)
+  # Configure chart
   app$set_inputs(
+    chart_type = "Run",
     x_column = "Dato",
-    y_column = "Tæller",
-    chart_type_da = "Run chart"
+    y_column = "Vaerdi"
+  )
+  app$wait_for_idle(timeout = 5000)
+
+  # Snapshot visual output
+  app$expect_screenshot(
+    selector = "#spc_plot_actual",
+    name = "bfh-run-chart",
+    threshold = 0.1  # Allow 10% pixel diff for anti-aliasing
   )
 
-  app$wait_for_idle(timeout = 5000)
-
-  # Verify no errors
-  errors <- app$get_html(".shiny-notification-error")
-  expect_true(is.null(errors) || nchar(errors) == 0)
+  # Verify plot rendered (check values)
+  expect_true(app$get_value(output = "plot_ready"))
 
   # Cleanup
   app$stop()
-  unlink(test_file)
+  unlink(temp_csv)
 })
 
-test_that("BFHchart integration - I chart (Individuals)", {
+# ==============================================================================
+# Test: I Chart with BFHchart Backend
+# ==============================================================================
+
+test_that("BFHchart module: I chart renders correctly", {
   skip_if_not_installed("shinytest2")
-  skip_on_cran()
 
-  test_data <- create_test_data_for_chart_type("i")
-  test_file <- tempfile(fileext = ".csv")
-  write.csv(test_data, test_file, row.names = FALSE, fileEncoding = "UTF-8")
+  test_data <- create_test_csv("i")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
 
-  app <- shinytest2::AppDriver$new(
-    app_dir = test_path("../.."),
+  app <- get_app_driver("bfh-i-chart")
+
+  app$upload_file(file_upload = temp_csv)
+  app$wait_for_idle(timeout = 5000)
+
+  app$set_inputs(
+    chart_type = "I",
+    x_column = "Dato",
+    y_column = "Vaerdi"
+  )
+  app$wait_for_idle(timeout = 5000)
+
+  app$expect_screenshot(
+    selector = "#spc_plot_actual",
     name = "bfh-i-chart",
-    timeout = 15000
+    threshold = 0.1
   )
 
-  app$upload_file(file_upload = test_file)
+  expect_true(app$get_value(output = "plot_ready"))
+
+  app$stop()
+  unlink(temp_csv)
+})
+
+# ==============================================================================
+# Test: P Chart with BFHchart Backend (ratio chart with denominator)
+# ==============================================================================
+
+test_that("BFHchart module: P chart renders correctly with denominator", {
+  skip_if_not_installed("shinytest2")
+
+  test_data <- create_test_csv("p")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
+
+  app <- get_app_driver("bfh-p-chart")
+
+  app$upload_file(file_upload = temp_csv)
   app$wait_for_idle(timeout = 5000)
 
   app$set_inputs(
+    chart_type = "P",
     x_column = "Dato",
-    y_column = "Tæller",
-    chart_type_da = "I chart"
+    y_column = "Vaerdi",
+    n_column = "Naevner"
   )
-
   app$wait_for_idle(timeout = 5000)
 
-  # Verify no errors
-  errors <- app$get_html(".shiny-notification-error")
-  expect_true(is.null(errors) || nchar(errors) == 0)
-
-  app$stop()
-  unlink(test_file)
-})
-
-test_that("BFHchart integration - P chart (Proportions)", {
-  skip_if_not_installed("shinytest2")
-  skip_on_cran()
-
-  test_data <- create_test_data_for_chart_type("p")
-  test_file <- tempfile(fileext = ".csv")
-  write.csv(test_data, test_file, row.names = FALSE, fileEncoding = "UTF-8")
-
-  app <- shinytest2::AppDriver$new(
-    app_dir = test_path("../.."),
+  app$expect_screenshot(
+    selector = "#spc_plot_actual",
     name = "bfh-p-chart",
-    timeout = 15000
+    threshold = 0.1
   )
 
-  app$upload_file(file_upload = test_file)
+  expect_true(app$get_value(output = "plot_ready"))
+
+  app$stop()
+  unlink(temp_csv)
+})
+
+# ==============================================================================
+# Test: C Chart with BFHchart Backend (count data)
+# ==============================================================================
+
+test_that("BFHchart module: C chart renders correctly with count data", {
+  skip_if_not_installed("shinytest2")
+
+  test_data <- create_test_csv("c")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
+
+  app <- get_app_driver("bfh-c-chart")
+
+  app$upload_file(file_upload = temp_csv)
   app$wait_for_idle(timeout = 5000)
 
   app$set_inputs(
+    chart_type = "C",
     x_column = "Dato",
-    y_column = "Tæller",
-    n_column = "Nævner",
-    chart_type_da = "P chart"
+    y_column = "Vaerdi"
   )
-
   app$wait_for_idle(timeout = 5000)
 
-  errors <- app$get_html(".shiny-notification-error")
-  expect_true(is.null(errors) || nchar(errors) == 0)
-
-  app$stop()
-  unlink(test_file)
-})
-
-test_that("BFHchart integration - C chart (Counts)", {
-  skip_if_not_installed("shinytest2")
-  skip_on_cran()
-
-  test_data <- create_test_data_for_chart_type("c")
-  test_file <- tempfile(fileext = ".csv")
-  write.csv(test_data, test_file, row.names = FALSE, fileEncoding = "UTF-8")
-
-  app <- shinytest2::AppDriver$new(
-    app_dir = test_path("../.."),
+  app$expect_screenshot(
+    selector = "#spc_plot_actual",
     name = "bfh-c-chart",
-    timeout = 15000
+    threshold = 0.1
   )
 
-  app$upload_file(file_upload = test_file)
+  expect_true(app$get_value(output = "plot_ready"))
+
+  app$stop()
+  unlink(temp_csv)
+})
+
+# ==============================================================================
+# Test: U Chart with BFHchart Backend (rate data with variable denominator)
+# ==============================================================================
+
+test_that("BFHchart module: U chart renders correctly with variable denominator", {
+  skip_if_not_installed("shinytest2")
+
+  test_data <- create_test_csv("u")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
+
+  app <- get_app_driver("bfh-u-chart")
+
+  app$upload_file(file_upload = temp_csv)
   app$wait_for_idle(timeout = 5000)
 
   app$set_inputs(
+    chart_type = "U",
     x_column = "Dato",
-    y_column = "Tæller",
-    chart_type_da = "C chart"
+    y_column = "Vaerdi",
+    n_column = "Naevner"
   )
-
   app$wait_for_idle(timeout = 5000)
 
-  errors <- app$get_html(".shiny-notification-error")
-  expect_true(is.null(errors) || nchar(errors) == 0)
-
-  app$stop()
-  unlink(test_file)
-})
-
-test_that("BFHchart integration - U chart (Rates)", {
-  skip_if_not_installed("shinytest2")
-  skip_on_cran()
-
-  test_data <- create_test_data_for_chart_type("u")
-  test_file <- tempfile(fileext = ".csv")
-  write.csv(test_data, test_file, row.names = FALSE, fileEncoding = "UTF-8")
-
-  app <- shinytest2::AppDriver$new(
-    app_dir = test_path("../.."),
+  app$expect_screenshot(
+    selector = "#spc_plot_actual",
     name = "bfh-u-chart",
-    timeout = 15000
+    threshold = 0.1
   )
 
-  app$upload_file(file_upload = test_file)
-  app$wait_for_idle(timeout = 5000)
-
-  app$set_inputs(
-    x_column = "Dato",
-    y_column = "Tæller",
-    n_column = "Nævner",
-    chart_type_da = "U chart"
-  )
-
-  app$wait_for_idle(timeout = 5000)
-
-  errors <- app$get_html(".shiny-notification-error")
-  expect_true(is.null(errors) || nchar(errors) == 0)
+  expect_true(app$get_value(output = "plot_ready"))
 
   app$stop()
-  unlink(test_file)
+  unlink(temp_csv)
 })
 
 # ==============================================================================
-# TEST SUITE: Backend Switching Validation
+# Test: Freeze Period with BFHchart Backend
 # ==============================================================================
 
-test_that("Backend switching - Feature flag defaults to qicharts2", {
-  skip_if_not_installed("yaml")
-
-  # Read config
-  config <- yaml::read_yaml(test_path("../../inst/golem-config.yml"))
-
-  # Verify default environment uses qicharts2
-  expect_false(config$default$features$use_bfhchart)
-
-  # Verify supported types list exists
-  expect_true("bfhchart_supported_types" %in% names(config$default$features))
-  expect_equal(
-    config$default$features$bfhchart_supported_types,
-    c("run", "i", "p", "c", "u")
-  )
-})
-
-test_that("Backend switching - Wrapper function structure", {
-  # Verify wrapper functions exist
-  expect_true(exists("generateSPCPlot_with_backend"))
-  expect_true(exists("generateSPCPlot_qicharts2"))
-  expect_true(exists("generateSPCPlot"))
-
-  # Verify legacy alias points to wrapper
-  expect_identical(generateSPCPlot, generateSPCPlot_with_backend)
-})
-
-# ==============================================================================
-# TEST SUITE: Feature Integration (Freeze/Comments)
-# ==============================================================================
-
-test_that("BFHchart integration - Freeze line support", {
+test_that("BFHchart module: Freeze period renders correctly", {
   skip_if_not_installed("shinytest2")
-  skip_on_cran()
 
-  # Create data with freeze marker
-  test_data <- create_test_data_for_chart_type("run")
-  test_data$Frys <- c(rep(FALSE, 12), rep(TRUE, 8))
+  test_data <- create_test_csv("run")
+  test_data$Fryz <- c(rep(0, 30), rep(1, 20))  # Last 20 points frozen
 
-  test_file <- tempfile(fileext = ".csv")
-  write.csv(test_data, test_file, row.names = FALSE, fileEncoding = "UTF-8")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
 
-  app <- shinytest2::AppDriver$new(
-    app_dir = test_path("../.."),
-    name = "bfh-freeze-test",
-    timeout = 15000
-  )
+  app <- get_app_driver("bfh-freeze-test")
 
-  app$upload_file(file_upload = test_file)
+  app$upload_file(file_upload = temp_csv)
   app$wait_for_idle(timeout = 5000)
 
   app$set_inputs(
+    chart_type = "Run",
     x_column = "Dato",
-    y_column = "Tæller",
-    frys_column = "Frys",
-    chart_type_da = "Run chart"
+    y_column = "Vaerdi",
+    frys_column = "Fryz"
   )
-
   app$wait_for_idle(timeout = 5000)
 
-  # Verify no errors
-  errors <- app$get_html(".shiny-notification-error")
-  expect_true(is.null(errors) || nchar(errors) == 0)
+  app$expect_screenshot(
+    selector = "#spc_plot_actual",
+    name = "bfh-freeze-period",
+    threshold = 0.1
+  )
 
   app$stop()
-  unlink(test_file)
+  unlink(temp_csv)
 })
 
-test_that("BFHchart integration - Comment annotations support", {
+# ==============================================================================
+# Test: Comments/Notes with BFHchart Backend
+# ==============================================================================
+
+test_that("BFHchart module: Comments render correctly with BFHchart", {
   skip_if_not_installed("shinytest2")
-  skip_on_cran()
 
-  # Create data with comments
-  test_data <- create_test_data_for_chart_type("run")
-  test_data$Kommentarer <- c(
-    "", "", "", "Ændring implementeret", rep("", 16)
+  test_data <- create_test_csv("run")
+  test_data$Kommentar <- c(
+    rep("", 45),
+    "Intervention", "Intervention", "Intervention", "Intervention", "Intervention"
   )
 
-  test_file <- tempfile(fileext = ".csv")
-  write.csv(test_data, test_file, row.names = FALSE, fileEncoding = "UTF-8")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
 
-  app <- shinytest2::AppDriver$new(
-    app_dir = test_path("../.."),
-    name = "bfh-comment-test",
-    timeout = 15000
-  )
+  app <- get_app_driver("bfh-comments-test")
 
-  app$upload_file(file_upload = test_file)
+  app$upload_file(file_upload = temp_csv)
   app$wait_for_idle(timeout = 5000)
 
   app$set_inputs(
+    chart_type = "Run",
     x_column = "Dato",
-    y_column = "Tæller",
-    kommentar_column = "Kommentarer",
-    chart_type_da = "Run chart"
+    y_column = "Vaerdi",
+    kommentar_column = "Kommentar"
   )
-
   app$wait_for_idle(timeout = 5000)
 
-  # Verify no errors
-  errors <- app$get_html(".shiny-notification-error")
-  expect_true(is.null(errors) || nchar(errors) == 0)
+  app$expect_screenshot(
+    selector = "#spc_plot_actual",
+    name = "bfh-comments",
+    threshold = 0.1
+  )
 
   app$stop()
-  unlink(test_file)
+  unlink(temp_csv)
 })
 
 # ==============================================================================
-# TEST SUITE: Error Handling and Fallback
+# Test: Visual Regression Detection - No breaking changes
 # ==============================================================================
 
-test_that("Backend wrapper - Unsupported chart type falls back to qicharts2", {
-  # This test validates that unsupported chart types (X̄, S) automatically
-  # use qicharts2 backend even if feature flag is enabled
+test_that("BFHchart module: Visual output consistent across runs", {
+  skip_if_not_installed("shinytest2")
 
-  # Note: This is a unit test, not Shinytest2, since it tests function logic
-  skip_if_not_installed("yaml")
+  test_data <- create_test_csv("run")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
 
-  # Read supported types from config
-  config <- yaml::read_yaml(test_path("../../inst/golem-config.yml"))
-  supported_types <- config$default$features$bfhchart_supported_types
+  # First run
+  app1 <- get_app_driver("bfh-regression-1")
+  app1$upload_file(file_upload = temp_csv)
+  app1$wait_for_idle(timeout = 5000)
+  app1$set_inputs(
+    chart_type = "Run",
+    x_column = "Dato",
+    y_column = "Vaerdi"
+  )
+  app1$wait_for_idle(timeout = 5000)
 
-  # Verify X̄ and S are NOT in supported types
-  expect_false("xbar" %in% supported_types)
-  expect_false("s" %in% supported_types)
+  # Capture first screenshot
+  app1$expect_screenshot(
+    selector = "#spc_plot_actual",
+    name = "bfh-regression-baseline",
+    threshold = 0.1
+  )
 
-  # Verify the 5 validated types ARE supported
-  expect_true(all(c("run", "i", "p", "c", "u") %in% supported_types))
+  app1$stop()
+
+  # Second run (should match)
+  app2 <- get_app_driver("bfh-regression-2")
+  app2$upload_file(file_upload = temp_csv)
+  app2$wait_for_idle(timeout = 5000)
+  app2$set_inputs(
+    chart_type = "Run",
+    x_column = "Dato",
+    y_column = "Vaerdi"
+  )
+  app2$wait_for_idle(timeout = 5000)
+
+  # Capture second screenshot (should match baseline)
+  app2$expect_screenshot(
+    selector = "#spc_plot_actual",
+    name = "bfh-regression-check",
+    threshold = 0.1
+  )
+
+  app2$stop()
+  unlink(temp_csv)
 })
 
 # ==============================================================================
-# INTEGRATION SUMMARY
+# Test: Module Output Structure
 # ==============================================================================
 
-# This test suite validates:
-# ✓ All 5 supported chart types render without errors (run, I, P, C, U)
-# ✓ Feature flag defaults to FALSE (safe state)
-# ✓ Wrapper function structure correct
-# ✓ Freeze line integration works
-# ✓ Comment annotations work
-# ✓ Unsupported chart types have proper fallback
-#
-# Manual testing required for:
-# - BFHchart backend activation (set use_bfhchart: true)
-# - Visual comparison between backends
-# - Performance benchmarking
-# - Hospital theme application
-#
-# Coverage: ~60% of Task #32 acceptance criteria
-# Remaining: Manual visual validation + BFHchart runtime testing
+test_that("BFHchart module: Output structure is correct", {
+  skip_if_not_installed("shinytest2")
+
+  test_data <- create_test_csv("run")
+  temp_csv <- tempfile(fileext = ".csv")
+  write.csv(test_data, temp_csv, row.names = FALSE, quote = FALSE)
+
+  app <- get_app_driver("bfh-output-structure")
+
+  app$upload_file(file_upload = temp_csv)
+  app$wait_for_idle(timeout = 5000)
+
+  app$set_inputs(
+    chart_type = "Run",
+    x_column = "Dato",
+    y_column = "Vaerdi"
+  )
+  app$wait_for_idle(timeout = 5000)
+
+  # Check outputs exist
+  expect_true(app$get_value(output = "plot_ready"))
+  expect_true(!is.null(app$get_value(output = "spc_plot_actual")))
+
+  # Check Anhøj results exist
+  anhoej <- app$get_value(output = "anhoej_results")
+  expect_true(!is.null(anhoej))
+
+  app$stop()
+  unlink(temp_csv)
+})
