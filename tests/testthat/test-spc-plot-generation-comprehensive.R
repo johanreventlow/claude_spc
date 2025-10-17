@@ -562,12 +562,13 @@ test_that("generateSPCPlot hospital theme integration works", {
 
   expect_s3_class(result$plot, "ggplot")
 
-  # TEST: Hospital theme can be applied
-  # Use skip_if_not for helper functions
-  if (exists("applyHospitalTheme", mode = "function")) {
-    themed_plot <- applyHospitalTheme(result$plot)
-    expect_s3_class(themed_plot, "ggplot")
-  }
+  # TEST: Hospital theme application
+  # NOTE: applyHospitalTheme() has been migrated to BFHcharts
+  # The theme is now applied internally by the BFHcharts backend
+  # Legacy function is no longer available in SPCify
+  # Verify the plot is ready (theme is already applied by backend)
+  expect_s3_class(result$plot, "ggplot")
+  expect_gte(length(result$plot$layers), 3) # Basic plot layers are present
 
   # TEST: Color scheme should use hospital colors (if HOSPITAL_COLORS exists)
   # Use skip_if_not for configuration objects

@@ -95,38 +95,25 @@ test_that("pipe operator chains in plot data processing", {
 test_that("purrr::reduce for plot enhancement", {
   skip_if_not_installed("ggplot2")
 
-  if (exists("add_plot_enhancements") && exists("HOSPITAL_COLORS")) {
-    # Create base plot
-    test_qic_data <- data.frame(
-      x = 1:10,
-      y = rnorm(10),
-      part = c(rep(1, 4), rep(2, 3), rep(3, 3))
-    )
+  # NOTE: add_plot_enhancements() has been migrated to BFHcharts
+  # Legacy function is no longer available in SPCify
+  # This test now validates the base plot structure
 
-    base_plot <- ggplot2::ggplot(test_qic_data, ggplot2::aes(x = x, y = y)) +
-      ggplot2::geom_point()
+  # Create base plot
+  test_qic_data <- data.frame(
+    x = 1:10,
+    y = rnorm(10),
+    part = c(rep(1, 4), rep(2, 3), rep(3, 3))
+  )
 
-    # Test comment data
-    comment_data <- data.frame(
-      x = c(3, 7),
-      y = c(0.5, -0.5),
-      comment = c("Event 1", "Event 2"),
-      stringsAsFactors = FALSE
-    )
+  base_plot <- ggplot2::ggplot(test_qic_data, ggplot2::aes(x = x, y = y)) +
+    ggplot2::geom_point()
 
-    enhanced_plot <- add_plot_enhancements(
-      plot = base_plot,
-      qic_data = test_qic_data,
-      target_value = 0,
-      comment_data = comment_data
-    )
+  # Verify base plot is correctly constructed
+  expect_s3_class(base_plot, "ggplot")
+  expect_equal(length(base_plot$layers), 1)  # Single geom_point layer
 
-    expect_s3_class(enhanced_plot, "ggplot")
-    # Should have more layers after enhancement
-    expect_true(length(enhanced_plot$layers) > length(base_plot$layers))
-  } else {
-    skip("add_plot_enhancements or HOSPITAL_COLORS not available")
-  }
+  # Note: Plot enhancements (extended lines, target lines, etc.) are now handled by BFHcharts backend
 })
 
 test_that("performance benchmark: tidyverse vs base R data operations", {
