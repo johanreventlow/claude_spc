@@ -1,20 +1,20 @@
 # BFHcharts Limitations & Workarounds
 
-**Version:** 1.0.0 (BFHcharts 0.1.0)
+**Version:** 2.0.0 (Pure BFHcharts - No Fallback)
 **Last Updated:** 2025-10-17
 
 ## Quick Reference
 
-| Feature | Status | Workaround |
-|---------|--------|-----------|
-| Run Charts | ✅ Full Support | N/A |
-| I Charts | ✅ Full Support | N/A |
-| P Charts | ✅ Full Support | N/A |
-| C Charts | ✅ Full Support | N/A |
-| U Charts | ✅ Full Support | N/A |
-| X̄ Charts | ❌ Not Supported | Use feature flag fallback to qicharts2 |
-| S Charts | ❌ Not Supported | Use feature flag fallback to qicharts2 |
-| MR Charts | ❌ Not Supported | Use feature flag fallback to qicharts2 |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Run Charts | ✅ Full Support | All features supported |
+| I Charts | ✅ Full Support | All features supported |
+| P Charts | ✅ Full Support | All features supported |
+| C Charts | ✅ Full Support | All features supported |
+| U Charts | ✅ Full Support | All features supported |
+| X̄ Charts | ❌ Not Supported | No fallback - explicit error |
+| S Charts | ❌ Not Supported | No fallback - explicit error |
+| MR Charts | ❌ Not Supported | No fallback - explicit error |
 
 ---
 
@@ -159,27 +159,26 @@ compute_spc_results_bfh(
 
 **Problem:** Requires subgrouped data structure that BFHcharts doesn't handle.
 
-**Workaround - Automatic Fallback:**
+**Error Handling:**
 ```r
-# Feature flag automatically falls back to qicharts2
-use_bfhchart <- TRUE  # Feature flag enabled
-
-result <- generateSPCPlot(
-  data = data,
-  chart_type = "xbar",  # Unsupported chart type
-  # ... other parameters
+# Attempting to use xbar chart will result in an explicit error
+tryCatch(
+  {
+    result <- generateSPCPlot(
+      data = data,
+      chart_type = "xbar",  # Unsupported chart type
+      # ... other parameters
+    )
+  },
+  error = function(e) {
+    cat("Error:", e$message, "\n")
+    # Error: Chart type 'xbar' is not supported in BFHcharts.
+    # Supported types: run, i, p, c, u
+  }
 )
-
-# Backend wrapper:
-# 1. Detects "xbar" not in supported types
-# 2. Falls back to qicharts2 automatically
-# 3. Returns same result structure
-# 4. Logs reason for fallback
-
-print(result$plot)  # Renders with qicharts2
 ```
 
-**Code Changes Required:** NONE - Automatic!
+**Recommendation:** Use one of the supported chart types (run, i, p, c, u) instead. If X̄ charts are essential for your workflow, SPCify is not currently suitable.
 
 ---
 
@@ -189,19 +188,19 @@ print(result$plot)  # Renders with qicharts2
 
 **Problem:** Companion to X̄ charts, also requires subgrouped data.
 
-**Workaround - Automatic Fallback:**
+**Error Handling:**
 ```r
+# Will result in an explicit error
 result <- generateSPCPlot(
   data = data,
   chart_type = "s",  # Unsupported chart type
   # ... other parameters
 )
-
-# Backend wrapper automatically falls back to qicharts2
-print(result$plot)  # Renders with qicharts2
+# Error: Chart type 's' is not supported in BFHcharts.
+# Supported types: run, i, p, c, u
 ```
 
-**Code Changes Required:** NONE - Automatic!
+**Recommendation:** Use supported chart types instead.
 
 ---
 
@@ -211,19 +210,19 @@ print(result$plot)  # Renders with qicharts2
 
 **Problem:** BFHcharts API doesn't expose moving range calculations.
 
-**Workaround - Automatic Fallback:**
+**Error Handling:**
 ```r
+# Will result in an explicit error
 result <- generateSPCPlot(
   data = data,
   chart_type = "mr",  # Unsupported chart type
   # ... other parameters
 )
-
-# Backend wrapper automatically falls back to qicharts2
-print(result$plot)  # Renders with qicharts2
+# Error: Chart type 'mr' is not supported in BFHcharts.
+# Supported types: run, i, p, c, u
 ```
 
-**Code Changes Required:** NONE - Automatic!
+**Recommendation:** Use supported chart types instead.
 
 ---
 
@@ -238,13 +237,7 @@ print(result$plot)  # Renders with qicharts2
 **Workaround:**
 
 ```r
-# Option 1: Use feature flag to fallback to qicharts2
-# (qicharts2 has more flexible centerline handling)
-Sys.setenv(GOLEM_CONFIG_ACTIVE = "production")  # use_bfhchart = false
-result <- generateSPCPlot(...)  # Falls back to qicharts2
-
-# Option 2: Pre-process data to shift values
-# So calculated mean equals desired centerline
+# Pre-process data to shift values so calculated mean equals desired centerline
 data$Vaerdi <- data$Vaerdi - (current_mean - desired_centerline)
 result <- compute_spc_results_bfh(...)
 ```
@@ -327,8 +320,7 @@ result_qic <- compute_spc_results_qic(
   freeze_var = "Fryz"
 )
 
-# If BFHcharts doesn't render freeze line, use qicharts2 fallback
-Sys.setenv(GOLEM_CONFIG_ACTIVE = "production")  # Feature flag = false
+# If BFHcharts doesn't render freeze line, verify data format and column types
 ```
 
 ---
@@ -375,9 +367,8 @@ result <- compute_spc_results_bfh(data = data_recent, ...)
 # Option 2: Batch updates
 # Collect 10 new data points before triggering chart update
 
-# Option 3: Disable real-time for BFHcharts
-# Keep using qicharts2 for real-time dashboards
-Sys.setenv(GOLEM_CONFIG_ACTIVE = "production")  # use_bfhchart = false
+# Option 3: Increase debounce timeout in configuration
+# This reduces rendering frequency for real-time data
 ```
 
 ---
@@ -467,10 +458,7 @@ result <- compute_spc_results_bfh(data = data, ...)
 
 ```r
 # No direct workaround for BFHcharts color customization
-# If custom colors critical, use qicharts2 fallback
-Sys.setenv(GOLEM_CONFIG_ACTIVE = "production")  # use_bfhchart = false
-
-# Or accept BFHcharts hospital branding colors (by design)
+# BFHcharts uses fixed colors from BFHthemes for hospital branding (by design)
 ```
 
 ---
@@ -519,12 +507,12 @@ identical(result_bfh$qic_data$runs.signal, result_qic$runs.signal)
 
 | Issue | Status | Workaround | Target Fix |
 |-------|--------|-----------|-----------|
-| X̄ charts unsupported | Known | Fallback to qicharts2 | BFHcharts 0.2.0? |
-| S charts unsupported | Known | Fallback to qicharts2 | BFHcharts 0.2.0? |
-| MR charts unsupported | Known | Fallback to qicharts2 | BFHcharts 0.2.0? |
-| Centerline override finicky | Known | Use qicharts2 fallback | BFHcharts 0.2.0? |
+| X̄ charts unsupported | Known | Use supported chart types | BFHcharts 0.2.0? |
+| S charts unsupported | Known | Use supported chart types | BFHcharts 0.2.0? |
+| MR charts unsupported | Known | Use supported chart types | BFHcharts 0.2.0? |
+| Centerline override finicky | Known | Pre-process data | BFHcharts 0.2.0? |
 | Comment truncation | Minor | Keep comments short | BFHcharts 0.2.0 |
-| Large dataset performance | Known | Downsample/filter | BFHcharts future |
+| Large dataset performance | Known | Downsample/filter/cache | BFHcharts future |
 
 ---
 
@@ -573,13 +561,13 @@ app$expect_screenshot(
 
 ## Migration Notes
 
-For teams migrating from pure qicharts2 to BFHcharts hybrid:
+For teams using SPCify with pure BFHcharts implementation:
 
-1. **Code changes minimal** - Feature flag handles most transitions
-2. **X̄/S charts** - Automatic fallback (no user impact)
-3. **Testing** - Update snapshot thresholds (10% recommended)
-4. **Performance** - Generally equivalent, some cache benefit
-5. **Styling** - BFHcharts styling is intentional (hospital branding)
+1. **Code changes** - No feature flag branching needed (simplified)
+2. **Chart types** - Limited to: run, i, p, c, u (explicit errors for others)
+3. **Testing** - Use snapshot thresholds of 10% for visual tolerance
+4. **Performance** - Generally equivalent to qicharts2, with caching benefit
+5. **Styling** - BFHcharts styling is intentional (hospital branding maintained)
 
 ---
 

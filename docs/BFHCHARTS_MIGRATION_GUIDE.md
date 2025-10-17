@@ -1,176 +1,78 @@
 # BFHcharts SPC Migration Guide
 
-**Version:** 1.0.0
+**Version:** 2.0.0
 **Date:** 2025-10-17
-**Status:** Complete - Core migration finished, feature flag live
+**Status:** Complete - Pure BFHcharts implementation (no feature flag)
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Architecture: HYBRID Workflow](#architecture-hybrid-workflow)
-3. [Feature Flag Architecture](#feature-flag-architecture)
-4. [Parameter Mapping: SPCify ↔ BFHcharts](#parameter-mapping-spcify--bfhcharts)
-5. [Key Changes from qicharts2](#key-changes-from-qicharts2)
-6. [Error Handling & Fallback](#error-handling--fallback)
-7. [Performance Optimizations](#performance-optimizations)
-8. [Known Limitations & Workarounds](#known-limitations--workarounds)
-9. [Integration Examples](#integration-examples)
-10. [Troubleshooting](#troubleshooting)
-11. [Future Roadmap](#future-roadmap)
+2. [Architecture: Pure BFHcharts](#architecture-pure-bfhcharts)
+3. [Parameter Mapping: SPCify ↔ BFHcharts](#parameter-mapping-spcify--bfhcharts)
+4. [Key Changes from qicharts2](#key-changes-from-qicharts2)
+5. [Error Handling](#error-handling)
+6. [Performance Optimizations](#performance-optimizations)
+7. [Known Limitations & Workarounds](#known-limitations--workarounds)
+8. [Integration Examples](#integration-examples)
+9. [Troubleshooting](#troubleshooting)
+10. [Future Roadmap](#future-roadmap)
 
 ---
 
 ## Overview
 
-SPCify has migrated from **qicharts2** to **BFHcharts** for SPC visualization, using a **HYBRID approach** that combines:
+SPCify has completed full migration from **qicharts2** to **BFHcharts** for SPC visualization:
 
-- **BFHcharts HIGH-LEVEL API** (`create_spc_chart()`) for all visualization
-- **qicharts2 LOW-LEVEL API** for Anhøj rules metadata extraction only
+- **BFHcharts HIGH-LEVEL API** (`create_spc_chart()`) for all SPC chart visualization
+- **qicharts2 LOW-LEVEL API** for Anhøj rules metadata extraction only (internal use)
+- **No fallback** to qicharts2 - pure BFHcharts implementation
 
-**Why HYBRID?**
-- Faster migration (no rewrite of Anhøj rules logic)
-- Easier rollback (feature flag = false)
-- Future-proof (when BFHcharts adds missing features, we upgrade)
-- Seamless fallback for unsupported chart types
+**Why Pure BFHcharts?**
+- Simpler codebase (no feature flag branching logic)
+- Consistent user experience across all deployments
+- Better performance (no runtime backend selection)
+- Clearer error handling (no ambiguous fallback behavior)
 
 ---
 
-## Architecture: HYBRID Workflow
+## Architecture: Pure BFHcharts
 
-### Traditional Flow (Old: qicharts2 only)
+### Current Flow (BFHcharts Only)
 
 ```
 User Input
     ↓
 SPCify Parameters
     ↓
-qicharts2::qic()
+generateSPCPlot_with_backend()
+    ↓
+compute_spc_results_bfh()
+    ├─ BFHcharts: Visual rendering
+    └─ qicharts2: Anhøj metadata extraction (internal)
     ↓
 Plot + Anhøj Metadata
     ↓
-User sees chart
+User sees chart (BFHcharts styled)
 ```
 
-### HYBRID Flow (New: BFHcharts + qicharts2)
+### Key Architectural Changes
 
-```
-User Input
-    ├─→ BFHcharts Backend?
-    │   ├─ YES + Chart Supported?
-    │   │   ├─ YES: Use BFHchart HIGH-LEVEL API
-    │   │   │   └─ compute_spc_results_bfh()
-    │   │   └─ NO: Fall back to qicharts2
-    │   └─ NO: Use qicharts2 backend
-    │       └─ compute_spc_results_qic()
-    │
-    ├─ BFHcharts Plot Generated?
-    │   ├─ YES: Use qicharts2 for Anhøj metadata only
-    │   │   └─ call_qicharts2_for_anhoej_metadata()
-    │   └─ NO: Error handling → Fallback to qicharts2
-    │
-    └─ Return Combined Result:
-        ├─ plot (from BFHcharts or qicharts2)
-        ├─ qic_data (from qicharts2, for Anhøj rules)
-        └─ metadata (backend info, chart type, etc.)
+| Aspect | Old (HYBRID) | New (Pure BFHcharts) |
+|--------|-------------|----------------------|
+| **Backend Selection** | Runtime feature flag | Compile-time (constant) |
+| **Fallback Logic** | Conditional routing | Error propagation |
+| **Configuration** | `features.use_bfhchart` | None needed |
+| **Code Complexity** | Dual paths in wrapper | Single path |
+| **qicharts2 Role** | Visualization + Anhøj | Anhøj metadata only |
+| **Error Handling** | Silent fallback | Explicit errors |
+| **Performance** | Slight overhead from flag checks | Direct execution |
 
-User sees chart (potentially different styling)
-```
+### Why This Approach
 
-### Benefits of HYBRID Approach
-
-| Aspect | Traditional | HYBRID |
-|--------|-------------|--------|
-| **Migration Time** | Weeks (full rewrite) | Days (wrapper layer) |
-| **Anhøj Rules** | Built into qicharts2 | Reuse existing logic |
-| **Rollback** | Requires full code revert | Feature flag toggle |
-| **Unsupported Types** | N/A | Auto-fallback to qicharts2 |
-| **X̄/S Charts** | Work with qicharts2 | Work via fallback |
-| **Future Upgrades** | Rewrite again | Update BFHcharts version |
-
----
-
-## Feature Flag Architecture
-
-### Configuration
-
-Feature flag: `use_bfhchart` in `inst/golem-config.yml`
-
-```yaml
-# Development: Test new BFHcharts backend
-development:
-  features:
-    use_bfhchart: true
-    bfhchart_version_required: "0.1.0"
-    bfhchart_supported_types: ["run", "i", "p", "c", "u"]
-
-# Testing: Validate BFHcharts behavior
-testing:
-  features:
-    use_bfhchart: true
-    bfhchart_version_required: "0.1.0"
-    bfhchart_supported_types: ["run", "i", "p", "c", "u"]
-
-# Production: Safe rollback default (qicharts2)
-production:
-  features:
-    use_bfhchart: false
-    bfhchart_version_required: "0.1.0"
-    bfhchart_supported_types: ["run", "i", "p", "c", "u"]
-```
-
-### Backend Selection Logic
-
-```r
-# In module server or reactive context
-use_bfhchart <- golem::get_golem_options("use_bfhchart", default = FALSE)
-supported_types <- golem::get_golem_options("bfhchart_supported_types",
-                                             default = c("run", "i", "p", "c", "u"))
-
-# Check if current chart type is supported
-chart_type_supported <- tolower(input$chart_type) %in% supported_types
-
-# Backend selection
-result <- if (use_bfhchart && chart_type_supported) {
-  # Use BFHcharts backend (new)
-  compute_spc_results_bfh(
-    data = data,
-    x_var = x_column,
-    y_var = y_column,
-    chart_type = tolower(chart_type),
-    # ... other parameters
-  )
-} else {
-  # Use qicharts2 backend (fallback)
-  compute_spc_results_qic(
-    data = data,
-    x_var = x_column,
-    y_var = y_column,
-    chart_type = chart_type,
-    # ... other parameters
-  )
-}
-```
-
-### Gradual Rollout Strategy
-
-**Phase 1: Development Testing** (Current)
-- Feature flag: TRUE in dev/test environments
-- Monitor for issues
-- Gather feedback
-
-**Phase 2: Beta Deployment**
-- Feature flag: FALSE in production (safe default)
-- Internal stakeholders: Opt-in to TRUE
-- Gather production metrics
-
-**Phase 3: General Availability**
-- Feature flag: TRUE in all environments
-- Sunset qicharts2 dependencies (later release)
-
-**Phase 4: Maintenance**
-- Update BFHcharts version when new features available
-- Add X̄/S chart support when BFHcharts releases
-- Remove qicharts2 entirely (major version bump)
+1. **Simpler:** No feature flag branching, cleaner codebase
+2. **Consistent:** Same behavior across all deployments
+3. **Performant:** No runtime backend selection overhead
+4. **Clear:** Explicit errors vs. silent fallbacks
 
 ---
 
@@ -276,40 +178,47 @@ result <- list(
 
 ---
 
-## Error Handling & Fallback
+## Error Handling
 
-### Automatic Fallback Logic
+### Explicit Error Handling (No Fallback)
 
 ```r
-# BFHcharts wrapper handles fallback automatically
-result <- generateSPCPlot_with_backend(
-  data = data,
-  config = config,
-  chart_type = chart_type,
-  # ... other parameters
+# BFHcharts wrapper with explicit error handling
+result <- tryCatch(
+  generateSPCPlot_with_backend(
+    data = data,
+    config = config,
+    chart_type = chart_type,
+    # ... other parameters
+  ),
+  error = function(e) {
+    log_error(
+      component = "[BACKEND_WRAPPER]",
+      message = "BFHchart backend failed",
+      details = list(error = e$message, chart_type = chart_type)
+    )
+    stop(e)  # Re-throw - no silent fallback
+  }
 )
-
-# Inside: If BFHcharts fails or unsupported chart type
-# → Automatically falls back to qicharts2
-# → Logs the reason
-# → Returns same data structure
-# → User gets chart (possibly different styling)
 ```
 
-### Error Messages
+### Supported vs. Unsupported Chart Types
 
-**User-Facing (shown in UI):**
-```
-"Chart generation failed temporarily. Showing with standard styling."
-```
+**Supported (will render):**
+- `"run"` - Run charts
+- `"i"` - Individual value charts
+- `"p"` - Proportion charts
+- `"c"` - Count/defect charts
+- `"u"` - Rate with variable denominator charts
 
-**Developer-Facing (in logs):**
+**Unsupported (will error):**
+- `"xbar"` - X̄ (X-bar) charts
+- `"s"` - S charts (subgroup standard deviation)
+- `"mr"` - MR charts (moving range)
+
+If an unsupported chart type is requested, the user will receive an explicit error message:
 ```
-[2025-10-17 21:30:45] ERROR [BACKEND_WRAPPER]
-  BFHchart backend failed for chart type 'xbar'
-  Error: X̄ charts not supported in BFHcharts 0.1.0
-  Falling back to qicharts2
-  Status: SUCCESS (fallback executed)
+Chart type 'xbar' is not supported in BFHcharts. Supported types: run, i, p, c, u
 ```
 
 ---
@@ -356,17 +265,12 @@ cache_key <- digest::digest(
 - C charts (counts/defects)
 - U charts (rates with variable denominator)
 
-**❌ NOT SUPPORTED (Fallback to qicharts2):**
+**❌ NOT SUPPORTED:**
 - X̄ (X-bar) charts
 - S (subgroup standard deviation) charts
 - MR (moving range) charts
 
-**Workaround:**
-```r
-# Feature flag automatically falls back for unsupported types
-# Set use_bfhchart: true, and X̄ charts still work via qicharts2
-# No code changes required!
-```
+**Note:** Unsupported chart types will result in an explicit error. There is no automatic fallback. If your workflow requires these chart types, SPCify is not currently suitable for that use case.
 
 ### Parameter Limitations
 
@@ -444,109 +348,110 @@ result <- compute_spc_results_bfh(
 print(result$plot)  # Run chart with phase line at row 26
 ```
 
-### Example 4: Feature Flag Toggle (In Module)
+### Example 4: Error Handling for Unsupported Chart Types
 
 ```r
 # Inside visualizationModuleServer()
 
-use_bfhchart <- golem::get_golem_options("use_bfhchart", default = FALSE)
-
-result <- if (use_bfhchart) {
-  compute_spc_results_bfh(...)  # NEW backend
-} else {
-  compute_spc_results_qic(...)  # OLD backend
-}
-
-# Result structure is identical
-# Module code unchanged regardless of backend!
+tryCatch(
+  {
+    result <- compute_spc_results_bfh(
+      data = data,
+      x_var = "Dato",
+      y_var = "Vaerdi",
+      chart_type = chart_type  # Supported: run, i, p, c, u
+    )
+    print(result$plot)
+  },
+  error = function(e) {
+    # Unsupported chart types will trigger explicit error
+    showModal(modalDialog(
+      title = "Chart Type Not Supported",
+      paste("Error:", e$message),
+      easyClose = TRUE
+    ))
+  }
+)
 ```
 
 ---
 
 ## Troubleshooting
 
-### Issue: Chart doesn't render
+### Issue: Chart generation error
 
 **Symptoms:**
-- Blank plot area
-- No error message in UI
+- Error message: "Chart type 'xbar' is not supported in BFHcharts"
+- Plot area shows error
 
 **Diagnosis:**
 ```r
-# Check logs
-tail(app_logs)  # Look for [BACKEND_WRAPPER] errors
-
-# Check configuration
-golem::get_golem_options("use_bfhchart")
-
-# Verify backend function exists
-exists("compute_spc_results_bfh")
+# Check if chart type is in supported list
+chart_type <- "xbar"
+supported_types <- c("run", "i", "p", "c", "u")
+chart_type %in% supported_types  # FALSE for unsupported types
 ```
 
 **Solutions:**
-1. Verify feature flag configuration
-2. Check data has required columns
+1. Verify chart type is one of: run, i, p, c, u
+2. Check data columns are specified correctly
 3. Ensure data has ≥10 rows (SPC requirement)
-4. Review error logs for details
+4. Review error logs for detailed message
 
-### Issue: Different chart appearance between backends
+### Issue: BFHchart backend failed
 
-**Explanation:**
-BFHcharts styling is intentionally different from qicharts2. This is expected.
-
-**To verify both backends work:**
-```r
-# Switch feature flag and reload
-# Chart may look different but should display
-# If either fails → check logs
-```
-
-**Solutions:**
-1. Compare plot objects to verify both render
-2. Check Anhøj rules match between backends
-3. Report if specific styling issue detected
-
-### Issue: X̄ or S charts not rendering
-
-**Explanation:**
-These chart types are not supported in BFHcharts 0.1.0. They should automatically fall back to qicharts2.
+**Symptoms:**
+- Error message with specific BFHcharts error
+- Stack trace in logs
 
 **Diagnosis:**
 ```r
-# Check logs
-grep("not supported", app_logs)
+# Check logs for [BACKEND_WRAPPER] component
+tail(app_logs)  # Look for detailed error message
 
-# Should see fallback message
+# Verify BFHchart package is installed
+require("BFHchart")
 ```
 
-**Solution:**
-Feature flag automatically handles this. No action needed. If no fallback occurs → bug report.
+**Solutions:**
+1. Ensure BFHchart package is properly installed
+2. Verify data columns exist and are correctly named
+3. Check for NA or invalid values in critical columns
+4. Report issue with full error message and reproducible data
+
+### Issue: Different chart appearance than before
+
+**Explanation:**
+BFHcharts styling is intentionally different from the old qicharts2 implementation. The visual appearance, fonts, and colors may differ while maintaining the same analytical content (control limits, Anhøj rules, etc.).
+
+**Verification:**
+The analytical content (centerline, control limits, signals) remains the same. If you see different statistical calculations, that's a bug to report.
 
 ---
 
 ## Future Roadmap
 
-### Short Term (Next Release)
-- ✅ BFHcharts core integration complete
-- ⚠️ Monitoring production usage with feature flag
-- 🔄 Gather user feedback on new styling
+### Short Term (Current Release)
+- ✅ Pure BFHcharts implementation complete (no feature flag)
+- ✅ Explicit error handling for unsupported chart types
+- 🔄 Gather user feedback on supported chart type restrictions
 
 ### Medium Term (Q1 2026)
 - 🎯 BFHcharts 0.2.0 support (if released)
 - 🎯 X̄/S chart support (if added to BFHcharts)
-- 🎯 Remove qicharts2 dependency from critical path
+- 🎯 Update to support new BFHcharts chart types automatically
 
 ### Long Term (Q2+ 2026)
-- 🎯 Full migration to BFHcharts (remove qicharts2)
+- 🎯 Possible full qicharts2 removal (if no longer needed for internal operations)
 - 🎯 Enhanced features from BFHcharts future releases
-- 🎯 Deprecate feature flag (always true)
+- 🎯 Performance optimizations based on production metrics
 
 ### Dependency on BFHcharts Roadmap
 
-SPCify's roadmap depends on BFHcharts development:
-- **If BFHcharts adds X̄/S support:** We add immediately
-- **If BFHcharts performance improves:** We optimize further
-- **If BFHcharts API changes:** We update wrapper layer
+SPCify's capabilities are directly tied to BFHcharts development:
+- **If BFHcharts adds X̄/S support:** SPCify will add support immediately
+- **If BFHcharts performance improves:** SPCify benefits automatically
+- **If BFHcharts API changes:** SPCify wrapper layer will be updated
 
 ---
 

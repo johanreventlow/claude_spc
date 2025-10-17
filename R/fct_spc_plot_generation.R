@@ -457,146 +457,76 @@ execute_qic_call <- function(qic_args, chart_type, config, qic_cache = NULL) {
 # Moved to BFHcharts - see BFHcharts:::add_plot_enhancements()
 # Removed legacy functions: add_plot_enhancements()
 
-#' Backend Wrapper for SPC Plot Generation
+#' Backend Wrapper for SPC Plot Generation (BFHcharts Only)
 #'
-#' Conditionally routes to BFHchart or qicharts2 backend based on feature flag.
+#' Routes to BFHchart backend for all supported chart types.
 #' This wrapper preserves the existing generateSPCPlot() interface, ensuring
 #' zero changes required in mod_spc_chart_server.R.
 #'
+#' **Note:** This is a pure BFHcharts implementation. qicharts2 is used only
+#' for Anhøj rules metadata extraction (internal). No fallback to qicharts2
+#' visualization occurs.
+#'
 #' @inheritParams generateSPCPlot
-#' @return List with plot and qic_data (consistent structure from both backends)
+#' @return List with plot and qic_data (from BFHcharts backend)
 #' @export
 generateSPCPlot_with_backend <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL, target_text = NULL, qic_cache = NULL) {
-  # Read feature flag configuration
-  features_config <- tryCatch(
-    {
-      cfg <- golem::get_golem_options("features")
-      log_debug(
-        component = "[BACKEND_WRAPPER]",
-        message = "Successfully read features config from golem",
-        details = list(
-          use_bfhchart = cfg$use_bfhchart,
-          supported_types = paste(cfg$bfhchart_supported_types %||% c(), collapse = ", ")
-        )
-      )
-      cfg
-    },
-    error = function(e) {
-      log_warn(
-        component = "[BACKEND_WRAPPER]",
-        message = "Failed to read features config from golem, defaulting to qicharts2",
-        details = list(
-          error = e$message,
-          GOLEM_CONFIG_ACTIVE = Sys.getenv("GOLEM_CONFIG_ACTIVE", "not_set")
-        )
-      )
-      list(use_bfhchart = FALSE)
-    }
-  )
-
-  use_bfhchart <- isTRUE(features_config$use_bfhchart)
+  # Supported chart types for BFHcharts
+  supported_types <- c("run", "i", "p", "c", "u")
 
   log_debug(
     component = "[BACKEND_WRAPPER]",
-    message = sprintf("Backend selection: use_bfhchart = %s", use_bfhchart),
+    message = sprintf("Using BFHchart backend for chart type: %s", chart_type),
     details = list(chart_type = chart_type)
   )
 
-  # Backend selection logic
-  if (use_bfhchart) {
-    # Check if chart type is supported by BFHchart
-    supported_types <- features_config$bfhchart_supported_types %||% c("run", "i", "p", "c", "u")
-
-    if (!chart_type %in% supported_types) {
-      log_warn(
-        component = "[BACKEND_WRAPPER]",
-        message = sprintf("Chart type '%s' not in BFHchart supported types, falling back to qicharts2", chart_type),
-        details = list(
-          chart_type = chart_type,
-          supported_types = paste(supported_types, collapse = ", ")
-        )
-      )
-      use_bfhchart <- FALSE
-    }
-  }
-
-  # Execute with selected backend
-  if (use_bfhchart) {
-    log_info(
-      component = "[BACKEND_WRAPPER]",
-      message = sprintf("Using BFHchart backend for chart type: %s", chart_type),
-      details = list(chart_type = chart_type)
-    )
-
-    result <- tryCatch(
-      {
-        # Call BFHchart backend (compute_spc_results_bfh from Task #31)
-        # Adapter: Map config object to individual parameters
-        compute_spc_results_bfh(
-          data = data,
-          x_var = config$x_col,
-          y_var = config$y_col,
-          chart_type = chart_type,
-          n_var = config$n_col,
-          cl_var = NULL, # Not currently supported in SPCify
-          freeze_var = frys_column,
-          part_var = if (isTRUE(show_phases) && !is.null(skift_column)) skift_column else NULL,
-          notes_column = kommentar_column,
-          multiply = 1, # No scaling needed, handled in y_axis_unit
-          # Pass through additional BFHcharts parameters from config
-          target_value = target_value,
-          target_text = target_text,
-          centerline_value = centerline_value,
-          chart_title_reactive = chart_title_reactive,
-          y_axis_unit = y_axis_unit
-        )
-      },
-      error = function(e) {
-        log_error(
-          component = "[BACKEND_WRAPPER]",
-          message = "BFHchart backend failed, falling back to qicharts2",
-          details = list(
-            error = e$message,
-            chart_type = chart_type
-          ),
-          session = NULL,
-          show_user = TRUE
-        )
-
-        # Fallback to qicharts2
-        generateSPCPlot_qicharts2(
-          data = data, config = config, chart_type = chart_type,
-          target_value = target_value, centerline_value = centerline_value,
-          show_phases = show_phases, skift_column = skift_column,
-          frys_column = frys_column, chart_title_reactive = chart_title_reactive,
-          y_axis_unit = y_axis_unit, kommentar_column = kommentar_column,
-          base_size = base_size, viewport_width = viewport_width,
-          viewport_height = viewport_height, target_text = target_text,
-          qic_cache = qic_cache
-        )
-      }
-    )
-
-    return(result)
-  } else {
-    # Use qicharts2 backend (default)
-    log_debug(
-      component = "[BACKEND_WRAPPER]",
-      message = sprintf("Using qicharts2 backend for chart type: %s", chart_type),
-      details = list(chart_type = chart_type)
-    )
-
-    return(generateSPCPlot_qicharts2(
-      data = data, config = config, chart_type = chart_type,
-      target_value = target_value, centerline_value = centerline_value,
-      show_phases = show_phases, skift_column = skift_column,
-      frys_column = frys_column, chart_title_reactive = chart_title_reactive,
-      y_axis_unit = y_axis_unit, kommentar_column = kommentar_column,
-      base_size = base_size, viewport_width = viewport_width,
-      viewport_height = viewport_height, target_text = target_text,
-      qic_cache = qic_cache
+  # Validate chart type is supported
+  if (!chart_type %in% supported_types) {
+    stop(sprintf(
+      "Chart type '%s' is not supported in BFHcharts. Supported types: %s",
+      chart_type, paste(supported_types, collapse = ", ")
     ))
   }
+
+  # Call BFHchart backend (compute_spc_results_bfh from Task #31)
+  # Adapter: Map config object to individual parameters
+  result <- tryCatch(
+    {
+      compute_spc_results_bfh(
+        data = data,
+        x_var = config$x_col,
+        y_var = config$y_col,
+        chart_type = chart_type,
+        n_var = config$n_col,
+        cl_var = NULL, # Not currently supported in SPCify
+        freeze_var = frys_column,
+        part_var = if (isTRUE(show_phases) && !is.null(skift_column)) skift_column else NULL,
+        notes_column = kommentar_column,
+        multiply = 1, # No scaling needed, handled in y_axis_unit
+        # Pass through additional BFHcharts parameters from config
+        target_value = target_value,
+        target_text = target_text,
+        centerline_value = centerline_value,
+        chart_title_reactive = chart_title_reactive,
+        y_axis_unit = y_axis_unit
+      )
+    },
+    error = function(e) {
+      log_error(
+        component = "[BACKEND_WRAPPER]",
+        message = "BFHchart backend failed",
+        details = list(
+          error = e$message,
+          chart_type = chart_type
+        ),
+        session = NULL,
+        show_user = TRUE
+      )
+      stop(e) # Re-throw the error - no fallback available
+    }
+  )
+
+  return(result)
 }
 
 
