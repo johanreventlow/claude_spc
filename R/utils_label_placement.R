@@ -437,7 +437,7 @@ clear_grob_height_cache <- function() {
   .grob_cache_stats$operations <<- 0L
   .grob_cache_stats$last_purge_time <<- Sys.time()
 
-  message(sprintf("Ryddet %d cache entries for label height estimationer", entries_cleared))
+  log_debug_kv(entries_cleared = entries_cleared, .context = "LABEL_CACHE")
   invisible(entries_cleared)
 }
 
@@ -1408,31 +1408,39 @@ measure_panel_height_inches <- function(p, panel = 1, device_width = 7, device_h
   h_native_unit <- attr(h_native, "unit")
   text_preview <- substring(gsub("\n", " ", text), 1, 30)
 
-  message(sprintf(
-    "[GROB_DEBUG] Text: '%s...' | Native: %s (%.6f %s)",
-    text_preview, as.character(h_native), h_native_value, h_native_unit
-  ))
-  message(sprintf(
-    "[DEVICE_DEBUG] Device: #%d | Size: %.3f × %.3f inches | Viewport: %s (%.3f × %.3f in)",
-    dev_info$dev_cur, dev_info$dev_size[1], dev_info$dev_size[2],
-    as.character(vp_info$current_vp), vp_info$vp_width, vp_info$vp_height
-  ))
+  log_debug_kv(
+    text = text_preview,
+    height_native = h_native_value,
+    unit = h_native_unit,
+    .context = "GROB_HEIGHT_MEASUREMENT"
+  )
+  log_debug_kv(
+    device_id = dev_info$dev_cur,
+    device_size_inches = paste(dev_info$dev_size, collapse = "×"),
+    viewport = as.character(vp_info$current_vp),
+    .context = "DEVICE_INFO"
+  )
 
   # Convert to NPC
   if (!is.null(panel_height_inches)) {
     h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
     h_npc <- h_inches / panel_height_inches
-    message(sprintf(
-      "[GROB_DEBUG] Panel-based: h_inches=%.4f (from native %.6f), panel_height=%.4f, h_npc=%.4f",
-      h_inches, h_native_value, panel_height_inches, h_npc
-    ))
+    log_debug_kv(
+      h_inches = h_inches,
+      h_native = h_native_value,
+      panel_height = panel_height_inches,
+      h_npc = h_npc,
+      .context = "GROB_PANEL_BASED"
+    )
   } else {
     h_npc <- grid::convertHeight(h_native, "npc", valueOnly = TRUE)
     h_inches <- grid::convertHeight(h_native, "inches", valueOnly = TRUE)
-    message(sprintf(
-      "[GROB_DEBUG] Viewport-based: h_npc=%.4f, h_inches=%.4f (from native %.6f)",
-      h_npc, h_inches, h_native_value
-    ))
+    log_debug_kv(
+      h_npc = h_npc,
+      h_inches = h_inches,
+      h_native = h_native_value,
+      .context = "GROB_VIEWPORT_BASED"
+    )
   }
 
   # Safety margin from config
@@ -1551,9 +1559,9 @@ estimate_label_heights_npc <- function(
   using_fallback <- is.null(device_width) || is.null(device_height)
 
   if (using_fallback && getOption("spc.debug.label_placement", FALSE)) {
-    message(
-      "[LABEL_HEIGHT_ESTIMATE] WARNING: No actual device dimensions provided - ",
-      "using fallback 8×4.5\" (this should not happen in production with viewport guard)"
+    log_debug(
+      "No actual device dimensions provided - using fallback 8×4.5 inches",
+      .context = "LABEL_HEIGHT_ESTIMATE"
     )
   }
 
@@ -2158,24 +2166,36 @@ place_two_labels_npc <- function(
 
       gap_line <- gap_line_inches / panel_height_inches # Konverter til NPC
       if (debug) {
-        message(sprintf(
-          "[DEBUG] gap_line beregnet fra config (NY API): %.4f inches × %.2f = %.4f inches (min: %.2f) = %.4f NPC",
-          label_height_inches, cfg$relative_gap_line, gap_line_inches, min_gap_inches, gap_line
-        ))
+        log_debug_kv(
+          label_height_inches = label_height_inches,
+          relative_gap_line = cfg$relative_gap_line,
+          gap_line_inches = gap_line_inches,
+          min_gap_inches = min_gap_inches,
+          gap_line_npc = gap_line,
+          api_type = "NEW_API",
+          .context = "GAP_LINE_CALC"
+        )
       }
     } else {
       # Legacy API: Beregn gap som % af NPC
       gap_line <- label_height_npc_value * cfg$relative_gap_line
       if (debug) {
-        message(sprintf(
-          "[DEBUG] gap_line beregnet fra config (LEGACY API): %.4f NPC × %.2f = %.4f NPC",
-          label_height_npc_value, cfg$relative_gap_line, gap_line
-        ))
+        log_debug_kv(
+          label_height_npc = label_height_npc_value,
+          relative_gap_line = cfg$relative_gap_line,
+          gap_line_npc = gap_line,
+          api_type = "LEGACY_API",
+          .context = "GAP_LINE_CALC"
+        )
       }
     }
   } else {
     if (debug) {
-      message(sprintf("[DEBUG] gap_line var eksplicit sat til: %.4f NPC (config IKKE brugt)", gap_line))
+      log_debug_kv(
+        gap_line_npc = gap_line,
+        source = "explicit_parameter",
+        .context = "GAP_LINE_CALC"
+      )
     }
   }
 

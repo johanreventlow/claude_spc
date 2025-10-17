@@ -98,10 +98,12 @@ add_right_labels_marquee <- function(
   if (!is.null(viewport_width) && !is.null(viewport_height)) {
     # STRATEGY 1: Viewport dimensions provided (PRIMARY PATH)
     if (verbose) {
-      message(sprintf(
-        "[VIEWPORT_STRATEGY] Using provided viewport dimensions: %.2f × %.2f inches",
-        viewport_width, viewport_height
-      ))
+      log_debug_kv(
+        width_inches = viewport_width,
+        height_inches = viewport_height,
+        strategy = "provided_viewport",
+        .context = "VIEWPORT_STRATEGY"
+      )
     }
 
     # Check if device is already open with correct dimensions
@@ -113,7 +115,10 @@ add_right_labels_marquee <- function(
         abs(current_size[2] - viewport_height) / viewport_height < 0.01) {
         device_already_open <- TRUE
         if (verbose) {
-          message("[VIEWPORT_STRATEGY] Device already open with matching dimensions")
+          log_debug_kv(
+            status = "device_already_open",
+            .context = "VIEWPORT_STRATEGY"
+          )
         }
       }
     }
@@ -121,7 +126,11 @@ add_right_labels_marquee <- function(
     # Open temporary device if needed for grob measurements
     if (!device_already_open) {
       if (verbose) {
-        message("[VIEWPORT_STRATEGY] Opening temporary PDF device for grob measurements")
+        log_debug_kv(
+          action = "open_temp_device",
+          device_type = "pdf",
+          .context = "VIEWPORT_STRATEGY"
+        )
       }
       grDevices::pdf(NULL, width = viewport_width, height = viewport_height)
       temp_device_opened <- TRUE
@@ -136,7 +145,11 @@ add_right_labels_marquee <- function(
   } else {
     # STRATEGY 2: Fallback to existing device detection (LEGACY PATH)
     if (verbose) {
-      message("[DEVICE_FALLBACK] No viewport dimensions - attempting device detection")
+      log_debug_kv(
+        strategy = "device_fallback",
+        action = "detecting_device",
+        .context = "DEVICE_FALLBACK"
+      )
     }
 
     device_size <- tryCatch(
@@ -179,12 +192,18 @@ add_right_labels_marquee <- function(
 
   if (verbose) {
     if (device_size$actual) {
-      message(sprintf(
-        "Device size: %.2f × %.2f inches (ACTUAL measurements)",
-        device_size$width, device_size$height
-      ))
+      log_debug_kv(
+        width_inches = device_size$width,
+        height_inches = device_size$height,
+        type = "actual_measurements",
+        .context = "DEVICE_SIZE"
+      )
     } else {
-      message("[DEVICE_SIZE] WARNING: No actual device size available - proceeding without measurements")
+      log_debug_kv(
+        warning = "no_actual_device_size",
+        status = "proceeding_without_measurements",
+        .context = "DEVICE_SIZE"
+      )
     }
   }
 
@@ -203,22 +222,31 @@ add_right_labels_marquee <- function(
       },
       error = function(e) {
         if (verbose) {
-          message("Panel height measurement failed: ", e$message)
+          log_debug_kv(
+            status = "measurement_failed",
+            error_message = e$message,
+            .context = "PANEL_HEIGHT_MEASURE"
+          )
         }
         NULL
       }
     )
 
     if (verbose && !is.null(panel_height_inches)) {
-      message(sprintf(
-        "Panel height: %.3f inches (measured from actual device)",
-        panel_height_inches
-      ))
+      log_debug_kv(
+        panel_height_inches = panel_height_inches,
+        source = "measured_from_device",
+        .context = "PANEL_HEIGHT"
+      )
     }
   } else {
     # Ingen faktiske device dimensioner - kan ikke måle panel height
     if (verbose) {
-      message("[PANEL_HEIGHT] Cannot measure without actual device size - skipping measurement")
+      log_debug_kv(
+        status = "skipping_measurement",
+        reason = "no_device_size",
+        .context = "PANEL_HEIGHT"
+      )
     }
   }
 
@@ -274,12 +302,14 @@ add_right_labels_marquee <- function(
     }
 
     if (verbose) {
-      message(
-        "Auto-beregnet label_height_npc: ", round(params$label_height_npc$npc, 4),
-        " (A: ", round(height_A$npc, 4), ", B: ", round(height_B$npc, 4), ")",
-        " [", round(params$label_height_npc$inches, 4), " inches]",
-        if (textA_is_empty) " [A tom]" else "",
-        if (textB_is_empty) " [B tom]" else ""
+      log_debug_kv(
+        label_height_npc = round(params$label_height_npc$npc, 4),
+        height_a_npc = round(height_A$npc, 4),
+        height_b_npc = round(height_B$npc, 4),
+        label_height_inches = round(params$label_height_npc$inches, 4),
+        text_a_empty = textA_is_empty,
+        text_b_empty = textB_is_empty,
+        .context = "LABEL_HEIGHT_AUTO"
       )
     }
   }
@@ -327,11 +357,12 @@ add_right_labels_marquee <- function(
 
   # Print warnings
   if (verbose && length(placement$warnings) > 0) {
-    message("Label placement warnings:")
-    for (w in placement$warnings) {
-      message("  - ", w)
-    }
-    message("Placement quality: ", placement$placement_quality)
+    log_debug_kv(
+      warning_count = length(placement$warnings),
+      warnings = paste(placement$warnings, collapse = " | "),
+      placement_quality = placement$placement_quality,
+      .context = "PLACEMENT_WARNINGS"
+    )
   }
 
   # Konverter NPC positions til data coordinates
@@ -442,7 +473,11 @@ add_right_labels_marquee <- function(
   # Cleanup temporary device if opened
   if (temp_device_opened) {
     if (verbose) {
-      message("[VIEWPORT_STRATEGY] Closing temporary device")
+      log_debug_kv(
+        action = "close_temp_device",
+        device_type = "pdf",
+        .context = "VIEWPORT_STRATEGY"
+      )
     }
     grDevices::dev.off()
   }
