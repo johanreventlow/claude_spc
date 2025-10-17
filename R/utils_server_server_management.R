@@ -284,7 +284,7 @@ setup_session_management <- function(input, output, session, app_state, emit, ui
 
     # PHASE 1: PRAGMATIC WORKAROUND - Emit modal close after 1 second
     # This ensures observers resume even if user closes modal immediately
-    # TODO: Replace with proper JavaScript hidden.bs.modal event handler
+    # TODO(#50): Replace with proper JavaScript hidden.bs.modal event handler
     later::later(function() {
       if (isTRUE(shiny::isolate(app_state$ui$modal_column_mapping_active))) {
         emit$column_mapping_modal_closed()

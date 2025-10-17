@@ -1,1 +1,7 @@
-linters: linters_with_defaults(library_call_linter = NULL)
+linters: linters_with_defaults(
+    library_call_linter = NULL,
+    commented_code_linter = commented_code_linter(
+      allow_empty = TRUE
+    )
+  )
+exclude_linters: "line_length_linter"
