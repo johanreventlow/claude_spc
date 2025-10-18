@@ -429,6 +429,7 @@ compute_spc_results_bfh <- function(
         cl_var = cl_var,
         freeze_var = freeze_var,
         part_var = part_var,
+        notes_column = notes_column,
         target_value = target_value,
         centerline_value = centerline_value,
         chart_title = chart_title,
@@ -569,6 +570,8 @@ compute_spc_results_bfh <- function(
 #' @param cl_var character. Centerline override column (optional).
 #' @param freeze_var character. Freeze indicator column (optional).
 #' @param part_var character. Phase grouping column (optional).
+#' @param notes_column character. Name of notes/comment column in data. Will be
+#'   mapped to BFHcharts `notes` parameter as character vector. Default NULL.
 #' @param target_value numeric. Target value in SPCify scale (optional).
 #' @param centerline_value numeric. Custom centerline in SPCify scale (optional).
 #' @param ... Additional parameters to pass through to BFHchart.
@@ -632,6 +635,7 @@ map_to_bfh_params <- function(
   cl_var = NULL,
   freeze_var = NULL,
   part_var = NULL,
+  notes_column = NULL,
   target_value = NULL,
   centerline_value = NULL,
   ...
@@ -802,6 +806,76 @@ map_to_bfh_params <- function(
         )
       }
 
+      # 7b. Add notes column if provided (map kommentarer → notes)
+      # BFHcharts expects a character vector for the notes parameter
+      # IMPORTANT: notes_column refers to ORIGINAL column name (before sanitization)
+
+      # ROBUST COLUMN NAME MATCHING: Case-insensitive with fallback
+      notes_column_sanitized <- NULL
+      if (!is.null(notes_column)) {
+        # Try exact match first
+        if (notes_column %in% names(col_mapping)) {
+          notes_column_sanitized <- col_mapping[notes_column]
+        } else {
+          # Fallback: Case-insensitive match
+          original_names <- names(col_mapping)
+          match_idx <- which(tolower(original_names) == tolower(notes_column))
+          if (length(match_idx) > 0) {
+            notes_column_sanitized <- col_mapping[original_names[match_idx[1]]]
+            log_debug(
+              paste(
+                "[NOTES_TRACE] Case-insensitive match:",
+                notes_column, "→", original_names[match_idx[1]]
+              ),
+              .context = "BFH_SERVICE"
+            )
+          } else {
+            log_warn(
+              paste(
+                "[NOTES_TRACE] Column not found in data:",
+                notes_column, "| Available columns:",
+                paste(head(original_names, 5), collapse = ", ")
+              ),
+              .context = "BFH_SERVICE"
+            )
+          }
+        }
+      }
+
+      # DEBUG: Log column name mapping for notes
+      log_debug(
+        paste(
+          "[NOTES_TRACE] Original notes_column:", notes_column,
+          "| Sanitized:", notes_column_sanitized,
+          "| Exists in data:", !is.null(notes_column_sanitized) && notes_column_sanitized %in% names(data)
+        ),
+        .context = "BFH_SERVICE"
+      )
+
+      if (!is.null(notes_column_sanitized) && notes_column_sanitized %in% names(data)) {
+        # Extract notes data and ensure it's character type
+        notes_data <- data[[notes_column_sanitized]]
+
+        # Convert to character vector (handles factor, numeric, etc.)
+        notes_char <- as.character(notes_data)
+
+        # Replace NA with empty strings (BFHcharts may not handle NA)
+        notes_char[is.na(notes_char)] <- ""
+
+        # Add as notes parameter (character vector, not NSE symbol)
+        params$notes <- notes_char
+
+        log_debug(
+          paste(
+            "[NOTES_TRACE] Notes vector created.",
+            "Non-empty notes:", sum(nzchar(notes_char)),
+            "| Total length:", length(notes_char),
+            "| First value:", if (length(notes_char) > 0) substring(notes_char[1], 1, 20) else "NONE"
+          ),
+          .context = "BFH_SERVICE"
+        )
+      }
+
       # 8. Pass through additional parameters
       extra_params <- list(...)
       if (length(extra_params) > 0) {
@@ -951,11 +1025,13 @@ call_bfh_chart <- function(bfh_params) {
 
       # 3b. CONSERVATIVE APPROACH: Only send core parameters to BFHcharts
       # Testing shows BFHcharts may not accept all documented parameters
-      # Keep only: data, x, y, n, chart_type, freeze, part, multiply, target_value, cl
-      # TODO(#51): Investigate BFHcharts version compatibility for: y_axis_unit, chart_title, target_text, notes
+      # Keep only: data, x, y, n, chart_type, freeze, part, multiply, target_value, cl, notes, y_axis_unit
+      # TODO(#51): Investigate BFHcharts version compatibility for: chart_title, target_text
       # NOTE: target_value added for target line rendering (feat/target-line-rendering)
       # NOTE: cl (centerline) added for baseline rendering (fix/bfhcharts-core-features)
-      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value", "cl")
+      # NOTE: notes added for comment annotations (fix/kommentarer-notes-mapping)
+      # NOTE: y_axis_unit added for y-axis formatting (fix/y-axis-unit-regression)
+      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value", "cl", "notes", "y_axis_unit")
       bfh_params_clean <- bfh_params[names(bfh_params) %in% fields_to_keep]
 
       removed_fields <- setdiff(names(bfh_params), fields_to_keep)
@@ -986,6 +1062,26 @@ call_bfh_chart <- function(bfh_params) {
           .context = "BFH_SERVICE"
         )
       }
+
+      # Log y_axis_unit if present
+      if ("y_axis_unit" %in% names(bfh_params_clean)) {
+        log_debug(
+          paste(
+            "Y-axis unit parameter included: y_axis_unit =", bfh_params_clean$y_axis_unit
+          ),
+          .context = "BFH_SERVICE"
+        )
+      }
+
+      # Log notes parameter presence
+      log_debug(
+        paste(
+          "[NOTES_TRACE] Is 'notes' param passed to BFHcharts?:",
+          "notes" %in% names(bfh_params_clean),
+          "| Notes count:", if ("notes" %in% names(bfh_params_clean)) length(bfh_params_clean$notes) else 0
+        ),
+        .context = "BFH_SERVICE"
+      )
 
       # 3c. DEBUG: Log data types being sent to BFHcharts
       if (!is.null(bfh_params_clean$data)) {
