@@ -809,7 +809,48 @@ map_to_bfh_params <- function(
       # 7b. Add notes column if provided (map kommentarer → notes)
       # BFHcharts expects a character vector for the notes parameter
       # IMPORTANT: notes_column refers to ORIGINAL column name (before sanitization)
-      notes_column_sanitized <- if (!is.null(notes_column)) col_mapping[notes_column] else NULL
+
+      # ROBUST COLUMN NAME MATCHING: Case-insensitive with fallback
+      notes_column_sanitized <- NULL
+      if (!is.null(notes_column)) {
+        # Try exact match first
+        if (notes_column %in% names(col_mapping)) {
+          notes_column_sanitized <- col_mapping[notes_column]
+        } else {
+          # Fallback: Case-insensitive match
+          original_names <- names(col_mapping)
+          match_idx <- which(tolower(original_names) == tolower(notes_column))
+          if (length(match_idx) > 0) {
+            notes_column_sanitized <- col_mapping[original_names[match_idx[1]]]
+            log_debug(
+              paste(
+                "[NOTES_TRACE] Case-insensitive match:",
+                notes_column, "→", original_names[match_idx[1]]
+              ),
+              .context = "BFH_SERVICE"
+            )
+          } else {
+            log_warn(
+              paste(
+                "[NOTES_TRACE] Column not found in data:",
+                notes_column, "| Available columns:",
+                paste(head(original_names, 5), collapse = ", ")
+              ),
+              .context = "BFH_SERVICE"
+            )
+          }
+        }
+      }
+
+      # DEBUG: Log column name mapping for notes
+      log_debug(
+        paste(
+          "[NOTES_TRACE] Original notes_column:", notes_column,
+          "| Sanitized:", notes_column_sanitized,
+          "| Exists in data:", !is.null(notes_column_sanitized) && notes_column_sanitized %in% names(data)
+        ),
+        .context = "BFH_SERVICE"
+      )
 
       if (!is.null(notes_column_sanitized) && notes_column_sanitized %in% names(data)) {
         # Extract notes data and ensure it's character type
@@ -826,9 +867,10 @@ map_to_bfh_params <- function(
 
         log_debug(
           paste(
-            "Notes column mapped:",
-            notes_column, "→ notes parameter",
-            "| Non-empty notes:", sum(nzchar(notes_char))
+            "[NOTES_TRACE] Notes vector created.",
+            "Non-empty notes:", sum(nzchar(notes_char)),
+            "| Total length:", length(notes_char),
+            "| First value:", if (length(notes_char) > 0) substring(notes_char[1], 1, 20) else "NONE"
           ),
           .context = "BFH_SERVICE"
         )
@@ -1030,6 +1072,16 @@ call_bfh_chart <- function(bfh_params) {
           .context = "BFH_SERVICE"
         )
       }
+
+      # Log notes parameter presence
+      log_debug(
+        paste(
+          "[NOTES_TRACE] Is 'notes' param passed to BFHcharts?:",
+          "notes" %in% names(bfh_params_clean),
+          "| Notes count:", if ("notes" %in% names(bfh_params_clean)) length(bfh_params_clean$notes) else 0
+        ),
+        .context = "BFH_SERVICE"
+      )
 
       # 3c. DEBUG: Log data types being sent to BFHcharts
       if (!is.null(bfh_params_clean$data)) {

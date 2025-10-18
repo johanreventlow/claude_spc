@@ -259,7 +259,12 @@ setup_visualization <- function(input, output, session, app_state) {
       }
     }),
     kommentar_column_reactive = shiny::reactive({
-      return(sanitize_selection(input$kommentar_column))
+      val <- sanitize_selection(input$kommentar_column)
+      log_debug(
+        paste("[NOTES_TRACE] UI selected kommentar_column:", val),
+        .context = "[NOTES_UI]"
+      )
+      return(val)
     }),
     app_state = app_state
   )
