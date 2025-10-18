@@ -1,4 +1,4 @@
-# ADR-001: Bevar UI Sync Throttle på 250ms
+# ADR-002: Bevar UI Sync Throttle på 250ms
 
 ## Status
 **Accepted** - 2025-10-10
