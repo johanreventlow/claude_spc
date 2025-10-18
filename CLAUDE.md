@@ -292,6 +292,84 @@ Sys.setenv(GOLEM_CONFIG_ACTIVE = "dev")  # dev/test/prod
 * BFHthemes er **styling framework**
 * Bevar klar separation of concerns
 
+### 5.4 BFHcharts + qicharts2 Hybrid Architecture
+
+✅ **VIGTIGT:** SPCify bruger hybrid arkitektur for SPC beregninger og visualisering.
+
+**Architecture Decision (2025-10-18):**
+
+SPCify anvender **både BFHcharts OG qicharts2** i en permanent hybrid løsning:
+
+| Komponent | Ansvar | Package | Rationale |
+|-----------|--------|---------|-----------|
+| **SPC Plotting** | Chart rendering, visual theming, plot layers | BFHcharts | Modern ggplot2-based rendering med BFH branding |
+| **Anhøj Rules** | Serielængde, antal kryds, special cause detection | qicharts2 | Valideret implementation, klinisk accepteret |
+
+**Implementation Details:**
+
+```r
+# BFHcharts: Primary plotting engine
+plot <- BFHcharts::create_spc_chart(
+  data = data,
+  x = x_var,
+  y = y_var,
+  chart_type = chart_type,
+  notes_column = notes_column,
+  ...
+)
+
+# qicharts2: Anhøj rules metadata extraction (UI value boxes)
+qic_result <- qicharts2::qic(
+  x = x_data,
+  y = y_data,
+  chart = chart_type,
+  return.data = TRUE
+)
+anhoej_metadata <- extract_anhoej_metadata(qic_result)
+```
+
+**Files Involved:**
+
+* `R/fct_spc_bfh_service.R` - BFHcharts service layer + qicharts2 Anhøj rules call
+* `R/utils_qic_preparation.R` - qicharts2 input preparation
+* `R/utils_qic_caching.R` - Anhøj rules caching
+* `R/utils_qic_debug_logging.R` - qicharts2 debug logging
+* `R/utils_qic_cache_invalidation.R` - Cache invalidation logik
+
+**Important Constraints:**
+
+❌ **qicharts2 må KUN bruges til:**
+- Anhøj rules beregning (serielængde, antal kryds)
+- Metadata ekstraktion til UI value boxes
+
+✅ **BFHcharts skal bruges til:**
+- Alle plot rendering opgaver
+- Chart type handling
+- Visual theming og styling
+- Notes/kommentarer rendering
+- Target lines og freezing
+
+**Dependency Management:**
+
+```r
+# DESCRIPTION
+Imports:
+  BFHcharts (>= 0.1.0)  # Primary plotting
+Suggests:
+  qicharts2 (>= 0.7.0)  # Anhøj rules only
+```
+
+**Rationale for Hybrid:**
+
+1. **BFHcharts** - Hospital-specific branding, moderne ggplot2 implementation
+2. **qicharts2** - Klinisk valideret Anhøj rules, ikke planlagt til re-implementation
+3. **Separation of concerns** - Plotting vs statistical rules beregning
+4. **Maintenance burden** - Undgå duplikering af kompleks statistisk logik
+
+**Future Consideration:**
+
+Hvis BFHcharts implementerer Anhøj rules i fremtiden, kan qicharts2 dependency fjernes. Indtil da er hybrid arkitekturen permanent.
+
 ### Cross-Repository Coordination
 
 Se omfattende koordinationsdokumentation:
