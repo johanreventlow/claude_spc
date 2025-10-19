@@ -225,9 +225,22 @@ mod_export_ui <- function(id) {
             " Ingen graf er genereret endnu. Gå til hovedsiden for at oprette en SPC-graf først."
           )
         ),
-        # Show preview when plot available
+        # Show PDF preview when PDF format selected
         shiny::conditionalPanel(
-          condition = "output.plot_available == true",
+          condition = "output.plot_available == true && output.is_pdf_format == true",
+          ns = ns,
+          shiny::div(
+            style = "height: 100%; display: flex; align-items: center; justify-content: center; overflow: auto;",
+            shiny::imageOutput(
+              ns("pdf_preview"),
+              width = "100%",
+              height = "auto"
+            )
+          )
+        ),
+        # Show ggplot preview when PNG/PPTX format selected
+        shiny::conditionalPanel(
+          condition = "output.plot_available == true && output.is_pdf_format == false",
           ns = ns,
           shiny::div(
             style = "height: 100%; display: flex; align-items: center; justify-content: center;",

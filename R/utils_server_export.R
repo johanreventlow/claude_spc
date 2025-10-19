@@ -303,3 +303,158 @@ get_hospital_name_for_export <- function() {
   # Final fallback
   return("Bispebjerg og Frederiksberg Hospital")
 }
+
+# GENERATE PDF PREVIEW ========================================================
+
+#' Generate PDF Preview Image
+#'
+#' Kompilerer Typst til PDF og konverterer første side til PNG til preview.
+#' Bruges af export module til at vise PDF layout preview.
+#'
+#' @param plot_object ggplot2 object. SPC chart til embedding i PDF.
+#' @param metadata List. PDF metadata (hospital, department, title, analysis, etc.).
+#' @param spc_statistics List. SPC statistikker (runs, crossings, outliers).
+#' @param dpi Numeric. DPI for PNG rendering (default: 150).
+#'
+#' @return Character path til PNG preview fil eller NULL ved fejl.
+#'
+#' @details
+#' Funktionen:
+#' 1. Genererer temp PDF via \code{export_spc_to_typst_pdf()}
+#' 2. Konverterer første side til PNG via \code{pdftools::pdf_render_page()}
+#' 3. Returnerer path til PNG fil (i temp directory)
+#'
+#' PNG filen er midlertidig og vil blive slettet når R session afsluttes.
+#'
+#' @examples
+#' \dontrun{
+#' plot <- ggplot2::qplot(1:10, 1:10)
+#' metadata <- list(
+#'   hospital = "Test Hospital",
+#'   department = "Test Dept",
+#'   title = "Test Chart",
+#'   analysis = "Test analysis",
+#'   details = "Test details",
+#'   data_definition = NULL,
+#'   author = "Test Author",
+#'   date = Sys.Date()
+#' )
+#' spc_stats <- list(
+#'   runs_expected = 12, runs_actual = 10,
+#'   crossings_expected = 16, crossings_actual = 14,
+#'   outliers_expected = 0, outliers_actual = 2
+#' )
+#'
+#' preview_path <- generate_pdf_preview(plot, metadata, spc_stats)
+#' if (!is.null(preview_path)) {
+#'   # Display preview image
+#' }
+#' }
+#'
+#' @family export_helpers
+#' @export
+generate_pdf_preview <- function(plot_object,
+                                 metadata,
+                                 spc_statistics,
+                                 dpi = 150) {
+  safe_operation(
+    operation_name = "Generate PDF preview",
+    code = {
+      # Validér inputs
+      if (is.null(plot_object)) {
+        log_warn(
+          component = "[EXPORT]",
+          message = "Ingen plot object til PDF preview"
+        )
+        return(NULL)
+      }
+
+      # Check Quarto availability
+      if (!quarto_available()) {
+        log_warn(
+          component = "[EXPORT]",
+          message = "Quarto ikke tilgængelig - PDF preview kan ikke genereres"
+        )
+        return(NULL)
+      }
+
+      # Generer temp PDF
+      temp_pdf <- tempfile(fileext = ".pdf")
+
+      log_debug(
+        component = "[EXPORT]",
+        message = "Genererer temp PDF til preview",
+        details = list(temp_pdf = temp_pdf)
+      )
+
+      # Brug eksisterende Typst export
+      export_spc_to_typst_pdf(
+        plot_object = plot_object,
+        metadata = metadata,
+        spc_statistics = spc_statistics,
+        output_path = temp_pdf
+      )
+
+      # Validér PDF blev genereret
+      if (!file.exists(temp_pdf)) {
+        log_error(
+          component = "[EXPORT]",
+          message = "Temp PDF blev ikke genereret"
+        )
+        return(NULL)
+      }
+
+      # Konverter første side til PNG
+      temp_png <- tempfile(fileext = ".png")
+
+      log_debug(
+        component = "[EXPORT]",
+        message = "Konverterer PDF til PNG preview",
+        details = list(
+          pdf = temp_pdf,
+          png = temp_png,
+          dpi = dpi
+        )
+      )
+
+      pdftools::pdf_render_page(
+        pdf = temp_pdf,
+        page = 1,
+        dpi = dpi,
+        filename = temp_png
+      )
+
+      # Validér PNG blev genereret
+      if (!file.exists(temp_png)) {
+        log_error(
+          component = "[EXPORT]",
+          message = "PNG preview blev ikke genereret"
+        )
+        return(NULL)
+      }
+
+      # Cleanup temp PDF (behold kun PNG)
+      unlink(temp_pdf)
+
+      log_info(
+        component = "[EXPORT]",
+        message = "PDF preview genereret succesfuldt",
+        details = list(
+          png = temp_png,
+          size_kb = round(file.size(temp_png) / 1024, 1)
+        )
+      )
+
+      return(temp_png)
+    },
+    fallback = function(e) {
+      log_error(
+        component = "[EXPORT]",
+        message = "PDF preview generation failed",
+        details = list(error = e$message)
+      )
+      return(NULL)
+    },
+    error_type = "processing"
+  )
+}

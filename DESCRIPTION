@@ -53,7 +53,8 @@ Imports:
     forcats (>= 1.0.0),
     config (>= 0.3.0),
     systemfonts (>= 1.0.0),
-    ragg (>= 1.2.0)
+    ragg (>= 1.2.0),
+    pdftools (>= 3.3.0)
 Suggests:
     testthat (>= 3.0.0),
     shinytest2,

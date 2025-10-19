@@ -169,6 +169,138 @@ mod_export_server <- function(id, app_state) {
     })
     outputOptions(output, "plot_available", suspendWhenHidden = FALSE)
 
+    # PDF PREVIEW GENERATION ==================================================
+
+    # PDF preview reactive - generates PNG preview of Typst PDF layout
+    # Only active when format is "pdf"
+    pdf_preview_image <- shiny::reactive({
+      # Only generate for PDF format
+      format <- input$export_format %||% "pdf"
+      if (format != "pdf") {
+        return(NULL)
+      }
+
+      # Defensive checks - require valid app_state and data
+      shiny::req(app_state)
+      shiny::req(app_state$data$current_data)
+      shiny::req(app_state$columns$mappings$y_column)
+
+      # Get existing plot from visualization state
+      base_plot <- app_state$visualization$plot_object
+      shiny::req(base_plot)
+
+      # Read export metadata inputs (triggers reactive dependency)
+      title_input <- input$export_title
+      dept_input <- input$export_department
+      analysis_input <- input$pdf_improvement
+      data_def_input <- input$pdf_description
+
+      # Build metadata for PDF generation
+      metadata <- list(
+        hospital = get_hospital_name_for_export(),
+        department = dept_input,
+        title = title_input,
+        analysis = analysis_input,
+        data_definition = data_def_input,
+        details = generate_details_string(app_state, format = "full"),
+        author = Sys.getenv("USER"),
+        date = Sys.Date()
+      )
+
+      # Extract SPC statistics
+      spc_stats <- extract_spc_statistics(app_state)
+
+      # Apply export metadata to plot (title, department)
+      title_parts <- c()
+      if (!is.null(title_input) && nchar(trimws(title_input)) > 0) {
+        title_parts <- c(title_parts, trimws(title_input))
+      }
+      if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
+        title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
+      }
+      export_title <- if (length(title_parts) > 0) {
+        paste(title_parts, collapse = " ")
+      } else {
+        ""
+      }
+
+      # Clone plot and update title
+      preview_plot <- base_plot + ggplot2::labs(title = export_title)
+
+      # Apply hospital theme
+      if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
+        preview_plot <- applyHospitalTheme(preview_plot, base_size = 14)
+      }
+
+      # Generate PDF preview PNG
+      safe_operation(
+        operation_name = "Generate PDF preview PNG",
+        code = {
+          preview_path <- generate_pdf_preview(
+            plot_object = preview_plot,
+            metadata = metadata,
+            spc_statistics = spc_stats,
+            dpi = 150
+          )
+
+          log_debug(
+            component = "[EXPORT_MODULE]",
+            message = "PDF preview PNG generated",
+            details = list(
+              preview_path = preview_path,
+              has_preview = !is.null(preview_path)
+            )
+          )
+
+          return(preview_path)
+        },
+        fallback = function(e) {
+          log_error(
+            component = "[EXPORT_MODULE]",
+            message = "Failed to generate PDF preview PNG",
+            details = list(error = e$message)
+          )
+          return(NULL)
+        },
+        error_type = "processing"
+      )
+    }) %>% shiny::debounce(millis = 1000) # Debounce for performance (PDF generation is slow)
+
+    # PDF preview renderImage - displays PNG preview of Typst PDF layout
+    output$pdf_preview <- shiny::renderImage(
+      {
+        preview_path <- pdf_preview_image()
+
+        if (is.null(preview_path) || !file.exists(preview_path)) {
+          # Return placeholder image (1x1 transparent PNG)
+          return(list(
+            src = "",
+            contentType = "image/png",
+            width = "100%",
+            height = "auto",
+            alt = "PDF preview ikke tilgængelig"
+          ))
+        }
+
+        # Return PNG preview
+        return(list(
+          src = preview_path,
+          contentType = "image/png",
+          width = "100%",
+          height = "auto",
+          alt = "PDF layout preview"
+        ))
+      },
+      deleteFile = FALSE # Don't delete temp file (will be cleaned up by R session)
+    )
+
+    # PDF format flag - for conditional UI rendering
+    output$is_pdf_format <- shiny::reactive({
+      format <- input$export_format %||% "pdf"
+      format == "pdf"
+    })
+    outputOptions(output, "is_pdf_format", suspendWhenHidden = FALSE)
+
     # DOWNLOAD HANDLER ========================================================
 
     # Download handler - generates export file based on format

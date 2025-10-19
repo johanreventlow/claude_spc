@@ -2,6 +2,33 @@
 
 ## New Features
 
+### PDF Layout Preview på Export-siden (Issue #56)
+
+* Added real-time PDF layout preview functionality on export page
+* Preview shows complete Typst PDF layout including:
+  - Hospital branding and header
+  - SPC statistics table (Anhøj rules)
+  - Data definition section
+  - Chart with metadata applied
+* Server-side rendering approach using pdftools for 100% accurate preview
+* Conditional UI: Shows PDF preview for PDF format, ggplot preview for PNG/PPTX
+* Debounced preview generation (1000ms) for optimal performance
+* Automatic fallback to ggplot preview when Quarto not available
+
+**New Functions:**
+- `generate_pdf_preview()` - Generate PNG preview of Typst PDF layout
+
+**Technical Implementation:**
+- Uses `pdftools::pdf_render_page()` to convert first PDF page to PNG
+- Reuses existing `export_spc_to_typst_pdf()` infrastructure
+- Conditional `imageOutput()` vs `plotOutput()` in UI based on format selection
+- Preview reactive auto-updates when metadata changes (debounced)
+- Graceful degradation when Quarto CLI not available
+
+**Requirements:**
+- pdftools >= 3.3.0
+- Quarto >= 1.4 (for PDF preview - optional)
+
 ### Typst PDF Export (Issue #43)
 
 * Added professional PDF export functionality using Typst typesetting system via Quarto
