@@ -47,7 +47,7 @@
   - Professional layout optimized for clinical reports
 
 **New Functions:**
-- `export_chart_for_typst()` - Export ggplot to PNG for Typst embedding
+- `export_chart_for_typst()` - Export ggplot to PNG for Typst embedding (strips title/subtitle)
 - `create_typst_document()` - Generate .typ files programmatically from R
 - `compile_typst_to_pdf()` - Compile Typst to PDF via Quarto CLI
 - `export_spc_to_typst_pdf()` - High-level orchestrator for complete workflow
@@ -55,6 +55,10 @@
 - `generate_details_string()` - Generate period/statistics summary
 - `quarto_available()` - Check Quarto CLI availability (with RStudio fallback)
 - `get_hospital_name_for_export()` - Get hospital name with fallback chain
+
+**Chart Export Behavior:**
+- Chart PNG embedded in PDF has title/subtitle removed to avoid duplication
+- Title and subtitle are displayed in PDF header section instead
 
 **Technical Implementation:**
 - Uses Quarto's bundled Typst CLI (>= v1.4, includes Typst 0.13+)

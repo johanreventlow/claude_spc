@@ -9,6 +9,9 @@
 #' Eksporterer en ggplot SPC chart som PNG i korrekt format til indlejring
 #' i Typst dokumenter. Optimeret til A4 landscape layout.
 #'
+#' Title og subtitle fjernes automatisk fra plottet, da disse vises
+#' separat i PDF layoutet.
+#'
 #' @param plot_object ggplot object. SPC chart der skal eksporteres.
 #' @param output_path Character. Sti til output PNG fil.
 #' @param width Numeric. Bredde i mm (default: 200mm, passende til A4 landscape).
@@ -56,12 +59,16 @@ export_chart_for_typst <- function(
   width_in <- width / 25.4
   height_in <- height / 25.4
 
+  # Fjern title og subtitle fra plot (vises allerede i PDF layout)
+  plot_clean <- plot_object +
+    ggplot2::labs(title = NULL, subtitle = NULL)
+
   # Eksportér plot
   tryCatch(
     {
       ggplot2::ggsave(
         filename = output_path,
-        plot = plot_object,
+        plot = plot_clean,
         width = width_in,
         height = height_in,
         dpi = dpi,
