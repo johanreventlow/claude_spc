@@ -223,21 +223,63 @@ mod_export_server <- function(id, app_state) {
 
             # Export logic based on format
             if (format == "pdf") {
-              # PDF export - placeholder for actual implementation
+              # PDF export via Typst/Quarto
               log_debug(
                 component = "[EXPORT_MODULE]",
-                message = "PDF export - placeholder implementation"
+                message = "PDF export via Typst/Quarto"
               )
-              # TODO: Implement PDF export with metadata
-              # For now, save as simple PDF
-              grDevices::pdf(
-                file = file,
-                width = 10,
-                height = 7.5,
-                paper = EXPORT_PDF_CONFIG$paper
+
+              # Check Quarto availability
+              if (!quarto_available()) {
+                shiny::showNotification(
+                  "PDF export kræver Quarto installation. Download fra https://quarto.org",
+                  type = "warning",
+                  duration = 10
+                )
+                stop("Quarto CLI ikke tilgængelig. Installér fra https://quarto.org")
+              }
+
+              # Udtræk metadata fra UI inputs
+              metadata <- list(
+                hospital = get_hospital_name_for_export(),
+                department = input$export_department,
+                title = input$export_title,
+                analysis = input$pdf_improvement,
+                data_definition = input$pdf_description,
+                details = generate_details_string(app_state, format = "full"),
+                author = Sys.getenv("USER"),
+                date = Sys.Date()
               )
-              print(plot)
-              grDevices::dev.off()
+
+              # Udtræk SPC statistikker fra app_state
+              spc_stats <- extract_spc_statistics(app_state)
+
+              # Validate export inputs
+              validate_export_inputs(
+                format = "pdf",
+                title = input$export_title,
+                department = input$export_department
+              )
+
+              # Generate PDF using Typst export workflow
+              result <- export_spc_to_typst_pdf(
+                plot_object = plot,
+                metadata = metadata,
+                spc_statistics = spc_stats,
+                output_path = file
+              )
+
+              # Verify successful generation
+              if (is.null(result) || !file.exists(file)) {
+                stop("PDF generation failed - file not created")
+              }
+
+              # Success notification
+              shiny::showNotification(
+                "PDF genereret og downloadet via Typst",
+                type = "message",
+                duration = 3
+              )
             } else if (format == "png") {
               # PNG export - full implementation with size presets and DPI
               log_debug(
