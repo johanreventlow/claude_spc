@@ -498,7 +498,8 @@ export_spc_to_typst_pdf <- function(
       create_typst_document(
         template = "bfh-diagram2",
         output_path = typst_file,
-        hospital = metadata$hospital %||% "Bispebjerg og Frederiksberg Hospital",
+        # hospital = metadata$hospital %||% "Bispebjerg og Frederiksberg Hospital",
+        hospital = "Bispebjerg og Frederiksberg Hospital",
         department = metadata$department,
         title = metadata$title %||% "SPC Chart",
         analysis = metadata$analysis,
