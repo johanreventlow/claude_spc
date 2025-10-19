@@ -230,11 +230,14 @@ mod_export_ui <- function(id) {
           condition = "output.plot_available == true && output.is_pdf_format == true",
           ns = ns,
           shiny::div(
-            style = "height: 100%; display: flex; align-items: center; justify-content: center; overflow: auto;",
-            shiny::imageOutput(
-              ns("pdf_preview"),
-              width = "100%",
-              height = "auto"
+            style = "height: 100%; display: flex; align-items: center; justify-content: center; overflow: auto; background-color: #f8f8f8; padding: 20px;",
+            shiny::div(
+              style = "border: 2px solid #565656; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background-color: white; display: inline-block;",
+              shiny::imageOutput(
+                ns("pdf_preview"),
+                width = "100%",
+                height = "auto"
+              )
             )
           )
         ),
