@@ -254,8 +254,8 @@ create_typst_document <- function(
 
 #' Compile Typst to PDF via Quarto
 #'
-#' Kompilerer en .typ fil til PDF ved hjælp af Quarto's Typst engine.
-#' Kræver Quarto >= 1.4 installeret på systemet.
+#' Kompilerer en .typ fil til PDF ved hjælp af Quarto's bundled Typst CLI.
+#' Kræver Quarto >= 1.4 installeret på systemet (som inkluderer Typst 0.13+).
 #'
 #' @param typst_file Character. Sti til input .typ fil.
 #' @param output_pdf Character. Sti til output PDF (optional, auto-generated hvis NULL).
@@ -323,36 +323,29 @@ compile_typst_to_pdf <- function(
     output_pdf <- sub("\\.typ$", ".pdf", typst_file)
   }
 
-  # Render via Quarto
+  # Compile via Quarto's bundled Typst CLI
   log_info(
     component = "[TYPST_EXPORT]",
-    message = "Starter Quarto render",
+    message = "Starter Quarto Typst compilation",
     details = list(input = typst_file, output = output_pdf)
   )
 
   tryCatch(
     {
-      # Kald quarto render
-      # Note: quarto::quarto_render() fra R package ville være preferred,
-      # men vi bruger system2 for mere kontrol over output
+      # Kald quarto typst compile (bruger Quarto's bundled Typst CLI)
+      # Dette er mere direkte end 'quarto render' og kræver ikke YAML-header
       result <- system2(
         "quarto",
-        c("render", shQuote(typst_file), "--to", "pdf", "--output", basename(output_pdf)),
+        c("typst", "compile", shQuote(typst_file), shQuote(output_pdf)),
         stdout = TRUE,
         stderr = TRUE
       )
 
       # Check om PDF blev genereret
-      expected_pdf <- file.path(dirname(typst_file), basename(output_pdf))
+      expected_pdf <- output_pdf
 
       if (!file.exists(expected_pdf)) {
-        stop("PDF file was not generated. Quarto output: ", paste(result, collapse = "\n"))
-      }
-
-      # Flyt til ønsket location hvis forskellig
-      if (normalizePath(expected_pdf, mustWork = FALSE) != normalizePath(output_pdf, mustWork = FALSE)) {
-        file.copy(expected_pdf, output_pdf, overwrite = TRUE)
-        file.remove(expected_pdf)
+        stop("PDF file was not generated. Quarto Typst output: ", paste(result, collapse = "\n"))
       }
 
       log_info(
@@ -369,7 +362,7 @@ compile_typst_to_pdf <- function(
     error = function(e) {
       log_error(
         component = "[TYPST_EXPORT]",
-        message = "Quarto render fejlede",
+        message = "Quarto Typst compilation fejlede",
         details = list(error = e$message, input = typst_file)
       )
       stop("PDF compilation failed: ", e$message, call. = FALSE)

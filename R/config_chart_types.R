@@ -27,7 +27,7 @@
 #' @format Named list med dansk label → engelsk kode
 #' @export
 CHART_TYPES_DA <- list(
-  "Seriediagram med SPC (Run Chart)" = "run",
+  "Seriediagram m SPC (Run Chart)" = "run",
   "I-kort (Individuelle værdier)" = "i",
   "MR-kort (Moving Range)" = "mr",
   "P-kort (Andele)" = "p",

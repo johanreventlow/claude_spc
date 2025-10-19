@@ -237,6 +237,22 @@ quarto_available <- function() {
   quarto_path <- Sys.which("quarto")
   available <- nzchar(quarto_path)
 
+  # Fallback: Check for RStudio bundled Quarto (macOS)
+  if (!available && file.exists("/Applications/RStudio.app/Contents/Resources/app/quarto/bin/quarto")) {
+    available <- TRUE
+  }
+
+  # Fallback: Check for RStudio bundled Quarto (Windows)
+  if (!available && .Platform$OS.type == "windows") {
+    rstudio_quarto <- file.path(
+      Sys.getenv("PROGRAMFILES"),
+      "RStudio/resources/app/quarto/bin/quarto.cmd"
+    )
+    if (file.exists(rstudio_quarto)) {
+      available <- TRUE
+    }
+  }
+
   if (!available) {
     log_debug(
       component = "[EXPORT]",

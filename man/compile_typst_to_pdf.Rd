@@ -15,8 +15,8 @@ compile_typst_to_pdf(typst_file, output_pdf = NULL)
 Character. Path til den genererede PDF fil.
 }
 \description{
-Kompilerer en .typ fil til PDF ved hjælp af Quarto's Typst engine.
-Kræver Quarto >= 1.4 installeret på systemet.
+Kompilerer en .typ fil til PDF ved hjælp af Quarto's bundled Typst CLI.
+Kræver Quarto >= 1.4 installeret på systemet (som inkluderer Typst 0.13+).
 }
 \examples{
 \dontrun{

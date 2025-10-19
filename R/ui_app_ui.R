@@ -433,7 +433,7 @@ create_plot_only_card <- function() {
     ),
     bslib::layout_sidebar(
       sidebar = bslib::sidebar(
-        width = "350px",
+        width = "300px",
         position = "right",
         shiny::selectizeInput(
           "chart_type",
@@ -449,23 +449,20 @@ create_plot_only_card <- function() {
           selected = "count",
           width = "100%"
         ),
-        bslib::layout_column_wrap(
-          width = 1 / 2,
-          # Detaljer fields from accordion
-          shiny::textInput(
-            "target_value",
-            "Udviklingsmål:",
-            value = "",
-            placeholder = "fx >=90%, <25 eller >",
-            width = "100%"
-          ),
-          shiny::textInput(
-            "centerline_value",
-            "Evt. baseline:",
-            value = "",
-            placeholder = "fx 68%, 0,7 el. 22",
-            width = "100%"
-          )
+        # Detaljer fields from accordion
+        shiny::textInput(
+          "target_value",
+          "Udviklingsmål:",
+          value = "",
+          placeholder = "fx >=90%, <25 eller >",
+          width = "100%"
+        ),
+        shiny::textInput(
+          "centerline_value",
+          "Evt. baseline:",
+          value = "",
+          placeholder = "fx 68%, 0,7 el. 22",
+          width = "100%"
         )
       ),
 
@@ -516,7 +513,7 @@ create_data_table_card <- function() {
     ),
     bslib::layout_sidebar(
       sidebar = bslib::sidebar(
-        width = "350px",
+        width = "300px",
         position = "right",
 
         # Knapper til kolonnematch

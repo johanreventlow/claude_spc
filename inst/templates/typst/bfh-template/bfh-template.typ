@@ -301,48 +301,49 @@ grid.cell(
        //fill: rgb("ccebfa"),
       width: 100%,
       //height: 100%, */
-       text(fill: rgb("888888"),
-               weight: "bold",
-               size: 9pt,
-               upper( 
-      [Statistisk Proceskontrol (SPC)]
-      )) +
-
-   
-      // SPC Statistics Table - only show if at least one statistic is provided
-      if runs_expected != none or runs_actual != none or
-         crossings_expected != none or crossings_actual != none or
-         outliers_expected != none or outliers_actual != none {
-        table(
-          columns: (27mm, 18mm, 18mm),
-          stroke: none,
-          inset: (0mm),
-          table.header(
-            [],
-            [FORVENTET],
-            [FAKTISK],
-          ),
-          [SERIELÆNGDE (MAKSIMUM)],
-          [#if runs_expected != none {str(runs_expected)} else {[-]}],
-          [#if runs_actual != none {str(runs_actual)} else {[-]}],
-          [ANTAL KRYDS (MINIMUM)],
-          [#if crossings_expected != none {str(crossings_expected)} else {[-]}],
-          [#if crossings_actual != none {str(crossings_actual)} else {[-]}],
-          [OBS. UDEN FOR KONTROLGRÆNSE],
-          [#if outliers_expected != none {str(outliers_expected)} else {[-]}],
-          [#if outliers_actual != none {str(outliers_actual)} else {[-]}],
-        )
-      } +
-      // Data definition section - only show if provided
-      if data_definition != none {
-        text(fill: rgb("888888"),
+       [
+         #text(fill: rgb("888888"),
                  weight: "bold",
                  size: 9pt,
-                 upper([Datadefinition])) +
-        text(fill: rgb("888888"),
-                 size: 9pt,
-                 data_definition)
-      }
+                 upper([Statistisk Proceskontrol (SPC)]))
+
+         // SPC Statistics Table - only show if at least one statistic is provided
+         #if (runs_expected != none or runs_actual != none or
+            crossings_expected != none or crossings_actual != none or
+            outliers_expected != none or outliers_actual != none) {
+           table(
+             columns: (27mm, 18mm, 18mm),
+             stroke: none,
+             inset: (0mm),
+             table.header(
+               [],
+               [FORVENTET],
+               [FAKTISK],
+             ),
+             [SERIELÆNGDE (MAKSIMUM)],
+             [#if runs_expected != none {str(runs_expected)} else {[-]}],
+             [#if runs_actual != none {str(runs_actual)} else {[-]}],
+             [ANTAL KRYDS (MINIMUM)],
+             [#if crossings_expected != none {str(crossings_expected)} else {[-]}],
+             [#if crossings_actual != none {str(crossings_actual)} else {[-]}],
+             [OBS. UDEN FOR KONTROLGRÆNSE],
+             [#if outliers_expected != none {str(outliers_expected)} else {[-]}],
+             [#if outliers_actual != none {str(outliers_actual)} else {[-]}],
+           )
+           v(2mm)
+         }
+         // Data definition section - only show if provided
+         #if data_definition != none {
+           text(fill: rgb("888888"),
+                    weight: "bold",
+                    size: 9pt,
+                    upper([Datadefinition]))
+           linebreak()
+           text(fill: rgb("888888"),
+                    size: 9pt,
+                    data_definition)
+         }
+       ]
 
 
             
