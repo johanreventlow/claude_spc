@@ -13,6 +13,7 @@ map_to_bfh_params(
   cl_var = NULL,
   freeze_var = NULL,
   part_var = NULL,
+  notes_column = NULL,
   target_value = NULL,
   centerline_value = NULL,
   ...
@@ -34,6 +35,9 @@ map_to_bfh_params(
 \item{freeze_var}{character. Freeze indicator column (optional).}
 
 \item{part_var}{character. Phase grouping column (optional).}
+
+\item{notes_column}{character. Name of notes/comment column in data. Will be
+mapped to BFHcharts \code{notes} parameter as character vector. Default NULL.}
 
 \item{target_value}{numeric. Target value in SPCify scale (optional).}
 

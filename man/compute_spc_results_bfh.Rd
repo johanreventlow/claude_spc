@@ -15,6 +15,8 @@ compute_spc_results_bfh(
   part_var = NULL,
   notes_column = NULL,
   multiply = 1,
+  use_cache = TRUE,
+  app_state = NULL,
   ...
 )
 }
@@ -46,6 +48,12 @@ Maps to BFHchart notes parameter or SPCify ggrepel layer. Default NULL.}
 \item{multiply}{numeric. Multiplier applied to y-axis values for display scaling.
 Common use: convert decimal proportions to percentages (multiply = 100).
 Default 1 (no scaling).}
+
+\item{use_cache}{logical. Enable caching for SPC computation results. Default TRUE.
+Set to FALSE to force fresh computation (useful for debugging or testing).}
+
+\item{app_state}{Application state object. Required for cache access. If NULL,
+caching is disabled. Default NULL.}
 
 \item{...}{Additional arguments passed to BFHchart backend. Allows flexibility
 for BFHchart-specific parameters without breaking SPCify interface.}
@@ -159,5 +167,6 @@ print(result$metadata$signals_detected)
 }
 \seealso{
 \code{\link{map_to_bfh_params}} for parameter transformation logic
+\code{\link{transform_bfh_output}} for output standardization
 \code{\link{add_comment_annotations}} for notes column handling
 }

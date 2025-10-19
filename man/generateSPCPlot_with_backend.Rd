@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_spc_plot_generation.R
 \name{generateSPCPlot_with_backend}
 \alias{generateSPCPlot_with_backend}
-\title{Backend Wrapper for SPC Plot Generation}
+\title{Backend Wrapper for SPC Plot Generation (BFHcharts Only)}
 \usage{
 generateSPCPlot_with_backend(
   data,
@@ -24,10 +24,15 @@ generateSPCPlot_with_backend(
 )
 }
 \value{
-List with plot and qic_data (consistent structure from both backends)
+List with plot and qic_data (from BFHcharts backend)
 }
 \description{
-Conditionally routes to BFHchart or qicharts2 backend based on feature flag.
+Routes to BFHchart backend for all supported chart types.
 This wrapper preserves the existing generateSPCPlot() interface, ensuring
 zero changes required in mod_spc_chart_server.R.
+}
+\details{
+\strong{Note:} This is a pure BFHcharts implementation. qicharts2 is used only
+for Anhøj rules metadata extraction (internal). No fallback to qicharts2
+visualization occurs.
 }

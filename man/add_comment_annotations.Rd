@@ -116,4 +116,5 @@ print(result$plot)
 }
 \seealso{
 \code{\link{compute_spc_results_bfh}} for facade interface with integrated comments
+\code{\link{transform_bfh_output}} for output standardization
 }

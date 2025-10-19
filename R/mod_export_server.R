@@ -322,24 +322,70 @@ mod_export_server <- function(id, app_state) {
                 duration = 3
               )
             } else if (format == "pptx") {
-              # PowerPoint export - placeholder for actual implementation
+              # PowerPoint export - full implementation using officer
               log_debug(
                 component = "[EXPORT_MODULE]",
-                message = "PowerPoint export - placeholder implementation"
+                message = "PowerPoint export with officer package"
               )
-              # TODO: Implement PowerPoint export using officer package
-              # For now, save as PNG and notify user
-              grDevices::png(
-                filename = file,
-                width = EXPORT_SIZE_PRESETS$powerpoint$width,
-                height = EXPORT_SIZE_PRESETS$powerpoint$height,
-                units = "in",
-                res = EXPORT_SIZE_PRESETS$powerpoint$dpi,
-                type = EXPORT_PNG_CONFIG$type,
-                bg = EXPORT_PNG_CONFIG$bg
+
+              # Validate export inputs before generating
+              validate_export_inputs(
+                format = "pptx",
+                title = input$export_title,
+                department = input$export_department
               )
-              print(plot)
-              grDevices::dev.off()
+
+              # Check if custom template exists
+              template_path <- system.file(
+                "templates",
+                "hospital_presentation.pptx",
+                package = "SPCify"
+              )
+
+              # If template doesn't exist, use NULL (creates default)
+              if (!file.exists(template_path) || nchar(template_path) == 0) {
+                log_debug(
+                  "No hospital template found, using default PowerPoint template",
+                  .context = "EXPORT_MODULE"
+                )
+                template_path <- NULL
+              } else {
+                log_debug(
+                  paste("Using hospital template:", template_path),
+                  .context = "EXPORT_MODULE"
+                )
+              }
+
+              # Build title with department if provided
+              export_title <- input$export_title %||% ""
+              if (!is.null(input$export_department) && nchar(input$export_department) > 0) {
+                export_title <- paste0(
+                  export_title,
+                  " (",
+                  input$export_department,
+                  ")"
+                )
+              }
+
+              # Generate PowerPoint using dedicated export function
+              result <- generate_powerpoint_export(
+                plot_object = plot,
+                title = export_title,
+                template_path = template_path,
+                output_path = file
+              )
+
+              # Verify successful generation
+              if (is.null(result) || !file.exists(file)) {
+                stop("PowerPoint generation failed - file not created")
+              }
+
+              # Success notification
+              shiny::showNotification(
+                "PowerPoint genereret og downloadet",
+                type = "message",
+                duration = 3
+              )
             } else {
               stop(paste("Ukendt format:", format))
             }

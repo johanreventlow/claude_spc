@@ -4,7 +4,7 @@
 \alias{unlock_placement_cache_bindings}
 \title{Unlock cache bindings for runtime modification (test helper)}
 \usage{
-unlock_placement_cache_bindings()
+unlock_placement_cache_bindings(ns = NULL)
 }
 \value{
 Invisible: TRUE if successful, FALSE otherwise
