@@ -10,7 +10,7 @@
 #' i Typst dokumenter. Optimeret til A4 landscape layout.
 #'
 #' Title og subtitle fjernes automatisk fra plottet, da disse vises
-#' separat i PDF layoutet.
+#' separat i PDF layoutet. Plot margin sættes til 0mm for tight embedding.
 #'
 #' @param plot_object ggplot object. SPC chart der skal eksporteres.
 #' @param output_path Character. Sti til output PNG fil.
@@ -60,8 +60,10 @@ export_chart_for_typst <- function(
   height_in <- height / 25.4
 
   # Fjern title og subtitle fra plot (vises allerede i PDF layout)
+  # Sæt margin til 0 for tight embedding i PDF
   plot_clean <- plot_object +
-    ggplot2::labs(title = NULL, subtitle = NULL)
+    ggplot2::labs(title = NULL, subtitle = NULL) +
+    ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0, "mm"))
 
   # Eksportér plot
   tryCatch(

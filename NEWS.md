@@ -59,6 +59,7 @@
 **Chart Export Behavior:**
 - Chart PNG embedded in PDF has title/subtitle removed to avoid duplication
 - Title and subtitle are displayed in PDF header section instead
+- Plot margins set to 0mm for tight embedding in PDF layout
 
 **Technical Implementation:**
 - Uses Quarto's bundled Typst CLI (>= v1.4, includes Typst 0.13+)
