@@ -7,5 +7,5 @@
 print_enhanced_startup_summary()
 }
 \description{
-Print enhanced startup performance summary
+Formats and displays startup performance metrics using structured logging.
 }

@@ -55,4 +55,5 @@ log_info(paste("BFHchart call completed in", elapsed, "seconds"))
 \seealso{
 \code{\link{compute_spc_results_bfh}} for facade interface
 \code{\link{map_to_bfh_params}} for parameter preparation
+\code{\link{transform_bfh_output}} for output processing
 }
