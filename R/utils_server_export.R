@@ -421,7 +421,7 @@ generate_pdf_preview <- function(plot_object,
         pdf = temp_pdf,
         page = 1,
         dpi = dpi,
-        filename = temp_png
+        file = temp_png
       )
 
       # Validér PNG blev genereret
