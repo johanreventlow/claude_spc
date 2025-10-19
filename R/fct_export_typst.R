@@ -430,6 +430,48 @@ export_spc_to_typst_pdf <- function(
   dir.create(temp_dir)
   on.exit(unlink(temp_dir, recursive = TRUE), add = TRUE)
 
+  # Kopier Typst template til temp directory
+  # Dette er nødvendigt fordi .typ filen importerer template med relativ path
+  template_source <- system.file(
+    "templates/typst/bfh-template",
+    package = "SPCify"
+  )
+
+  if (!dir.exists(template_source)) {
+    stop("Typst template not found in package installation", call. = FALSE)
+  }
+
+  template_dest <- file.path(temp_dir, "bfh-template")
+  dir.create(template_dest, recursive = TRUE)
+
+  # Kopier alle filer fra template directory
+  template_files <- list.files(template_source, recursive = TRUE, full.names = TRUE)
+  for (file in template_files) {
+    rel_path <- sub(paste0("^", template_source, "/"), "", file)
+    dest_file <- file.path(template_dest, rel_path)
+
+    # Opret subdirectories hvis nødvendigt
+    dest_dir <- dirname(dest_file)
+    if (!dir.exists(dest_dir)) {
+      dir.create(dest_dir, recursive = TRUE)
+    }
+
+    # Kopier fil
+    if (!file.info(file)$isdir) {
+      file.copy(file, dest_file, overwrite = TRUE)
+    }
+  }
+
+  log_debug(
+    component = "[TYPST_EXPORT]",
+    message = "Template kopieret til temp directory",
+    details = list(
+      template_source = template_source,
+      template_dest = template_dest,
+      files_copied = length(template_files)
+    )
+  )
+
   tryCatch(
     {
       # Step 1: Eksportér chart til PNG
