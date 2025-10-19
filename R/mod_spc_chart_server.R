@@ -792,8 +792,12 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         # If Mari font is not available, BFHthemes will automatically use sans fallback
 
         # Simple unified rendering for all plots
-        print(plot_result)
-        invisible(plot_result)
+        # Add zero margin for tight display
+        plot_with_margin <- plot_result +
+          ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0, "mm"))
+
+        print(plot_with_margin)
+        invisible(plot_with_margin)
       }
     )
 
