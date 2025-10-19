@@ -417,12 +417,15 @@ generate_pdf_preview <- function(plot_object,
         )
       )
 
-      pdftools::pdf_render_page(
+      # pdf_render_page() returnerer raw bitmap data, ikke fil
+      bitmap <- pdftools::pdf_render_page(
         pdf = temp_pdf,
         page = 1,
-        dpi = dpi,
-        file = temp_png
+        dpi = dpi
       )
+
+      # Gem bitmap som PNG fil
+      png::writePNG(bitmap, target = temp_png)
 
       # Validér PNG blev genereret
       if (!file.exists(temp_png)) {
