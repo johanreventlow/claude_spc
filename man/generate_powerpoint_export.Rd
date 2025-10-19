@@ -73,7 +73,8 @@ Error handling:
 \examples{
 \dontrun{
 # Basic usage
-plot <- ggplot(mtcars, aes(x = wt, y = mpg)) + geom_point()
+plot <- ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point()
 generate_powerpoint_export(
   plot_object = plot,
   title = "Min SPC Graf",
