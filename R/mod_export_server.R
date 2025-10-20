@@ -101,6 +101,7 @@ mod_export_server <- function(id, app_state) {
     }) %>% shiny::debounce(millis = 500) # Debounce metadata changes for performance
 
     # Export preview renderPlot - displays plot with export metadata
+    # Note: BFHcharts already applies hospital theme automatically via BFHtheme::theme_bfh()
     output$export_preview <- shiny::renderPlot(
       {
         plot <- export_plot()
@@ -121,45 +122,13 @@ mod_export_server <- function(id, app_state) {
           )
         }
 
-        # Apply hospital theme to preview
-        safe_operation(
-          operation_name = "Render export preview with hospital theme",
-          code = {
-            # Apply hospital theme (matches main app styling)
-            if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
-              themed_plot <- applyHospitalTheme(plot, base_size = 14)
-              return(themed_plot)
-            } else {
-              # Fallback: return plot without theme if function not available
-              log_warn(
-                component = "[EXPORT_MODULE]",
-                message = "applyHospitalTheme function not found, using plot without theme"
-              )
-              return(plot)
-            }
-          },
-          fallback = function(e) {
-            log_error(
-              component = "[EXPORT_MODULE]",
-              message = "Failed to apply hospital theme to preview plot",
-              details = list(error = e$message)
-            )
-            # Fallback: show error message in ggplot
-            ggplot2::ggplot() +
-              ggplot2::annotate(
-                "text",
-                x = 0.5,
-                y = 0.5,
-                label = paste("Fejl ved preview:\n", e$message),
-                size = 5,
-                color = "#dc3545"
-              ) +
-              ggplot2::theme_void()
-          },
-          error_type = "processing"
-        )
+        # BFHcharts already includes hospital theme - just return plot directly
+        # Add zero margin for tight display (matches main chart rendering)
+        plot + ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0, "mm"))
       },
-      res = 96 # Standard screen resolution for preview
+      width = 800, # Fixed 16:9 aspect ratio
+      height = 450,
+      res = 96
     )
 
     # Plot availability reactive - for conditional UI
