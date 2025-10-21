@@ -188,7 +188,7 @@ validate_export_inputs <- function(format,
 #' @export
 sanitize_user_input <- function(input_value,
                                 max_length = NULL,
-                                allowed_chars = "A-Za-z0-9_æøåÆØÅ .,-:!?",
+                                allowed_chars = "A-Za-z0-9_æøåÆØÅ .,-:!?*_",
                                 html_escape = TRUE) {
   # Handle NULL input
   if (is.null(input_value)) {
@@ -213,12 +213,19 @@ sanitize_user_input <- function(input_value,
     input_value <- gsub("vbscript:", "", input_value, ignore.case = TRUE)
   }
 
-  # Remove characters not in allowed set
-  pattern <- sprintf("[^%s]", allowed_chars)
-  input_value <- gsub(pattern, "", input_value)
+  # Split by newlines to preserve them during sanitization
+  # Process each line separately, then rejoin
+  lines <- strsplit(input_value, "\n", fixed = TRUE)[[1]]
 
-  # Trim whitespace
-  input_value <- trimws(input_value)
+  # Remove characters not in allowed set from each line (newlines already separated)
+  pattern <- sprintf("[^%s]", allowed_chars)
+  lines <- gsub(pattern, "", lines)
+
+  # Trim leading/trailing whitespace per line
+  lines <- trimws(lines)
+
+  # Remove empty lines but preserve the structure with newlines
+  input_value <- paste(lines, collapse = "\n")
 
   # Truncate to max length if specified
   if (!is.null(max_length) && nchar(input_value) > max_length) {

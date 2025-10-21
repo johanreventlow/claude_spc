@@ -49,10 +49,12 @@ mod_export_server <- function(id, app_state) {
       dept_input <- input$export_department
 
       # Construct chart title with export metadata
+      # Note: title_input may contain line breaks for markdown formatting - preserve them
       title_parts <- c()
 
-      if (!is.null(title_input) && nchar(trimws(title_input)) > 0) {
-        title_parts <- c(title_parts, trimws(title_input))
+      if (!is.null(title_input) && nchar(title_input) > 0) {
+        # Only strip leading/trailing whitespace from entire title, preserve internal line breaks
+        title_parts <- c(title_parts, title_input)
       }
 
       if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
@@ -180,9 +182,10 @@ mod_export_server <- function(id, app_state) {
       spc_stats <- extract_spc_statistics(app_state)
 
       # Apply export metadata to plot (title, department)
+      # Note: title_input may contain line breaks for markdown formatting - preserve them
       title_parts <- c()
-      if (!is.null(title_input) && nchar(trimws(title_input)) > 0) {
-        title_parts <- c(title_parts, trimws(title_input))
+      if (!is.null(title_input) && nchar(title_input) > 0) {
+        title_parts <- c(title_parts, title_input)
       }
       if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
         title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))

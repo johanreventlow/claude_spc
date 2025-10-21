@@ -179,10 +179,18 @@ create_typst_document <- function(
     } else if (is.numeric(value)) {
       return(as.character(value))
     } else if (is.character(value)) {
-      # Escape special characters og wrap i brackets hvis nødvendigt
+      # Escape special characters
       escaped <- gsub("\\\\", "\\\\\\\\", value)
       escaped <- gsub("\"", "\\\\\"", escaped)
+
+      # Konvertér \n til Typst line breaks (\) når bracket = TRUE
+      # I bracket mode (content block) skal \n være faktiske line breaks
       if (bracket) {
+        # Split by \n, escape each line, og join med \ (Typst line break)
+        lines <- strsplit(escaped, "\n", fixed = TRUE)[[1]]
+        # Trim each line for whitespace
+        lines <- trimws(lines)
+        escaped <- paste(lines, collapse = " \\ ")
         return(sprintf("[%s]", escaped))
       } else {
         return(sprintf('"%s"', escaped))

@@ -61,12 +61,14 @@ mod_export_ui <- function(id) {
         # Metadata fields (alle formater) ----
         shiny::div(
           style = "margin-bottom: 15px;",
-          shiny::textInput(
+          shiny::textAreaInput(
             ns("export_title"),
             "Titel:",
             value = "",
             placeholder = "Angiv titel til eksport",
-            width = "100%"
+            width = "100%",
+            rows = 2,
+            resize = "vertical"
           ),
           shiny::tags$small(
             class = "text-muted",
