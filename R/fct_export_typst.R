@@ -201,10 +201,13 @@ create_typst_document <- function(
         # Step 3: Convert placeholders back to Typst bold (*text*)
         escaped <- gsub("##BOLD##([^#]+)##/BOLD##", "*\\1*", escaped)
 
-        # Handle line breaks: Split by \n, trim each line, join with \ (Typst line break)
+        # Handle line breaks for Typst
+        # In Typst content blocks, actual newlines work as line breaks
+        # Just preserve the newlines from the input
         lines <- strsplit(escaped, "\n", fixed = TRUE)[[1]]
         lines <- trimws(lines)
-        escaped <- paste(lines, collapse = " \\ ")
+        # Join with actual newline (not backslash)
+        escaped <- paste(lines, collapse = "\n")
 
         return(sprintf("[%s]", escaped))
       } else {

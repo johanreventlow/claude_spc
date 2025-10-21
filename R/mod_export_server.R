@@ -49,12 +49,14 @@ mod_export_server <- function(id, app_state) {
       dept_input <- input$export_department
 
       # Construct chart title with export metadata
-      # Note: title_input may contain line breaks for markdown formatting - preserve them
+      # Note: title_input may contain line breaks for markdown formatting
       title_parts <- c()
 
       if (!is.null(title_input) && nchar(title_input) > 0) {
-        # Only strip leading/trailing whitespace from entire title, preserve internal line breaks
-        title_parts <- c(title_parts, title_input)
+        # Convert newlines to CommonMark line breaks (backslash + newline)
+        # This is needed for ggplot/marquee to render line breaks correctly
+        title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
+        title_parts <- c(title_parts, title_processed)
       }
 
       if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
@@ -182,10 +184,13 @@ mod_export_server <- function(id, app_state) {
       spc_stats <- extract_spc_statistics(app_state)
 
       # Apply export metadata to plot (title, department)
-      # Note: title_input may contain line breaks for markdown formatting - preserve them
+      # Note: title_input may contain line breaks for markdown formatting
       title_parts <- c()
       if (!is.null(title_input) && nchar(title_input) > 0) {
-        title_parts <- c(title_parts, title_input)
+        # Convert newlines to CommonMark line breaks (backslash + newline)
+        # This is needed for ggplot/marquee to render line breaks correctly in PDF preview
+        title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
+        title_parts <- c(title_parts, title_processed)
       }
       if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
         title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
