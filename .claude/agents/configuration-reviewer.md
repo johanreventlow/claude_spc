@@ -1,3 +1,8 @@
+---
+name: configuration-reviewer
+description: Validates configuration management, secrets handling, and environment-specific settings for security and maintainability
+---
+
 # Configuration Reviewer Agent
 
 ## Purpose

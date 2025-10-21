@@ -1,3 +1,8 @@
+---
+name: logging-reviewer
+description: Validates structured logging consistency, quality, and completeness for observability and debugging
+---
+
 # Logging Reviewer Agent
 
 ## Purpose

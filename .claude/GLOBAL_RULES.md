@@ -2,11 +2,23 @@
 
 This file documents that Claude reads global Claude Code settings from `~/.claude/` in addition to project-specific rules in `CLAUDE.md`.
 
+## 🚀 Automatic Bootstrap (Implemented)
+
+**UserPromptSubmit Hook System:**
+
+Bootstrap sker nu AUTOMATISK ved session start via `~/.claude/hooks/ensure-bootstrap.sh`.
+
+Ingen manuel intervention nødvendig - hooket injicerer bootstrap-instruktioner og auto-approval regler sikrer friction-free indlæsning af:
+- `~/.claude/rules/CLAUDE_BOOTSTRAP_WORKFLOW.md` (definerer hvilke filer skal læses)
+- Relevante globale standarder baseret på projekttype
+- Projekt-specifik `CLAUDE.md`
+
 ## What I Read
 
 Claude automatically reads from:
-1. **Global settings** in `~/.claude/` (system-wide rules, commit policies, git workflows)
-2. **Project settings** in `/CLAUDE.md` (project-specific rules and architecture)
+1. **Bootstrap workflow** - `~/.claude/rules/CLAUDE_BOOTSTRAP_WORKFLOW.md` (definerer hvilke filer skal læses)
+2. **Global settings** in `~/.claude/rules/` (system-wide rules baseret på projekttype)
+3. **Project settings** in `/CLAUDE.md` (project-specific rules and architecture)
 
 ## Combined Approach
 
