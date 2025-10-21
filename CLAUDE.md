@@ -8,6 +8,28 @@ R Shiny applikation til **Statistical Process Control (SPC)**. Anvendes i klinis
 
 ---
 
+## 1.1) Global Claude Code Settings
+
+⚠️ **VIGTIG:** Claude læser regler fra to kilder:
+
+1. **Globale settings** fra `~/.claude/` (gælder på tværs af alle projekter)
+   - Commit message policies
+   - Git workflow regler
+   - Branch safety guidelines
+   - General Claude Code best practices
+
+2. **Projektspecifikke regler** fra denne fil (`CLAUDE.md`)
+   - SPC app arkitektur
+   - Shiny patterns
+   - Testing strategi
+   - Configuration management
+
+**Kombination:** Globale regler først, derefter projektspecifikke regler som kan override/extend.
+
+Se `.claude/GLOBAL_RULES.md` for detaljer.
+
+---
+
 ## 2) Udviklingsprincipper
 
 ### 2.1 Test-First Development (TDD)
