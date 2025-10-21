@@ -566,6 +566,221 @@ R -e "microbenchmark::microbenchmark(
 
 ---
 
+## 10. config_export_config.R - Export Constants
+
+**Formål:** Export-specifikke konstanter for PDF, PNG og PowerPoint eksport.
+
+**Indeholder:**
+- `EXPORT_SIZE_PRESETS` - PNG/PowerPoint størrelses presets
+- `EXPORT_DPI_OPTIONS` - DPI opløsnings valg (72, 96, 150, 300)
+- `EXPORT_ASPECT_RATIO_MIN/MAX` - Tilladt aspect ratio range
+- `EXPORT_TITLE_MAX_LENGTH` - Titel tegn limit (200)
+- `EXPORT_DESCRIPTION_MAX_LENGTH` - Beskrivelse tegn limit (2000)
+- `EXPORT_DEPARTMENT_MAX_LENGTH` - Afdeling tegn limit (100)
+- `EXPORT_FORMAT_OPTIONS` - Tilgængelige formater (PDF, PNG, PowerPoint)
+- `EXPORT_VALIDATION_RULES` - Validerings regler
+
+**Anvendes af:**
+- `mod_export_ui.R` - Export modul UI (dropdowns, inputs)
+- `mod_export_server.R` - Export generation logik
+- `utils_export_validation.R` - Metadata validering
+- `utils_export_filename.R` - Filnavn generation
+
+**Relateret:**
+- `R/fct_export_png.R` - PNG export funktion
+- `R/fct_export_powerpoint.R` - PowerPoint export funktion
+- `R/fct_export_typst.R` - Typst/PDF export funktion
+- `inst/templates/` - Export templates (PowerPoint, Typst)
+
+**Typiske ændringer:**
+```r
+# Ændre PNG størrelse preset:
+EXPORT_SIZE_PRESETS$large <- list(
+  width = 2560,      # Øget fra 1920
+  height = 1920,
+  dpi = 96,
+  unit = "px",
+  label = "Ekstra stor (2560 × 1920 px)"
+)
+
+# Tilføj nyt DPI option:
+EXPORT_DPI_OPTIONS <- c(72, 96, 150, 300, 600)  # 600 for ultra-high quality
+
+# Justér metadata limits:
+EXPORT_TITLE_MAX_LENGTH <- 250  # Øget fra 200
+```
+
+---
+
+## Export Functionality
+
+### Overview
+
+SPCify understøtter export af SPC charts til tre professionelle formater:
+
+- **PDF:** Professionelle rapporter med metadata og hospital branding (via Typst/Quarto)
+- **PNG:** Høj-kvalitets billeder med konfigurerbar størrelse/DPI
+- **PowerPoint:** Slides med hospital template
+
+### PNG Export
+
+**Funktion:** `generate_png_export()` i `R/fct_export_png.R`
+
+**Features:**
+- Konfigurerbare størrelse presets (Lille/Medium/Stor/PowerPoint)
+- Brugerdefinerede dimensioner (pixel/inches)
+- DPI valg (72/96/150/300)
+- Titel og afdeling "brændt ind" i billedet
+- Høj-kvalitets rendering via ggplot2::ggsave()
+- Robust error handling
+
+**Eksempel brug:**
+```r
+generate_png_export(
+  plot_object = my_spc_plot,
+  width_inches = 10,
+  height_inches = 7.5,
+  dpi = 300,
+  output_path = "export.png"
+)
+```
+
+**Performance:** p95 < 2 sekunder (100 datapunkter)
+
+### PowerPoint Export
+
+**Funktion:** `generate_powerpoint_export()` i `R/fct_export_powerpoint.R`
+
+**Features:**
+- Officer package integration
+- Template-baseret slide generation
+- PNG chart embedding
+- Placeholder detection (titel + body)
+- Fallback positioning hvis placeholders ikke findes
+- Hospital template support
+
+**Eksempel brug:**
+```r
+generate_powerpoint_export(
+  plot_object = my_spc_plot,
+  title = "SPC Rapport Q4 2025",
+  template_path = "inst/templates/hospital_presentation.pptx",
+  output_path = "export.pptx"
+)
+```
+
+**Performance:** p95 < 3 sekunder (100 datapunkter)
+
+### PDF Export (Typst)
+
+**Funktion:** `export_spc_to_typst_pdf()` i `R/fct_export_typst.R`
+
+**Workflow:**
+1. Eksportér SPC chart til PNG (300 DPI)
+2. Generer Typst dokument (.typ) med metadata
+3. Kompilér til PDF via Quarto CLI
+4. Cleanup temp filer
+
+**Features:**
+- Hospital branded template (bfh-diagram2)
+- SPC statistikker (Anhøj rules) tabel
+- Metadata felter (titel, afdeling, analyse, data definition)
+- Danske tegn support (æøå)
+- Professional A4 landscape format
+
+**Helper funktioner:**
+- `export_chart_for_typst()` - PNG export til Typst embedding
+- `create_typst_document()` - Generer .typ fil fra R data
+- `compile_typst_to_pdf()` - Kompilér via Quarto
+
+**Krav:**
+- Quarto CLI >= 1.4 installeret (`quarto --version`)
+- Eller kun på Posit Cloud (pre-installed)
+
+**Eksempel brug:**
+```r
+export_spc_to_typst_pdf(
+  plot_object = my_spc_plot,
+  metadata = list(
+    hospital = "Bispebjerg og Frederiksberg Hospital",
+    department = "Kardiologi",
+    title = "Medicinsikkert Hospital - Scanning",
+    analysis = "Positive trend detected...",
+    data_definition = "Måling af scanning compliance..."
+  ),
+  spc_statistics = list(
+    runs_expected = 12, runs_actual = 15,
+    crossings_expected = 16, crossings_actual = 14,
+    outliers_expected = 0, outliers_actual = 2
+  ),
+  output_path = "export.pdf"
+)
+```
+
+**Performance:** p95 < 5 sekunder (100 datapunkter, Quarto >= 1.4)
+
+### Templates
+
+**PowerPoint:** `inst/templates/hospital_presentation.pptx`
+- Hospital branding
+- Title + body placeholders
+- Optimeret til 16:9 format
+
+**Typst:** `inst/templates/typst/bfh-template/`
+- `bfh-template.typ` - Main template med `bfh-diagram2()` function
+- `fonts/` - Mari og Arial fonts
+- `images/` - Hospital logos og branding assets
+- Se `inst/templates/typst/README.md` for komplet dokumentation
+
+### Export Module Integration
+
+**UI:** `mod_export_ui()` i `R/mod_export_ui.R`
+- Format selection (PDF/PNG/PowerPoint)
+- Format-specific metadata fields
+- Live preview (500ms debounce)
+- Size/DPI/template options
+- Download button
+
+**Server:** `mod_export_server()` i `R/mod_export_server.R`
+- Preview reactive (with debounce)
+- Download handler
+- Format-specific logic
+- Error handling via safe_operation()
+- Logging af export events
+
+### Live Preview
+
+Preview updates automatisk når bruger ændrer metadata:
+- Titel ændring → Preview opdateres
+- Afdeling ændring → Preview opdateres
+- Debouncing (500ms) for performance
+- Placeholder når data ikke tilgængelig
+
+### Troubleshooting
+
+**PDF export fails:**
+- Verificer Quarto installeret: `quarto --version`
+- Posit Cloud: Altid tilgængelig (pre-installed)
+- Local development: Installér fra https://quarto.org
+- Check logs: `~/.local/share/rstudio/logs/`
+
+**PowerPoint template incompatibel:**
+- Verificer placeholders eksisterer
+- Inspicer template: `officer::layout_summary(officer::read_pptx("template.pptx"))`
+- Fallback positioning bruges hvis placeholders ikke findes
+
+**PNG dimensioner forkert:**
+- Verificer DPI beregning: `width_px = width_in × DPI`
+- Check aspect ratio warnings
+- Test med kendt værdi (fx 10 × 7.5 in @ 96 DPI = 960 × 720 px)
+
+**Danske tegn ikke renderet i PDF:**
+- Verificer Typst templates har `lang: "da"`
+- Check fonts er Arial eller Mari (inkluderet i templates)
+- Posit Cloud: Altid supporteret
+
+---
+
 ## Troubleshooting
 
 ### "Config værdi ikke tilgængelig i runtime"
