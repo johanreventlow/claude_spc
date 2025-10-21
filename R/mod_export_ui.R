@@ -65,7 +65,7 @@ mod_export_ui <- function(id) {
             ns("export_title"),
             "Titel:",
             value = "",
-            placeholder = "Angiv titel til eksport",
+            placeholder = "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**",
             width = "100%",
             rows = 2,
             resize = "vertical"

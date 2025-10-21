@@ -63,11 +63,12 @@ mod_export_server <- function(id, app_state) {
         title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
       }
 
-      # If no metadata, use existing plot title or empty
+      # If no metadata, use default instructional title
       export_title <- if (length(title_parts) > 0) {
         paste(title_parts, collapse = " ")
       } else {
-        "" # Empty title if no metadata
+        # Default title when field is empty - instructs user what to write
+        "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
       }
 
       # Clone plot and update title
@@ -77,7 +78,7 @@ mod_export_server <- function(id, app_state) {
           # Clone plot to avoid modifying original
           preview_plot <- base_plot
 
-          # Update plot title with export metadata
+          # Update plot title with export metadata (or default instructional text)
           preview_plot <- preview_plot + ggplot2::labs(title = export_title)
 
           log_debug(
@@ -198,10 +199,11 @@ mod_export_server <- function(id, app_state) {
       export_title <- if (length(title_parts) > 0) {
         paste(title_parts, collapse = " ")
       } else {
-        ""
+        # Default title when field is empty - instructs user what to write
+        "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
       }
 
-      # Clone plot and update title
+      # Clone plot and update title (with default instructional text if empty)
       preview_plot <- base_plot + ggplot2::labs(title = export_title)
 
       # Apply hospital theme
