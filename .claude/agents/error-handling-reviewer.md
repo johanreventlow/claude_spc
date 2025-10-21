@@ -1,3 +1,8 @@
+---
+name: error-handling-reviewer
+description: Analyzes error handling patterns for consistency, completeness, and robustness with appropriate user feedback
+---
+
 # Error Handling Reviewer Agent
 
 ## Purpose
