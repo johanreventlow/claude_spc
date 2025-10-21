@@ -179,18 +179,33 @@ create_typst_document <- function(
     } else if (is.numeric(value)) {
       return(as.character(value))
     } else if (is.character(value)) {
-      # Escape special characters
+      # Escape special characters (BEFORE markdown conversion)
+      # Only escape backslashes and quotes, NOT asterisks (needed for markdown)
       escaped <- gsub("\\\\", "\\\\\\\\", value)
       escaped <- gsub("\"", "\\\\\"", escaped)
 
-      # Konvertér \n til Typst line breaks (\) når bracket = TRUE
-      # I bracket mode (content block) skal \n være faktiske line breaks
+      # Convert CommonMark markdown to Typst markdown when in bracket mode
+      # CommonMark (ggplot/marquee) -> Typst conversion:
+      #   **bold** -> *bold*
+      #   *italic* -> _italic_
+      #   _italic_ -> _italic_ (same)
       if (bracket) {
-        # Split by \n, escape each line, og join med \ (Typst line break)
+        # Step 1: Protect already-converted bold by temporarily replacing * with placeholder
+        # Convert CommonMark bold (**text**) to placeholder (##BOLD##text##/BOLD##)
+        escaped <- gsub("\\*\\*([^*]+)\\*\\*", "##BOLD##\\1##/BOLD##", escaped)
+
+        # Step 2: Convert CommonMark italic (*text*) to Typst italic (_text_)
+        # Now we can safely match single * without conflicting with bold
+        escaped <- gsub("\\*([^*]+?)\\*", "_\\1_", escaped)
+
+        # Step 3: Convert placeholders back to Typst bold (*text*)
+        escaped <- gsub("##BOLD##([^#]+)##/BOLD##", "*\\1*", escaped)
+
+        # Handle line breaks: Split by \n, trim each line, join with \ (Typst line break)
         lines <- strsplit(escaped, "\n", fixed = TRUE)[[1]]
-        # Trim each line for whitespace
         lines <- trimws(lines)
         escaped <- paste(lines, collapse = " \\ ")
+
         return(sprintf("[%s]", escaped))
       } else {
         return(sprintf('"%s"', escaped))
