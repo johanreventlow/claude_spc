@@ -202,12 +202,12 @@ create_typst_document <- function(
         escaped <- gsub("##BOLD##([^#]+)##/BOLD##", "*\\1*", escaped)
 
         # Handle line breaks for Typst
-        # In Typst content blocks, actual newlines work as line breaks
-        # Just preserve the newlines from the input
+        # In Typst, line breaks need explicit markup: backslash followed by space or newline
+        # We use "\ " (backslash-space) for hard line breaks
         lines <- strsplit(escaped, "\n", fixed = TRUE)[[1]]
         lines <- trimws(lines)
-        # Join with actual newline (not backslash)
-        escaped <- paste(lines, collapse = "\n")
+        # Join with backslash-space (Typst hard line break operator)
+        escaped <- paste(lines, collapse = " \\\n")
 
         return(sprintf("[%s]", escaped))
       } else {
