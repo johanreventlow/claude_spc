@@ -32,17 +32,15 @@ mod_export_server <- function(id, app_state) {
 
     # PREVIEW GENERATION ======================================================
 
-    # Export plot reactive - generates plot with export metadata applied
+    # Export plot reactive - regenerates plot with export-specific dimensions
+    # Issue #61: Separate plot generation with context "export_preview" (800×450px)
+    # Issue #62: Cache isolated from analysis context
     # Debounced to prevent excessive re-rendering when user types metadata
     export_plot <- shiny::reactive({
       # Defensive checks - require valid app_state and data
       shiny::req(app_state)
       shiny::req(app_state$data$current_data)
       shiny::req(app_state$columns$mappings$y_column)
-
-      # Get existing plot from visualization state
-      base_plot <- app_state$visualization$plot_object
-      shiny::req(base_plot)
 
       # Read export metadata inputs (triggers reactive dependency)
       title_input <- input$export_title
@@ -71,21 +69,52 @@ mod_export_server <- function(id, app_state) {
         "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
       }
 
-      # Clone plot and update title
+      # M12: Regenerate plot with export-specific dimensions instead of cloning
+      # This ensures correct label placement for export preview (800×450px)
       safe_operation(
         operation_name = "Generate export preview plot",
         code = {
-          # Clone plot to avoid modifying original
-          preview_plot <- base_plot
+          # Get export preview dimensions (800×450px fixed)
+          export_dims <- get_context_dimensions("export_preview")
 
-          # Update plot title with export metadata (or default instructional text)
-          preview_plot <- preview_plot + ggplot2::labs(title = export_title)
+          # Get chart configuration from app_state
+          # These inputs should match what was used on Analyse-side
+          config <- list(
+            x_col = app_state$columns$mappings$x_column,
+            y_col = app_state$columns$mappings$y_column,
+            n_col = app_state$columns$mappings$n_column
+          )
+
+          # Regenerate plot with export context and dimensions
+          spc_result <- generateSPCPlot(
+            data = app_state$data$current_data,
+            config = config,
+            chart_type = app_state$columns$mappings$chart_type,
+            target_value = app_state$columns$mappings$target_value,
+            target_text = app_state$columns$mappings$target_text,
+            centerline_value = app_state$columns$mappings$centerline_value,
+            show_phases = !is.null(app_state$columns$mappings$skift_column),
+            skift_column = app_state$columns$mappings$skift_column,
+            frys_column = app_state$columns$mappings$frys_column,
+            chart_title_reactive = export_title, # Use export title
+            y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
+            kommentar_column = app_state$columns$mappings$kommentar_column,
+            base_size = 14, # Fixed base_size for export preview
+            viewport_width = export_dims$width_px,
+            viewport_height = export_dims$height_px,
+            plot_context = "export_preview" # M12: Export preview context
+          )
+
+          preview_plot <- spc_result$plot
 
           log_debug(
             component = "[EXPORT_MODULE]",
-            message = "Export preview plot generated with metadata",
+            message = "Export preview plot regenerated with export context",
             details = list(
               title = export_title,
+              context = "export_preview",
+              width = export_dims$width_px,
+              height = export_dims$height_px,
               has_title = nchar(trimws(title_input %||% "")) > 0,
               has_dept = nchar(trimws(dept_input %||% "")) > 0
             )
