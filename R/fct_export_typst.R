@@ -527,7 +527,7 @@ export_spc_to_typst_pdf <- function(
         # hospital = metadata$hospital %||% "Bispebjerg og Frederiksberg Hospital",
         hospital = "Bispebjerg og Frederiksberg Hospital",
         department = metadata$department,
-        title = metadata$title %||% "SPC Chart",
+        title = metadata$title %||% "Skriv en kort titel, eller tilføj en konklusion,\n**der tydeligt opsummerer, hvad grafen fortæller**",
         analysis = metadata$analysis,
         details = metadata$details,
         chart_image_path = basename(chart_png), # Relative path fra .typ fil
