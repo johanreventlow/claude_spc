@@ -40,8 +40,19 @@ mod_export_server <- function(id, app_state) {
       # Defensive checks - require valid app_state and data
       shiny::req(app_state)
       shiny::req(app_state$data$current_data)
+      shiny::req(app_state$columns$mappings$x_column)
       shiny::req(app_state$columns$mappings$y_column)
       shiny::req(app_state$columns$mappings$chart_type)
+
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "export_plot() reactive executing",
+        details = list(
+          x_col = app_state$columns$mappings$x_column,
+          y_col = app_state$columns$mappings$y_column,
+          chart_type = app_state$columns$mappings$chart_type
+        )
+      )
 
       # Read export metadata inputs (triggers reactive dependency)
       title_input <- input$export_title
@@ -139,7 +150,18 @@ mod_export_server <- function(id, app_state) {
     # Note: BFHcharts already applies hospital theme automatically via BFHtheme::theme_bfh()
     output$export_preview <- shiny::renderPlot(
       {
+        log_debug(
+          component = "[EXPORT_MODULE]",
+          message = "renderPlot for export_preview starting"
+        )
+
         plot <- export_plot()
+
+        log_debug(
+          component = "[EXPORT_MODULE]",
+          message = "export_plot() returned",
+          details = list(is_null = is.null(plot), has_data = !is.null(plot$data))
+        )
 
         if (is.null(plot)) {
           # Display placeholder using ggplot2 for consistency
