@@ -41,6 +41,7 @@ mod_export_server <- function(id, app_state) {
       shiny::req(app_state)
       shiny::req(app_state$data$current_data)
       shiny::req(app_state$columns$mappings$y_column)
+      shiny::req(app_state$columns$mappings$chart_type)
 
       # Read export metadata inputs (triggers reactive dependency)
       title_input <- input$export_title
@@ -488,6 +489,13 @@ mod_export_server <- function(id, app_state) {
 
               # M13: Regenerate plot with export_png context and actual export dimensions
               # This ensures labels are placed correctly for the final export size
+
+              # Validate required mappings exist
+              if (is.null(app_state$columns$mappings$chart_type) ||
+                length(app_state$columns$mappings$chart_type) == 0) {
+                stop("Chart type er ikke defineret. Gå til Analyse-siden og vælg charttype.")
+              }
+
               config <- list(
                 x_col = app_state$columns$mappings$x_column,
                 y_col = app_state$columns$mappings$y_column,
@@ -592,6 +600,13 @@ mod_export_server <- function(id, app_state) {
               }
 
               # M13: Regenerate plot with export_pptx context (9×6.5 inches @ 96 DPI)
+
+              # Validate required mappings exist
+              if (is.null(app_state$columns$mappings$chart_type) ||
+                length(app_state$columns$mappings$chart_type) == 0) {
+                stop("Chart type er ikke defineret. Gå til Analyse-siden og vælg charttype.")
+              }
+
               pptx_dims <- get_context_dimensions("export_pptx")
 
               config <- list(
