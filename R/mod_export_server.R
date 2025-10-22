@@ -37,6 +37,22 @@ mod_export_server <- function(id, app_state) {
     # Issue #62: Cache isolated from analysis context
     # Debounced to prevent excessive re-rendering when user types metadata
     export_plot <- shiny::reactive({
+      # Log BEFORE req() checks to diagnose issues
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "export_plot() reactive called - checking prerequisites",
+        details = list(
+          has_app_state = !is.null(app_state),
+          has_data = !is.null(app_state$data$current_data),
+          has_x_col = !is.null(app_state$columns$mappings$x_column),
+          has_y_col = !is.null(app_state$columns$mappings$y_column),
+          has_chart_type = !is.null(app_state$columns$mappings$chart_type),
+          x_col_value = app_state$columns$mappings$x_column %||% "NULL",
+          y_col_value = app_state$columns$mappings$y_column %||% "NULL",
+          chart_type_value = app_state$columns$mappings$chart_type %||% "NULL"
+        )
+      )
+
       # Defensive checks - require valid app_state and data
       shiny::req(app_state)
       shiny::req(app_state$data$current_data)
@@ -46,12 +62,7 @@ mod_export_server <- function(id, app_state) {
 
       log_debug(
         component = "[EXPORT_MODULE]",
-        message = "export_plot() reactive executing",
-        details = list(
-          x_col = app_state$columns$mappings$x_column,
-          y_col = app_state$columns$mappings$y_column,
-          chart_type = app_state$columns$mappings$chart_type
-        )
+        message = "export_plot() reactive - all req() checks passed, generating plot"
       )
 
       # Read export metadata inputs (triggers reactive dependency)
