@@ -59,9 +59,12 @@ mod_export_server <- function(id, app_state) {
       shiny::req(app_state$columns$mappings$x_column)
       shiny::req(app_state$columns$mappings$y_column)
       shiny::req(app_state$columns$mappings$chart_type)
-      # CRITICAL: Wait for Analyse-side plot to be generated first
-      # This prevents race condition where export_plot() runs before autodetection completes
-      shiny::req(app_state$visualization$plot_object)
+
+      # NOTE: We do NOT require app_state$visualization$plot_object here because:
+      # 1. export_plot() regenerates independently (doesn't clone Analyse-side plot)
+      # 2. All required data is in app_state$columns$mappings (set by autodetection)
+      # 3. Requiring plot_object would block PNG/PPTX preview when user navigates
+      #    directly to Export-side before visiting Analyse-side
 
       log_debug(
         component = "[EXPORT_MODULE]",
@@ -69,8 +72,9 @@ mod_export_server <- function(id, app_state) {
       )
 
       # Read export metadata inputs (triggers reactive dependency)
-      title_input <- input$export_title
-      dept_input <- input$export_department
+      # Note: Use %||% to ensure reactive dependency is tracked even if NULL
+      title_input <- input$export_title %||% ""
+      dept_input <- input$export_department %||% ""
 
       # Construct chart title with export metadata
       # Note: title_input may contain line breaks for markdown formatting
