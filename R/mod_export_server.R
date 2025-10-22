@@ -59,6 +59,9 @@ mod_export_server <- function(id, app_state) {
       shiny::req(app_state$columns$mappings$x_column)
       shiny::req(app_state$columns$mappings$y_column)
       shiny::req(app_state$columns$mappings$chart_type)
+      # CRITICAL: Wait for Analyse-side plot to be generated first
+      # This prevents race condition where export_plot() runs before autodetection completes
+      shiny::req(app_state$visualization$plot_object)
 
       log_debug(
         component = "[EXPORT_MODULE]",
