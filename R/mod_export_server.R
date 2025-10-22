@@ -188,6 +188,146 @@ mod_export_server <- function(id, app_state) {
       )
     }) %>% shiny::debounce(millis = 500) # Debounce metadata changes for performance
 
+    # PDF EXPORT PLOT GENERATION ==============================================
+
+    # PDF export reactive - regenerates plot with PDF-specific dimensions
+    # This ensures correct label placement for high-res print output
+    # (200×120mm @ 300 DPI = ~2362×1417px)
+    pdf_export_plot <- shiny::reactive({
+      # Log BEFORE req() checks to diagnose issues
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "pdf_export_plot() reactive called - checking prerequisites"
+      )
+
+      # Defensive checks - require valid app_state and data
+      # Same checks as export_plot() but for PDF context
+      if (is.null(app_state)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: app_state is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$data$current_data)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: current_data is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$x_column)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: x_column is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$y_column)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: y_column is NULL")
+        shiny::req(FALSE)
+      }
+
+      # chart_type can be NULL at startup - use default "run" as fallback
+      chart_type <- app_state$columns$mappings$chart_type %||% "run"
+
+      if (is.null(chart_type) || nchar(trimws(chart_type)) == 0) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: chart_type is empty after fallback")
+        shiny::req(FALSE)
+      }
+
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "pdf_export_plot() reactive - all req() checks passed, generating plot"
+      )
+
+      # Read export metadata inputs (triggers reactive dependency)
+      title_input <- input$export_title %||% ""
+      dept_input <- input$export_department %||% ""
+
+      # Construct chart title with export metadata
+      # Note: title_input may contain line breaks for markdown formatting
+      title_parts <- c()
+
+      if (!is.null(title_input) && nchar(title_input) > 0) {
+        # Convert newlines to CommonMark line breaks (backslash + newline)
+        title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
+        title_parts <- c(title_parts, title_processed)
+      }
+
+      if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
+        title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
+      }
+
+      # If no metadata, use default instructional title
+      export_title <- if (length(title_parts) > 0) {
+        paste(title_parts, collapse = " ")
+      } else {
+        # Default title when field is empty - instructs user what to write
+        "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
+      }
+
+      # Regenerate plot with PDF-specific dimensions
+      # This ensures correct label placement for high-res print output
+      safe_operation(
+        operation_name = "Generate PDF export plot",
+        code = {
+          # Get PDF export dimensions (200×120mm @ 300 DPI = ~2362×1417px)
+          pdf_dims <- get_context_dimensions("export_pdf")
+
+          # Get chart configuration from app_state
+          config <- list(
+            x_col = app_state$columns$mappings$x_column,
+            y_col = app_state$columns$mappings$y_column,
+            n_col = app_state$columns$mappings$n_column
+          )
+
+          # Regenerate plot with PDF export context and dimensions
+          spc_result <- generateSPCPlot(
+            data = app_state$data$current_data,
+            config = config,
+            chart_type = chart_type,
+            target_value = app_state$columns$mappings$target_value,
+            target_text = app_state$columns$mappings$target_text,
+            centerline_value = app_state$columns$mappings$centerline_value,
+            show_phases = !is.null(app_state$columns$mappings$skift_column),
+            skift_column = app_state$columns$mappings$skift_column,
+            frys_column = app_state$columns$mappings$frys_column,
+            chart_title_reactive = export_title, # Use export title
+            y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
+            kommentar_column = app_state$columns$mappings$kommentar_column,
+            base_size = 14, # Fixed base_size for PDF export
+            viewport_width = pdf_dims$width_px,
+            viewport_height = pdf_dims$height_px,
+            plot_context = "export_pdf" # PDF export context
+          )
+
+          pdf_plot <- spc_result$plot
+
+          log_debug(
+            component = "[EXPORT_MODULE]",
+            message = "PDF export plot regenerated with export_pdf context",
+            details = list(
+              title = export_title,
+              context = "export_pdf",
+              width = pdf_dims$width_px,
+              height = pdf_dims$height_px,
+              dpi = pdf_dims$dpi,
+              has_title = nchar(trimws(title_input %||% "")) > 0,
+              has_dept = nchar(trimws(dept_input %||% "")) > 0
+            )
+          )
+
+          return(pdf_plot)
+        },
+        fallback = function(e) {
+          log_error(
+            component = "[EXPORT_MODULE]",
+            message = "Failed to generate PDF export plot",
+            details = list(error = e$message)
+          )
+          return(NULL)
+        },
+        error_type = "processing"
+      )
+    }) %>% shiny::debounce(millis = 1000) # Longer debounce for PDF (more expensive to render)
+
+    # EXPORT PREVIEW RENDERING ================================================
+
     # Export preview renderPlot - displays plot with export metadata
     # Note: BFHcharts already applies hospital theme automatically via BFHtheme::theme_bfh()
     output$export_preview <- shiny::renderPlot(
@@ -253,11 +393,13 @@ mod_export_server <- function(id, app_state) {
       shiny::req(app_state$data$current_data)
       shiny::req(app_state$columns$mappings$y_column)
 
-      # Get existing plot from visualization state
-      base_plot <- app_state$visualization$plot_object
+      # Get plot regenerated with PDF export context (200×120mm @ 300 DPI)
+      # This ensures correct label placement for high-res print output
+      base_plot <- pdf_export_plot()
       shiny::req(base_plot)
 
       # Read export metadata inputs (triggers reactive dependency)
+      # Note: title and department are already embedded in pdf_export_plot()
       title_input <- input$export_title
       dept_input <- input$export_department
       analysis_input <- input$pdf_improvement
@@ -278,32 +420,10 @@ mod_export_server <- function(id, app_state) {
       # Extract SPC statistics
       spc_stats <- extract_spc_statistics(app_state)
 
-      # Apply export metadata to plot (title, department)
-      # Note: title_input may contain line breaks for markdown formatting
-      title_parts <- c()
-      if (!is.null(title_input) && nchar(title_input) > 0) {
-        # Convert newlines to CommonMark line breaks (backslash + newline)
-        # This is needed for ggplot/marquee to render line breaks correctly in PDF preview
-        title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
-        title_parts <- c(title_parts, title_processed)
-      }
-      if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
-        title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
-      }
-      export_title <- if (length(title_parts) > 0) {
-        paste(title_parts, collapse = " ")
-      } else {
-        # Default title when field is empty - instructs user what to write
-        "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
-      }
-
-      # Clone plot and update title (with default instructional text if empty)
-      preview_plot <- base_plot + ggplot2::labs(title = export_title)
-
-      # Apply hospital theme
-      if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
-        preview_plot <- applyHospitalTheme(preview_plot, base_size = 14)
-      }
+      # NOTE: No need to update title or apply theme here
+      # - pdf_export_plot() already has title and department embedded
+      # - BFHcharts already applies theme via BFHtheme::theme_bfh()
+      preview_plot <- base_plot
 
       # Generate PDF preview PNG
       safe_operation(
@@ -414,21 +534,17 @@ mod_export_server <- function(id, app_state) {
           code = {
             # Export logic based on format
             if (format == "pdf") {
-              # PDF requires existing plot from visualization state
-              shiny::req(app_state$visualization$plot_object)
-
-              # PDF uses export_plot() reactive for preview consistency
-              plot <- export_plot()
+              # PDF uses pdf_export_plot() reactive with export_pdf context
+              # This ensures correct label placement for high-res print (200×120mm @ 300 DPI)
+              plot <- pdf_export_plot()
 
               # Validate plot exists
               if (is.null(plot)) {
                 stop("Ingen plot tilgængeligt til eksport")
               }
 
-              # Apply hospital theme for consistent export styling
-              if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
-                plot <- applyHospitalTheme(plot, base_size = 14)
-              }
+              # NOTE: No need to apply theme - pdf_export_plot() already handles it
+              # BFHcharts applies theme via BFHtheme::theme_bfh()
 
               # PDF export via Typst/Quarto
               log_debug(
