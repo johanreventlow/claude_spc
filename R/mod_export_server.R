@@ -54,11 +54,31 @@ mod_export_server <- function(id, app_state) {
       )
 
       # Defensive checks - require valid app_state and data
-      shiny::req(app_state)
-      shiny::req(app_state$data$current_data)
-      shiny::req(app_state$columns$mappings$x_column)
-      shiny::req(app_state$columns$mappings$y_column)
-      shiny::req(app_state$columns$mappings$chart_type)
+      # Log each check individually to identify which one blocks
+      if (is.null(app_state)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: app_state is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$data$current_data)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: current_data is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$x_column)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: x_column is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$y_column)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: y_column is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$chart_type)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: chart_type is NULL")
+        shiny::req(FALSE)
+      }
 
       # NOTE: We do NOT require app_state$visualization$plot_object here because:
       # 1. export_plot() regenerates independently (doesn't clone Analyse-side plot)
