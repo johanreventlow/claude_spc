@@ -422,9 +422,10 @@ mod_export_server <- function(id, app_state) {
               )
             } else if (format == "png") {
               # PNG export - full implementation with size presets and DPI
+              # M13: Regenerate plot with export_png context for correct label placement
               log_debug(
                 component = "[EXPORT_MODULE]",
-                message = "PNG export with configurable size/DPI"
+                message = "PNG export with configurable size/DPI and context-aware generation"
               )
 
               # Get DPI from input (default 96)
@@ -480,12 +481,50 @@ mod_export_server <- function(id, app_state) {
                 title = input$export_title,
                 department = input$export_department,
                 width = round(width_inches * dpi),
-                height = round(height_inches * dpi)
+                height = round(width_inches * dpi)
+              )
+
+              # M13: Regenerate plot with export_png context and actual export dimensions
+              # This ensures labels are placed correctly for the final export size
+              config <- list(
+                x_col = app_state$columns$mappings$x_column,
+                y_col = app_state$columns$mappings$y_column,
+                n_col = app_state$columns$mappings$n_column
+              )
+
+              # Build export title from inputs
+              title_parts <- c()
+              if (!is.null(input$export_title) && nchar(input$export_title) > 0) {
+                title_processed <- gsub("\n", "\\\n", input$export_title, fixed = TRUE)
+                title_parts <- c(title_parts, title_processed)
+              }
+              if (!is.null(input$export_department) && nchar(trimws(input$export_department)) > 0) {
+                title_parts <- c(title_parts, paste0("(", trimws(input$export_department), ")"))
+              }
+              export_title <- if (length(title_parts) > 0) paste(title_parts, collapse = " ") else NULL
+
+              png_plot_result <- generateSPCPlot(
+                data = app_state$data$current_data,
+                config = config,
+                chart_type = app_state$columns$mappings$chart_type,
+                target_value = app_state$columns$mappings$target_value,
+                target_text = app_state$columns$mappings$target_text,
+                centerline_value = app_state$columns$mappings$centerline_value,
+                show_phases = !is.null(app_state$columns$mappings$skift_column),
+                skift_column = app_state$columns$mappings$skift_column,
+                frys_column = app_state$columns$mappings$frys_column,
+                chart_title_reactive = export_title,
+                y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
+                kommentar_column = app_state$columns$mappings$kommentar_column,
+                base_size = 14,
+                viewport_width = round(width_inches * dpi), # PNG export width in pixels
+                viewport_height = round(height_inches * dpi), # PNG export height in pixels
+                plot_context = "export_png" # M13: PNG export context
               )
 
               # Generate PNG using dedicated export function
               result <- generate_png_export(
-                plot_object = plot,
+                plot_object = png_plot_result$plot,
                 width_inches = width_inches,
                 height_inches = height_inches,
                 dpi = dpi,
@@ -505,9 +544,10 @@ mod_export_server <- function(id, app_state) {
               )
             } else if (format == "pptx") {
               # PowerPoint export - full implementation using officer
+              # M13: Regenerate plot with export_pptx context for correct label placement
               log_debug(
                 component = "[EXPORT_MODULE]",
-                message = "PowerPoint export with officer package"
+                message = "PowerPoint export with officer package and context-aware generation"
               )
 
               # Validate export inputs before generating
@@ -549,9 +589,37 @@ mod_export_server <- function(id, app_state) {
                 )
               }
 
+              # M13: Regenerate plot with export_pptx context (9×6.5 inches @ 96 DPI)
+              pptx_dims <- get_context_dimensions("export_pptx")
+
+              config <- list(
+                x_col = app_state$columns$mappings$x_column,
+                y_col = app_state$columns$mappings$y_column,
+                n_col = app_state$columns$mappings$n_column
+              )
+
+              pptx_plot_result <- generateSPCPlot(
+                data = app_state$data$current_data,
+                config = config,
+                chart_type = app_state$columns$mappings$chart_type,
+                target_value = app_state$columns$mappings$target_value,
+                target_text = app_state$columns$mappings$target_text,
+                centerline_value = app_state$columns$mappings$centerline_value,
+                show_phases = !is.null(app_state$columns$mappings$skift_column),
+                skift_column = app_state$columns$mappings$skift_column,
+                frys_column = app_state$columns$mappings$frys_column,
+                chart_title_reactive = export_title,
+                y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
+                kommentar_column = app_state$columns$mappings$kommentar_column,
+                base_size = 14,
+                viewport_width = pptx_dims$width_px, # PowerPoint dimensions
+                viewport_height = pptx_dims$height_px,
+                plot_context = "export_pptx" # M13: PowerPoint export context
+              )
+
               # Generate PowerPoint using dedicated export function
               result <- generate_powerpoint_export(
-                plot_object = plot,
+                plot_object = pptx_plot_result$plot,
                 title = export_title,
                 template_path = template_path,
                 output_path = file

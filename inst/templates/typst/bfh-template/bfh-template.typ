@@ -255,7 +255,7 @@ show table.cell: it => {
             ) +
           align(bottom,
             par(
-              leading: 0.15em,
+              leading: 0.4em,
                 text(rgb("fff"), 
                 size: 38pt,
                 title
