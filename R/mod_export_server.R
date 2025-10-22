@@ -341,28 +341,30 @@ mod_export_server <- function(id, app_state) {
         # Defensive checks - validate app_state and data
         shiny::req(app_state)
         shiny::req(app_state$data$current_data)
-        shiny::req(app_state$visualization$plot_object)
 
         format <- input$export_format %||% "pdf"
 
         safe_operation(
           operation_name = paste("Export", toupper(format)),
           code = {
-            # Get plot with export metadata applied
-            plot <- export_plot()
-
-            # Validate plot exists
-            if (is.null(plot)) {
-              stop("Ingen plot tilgængeligt til eksport")
-            }
-
-            # Apply hospital theme for consistent export styling
-            if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
-              plot <- applyHospitalTheme(plot, base_size = 14)
-            }
-
             # Export logic based on format
             if (format == "pdf") {
+              # PDF requires existing plot from visualization state
+              shiny::req(app_state$visualization$plot_object)
+
+              # PDF uses export_plot() reactive for preview consistency
+              plot <- export_plot()
+
+              # Validate plot exists
+              if (is.null(plot)) {
+                stop("Ingen plot tilgængeligt til eksport")
+              }
+
+              # Apply hospital theme for consistent export styling
+              if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
+                plot <- applyHospitalTheme(plot, base_size = 14)
+              }
+
               # PDF export via Typst/Quarto
               log_debug(
                 component = "[EXPORT_MODULE]",
