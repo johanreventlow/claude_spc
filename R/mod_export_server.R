@@ -75,8 +75,11 @@ mod_export_server <- function(id, app_state) {
         shiny::req(FALSE)
       }
 
-      if (is.null(app_state$columns$mappings$chart_type)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: chart_type is NULL")
+      # chart_type can be NULL at startup - use default "run" as fallback
+      chart_type <- app_state$columns$mappings$chart_type %||% "run"
+
+      if (is.null(chart_type) || nchar(trimws(chart_type)) == 0) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: chart_type is empty after fallback")
         shiny::req(FALSE)
       }
 
@@ -136,10 +139,11 @@ mod_export_server <- function(id, app_state) {
           )
 
           # Regenerate plot with export context and dimensions
+          # Use local chart_type variable (with fallback to "run")
           spc_result <- generateSPCPlot(
             data = app_state$data$current_data,
             config = config,
-            chart_type = app_state$columns$mappings$chart_type,
+            chart_type = chart_type,
             target_value = app_state$columns$mappings$target_value,
             target_text = app_state$columns$mappings$target_text,
             centerline_value = app_state$columns$mappings$centerline_value,
