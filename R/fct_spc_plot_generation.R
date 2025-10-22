@@ -468,16 +468,28 @@ execute_qic_call <- function(qic_args, chart_type, config, qic_cache = NULL) {
 #' visualization occurs.
 #'
 #' @inheritParams generateSPCPlot
+#' @param plot_context Character. Plot context identifier (default "analysis").
+#'   Valid contexts: "analysis", "export_preview", "export_pdf", "export_png", "export_pptx".
+#'   Context determines cache isolation and enables context-aware label placement.
+#'   Use PLOT_CONTEXTS constants from config_plot_contexts.R.
 #' @return List with plot and qic_data (from BFHcharts backend)
 #' @export
-generateSPCPlot_with_backend <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL, target_text = NULL, qic_cache = NULL) {
+generateSPCPlot_with_backend <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL, target_text = NULL, qic_cache = NULL, plot_context = "analysis") {
   # Supported chart types for BFHcharts
   supported_types <- c("run", "i", "p", "c", "u")
 
+  # Validate plot context
+  validate_plot_context(plot_context, stop_on_invalid = TRUE)
+
   log_debug(
     component = "[BACKEND_WRAPPER]",
-    message = sprintf("Using BFHchart backend for chart type: %s", chart_type),
-    details = list(chart_type = chart_type)
+    message = sprintf("Using BFHchart backend for chart type: %s in context: %s", chart_type, plot_context),
+    details = list(
+      chart_type = chart_type,
+      plot_context = plot_context,
+      viewport_width = viewport_width,
+      viewport_height = viewport_height
+    )
   )
 
   # Validate chart type is supported
