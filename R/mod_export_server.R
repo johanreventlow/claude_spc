@@ -94,6 +94,17 @@ mod_export_server <- function(id, app_state) {
         message = "export_plot() reactive - all req() checks passed, generating plot"
       )
 
+      # CRITICAL: Read ALL mappings FIRST to establish reactive dependencies
+      # This ensures PNG/PPTX preview updates when user changes values on Analyse-side
+      mappings_target_value <- app_state$columns$mappings$target_value
+      mappings_target_text <- app_state$columns$mappings$target_text
+      mappings_centerline_value <- app_state$columns$mappings$centerline_value
+      mappings_skift_column <- app_state$columns$mappings$skift_column
+      mappings_frys_column <- app_state$columns$mappings$frys_column
+      mappings_y_axis_unit <- app_state$columns$mappings$y_axis_unit
+      mappings_kommentar_column <- app_state$columns$mappings$kommentar_column
+      mappings_n_column <- app_state$columns$mappings$n_column
+
       # Read export metadata inputs (triggers reactive dependency)
       # Note: Use %||% to ensure reactive dependency is tracked even if NULL
       title_input <- input$export_title %||% ""
@@ -131,28 +142,28 @@ mod_export_server <- function(id, app_state) {
           export_dims <- get_context_dimensions("export_preview")
 
           # Get chart configuration from app_state
-          # These inputs should match what was used on Analyse-side
+          # Use pre-read mappings (already established reactive dependency)
           config <- list(
             x_col = app_state$columns$mappings$x_column,
             y_col = app_state$columns$mappings$y_column,
-            n_col = app_state$columns$mappings$n_column
+            n_col = mappings_n_column
           )
 
           # Regenerate plot with export context and dimensions
-          # Use local chart_type variable (with fallback to "run")
+          # Use pre-read mappings to ensure reactive dependency was established
           spc_result <- generateSPCPlot(
             data = app_state$data$current_data,
             config = config,
             chart_type = chart_type,
-            target_value = app_state$columns$mappings$target_value,
-            target_text = app_state$columns$mappings$target_text,
-            centerline_value = app_state$columns$mappings$centerline_value,
-            show_phases = !is.null(app_state$columns$mappings$skift_column),
-            skift_column = app_state$columns$mappings$skift_column,
-            frys_column = app_state$columns$mappings$frys_column,
+            target_value = mappings_target_value,
+            target_text = mappings_target_text,
+            centerline_value = mappings_centerline_value,
+            show_phases = !is.null(mappings_skift_column),
+            skift_column = mappings_skift_column,
+            frys_column = mappings_frys_column,
             chart_title_reactive = export_title, # Use export title
-            y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
-            kommentar_column = app_state$columns$mappings$kommentar_column,
+            y_axis_unit = mappings_y_axis_unit %||% "count",
+            kommentar_column = mappings_kommentar_column,
             base_size = 14, # Fixed base_size for export preview
             viewport_width = export_dims$width_px,
             viewport_height = export_dims$height_px,
@@ -235,6 +246,17 @@ mod_export_server <- function(id, app_state) {
         message = "pdf_export_plot() reactive - all req() checks passed, generating plot"
       )
 
+      # CRITICAL: Read ALL mappings FIRST to establish reactive dependencies
+      # This ensures PDF preview updates when user changes values on Analyse-side
+      mappings_target_value <- app_state$columns$mappings$target_value
+      mappings_target_text <- app_state$columns$mappings$target_text
+      mappings_centerline_value <- app_state$columns$mappings$centerline_value
+      mappings_skift_column <- app_state$columns$mappings$skift_column
+      mappings_frys_column <- app_state$columns$mappings$frys_column
+      mappings_y_axis_unit <- app_state$columns$mappings$y_axis_unit
+      mappings_kommentar_column <- app_state$columns$mappings$kommentar_column
+      mappings_n_column <- app_state$columns$mappings$n_column
+
       # Read export metadata inputs (triggers reactive dependency)
       title_input <- input$export_title %||% ""
       dept_input <- input$export_department %||% ""
@@ -270,26 +292,28 @@ mod_export_server <- function(id, app_state) {
           pdf_dims <- get_context_dimensions("export_pdf")
 
           # Get chart configuration from app_state
+          # Use pre-read mappings (already established reactive dependency)
           config <- list(
             x_col = app_state$columns$mappings$x_column,
             y_col = app_state$columns$mappings$y_column,
-            n_col = app_state$columns$mappings$n_column
+            n_col = mappings_n_column
           )
 
           # Regenerate plot with PDF export context and dimensions
+          # Use pre-read mappings to ensure reactive dependency was established
           spc_result <- generateSPCPlot(
             data = app_state$data$current_data,
             config = config,
             chart_type = chart_type,
-            target_value = app_state$columns$mappings$target_value,
-            target_text = app_state$columns$mappings$target_text,
-            centerline_value = app_state$columns$mappings$centerline_value,
-            show_phases = !is.null(app_state$columns$mappings$skift_column),
-            skift_column = app_state$columns$mappings$skift_column,
-            frys_column = app_state$columns$mappings$frys_column,
+            target_value = mappings_target_value,
+            target_text = mappings_target_text,
+            centerline_value = mappings_centerline_value,
+            show_phases = !is.null(mappings_skift_column),
+            skift_column = mappings_skift_column,
+            frys_column = mappings_frys_column,
             chart_title_reactive = export_title, # Use export title
-            y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
-            kommentar_column = app_state$columns$mappings$kommentar_column,
+            y_axis_unit = mappings_y_axis_unit %||% "count",
+            kommentar_column = mappings_kommentar_column,
             base_size = 14, # Fixed base_size for PDF export
             viewport_width = pdf_dims$width_px,
             viewport_height = pdf_dims$height_px,
