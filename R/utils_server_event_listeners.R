@@ -809,6 +809,10 @@ register_chart_type_events <- function(app_state, emit, input, session, register
               }
             }
 
+            # CRITICAL: Save y_axis_unit to mappings for export module
+            # Export-side reads from mappings, not from reactive
+            app_state$columns$mappings$y_axis_unit <- ui_type
+
             y_col <- shiny::isolate(app_state$columns$y_column)
             data <- shiny::isolate(app_state$data$current_data)
             n_points <- if (!is.null(data)) nrow(data) else NA_integer_
