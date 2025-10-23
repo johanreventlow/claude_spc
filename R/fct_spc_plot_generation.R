@@ -520,7 +520,11 @@ generateSPCPlot_with_backend <- function(data, config, chart_type, target_value 
         target_text = target_text,
         centerline_value = centerline_value,
         chart_title_reactive = chart_title_reactive,
-        y_axis_unit = y_axis_unit
+        y_axis_unit = y_axis_unit,
+        # CRITICAL: Pass viewport dimensions for context-aware label placement
+        viewport_width = viewport_width,
+        viewport_height = viewport_height,
+        plot_context = plot_context
       )
     },
     error = function(e) {
