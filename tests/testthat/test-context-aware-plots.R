@@ -94,10 +94,10 @@ test_that("get_context_dimensions works for all contexts", {
 
   for (ctx in contexts) {
     dims <- get_context_dimensions(ctx)
-    expect_type(dims, "list", info = sprintf("Context: %s", ctx))
-    expect_true(dims$width_px > 0, info = sprintf("Context %s should have width_px > 0", ctx))
-    expect_true(dims$height_px > 0, info = sprintf("Context %s should have height_px > 0", ctx))
-    expect_equal(dims$context, ctx, info = sprintf("Context identifier should match: %s", ctx))
+    expect_type(dims, "list")
+    expect_true(dims$width_px > 0)
+    expect_true(dims$height_px > 0)
+    expect_equal(dims$context, ctx)
   }
 })
 
@@ -187,16 +187,15 @@ test_that("generateSPCPlot accepts plot_context parameter", {
   )
 
   # Test that plot generation works with context parameter
-  expect_silent({
-    result <- generateSPCPlot(
-      data = test_data,
-      config = config,
-      chart_type = "i",
-      viewport_width = 800,
-      viewport_height = 600,
-      plot_context = "analysis"
-    )
-  })
+  # Note: BFHcharts may produce warnings about fonts - this is expected
+  result <- generateSPCPlot(
+    data = test_data,
+    config = config,
+    chart_type = "i",
+    viewport_width = 800,
+    viewport_height = 600,
+    plot_context = "analysis"
+  )
 
   expect_type(result, "list")
   expect_true("plot" %in% names(result))
@@ -230,9 +229,9 @@ test_that("generateSPCPlot works with all context types", {
       plot_context = ctx
     )
 
-    expect_type(result, "list", info = sprintf("Context: %s", ctx))
-    expect_true("plot" %in% names(result), info = sprintf("Context: %s", ctx))
-    expect_s3_class(result$plot, "ggplot", info = sprintf("Context: %s", ctx))
+    expect_type(result, "list")
+    expect_true("plot" %in% names(result))
+    expect_s3_class(result$plot, "ggplot")
   }
 })
 
@@ -368,16 +367,15 @@ test_that("Default plot_context parameter maintains backward compatibility", {
   )
 
   # Should work without specifying plot_context (defaults to "analysis")
-  expect_silent({
-    result <- generateSPCPlot(
-      data = test_data,
-      config = config,
-      chart_type = "i",
-      viewport_width = 800,
-      viewport_height = 600
-      # plot_context not specified - should default to "analysis"
-    )
-  })
+  # Note: BFHcharts may produce warnings about fonts - this is expected
+  result <- generateSPCPlot(
+    data = test_data,
+    config = config,
+    chart_type = "i",
+    viewport_width = 800,
+    viewport_height = 600
+    # plot_context not specified - should default to "analysis"
+  )
 
   expect_type(result, "list")
   expect_true("plot" %in% names(result))
