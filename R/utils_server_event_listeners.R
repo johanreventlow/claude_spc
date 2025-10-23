@@ -708,6 +708,11 @@ register_chart_type_events <- function(app_state, emit, input, session, register
               .context = "[UI_SYNC]"
             )
 
+            # CRITICAL: Save chart_type to mappings for export module
+            # Export-side reads from mappings, not from reactive
+            qic_chart_type <- get_qic_chart_type(ct)
+            app_state$columns$mappings$chart_type <- qic_chart_type
+
             # Check for programmatic update token
             pending_token <- app_state$ui$pending_programmatic_inputs[["chart_type"]]
             if (!is.null(pending_token) && identical(pending_token$value, input$chart_type)) {
@@ -905,6 +910,104 @@ register_chart_type_events <- function(app_state, emit, input, session, register
                 )
               }
             }
+          },
+          fallback = NULL,
+          session = session,
+          error_type = "processing"
+        )
+      },
+      ignoreInit = TRUE,
+      priority = OBSERVER_PRIORITIES$UI_SYNC
+    )
+  )
+
+  # Target value observer - sync to mappings for export module
+  observers$target_value <- register_observer(
+    "target_value",
+    shiny::observeEvent(input$target_value,
+      {
+        safe_operation(
+          "Sync target value to mappings",
+          code = {
+            # CRITICAL: Save both target_value and target_text to mappings
+            # Export module reads from mappings, not from reactives
+
+            # Parse target_value (same logic as in fct_visualization_server.R)
+            if (is.null(input$target_value) || input$target_value == "") {
+              app_state$columns$mappings$target_value <- NULL
+              app_state$columns$mappings$target_text <- NULL
+            } else {
+              trimmed_input <- trimws(input$target_value)
+
+              # Store raw text for operator parsing
+              app_state$columns$mappings$target_text <- trimmed_input
+
+              # Check if input is ONLY operators (for arrow symbols)
+              if (grepl("^[<>=]+$", trimmed_input)) {
+                # Only operators - store dummy numeric value (text is what matters)
+                app_state$columns$mappings$target_value <- 0
+              } else {
+                # Parse numeric value
+                parsed <- tryCatch(
+                  {
+                    as.numeric(trimmed_input)
+                  },
+                  error = function(e) NULL,
+                  warning = function(w) NULL
+                )
+
+                app_state$columns$mappings$target_value <- parsed
+              }
+            }
+
+            log_debug_kv(
+              message = "Target value synced to mappings",
+              target_value = app_state$columns$mappings$target_value,
+              target_text = app_state$columns$mappings$target_text,
+              .context = "[MAPPINGS_SYNC]"
+            )
+          },
+          fallback = NULL,
+          session = session,
+          error_type = "processing"
+        )
+      },
+      ignoreInit = TRUE,
+      priority = OBSERVER_PRIORITIES$UI_SYNC
+    )
+  )
+
+  # Centerline value observer - sync to mappings for export module
+  observers$centerline_value <- register_observer(
+    "centerline_value",
+    shiny::observeEvent(input$centerline_value,
+      {
+        safe_operation(
+          "Sync centerline value to mappings",
+          code = {
+            # CRITICAL: Save centerline_value to mappings
+            # Export module reads from mappings, not from reactives
+
+            if (is.null(input$centerline_value) || input$centerline_value == "") {
+              app_state$columns$mappings$centerline_value <- NULL
+            } else {
+              # Parse numeric value
+              parsed <- tryCatch(
+                {
+                  as.numeric(input$centerline_value)
+                },
+                error = function(e) NULL,
+                warning = function(w) NULL
+              )
+
+              app_state$columns$mappings$centerline_value <- parsed
+            }
+
+            log_debug_kv(
+              message = "Centerline value synced to mappings",
+              centerline_value = app_state$columns$mappings$centerline_value,
+              .context = "[MAPPINGS_SYNC]"
+            )
           },
           fallback = NULL,
           session = session,
