@@ -433,7 +433,7 @@ create_plot_only_card <- function() {
     ),
     bslib::layout_sidebar(
       sidebar = bslib::sidebar(
-        width = "300px",
+        width = "325px",
         position = "right",
         shiny::selectizeInput(
           "chart_type",
@@ -513,7 +513,7 @@ create_data_table_card <- function() {
     ),
     bslib::layout_sidebar(
       sidebar = bslib::sidebar(
-        width = "300px",
+        width = "325px",
         position = "right",
 
         # Knapper til kolonnematch

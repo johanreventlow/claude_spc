@@ -8,6 +8,17 @@
 
 ---
 
+## ⚠️ OBLIGATORISKE REGLER (KRITISK)
+
+❌ **ALDRIG:**
+1. Merge til master/main uden eksplicit godkendelse
+2. Push til remote uden anmodning
+3. Tilføj Claude attribution footers:
+   - ❌ "🤖 Generated with [Claude Code]"
+   - ❌ "Co-Authored-By: Claude <noreply@anthropic.com>"
+
+---
+
 ## 1) Project Overview
 
 - **Project Type:** Shiny Application
