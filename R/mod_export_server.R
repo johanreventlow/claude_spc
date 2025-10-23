@@ -23,22 +23,25 @@ normalize_mapping <- function(value) {
   }
 }
 
-#' Build PDF Export Plot (Undebounced Helper)
+#' Build Export Plot (Generic Helper)
 #'
-#' Genererer PDF export plot uden debouncing.
-#' Issue #67: Download handler skal bruge fresh plot, ikke debounced preview.
+#' Genererer export plot for given context.
+#' Issue #65: Fælles helper for at reducere code duplication.
+#' Issue #67: Undebounced, så download handler får fresh plot.
 #'
 #' @param app_state Reactive values. Global app state
 #' @param title_input Character. Export title input
 #' @param dept_input Character. Export department input
+#' @param plot_context Character. Plot context ("export_preview", "export_pdf")
 #' @return Plot object eller NULL ved fejl
 #' @keywords internal
-build_pdf_export_plot <- function(app_state, title_input, dept_input) {
+build_export_plot <- function(app_state, title_input, dept_input,
+                              plot_context = "export_pdf") {
   # Validate required data
   if (is.null(app_state$data$current_data)) {
     log_warn(
       component = "[EXPORT_MODULE]",
-      message = "build_pdf_export_plot: No data available"
+      message = "build_export_plot: No data available"
     )
     return(NULL)
   }
@@ -47,7 +50,7 @@ build_pdf_export_plot <- function(app_state, title_input, dept_input) {
     is.null(app_state$columns$mappings$y_column)) {
     log_warn(
       component = "[EXPORT_MODULE]",
-      message = "build_pdf_export_plot: Missing required column mappings"
+      message = "build_export_plot: Missing required column mappings"
     )
     return(NULL)
   }
@@ -102,13 +105,13 @@ build_pdf_export_plot <- function(app_state, title_input, dept_input) {
     "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
   }
 
-  # Regenerate plot with PDF-specific dimensions
-  # This ensures correct label placement for high-res print output
+  # Regenerate plot with context-specific dimensions
+  # This ensures correct label placement for the target context
   safe_operation(
-    operation_name = "Generate PDF export plot",
+    operation_name = paste("Generate", plot_context, "plot"),
     code = {
-      # Get PDF export dimensions (200×120mm @ 300 DPI = ~2362×1417px)
-      pdf_dims <- get_context_dimensions("export_pdf")
+      # Get dimensions for the specified context
+      context_dims <- get_context_dimensions(plot_context)
 
       # Get chart configuration from app_state
       config <- list(
@@ -117,7 +120,7 @@ build_pdf_export_plot <- function(app_state, title_input, dept_input) {
         n_col = mappings_n_column
       )
 
-      # Regenerate plot with PDF export context and dimensions
+      # Regenerate plot with specified export context and dimensions
       spc_result <- generateSPCPlot(
         data = app_state$data$current_data,
         config = config,
@@ -132,34 +135,34 @@ build_pdf_export_plot <- function(app_state, title_input, dept_input) {
         y_axis_unit = mappings_y_axis_unit %||% "count",
         kommentar_column = mappings_kommentar_column,
         base_size = 14,
-        viewport_width = pdf_dims$width_px,
-        viewport_height = pdf_dims$height_px,
-        plot_context = "export_pdf"
+        viewport_width = context_dims$width_px,
+        viewport_height = context_dims$height_px,
+        plot_context = plot_context
       )
 
-      pdf_plot <- spc_result$plot
+      export_plot <- spc_result$plot
 
       log_debug(
         component = "[EXPORT_MODULE]",
-        message = "PDF export plot generated via undebounced helper",
+        message = sprintf("Export plot generated for context: %s", plot_context),
         details = list(
           title = export_title,
-          context = "export_pdf",
-          width = pdf_dims$width_px,
-          height = pdf_dims$height_px,
-          dpi = pdf_dims$dpi,
+          context = plot_context,
+          width = context_dims$width_px,
+          height = context_dims$height_px,
+          dpi = context_dims$dpi,
           has_title = nchar(trimws(title_input %||% "")) > 0,
           has_dept = nchar(trimws(dept_input %||% "")) > 0
         )
       )
 
-      return(pdf_plot)
+      return(export_plot)
     },
     fallback = function(e) {
       log_error(
         component = "[EXPORT_MODULE]",
-        message = "Failed to generate PDF export plot",
-        details = list(error = e$message)
+        message = sprintf("Failed to generate %s plot", plot_context),
+        details = list(error = e$message, context = plot_context)
       )
       return(NULL)
     },
@@ -240,127 +243,13 @@ mod_export_server <- function(id, app_state) {
         message = "export_plot() reactive - all req() checks passed, generating plot"
       )
 
-      # CRITICAL: Read ALL mappings FIRST to establish reactive dependencies
-      # This ensures PNG/PPTX preview updates when user changes values
-      # Issue #68: Normalize empty strings to NULL to prevent invalid column
-      # references
-      mappings_target_value <- normalize_mapping(
-        app_state$columns$mappings$target_value
-      )
-      mappings_target_text <- normalize_mapping(
-        app_state$columns$mappings$target_text
-      )
-      mappings_centerline_value <- normalize_mapping(
-        app_state$columns$mappings$centerline_value
-      )
-      mappings_skift_column <- normalize_mapping(
-        app_state$columns$mappings$skift_column
-      )
-      mappings_frys_column <- normalize_mapping(
-        app_state$columns$mappings$frys_column
-      )
-      mappings_y_axis_unit <- normalize_mapping(
-        app_state$columns$mappings$y_axis_unit
-      )
-      mappings_kommentar_column <- normalize_mapping(
-        app_state$columns$mappings$kommentar_column
-      )
-      mappings_n_column <- normalize_mapping(
-        app_state$columns$mappings$n_column
-      )
-
       # Read export metadata inputs (triggers reactive dependency)
       # Note: Use %||% to ensure reactive dependency is tracked even if NULL
       title_input <- input$export_title %||% ""
       dept_input <- input$export_department %||% ""
 
-      # Construct chart title with export metadata
-      # Note: title_input may contain line breaks for markdown formatting
-      title_parts <- c()
-
-      if (!is.null(title_input) && nchar(title_input) > 0) {
-        # Convert newlines to CommonMark line breaks (backslash + newline)
-        # This is needed for ggplot/marquee to render line breaks correctly
-        title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
-        title_parts <- c(title_parts, title_processed)
-      }
-
-      if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
-        title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
-      }
-
-      # If no metadata, use default instructional title
-      export_title <- if (length(title_parts) > 0) {
-        paste(title_parts, collapse = " ")
-      } else {
-        # Default title when field is empty - instructs user what to write
-        "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
-      }
-
-      # M12: Regenerate plot with export-specific dimensions instead of cloning
-      # This ensures correct label placement for export preview (800×450px)
-      safe_operation(
-        operation_name = "Generate export preview plot",
-        code = {
-          # Get export preview dimensions (800×450px fixed)
-          export_dims <- get_context_dimensions("export_preview")
-
-          # Get chart configuration from app_state
-          # Use pre-read mappings (already established reactive dependency)
-          config <- list(
-            x_col = app_state$columns$mappings$x_column,
-            y_col = app_state$columns$mappings$y_column,
-            n_col = mappings_n_column
-          )
-
-          # Regenerate plot with export context and dimensions
-          # Use pre-read mappings to ensure reactive dependency was established
-          spc_result <- generateSPCPlot(
-            data = app_state$data$current_data,
-            config = config,
-            chart_type = chart_type,
-            target_value = mappings_target_value,
-            target_text = mappings_target_text,
-            centerline_value = mappings_centerline_value,
-            show_phases = !is.null(mappings_skift_column),
-            skift_column = mappings_skift_column,
-            frys_column = mappings_frys_column,
-            chart_title_reactive = export_title, # Use export title
-            y_axis_unit = mappings_y_axis_unit %||% "count",
-            kommentar_column = mappings_kommentar_column,
-            base_size = 14, # Fixed base_size for export preview
-            viewport_width = export_dims$width_px,
-            viewport_height = export_dims$height_px,
-            plot_context = "export_preview" # M12: Export preview context
-          )
-
-          preview_plot <- spc_result$plot
-
-          log_debug(
-            component = "[EXPORT_MODULE]",
-            message = "Export preview plot regenerated with export context",
-            details = list(
-              title = export_title,
-              context = "export_preview",
-              width = export_dims$width_px,
-              height = export_dims$height_px,
-              has_title = nchar(trimws(title_input %||% "")) > 0,
-              has_dept = nchar(trimws(dept_input %||% "")) > 0
-            )
-          )
-
-          return(preview_plot)
-        },
-        fallback = function(e) {
-          log_error(
-            component = "[EXPORT_MODULE]",
-            message = "Failed to generate export preview plot",
-            details = list(error = e$message)
-          )
-          return(NULL)
-        },
-        error_type = "processing"
-      )
+      # Issue #65: Use shared helper to reduce code duplication
+      build_export_plot(app_state, title_input, dept_input, "export_preview")
     }) %>% shiny::debounce(millis = 500) # Debounce metadata changes for performance
 
     # PDF EXPORT PLOT GENERATION ==============================================
@@ -368,7 +257,8 @@ mod_export_server <- function(id, app_state) {
     # PDF export reactive - regenerates plot with PDF-specific dimensions
     # This ensures correct label placement for high-res print output
     # (200×120mm @ 300 DPI = ~2362×1417px)
-    # Issue #67: Use helper function for preview (debounced), download handler calls directly (undebounced)
+    # Issue #65: Use shared helper to reduce code duplication
+    # Issue #67: Helper is undebounced; reactive debounces for preview performance
     pdf_export_plot <- shiny::reactive({
       # Log BEFORE req() checks to diagnose issues
       log_debug(
@@ -388,8 +278,8 @@ mod_export_server <- function(id, app_state) {
       title_input <- input$export_title %||% ""
       dept_input <- input$export_department %||% ""
 
-      # Call undebounced helper to generate plot
-      build_pdf_export_plot(app_state, title_input, dept_input)
+      # Issue #65: Use shared helper with "export_pdf" context
+      build_export_plot(app_state, title_input, dept_input, "export_pdf")
     }) %>% shiny::debounce(millis = 1000) # Debounce for preview performance
 
     # EXPORT PREVIEW RENDERING ================================================
@@ -610,12 +500,14 @@ mod_export_server <- function(id, app_state) {
           code = {
             # Export logic based on format
             if (format == "pdf") {
+              # Issue #65: Use shared helper for consistent plot generation
               # Issue #67: Call undebounced helper directly for download (fresh data)
               # Preview uses debounced reactive for performance
-              plot <- build_pdf_export_plot(
+              plot <- build_export_plot(
                 app_state = app_state,
                 title_input = input$export_title %||% "",
-                dept_input = input$export_department %||% ""
+                dept_input = input$export_department %||% "",
+                plot_context = "export_pdf"
               )
 
               # Validate plot exists
