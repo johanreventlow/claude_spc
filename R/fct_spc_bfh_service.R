@@ -190,7 +190,14 @@ compute_spc_results_bfh <- function(
         target_value = extra_params$target_value,
         centerline_value = extra_params$centerline_value,
         y_axis_unit = extra_params$y_axis_unit,
-        multiply_by = multiply
+        multiply_by = multiply,
+        # CRITICAL: Include viewport dimensions for context-aware caching
+        # Different contexts (analysis, export_preview, export_pdf) have different
+        # viewport dimensions which affect label placement in BFHcharts.
+        # Without this, plots generated in one context would be incorrectly cached
+        # and reused in another context with different dimensions.
+        viewport_width = extra_params$width,
+        viewport_height = extra_params$height
       )
 
       # Generate cache key
