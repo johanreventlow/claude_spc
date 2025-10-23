@@ -215,35 +215,19 @@ mod_export_server <- function(id, app_state) {
         )
       )
 
-      # Defensive checks - require valid app_state and data
-      # Log each check individually to identify which one blocks
-      if (is.null(app_state)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: app_state is NULL")
-        shiny::req(FALSE)
-      }
-
-      if (is.null(app_state$data$current_data)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: current_data is NULL")
-        shiny::req(FALSE)
-      }
-
-      if (is.null(app_state$columns$mappings$x_column)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: x_column is NULL")
-        shiny::req(FALSE)
-      }
-
-      if (is.null(app_state$columns$mappings$y_column)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: y_column is NULL")
-        shiny::req(FALSE)
-      }
-
+      # Issue #66: Use idiomatic Shiny req() pattern for cleaner validation
       # chart_type can be NULL at startup - use default "run" as fallback
       chart_type <- app_state$columns$mappings$chart_type %||% "run"
 
-      if (is.null(chart_type) || nchar(trimws(chart_type)) == 0) {
-        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: chart_type is empty after fallback")
-        shiny::req(FALSE)
-      }
+      # Single req() call for all required dependencies
+      shiny::req(
+        app_state,
+        app_state$data$current_data,
+        app_state$columns$mappings$x_column,
+        app_state$columns$mappings$y_column,
+        chart_type,
+        nchar(trimws(chart_type)) > 0
+      )
 
       # NOTE: We do NOT require app_state$visualization$plot_object here because:
       # 1. export_plot() regenerates independently (doesn't clone Analyse-side plot)
@@ -392,26 +376,13 @@ mod_export_server <- function(id, app_state) {
         message = "pdf_export_plot() reactive called - checking prerequisites"
       )
 
-      # Defensive checks - require valid app_state and data
-      if (is.null(app_state)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: app_state is NULL")
-        shiny::req(FALSE)
-      }
-
-      if (is.null(app_state$data$current_data)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: current_data is NULL")
-        shiny::req(FALSE)
-      }
-
-      if (is.null(app_state$columns$mappings$x_column)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: x_column is NULL")
-        shiny::req(FALSE)
-      }
-
-      if (is.null(app_state$columns$mappings$y_column)) {
-        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: y_column is NULL")
-        shiny::req(FALSE)
-      }
+      # Issue #66: Use idiomatic Shiny req() pattern for cleaner validation
+      shiny::req(
+        app_state,
+        app_state$data$current_data,
+        app_state$columns$mappings$x_column,
+        app_state$columns$mappings$y_column
+      )
 
       # Read export metadata inputs (triggers reactive dependency)
       title_input <- input$export_title %||% ""
