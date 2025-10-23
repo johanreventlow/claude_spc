@@ -947,16 +947,35 @@ register_chart_type_events <- function(app_state, emit, input, session, register
                 # Only operators - store dummy numeric value (text is what matters)
                 app_state$columns$mappings$target_value <- 0
               } else {
-                # Parse numeric value
-                parsed <- tryCatch(
-                  {
-                    as.numeric(trimmed_input)
-                  },
-                  error = function(e) NULL,
-                  warning = function(w) NULL
+                # CRITICAL FIX: Use chart-type aware normalization (same as analysis side)
+                # Strip leading operators before parsing
+                numeric_part <- sub("^[<>=]+", "", trimmed_input)
+
+                # Get chart type and y_axis_unit for normalization context
+                chart_type <- get_qic_chart_type(input$chart_type %||% "run")
+                y_unit <- input$y_axis_unit
+
+                # Get Y sample data for heuristics (if no explicit user unit)
+                y_sample <- NULL
+                if (is.null(y_unit) || y_unit == "") {
+                  data <- shiny::isolate(app_state$data$current_data)
+                  y_col <- shiny::isolate(app_state$columns$y_column)
+                  if (!is.null(data) && !is.null(y_col) && y_col %in% names(data)) {
+                    y_data <- data[[y_col]]
+                    y_sample <- parse_danish_number(y_data)
+                  }
+                }
+
+                # Use chart-type aware normalization (eliminates 100×-mismatch)
+                normalized_value <- normalize_axis_value(
+                  x = numeric_part,
+                  user_unit = y_unit,
+                  col_unit = NULL,
+                  y_sample = y_sample,
+                  chart_type = chart_type
                 )
 
-                app_state$columns$mappings$target_value <- parsed
+                app_state$columns$mappings$target_value <- normalized_value
               }
             }
 
@@ -991,16 +1010,32 @@ register_chart_type_events <- function(app_state, emit, input, session, register
             if (is.null(input$centerline_value) || input$centerline_value == "") {
               app_state$columns$mappings$centerline_value <- NULL
             } else {
-              # Parse numeric value
-              parsed <- tryCatch(
-                {
-                  as.numeric(input$centerline_value)
-                },
-                error = function(e) NULL,
-                warning = function(w) NULL
+              # CRITICAL FIX: Use chart-type aware normalization (same as target_value)
+              # Get chart type and y_axis_unit for normalization context
+              chart_type <- get_qic_chart_type(input$chart_type %||% "run")
+              y_unit <- input$y_axis_unit
+
+              # Get Y sample data for heuristics (if no explicit user unit)
+              y_sample <- NULL
+              if (is.null(y_unit) || y_unit == "") {
+                data <- shiny::isolate(app_state$data$current_data)
+                y_col <- shiny::isolate(app_state$columns$y_column)
+                if (!is.null(data) && !is.null(y_col) && y_col %in% names(data)) {
+                  y_data <- data[[y_col]]
+                  y_sample <- parse_danish_number(y_data)
+                }
+              }
+
+              # Use chart-type aware normalization (eliminates 100×-mismatch)
+              normalized_value <- normalize_axis_value(
+                x = input$centerline_value,
+                user_unit = y_unit,
+                col_unit = NULL,
+                y_sample = y_sample,
+                chart_type = chart_type
               )
 
-              app_state$columns$mappings$centerline_value <- parsed
+              app_state$columns$mappings$centerline_value <- normalized_value
             }
 
             log_debug_kv(
