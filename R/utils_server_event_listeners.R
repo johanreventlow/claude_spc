@@ -708,6 +708,11 @@ register_chart_type_events <- function(app_state, emit, input, session, register
               .context = "[UI_SYNC]"
             )
 
+            # CRITICAL: Save chart_type to mappings for export module
+            # Export-side reads from mappings, not from reactive
+            qic_chart_type <- get_qic_chart_type(ct)
+            app_state$columns$mappings$chart_type <- qic_chart_type
+
             # Check for programmatic update token
             pending_token <- app_state$ui$pending_programmatic_inputs[["chart_type"]]
             if (!is.null(pending_token) && identical(pending_token$value, input$chart_type)) {
@@ -809,6 +814,10 @@ register_chart_type_events <- function(app_state, emit, input, session, register
               }
             }
 
+            # CRITICAL: Save y_axis_unit to mappings for export module
+            # Export-side reads from mappings, not from reactive
+            app_state$columns$mappings$y_axis_unit <- ui_type
+
             y_col <- shiny::isolate(app_state$columns$y_column)
             data <- shiny::isolate(app_state$data$current_data)
             n_points <- if (!is.null(data)) nrow(data) else NA_integer_
@@ -901,6 +910,139 @@ register_chart_type_events <- function(app_state, emit, input, session, register
                 )
               }
             }
+          },
+          fallback = NULL,
+          session = session,
+          error_type = "processing"
+        )
+      },
+      ignoreInit = TRUE,
+      priority = OBSERVER_PRIORITIES$UI_SYNC
+    )
+  )
+
+  # Target value observer - sync to mappings for export module
+  observers$target_value <- register_observer(
+    "target_value",
+    shiny::observeEvent(input$target_value,
+      {
+        safe_operation(
+          "Sync target value to mappings",
+          code = {
+            # CRITICAL: Save both target_value and target_text to mappings
+            # Export module reads from mappings, not from reactives
+
+            # Parse target_value (same logic as in fct_visualization_server.R)
+            if (is.null(input$target_value) || input$target_value == "") {
+              app_state$columns$mappings$target_value <- NULL
+              app_state$columns$mappings$target_text <- NULL
+            } else {
+              trimmed_input <- trimws(input$target_value)
+
+              # Store raw text for operator parsing
+              app_state$columns$mappings$target_text <- trimmed_input
+
+              # Check if input is ONLY operators (for arrow symbols)
+              if (grepl("^[<>=]+$", trimmed_input)) {
+                # Only operators - store dummy numeric value (text is what matters)
+                app_state$columns$mappings$target_value <- 0
+              } else {
+                # CRITICAL FIX: Use chart-type aware normalization (same as analysis side)
+                # Strip leading operators before parsing
+                numeric_part <- sub("^[<>=]+", "", trimmed_input)
+
+                # Get chart type and y_axis_unit for normalization context
+                chart_type <- get_qic_chart_type(input$chart_type %||% "run")
+                y_unit <- input$y_axis_unit
+
+                # Get Y sample data for heuristics (if no explicit user unit)
+                y_sample <- NULL
+                if (is.null(y_unit) || y_unit == "") {
+                  data <- shiny::isolate(app_state$data$current_data)
+                  y_col <- shiny::isolate(app_state$columns$y_column)
+                  if (!is.null(data) && !is.null(y_col) && y_col %in% names(data)) {
+                    y_data <- data[[y_col]]
+                    y_sample <- parse_danish_number(y_data)
+                  }
+                }
+
+                # Use chart-type aware normalization (eliminates 100×-mismatch)
+                normalized_value <- normalize_axis_value(
+                  x = numeric_part,
+                  user_unit = y_unit,
+                  col_unit = NULL,
+                  y_sample = y_sample,
+                  chart_type = chart_type
+                )
+
+                app_state$columns$mappings$target_value <- normalized_value
+              }
+            }
+
+            log_debug_kv(
+              message = "Target value synced to mappings",
+              target_value = app_state$columns$mappings$target_value,
+              target_text = app_state$columns$mappings$target_text,
+              .context = "[MAPPINGS_SYNC]"
+            )
+          },
+          fallback = NULL,
+          session = session,
+          error_type = "processing"
+        )
+      },
+      ignoreInit = TRUE,
+      priority = OBSERVER_PRIORITIES$UI_SYNC
+    )
+  )
+
+  # Centerline value observer - sync to mappings for export module
+  observers$centerline_value <- register_observer(
+    "centerline_value",
+    shiny::observeEvent(input$centerline_value,
+      {
+        safe_operation(
+          "Sync centerline value to mappings",
+          code = {
+            # CRITICAL: Save centerline_value to mappings
+            # Export module reads from mappings, not from reactives
+
+            if (is.null(input$centerline_value) || input$centerline_value == "") {
+              app_state$columns$mappings$centerline_value <- NULL
+            } else {
+              # CRITICAL FIX: Use chart-type aware normalization (same as target_value)
+              # Get chart type and y_axis_unit for normalization context
+              chart_type <- get_qic_chart_type(input$chart_type %||% "run")
+              y_unit <- input$y_axis_unit
+
+              # Get Y sample data for heuristics (if no explicit user unit)
+              y_sample <- NULL
+              if (is.null(y_unit) || y_unit == "") {
+                data <- shiny::isolate(app_state$data$current_data)
+                y_col <- shiny::isolate(app_state$columns$y_column)
+                if (!is.null(data) && !is.null(y_col) && y_col %in% names(data)) {
+                  y_data <- data[[y_col]]
+                  y_sample <- parse_danish_number(y_data)
+                }
+              }
+
+              # Use chart-type aware normalization (eliminates 100×-mismatch)
+              normalized_value <- normalize_axis_value(
+                x = input$centerline_value,
+                user_unit = y_unit,
+                col_unit = NULL,
+                y_sample = y_sample,
+                chart_type = chart_type
+              )
+
+              app_state$columns$mappings$centerline_value <- normalized_value
+            }
+
+            log_debug_kv(
+              message = "Centerline value synced to mappings",
+              centerline_value = app_state$columns$mappings$centerline_value,
+              .context = "[MAPPINGS_SYNC]"
+            )
           },
           fallback = NULL,
           session = session,

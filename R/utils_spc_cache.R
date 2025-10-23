@@ -157,7 +157,13 @@ generate_spc_cache_key <- function(data, config) {
         target_value = config$target_value,
         centerline_value = config$centerline_value,
         y_axis_unit = config$y_axis_unit,
-        multiply_by = config$multiply_by %||% 1
+        multiply_by = config$multiply_by %||% 1,
+        # CRITICAL: Include viewport dimensions for context-aware caching
+        # Different plot contexts (analysis, export_preview, export_pdf) have
+        # different viewport dimensions which affect label placement in BFHcharts.
+        # Without this, plots from one context would be incorrectly reused in another.
+        viewport_width = config$viewport_width,
+        viewport_height = config$viewport_height
       )
 
       # 6. Hash configuration

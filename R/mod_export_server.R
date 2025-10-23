@@ -32,21 +32,83 @@ mod_export_server <- function(id, app_state) {
 
     # PREVIEW GENERATION ======================================================
 
-    # Export plot reactive - generates plot with export metadata applied
+    # Export plot reactive - regenerates plot with export-specific dimensions
+    # Issue #61: Separate plot generation with context "export_preview" (800×450px)
+    # Issue #62: Cache isolated from analysis context
     # Debounced to prevent excessive re-rendering when user types metadata
     export_plot <- shiny::reactive({
-      # Defensive checks - require valid app_state and data
-      shiny::req(app_state)
-      shiny::req(app_state$data$current_data)
-      shiny::req(app_state$columns$mappings$y_column)
+      # Log BEFORE req() checks to diagnose issues
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "export_plot() reactive called - checking prerequisites",
+        details = list(
+          has_app_state = !is.null(app_state),
+          has_data = !is.null(app_state$data$current_data),
+          has_x_col = !is.null(app_state$columns$mappings$x_column),
+          has_y_col = !is.null(app_state$columns$mappings$y_column),
+          has_chart_type = !is.null(app_state$columns$mappings$chart_type),
+          x_col_value = app_state$columns$mappings$x_column %||% "NULL",
+          y_col_value = app_state$columns$mappings$y_column %||% "NULL",
+          chart_type_value = app_state$columns$mappings$chart_type %||% "NULL"
+        )
+      )
 
-      # Get existing plot from visualization state
-      base_plot <- app_state$visualization$plot_object
-      shiny::req(base_plot)
+      # Defensive checks - require valid app_state and data
+      # Log each check individually to identify which one blocks
+      if (is.null(app_state)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: app_state is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$data$current_data)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: current_data is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$x_column)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: x_column is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$y_column)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: y_column is NULL")
+        shiny::req(FALSE)
+      }
+
+      # chart_type can be NULL at startup - use default "run" as fallback
+      chart_type <- app_state$columns$mappings$chart_type %||% "run"
+
+      if (is.null(chart_type) || nchar(trimws(chart_type)) == 0) {
+        log_debug(component = "[EXPORT_MODULE]", message = "BLOCKED: chart_type is empty after fallback")
+        shiny::req(FALSE)
+      }
+
+      # NOTE: We do NOT require app_state$visualization$plot_object here because:
+      # 1. export_plot() regenerates independently (doesn't clone Analyse-side plot)
+      # 2. All required data is in app_state$columns$mappings (set by autodetection)
+      # 3. Requiring plot_object would block PNG/PPTX preview when user navigates
+      #    directly to Export-side before visiting Analyse-side
+
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "export_plot() reactive - all req() checks passed, generating plot"
+      )
+
+      # CRITICAL: Read ALL mappings FIRST to establish reactive dependencies
+      # This ensures PNG/PPTX preview updates when user changes values on Analyse-side
+      mappings_target_value <- app_state$columns$mappings$target_value
+      mappings_target_text <- app_state$columns$mappings$target_text
+      mappings_centerline_value <- app_state$columns$mappings$centerline_value
+      mappings_skift_column <- app_state$columns$mappings$skift_column
+      mappings_frys_column <- app_state$columns$mappings$frys_column
+      mappings_y_axis_unit <- app_state$columns$mappings$y_axis_unit
+      mappings_kommentar_column <- app_state$columns$mappings$kommentar_column
+      mappings_n_column <- app_state$columns$mappings$n_column
 
       # Read export metadata inputs (triggers reactive dependency)
-      title_input <- input$export_title
-      dept_input <- input$export_department
+      # Note: Use %||% to ensure reactive dependency is tracked even if NULL
+      title_input <- input$export_title %||% ""
+      dept_input <- input$export_department %||% ""
 
       # Construct chart title with export metadata
       # Note: title_input may contain line breaks for markdown formatting
@@ -71,21 +133,53 @@ mod_export_server <- function(id, app_state) {
         "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
       }
 
-      # Clone plot and update title
+      # M12: Regenerate plot with export-specific dimensions instead of cloning
+      # This ensures correct label placement for export preview (800×450px)
       safe_operation(
         operation_name = "Generate export preview plot",
         code = {
-          # Clone plot to avoid modifying original
-          preview_plot <- base_plot
+          # Get export preview dimensions (800×450px fixed)
+          export_dims <- get_context_dimensions("export_preview")
 
-          # Update plot title with export metadata (or default instructional text)
-          preview_plot <- preview_plot + ggplot2::labs(title = export_title)
+          # Get chart configuration from app_state
+          # Use pre-read mappings (already established reactive dependency)
+          config <- list(
+            x_col = app_state$columns$mappings$x_column,
+            y_col = app_state$columns$mappings$y_column,
+            n_col = mappings_n_column
+          )
+
+          # Regenerate plot with export context and dimensions
+          # Use pre-read mappings to ensure reactive dependency was established
+          spc_result <- generateSPCPlot(
+            data = app_state$data$current_data,
+            config = config,
+            chart_type = chart_type,
+            target_value = mappings_target_value,
+            target_text = mappings_target_text,
+            centerline_value = mappings_centerline_value,
+            show_phases = !is.null(mappings_skift_column),
+            skift_column = mappings_skift_column,
+            frys_column = mappings_frys_column,
+            chart_title_reactive = export_title, # Use export title
+            y_axis_unit = mappings_y_axis_unit %||% "count",
+            kommentar_column = mappings_kommentar_column,
+            base_size = 14, # Fixed base_size for export preview
+            viewport_width = export_dims$width_px,
+            viewport_height = export_dims$height_px,
+            plot_context = "export_preview" # M12: Export preview context
+          )
+
+          preview_plot <- spc_result$plot
 
           log_debug(
             component = "[EXPORT_MODULE]",
-            message = "Export preview plot generated with metadata",
+            message = "Export preview plot regenerated with export context",
             details = list(
               title = export_title,
+              context = "export_preview",
+              width = export_dims$width_px,
+              height = export_dims$height_px,
               has_title = nchar(trimws(title_input %||% "")) > 0,
               has_dept = nchar(trimws(dept_input %||% "")) > 0
             )
@@ -105,11 +199,175 @@ mod_export_server <- function(id, app_state) {
       )
     }) %>% shiny::debounce(millis = 500) # Debounce metadata changes for performance
 
+    # PDF EXPORT PLOT GENERATION ==============================================
+
+    # PDF export reactive - regenerates plot with PDF-specific dimensions
+    # This ensures correct label placement for high-res print output
+    # (200×120mm @ 300 DPI = ~2362×1417px)
+    pdf_export_plot <- shiny::reactive({
+      # Log BEFORE req() checks to diagnose issues
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "pdf_export_plot() reactive called - checking prerequisites"
+      )
+
+      # Defensive checks - require valid app_state and data
+      # Same checks as export_plot() but for PDF context
+      if (is.null(app_state)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: app_state is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$data$current_data)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: current_data is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$x_column)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: x_column is NULL")
+        shiny::req(FALSE)
+      }
+
+      if (is.null(app_state$columns$mappings$y_column)) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: y_column is NULL")
+        shiny::req(FALSE)
+      }
+
+      # chart_type can be NULL at startup - use default "run" as fallback
+      chart_type <- app_state$columns$mappings$chart_type %||% "run"
+
+      if (is.null(chart_type) || nchar(trimws(chart_type)) == 0) {
+        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: chart_type is empty after fallback")
+        shiny::req(FALSE)
+      }
+
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "pdf_export_plot() reactive - all req() checks passed, generating plot"
+      )
+
+      # CRITICAL: Read ALL mappings FIRST to establish reactive dependencies
+      # This ensures PDF preview updates when user changes values on Analyse-side
+      mappings_target_value <- app_state$columns$mappings$target_value
+      mappings_target_text <- app_state$columns$mappings$target_text
+      mappings_centerline_value <- app_state$columns$mappings$centerline_value
+      mappings_skift_column <- app_state$columns$mappings$skift_column
+      mappings_frys_column <- app_state$columns$mappings$frys_column
+      mappings_y_axis_unit <- app_state$columns$mappings$y_axis_unit
+      mappings_kommentar_column <- app_state$columns$mappings$kommentar_column
+      mappings_n_column <- app_state$columns$mappings$n_column
+
+      # Read export metadata inputs (triggers reactive dependency)
+      title_input <- input$export_title %||% ""
+      dept_input <- input$export_department %||% ""
+
+      # Construct chart title with export metadata
+      # Note: title_input may contain line breaks for markdown formatting
+      title_parts <- c()
+
+      if (!is.null(title_input) && nchar(title_input) > 0) {
+        # Convert newlines to CommonMark line breaks (backslash + newline)
+        title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
+        title_parts <- c(title_parts, title_processed)
+      }
+
+      if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
+        title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
+      }
+
+      # If no metadata, use default instructional title
+      export_title <- if (length(title_parts) > 0) {
+        paste(title_parts, collapse = " ")
+      } else {
+        # Default title when field is empty - instructs user what to write
+        "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
+      }
+
+      # Regenerate plot with PDF-specific dimensions
+      # This ensures correct label placement for high-res print output
+      safe_operation(
+        operation_name = "Generate PDF export plot",
+        code = {
+          # Get PDF export dimensions (200×120mm @ 300 DPI = ~2362×1417px)
+          pdf_dims <- get_context_dimensions("export_pdf")
+
+          # Get chart configuration from app_state
+          # Use pre-read mappings (already established reactive dependency)
+          config <- list(
+            x_col = app_state$columns$mappings$x_column,
+            y_col = app_state$columns$mappings$y_column,
+            n_col = mappings_n_column
+          )
+
+          # Regenerate plot with PDF export context and dimensions
+          # Use pre-read mappings to ensure reactive dependency was established
+          spc_result <- generateSPCPlot(
+            data = app_state$data$current_data,
+            config = config,
+            chart_type = chart_type,
+            target_value = mappings_target_value,
+            target_text = mappings_target_text,
+            centerline_value = mappings_centerline_value,
+            show_phases = !is.null(mappings_skift_column),
+            skift_column = mappings_skift_column,
+            frys_column = mappings_frys_column,
+            chart_title_reactive = export_title, # Use export title
+            y_axis_unit = mappings_y_axis_unit %||% "count",
+            kommentar_column = mappings_kommentar_column,
+            base_size = 14, # Fixed base_size for PDF export
+            viewport_width = pdf_dims$width_px,
+            viewport_height = pdf_dims$height_px,
+            plot_context = "export_pdf" # PDF export context
+          )
+
+          pdf_plot <- spc_result$plot
+
+          log_debug(
+            component = "[EXPORT_MODULE]",
+            message = "PDF export plot regenerated with export_pdf context",
+            details = list(
+              title = export_title,
+              context = "export_pdf",
+              width = pdf_dims$width_px,
+              height = pdf_dims$height_px,
+              dpi = pdf_dims$dpi,
+              has_title = nchar(trimws(title_input %||% "")) > 0,
+              has_dept = nchar(trimws(dept_input %||% "")) > 0
+            )
+          )
+
+          return(pdf_plot)
+        },
+        fallback = function(e) {
+          log_error(
+            component = "[EXPORT_MODULE]",
+            message = "Failed to generate PDF export plot",
+            details = list(error = e$message)
+          )
+          return(NULL)
+        },
+        error_type = "processing"
+      )
+    }) %>% shiny::debounce(millis = 1000) # Longer debounce for PDF (more expensive to render)
+
+    # EXPORT PREVIEW RENDERING ================================================
+
     # Export preview renderPlot - displays plot with export metadata
     # Note: BFHcharts already applies hospital theme automatically via BFHtheme::theme_bfh()
     output$export_preview <- shiny::renderPlot(
       {
+        log_debug(
+          component = "[EXPORT_MODULE]",
+          message = "renderPlot for export_preview starting"
+        )
+
         plot <- export_plot()
+
+        log_debug(
+          component = "[EXPORT_MODULE]",
+          message = "export_plot() returned",
+          details = list(is_null = is.null(plot), has_data = !is.null(plot$data))
+        )
 
         if (is.null(plot)) {
           # Display placeholder using ggplot2 for consistency
@@ -143,6 +401,12 @@ mod_export_server <- function(id, app_state) {
     })
     outputOptions(output, "plot_available", suspendWhenHidden = FALSE)
 
+    # CRITICAL: Disable suspension for export preview to ensure reactive dependencies
+    # are tracked even when user is on Analysis tab. Without this, changes to
+    # target_value, centerline, etc. on Analysis-side won't trigger export plot
+    # regeneration because the reactive is suspended when output is hidden.
+    outputOptions(output, "export_preview", suspendWhenHidden = FALSE)
+
     # PDF PREVIEW GENERATION ==================================================
 
     # PDF preview reactive - generates PNG preview of Typst PDF layout
@@ -159,11 +423,13 @@ mod_export_server <- function(id, app_state) {
       shiny::req(app_state$data$current_data)
       shiny::req(app_state$columns$mappings$y_column)
 
-      # Get existing plot from visualization state
-      base_plot <- app_state$visualization$plot_object
+      # Get plot regenerated with PDF export context (200×120mm @ 300 DPI)
+      # This ensures correct label placement for high-res print output
+      base_plot <- pdf_export_plot()
       shiny::req(base_plot)
 
       # Read export metadata inputs (triggers reactive dependency)
+      # Note: title and department are already embedded in pdf_export_plot()
       title_input <- input$export_title
       dept_input <- input$export_department
       analysis_input <- input$pdf_improvement
@@ -184,32 +450,10 @@ mod_export_server <- function(id, app_state) {
       # Extract SPC statistics
       spc_stats <- extract_spc_statistics(app_state)
 
-      # Apply export metadata to plot (title, department)
-      # Note: title_input may contain line breaks for markdown formatting
-      title_parts <- c()
-      if (!is.null(title_input) && nchar(title_input) > 0) {
-        # Convert newlines to CommonMark line breaks (backslash + newline)
-        # This is needed for ggplot/marquee to render line breaks correctly in PDF preview
-        title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
-        title_parts <- c(title_parts, title_processed)
-      }
-      if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
-        title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
-      }
-      export_title <- if (length(title_parts) > 0) {
-        paste(title_parts, collapse = " ")
-      } else {
-        # Default title when field is empty - instructs user what to write
-        "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
-      }
-
-      # Clone plot and update title (with default instructional text if empty)
-      preview_plot <- base_plot + ggplot2::labs(title = export_title)
-
-      # Apply hospital theme
-      if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
-        preview_plot <- applyHospitalTheme(preview_plot, base_size = 14)
-      }
+      # NOTE: No need to update title or apply theme here
+      # - pdf_export_plot() already has title and department embedded
+      # - BFHcharts already applies theme via BFHtheme::theme_bfh()
+      preview_plot <- base_plot
 
       # Generate PDF preview PNG
       safe_operation(
@@ -273,6 +517,10 @@ mod_export_server <- function(id, app_state) {
       deleteFile = FALSE # Don't delete temp file (will be cleaned up by R session)
     )
 
+    # CRITICAL: Disable suspension for PDF preview to ensure pdf_export_plot()
+    # reactive tracks dependencies even when user is on Analysis tab
+    outputOptions(output, "pdf_preview", suspendWhenHidden = FALSE)
+
     # PDF format flag - for conditional UI rendering
     output$is_pdf_format <- shiny::reactive({
       format <- input$export_format %||% "pdf"
@@ -312,28 +560,26 @@ mod_export_server <- function(id, app_state) {
         # Defensive checks - validate app_state and data
         shiny::req(app_state)
         shiny::req(app_state$data$current_data)
-        shiny::req(app_state$visualization$plot_object)
 
         format <- input$export_format %||% "pdf"
 
         safe_operation(
           operation_name = paste("Export", toupper(format)),
           code = {
-            # Get plot with export metadata applied
-            plot <- export_plot()
-
-            # Validate plot exists
-            if (is.null(plot)) {
-              stop("Ingen plot tilgængeligt til eksport")
-            }
-
-            # Apply hospital theme for consistent export styling
-            if (exists("applyHospitalTheme") && is.function(applyHospitalTheme)) {
-              plot <- applyHospitalTheme(plot, base_size = 14)
-            }
-
             # Export logic based on format
             if (format == "pdf") {
+              # PDF uses pdf_export_plot() reactive with export_pdf context
+              # This ensures correct label placement for high-res print (200×120mm @ 300 DPI)
+              plot <- pdf_export_plot()
+
+              # Validate plot exists
+              if (is.null(plot)) {
+                stop("Ingen plot tilgængeligt til eksport")
+              }
+
+              # NOTE: No need to apply theme - pdf_export_plot() already handles it
+              # BFHcharts applies theme via BFHtheme::theme_bfh()
+
               # PDF export via Typst/Quarto
               log_debug(
                 component = "[EXPORT_MODULE]",
@@ -393,9 +639,10 @@ mod_export_server <- function(id, app_state) {
               )
             } else if (format == "png") {
               # PNG export - full implementation with size presets and DPI
+              # M13: Regenerate plot with export_png context for correct label placement
               log_debug(
                 component = "[EXPORT_MODULE]",
-                message = "PNG export with configurable size/DPI"
+                message = "PNG export with configurable size/DPI and context-aware generation"
               )
 
               # Get DPI from input (default 96)
@@ -451,12 +698,57 @@ mod_export_server <- function(id, app_state) {
                 title = input$export_title,
                 department = input$export_department,
                 width = round(width_inches * dpi),
-                height = round(height_inches * dpi)
+                height = round(width_inches * dpi)
+              )
+
+              # M13: Regenerate plot with export_png context and actual export dimensions
+              # This ensures labels are placed correctly for the final export size
+
+              # Validate required mappings exist
+              if (is.null(app_state$columns$mappings$chart_type) ||
+                length(app_state$columns$mappings$chart_type) == 0) {
+                stop("Chart type er ikke defineret. Gå til Analyse-siden og vælg charttype.")
+              }
+
+              config <- list(
+                x_col = app_state$columns$mappings$x_column,
+                y_col = app_state$columns$mappings$y_column,
+                n_col = app_state$columns$mappings$n_column
+              )
+
+              # Build export title from inputs
+              title_parts <- c()
+              if (!is.null(input$export_title) && nchar(input$export_title) > 0) {
+                title_processed <- gsub("\n", "\\\n", input$export_title, fixed = TRUE)
+                title_parts <- c(title_parts, title_processed)
+              }
+              if (!is.null(input$export_department) && nchar(trimws(input$export_department)) > 0) {
+                title_parts <- c(title_parts, paste0("(", trimws(input$export_department), ")"))
+              }
+              export_title <- if (length(title_parts) > 0) paste(title_parts, collapse = " ") else NULL
+
+              png_plot_result <- generateSPCPlot(
+                data = app_state$data$current_data,
+                config = config,
+                chart_type = app_state$columns$mappings$chart_type,
+                target_value = app_state$columns$mappings$target_value,
+                target_text = app_state$columns$mappings$target_text,
+                centerline_value = app_state$columns$mappings$centerline_value,
+                show_phases = !is.null(app_state$columns$mappings$skift_column),
+                skift_column = app_state$columns$mappings$skift_column,
+                frys_column = app_state$columns$mappings$frys_column,
+                chart_title_reactive = export_title,
+                y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
+                kommentar_column = app_state$columns$mappings$kommentar_column,
+                base_size = 14,
+                viewport_width = round(width_inches * dpi), # PNG export width in pixels
+                viewport_height = round(height_inches * dpi), # PNG export height in pixels
+                plot_context = "export_png" # M13: PNG export context
               )
 
               # Generate PNG using dedicated export function
               result <- generate_png_export(
-                plot_object = plot,
+                plot_object = png_plot_result$plot,
                 width_inches = width_inches,
                 height_inches = height_inches,
                 dpi = dpi,
@@ -476,9 +768,10 @@ mod_export_server <- function(id, app_state) {
               )
             } else if (format == "pptx") {
               # PowerPoint export - full implementation using officer
+              # M13: Regenerate plot with export_pptx context for correct label placement
               log_debug(
                 component = "[EXPORT_MODULE]",
-                message = "PowerPoint export with officer package"
+                message = "PowerPoint export with officer package and context-aware generation"
               )
 
               # Validate export inputs before generating
@@ -520,9 +813,44 @@ mod_export_server <- function(id, app_state) {
                 )
               }
 
+              # M13: Regenerate plot with export_pptx context (9×6.5 inches @ 96 DPI)
+
+              # Validate required mappings exist
+              if (is.null(app_state$columns$mappings$chart_type) ||
+                length(app_state$columns$mappings$chart_type) == 0) {
+                stop("Chart type er ikke defineret. Gå til Analyse-siden og vælg charttype.")
+              }
+
+              pptx_dims <- get_context_dimensions("export_pptx")
+
+              config <- list(
+                x_col = app_state$columns$mappings$x_column,
+                y_col = app_state$columns$mappings$y_column,
+                n_col = app_state$columns$mappings$n_column
+              )
+
+              pptx_plot_result <- generateSPCPlot(
+                data = app_state$data$current_data,
+                config = config,
+                chart_type = app_state$columns$mappings$chart_type,
+                target_value = app_state$columns$mappings$target_value,
+                target_text = app_state$columns$mappings$target_text,
+                centerline_value = app_state$columns$mappings$centerline_value,
+                show_phases = !is.null(app_state$columns$mappings$skift_column),
+                skift_column = app_state$columns$mappings$skift_column,
+                frys_column = app_state$columns$mappings$frys_column,
+                chart_title_reactive = export_title,
+                y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
+                kommentar_column = app_state$columns$mappings$kommentar_column,
+                base_size = 14,
+                viewport_width = pptx_dims$width_px, # PowerPoint dimensions
+                viewport_height = pptx_dims$height_px,
+                plot_context = "export_pptx" # M13: PowerPoint export context
+              )
+
               # Generate PowerPoint using dedicated export function
               result <- generate_powerpoint_export(
-                plot_object = plot,
+                plot_object = pptx_plot_result$plot,
                 title = export_title,
                 template_path = template_path,
                 output_path = file

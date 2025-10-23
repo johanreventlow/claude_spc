@@ -411,8 +411,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
         inputs$config$n_col %||% "NULL"
       )
 
+      # M11: Context-aware cache key for plot isolation
+      # Issue #62: Separate cache per context to prevent dimension bleeding
+      plot_context <- "analysis" # Analyse-side always uses "analysis" context
+      vp_dims <- get_viewport_dims(app_state)
+
       cache_key <- digest::digest(
         list(
+          plot_context, # NEW: Context identifier for cache isolation
           inputs$data_hash,
           inputs$chart_type,
           config_key,
@@ -424,7 +430,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           inputs$title,
           inputs$y_axis_unit,
           inputs$kommentar_column,
-          inputs$base_size # FIX: Invalidér cache ved breddeændring/fuldskærm
+          inputs$base_size, # FIX: Invalidér cache ved breddeændring/fuldskærm
+          vp_dims$width, # NEW: Viewport width for dimension-aware caching
+          vp_dims$height # NEW: Viewport height for dimension-aware caching
         ),
         algo = "xxhash64"
       )
@@ -508,7 +516,8 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
             base_size = inputs$base_size,
             viewport_width = vp_dims$width,
             viewport_height = vp_dims$height,
-            qic_cache = qic_cache
+            qic_cache = qic_cache,
+            plot_context = "analysis" # M11: Analyse-side uses "analysis" context
           )
 
           # CRITICAL: Skip applyHospitalTheme() for BFHcharts plots
@@ -628,8 +637,14 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
     }) %>%
       bindCache({
         inputs <- spc_inputs()
+        # M11: Context-aware cache binding
+        # Issue #62: Include context and viewport dimensions for cache isolation
+        plot_context <- "analysis"
+        vp_dims <- get_viewport_dims(app_state)
+
         list(
           "spc_results",
+          plot_context, # NEW: Context identifier ensures separate cache per context
           inputs$data_hash,
           inputs$chart_type,
           paste0(inputs$config$x_col %||% "NULL", "|", inputs$config$y_col %||% "NULL", "|", inputs$config$n_col %||% "NULL"),
@@ -641,7 +656,9 @@ visualizationModuleServer <- function(id, data_reactive, column_config_reactive,
           inputs$title,
           inputs$y_axis_unit,
           inputs$kommentar_column,
-          inputs$base_size # FIX: Invalidér cache ved breddeændring/fuldskærm
+          inputs$base_size, # FIX: Invalidér cache ved breddeændring/fuldskærm
+          vp_dims$width, # NEW: Invalidate cache on viewport width change
+          vp_dims$height # NEW: Invalidate cache on viewport height change
         )
       })
 
