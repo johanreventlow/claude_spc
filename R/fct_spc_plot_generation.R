@@ -468,13 +468,33 @@ execute_qic_call <- function(qic_args, chart_type, config, qic_cache = NULL) {
 #' visualization occurs.
 #'
 #' @inheritParams generateSPCPlot
-#' @param plot_context Character. Plot context identifier (default "analysis").
-#'   Valid contexts: "analysis", "export_preview", "export_pdf", "export_png", "export_pptx".
-#'   Context determines cache isolation and enables context-aware label placement.
-#'   Use PLOT_CONTEXTS constants from config_plot_contexts.R.
+#' @param plot_context Character. Plot context identifier (default
+#'   "analysis"). Valid contexts: "analysis", "export_preview",
+#'   "export_pdf", "export_png", "export_pptx". Context determines cache
+#'   isolation and enables context-aware label placement. Use PLOT_CONTEXTS
+#'   constants from config_plot_contexts.R.
+#' @param override_dpi Numeric. Override DPI for dimension conversion
+#'   (optional). Issue #64: Allows PNG export to use user-selected DPI
+#'   instead of context default. If NULL, uses DPI from plot_context
+#'   configuration.
 #' @return List with plot and qic_data (from BFHcharts backend)
 #' @export
-generateSPCPlot_with_backend <- function(data, config, chart_type, target_value = NULL, centerline_value = NULL, show_phases = FALSE, skift_column = NULL, frys_column = NULL, chart_title_reactive = NULL, y_axis_unit = "count", kommentar_column = NULL, base_size = 14, viewport_width = NULL, viewport_height = NULL, target_text = NULL, qic_cache = NULL, plot_context = "analysis") {
+generateSPCPlot_with_backend <- function(data, config, chart_type,
+                                         target_value = NULL,
+                                         centerline_value = NULL,
+                                         show_phases = FALSE,
+                                         skift_column = NULL,
+                                         frys_column = NULL,
+                                         chart_title_reactive = NULL,
+                                         y_axis_unit = "count",
+                                         kommentar_column = NULL,
+                                         base_size = 14,
+                                         viewport_width = NULL,
+                                         viewport_height = NULL,
+                                         target_text = NULL,
+                                         qic_cache = NULL,
+                                         plot_context = "analysis",
+                                         override_dpi = NULL) {
   # Supported chart types for BFHcharts
   supported_types <- c("run", "i", "p", "c", "u")
 
@@ -483,7 +503,11 @@ generateSPCPlot_with_backend <- function(data, config, chart_type, target_value 
 
   log_debug(
     component = "[BACKEND_WRAPPER]",
-    message = sprintf("Using BFHchart backend for chart type: %s in context: %s", chart_type, plot_context),
+    message = sprintf(
+      "Using BFHchart backend for chart type: %s in context: %s",
+      chart_type,
+      plot_context
+    ),
     details = list(
       chart_type = chart_type,
       plot_context = plot_context,
@@ -503,18 +527,31 @@ generateSPCPlot_with_backend <- function(data, config, chart_type, target_value 
   # Convert viewport dimensions from pixels to inches
   # BFHcharts expects width/height in inches, not pixels
   # Use context-specific DPI for correct conversion
-  context_dims <- get_context_dimensions(plot_context)
+  # Issue #64: Allow override_dpi for user-configured PNG export
+  context_dims <- get_context_dimensions(
+    plot_context,
+    override_dpi = override_dpi
+  )
   dpi <- context_dims$dpi
 
-  viewport_width_inches <- if (!is.null(viewport_width)) viewport_width / dpi else NULL
-  viewport_height_inches <- if (!is.null(viewport_height)) viewport_height / dpi else NULL
+  viewport_width_inches <- if (!is.null(viewport_width)) {
+    viewport_width / dpi
+  } else {
+    NULL
+  }
+  viewport_height_inches <- if (!is.null(viewport_height)) {
+    viewport_height / dpi
+  } else {
+    NULL
+  }
 
   log_debug(
     component = "[PLOT_GENERATION]",
     message = "Viewport dimension conversion",
     details = list(
       plot_context = plot_context,
-      dpi = dpi,
+      override_dpi = override_dpi,
+      effective_dpi = dpi,
       width_px = viewport_width,
       height_px = viewport_height,
       width_inches = viewport_width_inches,

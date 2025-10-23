@@ -5,6 +5,168 @@
 # Dependencies ----------------------------------------------------------------
 # Helper functions loaded globally in global.R for better performance
 
+# INTERNAL HELPERS ============================================================
+
+#' Normalize Mapping Value
+#'
+#' Konverterer tomme strenge til NULL for at sikre konsistent behandling.
+#' Issue #68: Tomme mappings skal normaliseres før brug.
+#'
+#' @param value Character eller NULL. Mapping værdi fra app_state
+#' @return NULL hvis tom/NULL, ellers original værdi
+#' @keywords internal
+normalize_mapping <- function(value) {
+  if (is.null(value) || (is.character(value) && !nzchar(trimws(value)))) {
+    NULL
+  } else {
+    value
+  }
+}
+
+#' Build PDF Export Plot (Undebounced Helper)
+#'
+#' Genererer PDF export plot uden debouncing.
+#' Issue #67: Download handler skal bruge fresh plot, ikke debounced preview.
+#'
+#' @param app_state Reactive values. Global app state
+#' @param title_input Character. Export title input
+#' @param dept_input Character. Export department input
+#' @return Plot object eller NULL ved fejl
+#' @keywords internal
+build_pdf_export_plot <- function(app_state, title_input, dept_input) {
+  # Validate required data
+  if (is.null(app_state$data$current_data)) {
+    log_warn(
+      component = "[EXPORT_MODULE]",
+      message = "build_pdf_export_plot: No data available"
+    )
+    return(NULL)
+  }
+
+  if (is.null(app_state$columns$mappings$x_column) ||
+    is.null(app_state$columns$mappings$y_column)) {
+    log_warn(
+      component = "[EXPORT_MODULE]",
+      message = "build_pdf_export_plot: Missing required column mappings"
+    )
+    return(NULL)
+  }
+
+  # chart_type can be NULL at startup - use default "run" as fallback
+  chart_type <- app_state$columns$mappings$chart_type %||% "run"
+
+  # Normalize all mappings (Issue #68)
+  mappings_target_value <- normalize_mapping(
+    app_state$columns$mappings$target_value
+  )
+  mappings_target_text <- normalize_mapping(
+    app_state$columns$mappings$target_text
+  )
+  mappings_centerline_value <- normalize_mapping(
+    app_state$columns$mappings$centerline_value
+  )
+  mappings_skift_column <- normalize_mapping(
+    app_state$columns$mappings$skift_column
+  )
+  mappings_frys_column <- normalize_mapping(
+    app_state$columns$mappings$frys_column
+  )
+  mappings_y_axis_unit <- normalize_mapping(
+    app_state$columns$mappings$y_axis_unit
+  )
+  mappings_kommentar_column <- normalize_mapping(
+    app_state$columns$mappings$kommentar_column
+  )
+  mappings_n_column <- normalize_mapping(
+    app_state$columns$mappings$n_column
+  )
+
+  # Construct chart title with export metadata
+  title_parts <- c()
+
+  if (!is.null(title_input) && nchar(title_input) > 0) {
+    # Convert newlines to CommonMark line breaks (backslash + newline)
+    title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
+    title_parts <- c(title_parts, title_processed)
+  }
+
+  if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
+    title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
+  }
+
+  # If no metadata, use default instructional title
+  export_title <- if (length(title_parts) > 0) {
+    paste(title_parts, collapse = " ")
+  } else {
+    # Default title when field is empty - instructs user what to write
+    "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
+  }
+
+  # Regenerate plot with PDF-specific dimensions
+  # This ensures correct label placement for high-res print output
+  safe_operation(
+    operation_name = "Generate PDF export plot",
+    code = {
+      # Get PDF export dimensions (200×120mm @ 300 DPI = ~2362×1417px)
+      pdf_dims <- get_context_dimensions("export_pdf")
+
+      # Get chart configuration from app_state
+      config <- list(
+        x_col = app_state$columns$mappings$x_column,
+        y_col = app_state$columns$mappings$y_column,
+        n_col = mappings_n_column
+      )
+
+      # Regenerate plot with PDF export context and dimensions
+      spc_result <- generateSPCPlot(
+        data = app_state$data$current_data,
+        config = config,
+        chart_type = chart_type,
+        target_value = mappings_target_value,
+        target_text = mappings_target_text,
+        centerline_value = mappings_centerline_value,
+        show_phases = !is.null(mappings_skift_column),
+        skift_column = mappings_skift_column,
+        frys_column = mappings_frys_column,
+        chart_title_reactive = export_title,
+        y_axis_unit = mappings_y_axis_unit %||% "count",
+        kommentar_column = mappings_kommentar_column,
+        base_size = 14,
+        viewport_width = pdf_dims$width_px,
+        viewport_height = pdf_dims$height_px,
+        plot_context = "export_pdf"
+      )
+
+      pdf_plot <- spc_result$plot
+
+      log_debug(
+        component = "[EXPORT_MODULE]",
+        message = "PDF export plot generated via undebounced helper",
+        details = list(
+          title = export_title,
+          context = "export_pdf",
+          width = pdf_dims$width_px,
+          height = pdf_dims$height_px,
+          dpi = pdf_dims$dpi,
+          has_title = nchar(trimws(title_input %||% "")) > 0,
+          has_dept = nchar(trimws(dept_input %||% "")) > 0
+        )
+      )
+
+      return(pdf_plot)
+    },
+    fallback = function(e) {
+      log_error(
+        component = "[EXPORT_MODULE]",
+        message = "Failed to generate PDF export plot",
+        details = list(error = e$message)
+      )
+      return(NULL)
+    },
+    error_type = "processing"
+  )
+}
+
 # EXPORT MODULE SERVER ========================================================
 
 #' Export Module Server
@@ -95,15 +257,33 @@ mod_export_server <- function(id, app_state) {
       )
 
       # CRITICAL: Read ALL mappings FIRST to establish reactive dependencies
-      # This ensures PNG/PPTX preview updates when user changes values on Analyse-side
-      mappings_target_value <- app_state$columns$mappings$target_value
-      mappings_target_text <- app_state$columns$mappings$target_text
-      mappings_centerline_value <- app_state$columns$mappings$centerline_value
-      mappings_skift_column <- app_state$columns$mappings$skift_column
-      mappings_frys_column <- app_state$columns$mappings$frys_column
-      mappings_y_axis_unit <- app_state$columns$mappings$y_axis_unit
-      mappings_kommentar_column <- app_state$columns$mappings$kommentar_column
-      mappings_n_column <- app_state$columns$mappings$n_column
+      # This ensures PNG/PPTX preview updates when user changes values
+      # Issue #68: Normalize empty strings to NULL to prevent invalid column
+      # references
+      mappings_target_value <- normalize_mapping(
+        app_state$columns$mappings$target_value
+      )
+      mappings_target_text <- normalize_mapping(
+        app_state$columns$mappings$target_text
+      )
+      mappings_centerline_value <- normalize_mapping(
+        app_state$columns$mappings$centerline_value
+      )
+      mappings_skift_column <- normalize_mapping(
+        app_state$columns$mappings$skift_column
+      )
+      mappings_frys_column <- normalize_mapping(
+        app_state$columns$mappings$frys_column
+      )
+      mappings_y_axis_unit <- normalize_mapping(
+        app_state$columns$mappings$y_axis_unit
+      )
+      mappings_kommentar_column <- normalize_mapping(
+        app_state$columns$mappings$kommentar_column
+      )
+      mappings_n_column <- normalize_mapping(
+        app_state$columns$mappings$n_column
+      )
 
       # Read export metadata inputs (triggers reactive dependency)
       # Note: Use %||% to ensure reactive dependency is tracked even if NULL
@@ -204,6 +384,7 @@ mod_export_server <- function(id, app_state) {
     # PDF export reactive - regenerates plot with PDF-specific dimensions
     # This ensures correct label placement for high-res print output
     # (200×120mm @ 300 DPI = ~2362×1417px)
+    # Issue #67: Use helper function for preview (debounced), download handler calls directly (undebounced)
     pdf_export_plot <- shiny::reactive({
       # Log BEFORE req() checks to diagnose issues
       log_debug(
@@ -212,7 +393,6 @@ mod_export_server <- function(id, app_state) {
       )
 
       # Defensive checks - require valid app_state and data
-      # Same checks as export_plot() but for PDF context
       if (is.null(app_state)) {
         log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: app_state is NULL")
         shiny::req(FALSE)
@@ -233,122 +413,13 @@ mod_export_server <- function(id, app_state) {
         shiny::req(FALSE)
       }
 
-      # chart_type can be NULL at startup - use default "run" as fallback
-      chart_type <- app_state$columns$mappings$chart_type %||% "run"
-
-      if (is.null(chart_type) || nchar(trimws(chart_type)) == 0) {
-        log_debug(component = "[EXPORT_MODULE]", message = "PDF: BLOCKED: chart_type is empty after fallback")
-        shiny::req(FALSE)
-      }
-
-      log_debug(
-        component = "[EXPORT_MODULE]",
-        message = "pdf_export_plot() reactive - all req() checks passed, generating plot"
-      )
-
-      # CRITICAL: Read ALL mappings FIRST to establish reactive dependencies
-      # This ensures PDF preview updates when user changes values on Analyse-side
-      mappings_target_value <- app_state$columns$mappings$target_value
-      mappings_target_text <- app_state$columns$mappings$target_text
-      mappings_centerline_value <- app_state$columns$mappings$centerline_value
-      mappings_skift_column <- app_state$columns$mappings$skift_column
-      mappings_frys_column <- app_state$columns$mappings$frys_column
-      mappings_y_axis_unit <- app_state$columns$mappings$y_axis_unit
-      mappings_kommentar_column <- app_state$columns$mappings$kommentar_column
-      mappings_n_column <- app_state$columns$mappings$n_column
-
       # Read export metadata inputs (triggers reactive dependency)
       title_input <- input$export_title %||% ""
       dept_input <- input$export_department %||% ""
 
-      # Construct chart title with export metadata
-      # Note: title_input may contain line breaks for markdown formatting
-      title_parts <- c()
-
-      if (!is.null(title_input) && nchar(title_input) > 0) {
-        # Convert newlines to CommonMark line breaks (backslash + newline)
-        title_processed <- gsub("\n", "\\\n", title_input, fixed = TRUE)
-        title_parts <- c(title_parts, title_processed)
-      }
-
-      if (!is.null(dept_input) && nchar(trimws(dept_input)) > 0) {
-        title_parts <- c(title_parts, paste0("(", trimws(dept_input), ")"))
-      }
-
-      # If no metadata, use default instructional title
-      export_title <- if (length(title_parts) > 0) {
-        paste(title_parts, collapse = " ")
-      } else {
-        # Default title when field is empty - instructs user what to write
-        "Skriv en kort og sigende titel eller\n**konkluder hvad grafen viser**"
-      }
-
-      # Regenerate plot with PDF-specific dimensions
-      # This ensures correct label placement for high-res print output
-      safe_operation(
-        operation_name = "Generate PDF export plot",
-        code = {
-          # Get PDF export dimensions (200×120mm @ 300 DPI = ~2362×1417px)
-          pdf_dims <- get_context_dimensions("export_pdf")
-
-          # Get chart configuration from app_state
-          # Use pre-read mappings (already established reactive dependency)
-          config <- list(
-            x_col = app_state$columns$mappings$x_column,
-            y_col = app_state$columns$mappings$y_column,
-            n_col = mappings_n_column
-          )
-
-          # Regenerate plot with PDF export context and dimensions
-          # Use pre-read mappings to ensure reactive dependency was established
-          spc_result <- generateSPCPlot(
-            data = app_state$data$current_data,
-            config = config,
-            chart_type = chart_type,
-            target_value = mappings_target_value,
-            target_text = mappings_target_text,
-            centerline_value = mappings_centerline_value,
-            show_phases = !is.null(mappings_skift_column),
-            skift_column = mappings_skift_column,
-            frys_column = mappings_frys_column,
-            chart_title_reactive = export_title, # Use export title
-            y_axis_unit = mappings_y_axis_unit %||% "count",
-            kommentar_column = mappings_kommentar_column,
-            base_size = 14, # Fixed base_size for PDF export
-            viewport_width = pdf_dims$width_px,
-            viewport_height = pdf_dims$height_px,
-            plot_context = "export_pdf" # PDF export context
-          )
-
-          pdf_plot <- spc_result$plot
-
-          log_debug(
-            component = "[EXPORT_MODULE]",
-            message = "PDF export plot regenerated with export_pdf context",
-            details = list(
-              title = export_title,
-              context = "export_pdf",
-              width = pdf_dims$width_px,
-              height = pdf_dims$height_px,
-              dpi = pdf_dims$dpi,
-              has_title = nchar(trimws(title_input %||% "")) > 0,
-              has_dept = nchar(trimws(dept_input %||% "")) > 0
-            )
-          )
-
-          return(pdf_plot)
-        },
-        fallback = function(e) {
-          log_error(
-            component = "[EXPORT_MODULE]",
-            message = "Failed to generate PDF export plot",
-            details = list(error = e$message)
-          )
-          return(NULL)
-        },
-        error_type = "processing"
-      )
-    }) %>% shiny::debounce(millis = 1000) # Longer debounce for PDF (more expensive to render)
+      # Call undebounced helper to generate plot
+      build_pdf_export_plot(app_state, title_input, dept_input)
+    }) %>% shiny::debounce(millis = 1000) # Debounce for preview performance
 
     # EXPORT PREVIEW RENDERING ================================================
 
@@ -568,9 +639,13 @@ mod_export_server <- function(id, app_state) {
           code = {
             # Export logic based on format
             if (format == "pdf") {
-              # PDF uses pdf_export_plot() reactive with export_pdf context
-              # This ensures correct label placement for high-res print (200×120mm @ 300 DPI)
-              plot <- pdf_export_plot()
+              # Issue #67: Call undebounced helper directly for download (fresh data)
+              # Preview uses debounced reactive for performance
+              plot <- build_pdf_export_plot(
+                app_state = app_state,
+                title_input = input$export_title %||% "",
+                dept_input = input$export_department %||% ""
+              )
 
               # Validate plot exists
               if (is.null(plot)) {
@@ -710,10 +785,11 @@ mod_export_server <- function(id, app_state) {
                 stop("Chart type er ikke defineret. Gå til Analyse-siden og vælg charttype.")
               }
 
+              # Issue #68: Normalize empty mappings to NULL
               config <- list(
                 x_col = app_state$columns$mappings$x_column,
                 y_col = app_state$columns$mappings$y_column,
-                n_col = app_state$columns$mappings$n_column
+                n_col = normalize_mapping(app_state$columns$mappings$n_column)
               )
 
               # Build export title from inputs
@@ -727,23 +803,48 @@ mod_export_server <- function(id, app_state) {
               }
               export_title <- if (length(title_parts) > 0) paste(title_parts, collapse = " ") else NULL
 
+              # Issue #68: Normalize mappings before use
+              norm_skift <- normalize_mapping(
+                app_state$columns$mappings$skift_column
+              )
+              norm_frys <- normalize_mapping(
+                app_state$columns$mappings$frys_column
+              )
+              norm_kommentar <- normalize_mapping(
+                app_state$columns$mappings$kommentar_column
+              )
+              norm_target_value <- normalize_mapping(
+                app_state$columns$mappings$target_value
+              )
+              norm_target_text <- normalize_mapping(
+                app_state$columns$mappings$target_text
+              )
+              norm_centerline_value <- normalize_mapping(
+                app_state$columns$mappings$centerline_value
+              )
+              norm_y_axis_unit <- normalize_mapping(
+                app_state$columns$mappings$y_axis_unit
+              )
+
+              # Issue #64: Pass override_dpi to ensure correct dimension conversion
               png_plot_result <- generateSPCPlot(
                 data = app_state$data$current_data,
                 config = config,
                 chart_type = app_state$columns$mappings$chart_type,
-                target_value = app_state$columns$mappings$target_value,
-                target_text = app_state$columns$mappings$target_text,
-                centerline_value = app_state$columns$mappings$centerline_value,
-                show_phases = !is.null(app_state$columns$mappings$skift_column),
-                skift_column = app_state$columns$mappings$skift_column,
-                frys_column = app_state$columns$mappings$frys_column,
+                target_value = norm_target_value,
+                target_text = norm_target_text,
+                centerline_value = norm_centerline_value,
+                show_phases = !is.null(norm_skift),
+                skift_column = norm_skift,
+                frys_column = norm_frys,
                 chart_title_reactive = export_title,
-                y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
-                kommentar_column = app_state$columns$mappings$kommentar_column,
+                y_axis_unit = norm_y_axis_unit %||% "count",
+                kommentar_column = norm_kommentar,
                 base_size = 14,
                 viewport_width = round(width_inches * dpi), # PNG export width in pixels
                 viewport_height = round(height_inches * dpi), # PNG export height in pixels
-                plot_context = "export_png" # M13: PNG export context
+                plot_context = "export_png", # M13: PNG export context
+                override_dpi = dpi # Issue #64: User-selected DPI
               )
 
               # Generate PNG using dedicated export function
@@ -823,25 +924,49 @@ mod_export_server <- function(id, app_state) {
 
               pptx_dims <- get_context_dimensions("export_pptx")
 
+              # Issue #68: Normalize empty mappings to NULL
               config <- list(
                 x_col = app_state$columns$mappings$x_column,
                 y_col = app_state$columns$mappings$y_column,
-                n_col = app_state$columns$mappings$n_column
+                n_col = normalize_mapping(app_state$columns$mappings$n_column)
+              )
+
+              # Issue #68: Normalize mappings before use
+              norm_skift <- normalize_mapping(
+                app_state$columns$mappings$skift_column
+              )
+              norm_frys <- normalize_mapping(
+                app_state$columns$mappings$frys_column
+              )
+              norm_kommentar <- normalize_mapping(
+                app_state$columns$mappings$kommentar_column
+              )
+              norm_target_value <- normalize_mapping(
+                app_state$columns$mappings$target_value
+              )
+              norm_target_text <- normalize_mapping(
+                app_state$columns$mappings$target_text
+              )
+              norm_centerline_value <- normalize_mapping(
+                app_state$columns$mappings$centerline_value
+              )
+              norm_y_axis_unit <- normalize_mapping(
+                app_state$columns$mappings$y_axis_unit
               )
 
               pptx_plot_result <- generateSPCPlot(
                 data = app_state$data$current_data,
                 config = config,
                 chart_type = app_state$columns$mappings$chart_type,
-                target_value = app_state$columns$mappings$target_value,
-                target_text = app_state$columns$mappings$target_text,
-                centerline_value = app_state$columns$mappings$centerline_value,
-                show_phases = !is.null(app_state$columns$mappings$skift_column),
-                skift_column = app_state$columns$mappings$skift_column,
-                frys_column = app_state$columns$mappings$frys_column,
+                target_value = norm_target_value,
+                target_text = norm_target_text,
+                centerline_value = norm_centerline_value,
+                show_phases = !is.null(norm_skift),
+                skift_column = norm_skift,
+                frys_column = norm_frys,
                 chart_title_reactive = export_title,
-                y_axis_unit = app_state$columns$mappings$y_axis_unit %||% "count",
-                kommentar_column = app_state$columns$mappings$kommentar_column,
+                y_axis_unit = norm_y_axis_unit %||% "count",
+                kommentar_column = norm_kommentar,
                 base_size = 14,
                 viewport_width = pptx_dims$width_px, # PowerPoint dimensions
                 viewport_height = pptx_dims$height_px,
