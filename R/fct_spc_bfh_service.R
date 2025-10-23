@@ -1031,7 +1031,9 @@ call_bfh_chart <- function(bfh_params) {
       # NOTE: cl (centerline) added for baseline rendering (fix/bfhcharts-core-features)
       # NOTE: notes added for comment annotations (fix/kommentarer-notes-mapping)
       # NOTE: y_axis_unit added for y-axis formatting (fix/y-axis-unit-regression)
-      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value", "cl", "notes", "y_axis_unit")
+      # NOTE: width, height added for context-aware label placement (feat/context-aware-plots)
+      #       plot_context is NOT sent - BFHcharts only needs dimensions in inches
+      fields_to_keep <- c("data", "x", "y", "n", "chart_type", "freeze", "part", "multiply", "target_value", "cl", "notes", "y_axis_unit", "width", "height")
       bfh_params_clean <- bfh_params[names(bfh_params) %in% fields_to_keep]
 
       removed_fields <- setdiff(names(bfh_params), fields_to_keep)

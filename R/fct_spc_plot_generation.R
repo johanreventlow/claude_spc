@@ -500,6 +500,28 @@ generateSPCPlot_with_backend <- function(data, config, chart_type, target_value 
     ))
   }
 
+  # Convert viewport dimensions from pixels to inches
+  # BFHcharts expects width/height in inches, not pixels
+  # Use context-specific DPI for correct conversion
+  context_dims <- get_context_dimensions(plot_context)
+  dpi <- context_dims$dpi
+
+  viewport_width_inches <- if (!is.null(viewport_width)) viewport_width / dpi else NULL
+  viewport_height_inches <- if (!is.null(viewport_height)) viewport_height / dpi else NULL
+
+  log_debug(
+    component = "[PLOT_GENERATION]",
+    message = "Viewport dimension conversion",
+    details = list(
+      plot_context = plot_context,
+      dpi = dpi,
+      width_px = viewport_width,
+      height_px = viewport_height,
+      width_inches = viewport_width_inches,
+      height_inches = viewport_height_inches
+    )
+  )
+
   # Call BFHchart backend (compute_spc_results_bfh from Task #31)
   # Adapter: Map config object to individual parameters
   result <- tryCatch(
@@ -521,10 +543,11 @@ generateSPCPlot_with_backend <- function(data, config, chart_type, target_value 
         centerline_value = centerline_value,
         chart_title_reactive = chart_title_reactive,
         y_axis_unit = y_axis_unit,
-        # CRITICAL: Pass viewport dimensions for context-aware label placement
-        viewport_width = viewport_width,
-        viewport_height = viewport_height,
-        plot_context = plot_context
+        # CRITICAL: Pass viewport dimensions in INCHES (BFHcharts format)
+        # Converted from pixels using context-specific DPI
+        # Note: plot_context is NOT needed in BFHcharts - only width/height matters
+        width = viewport_width_inches,
+        height = viewport_height_inches
       )
     },
     error = function(e) {
