@@ -27,6 +27,7 @@ if (quarto_available()) {
 Other export_helpers: 
 \code{\link{extract_spc_statistics}()},
 \code{\link{generate_details_string}()},
+\code{\link{generate_pdf_preview}()},
 \code{\link{get_hospital_name_for_export}()}
 }
 \concept{export_helpers}

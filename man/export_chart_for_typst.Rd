@@ -30,6 +30,10 @@ Character. Path til den genererede PNG fil.
 Eksporterer en ggplot SPC chart som PNG i korrekt format til indlejring
 i Typst dokumenter. Optimeret til A4 landscape layout.
 }
+\details{
+Title og subtitle fjernes automatisk fra plottet, da disse vises
+separat i PDF layoutet. Plot margin sættes til 0mm for tight embedding.
+}
 \examples{
 \dontrun{
 plot <- create_spc_plot(data)

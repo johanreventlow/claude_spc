@@ -23,6 +23,7 @@ hospital <- get_hospital_name_for_export()
 Other export_helpers: 
 \code{\link{extract_spc_statistics}()},
 \code{\link{generate_details_string}()},
+\code{\link{generate_pdf_preview}()},
 \code{\link{quarto_available}()}
 }
 \concept{export_helpers}

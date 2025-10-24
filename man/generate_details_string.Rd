@@ -28,6 +28,7 @@ details <- generate_details_string(app_state)
 \seealso{
 Other export_helpers: 
 \code{\link{extract_spc_statistics}()},
+\code{\link{generate_pdf_preview}()},
 \code{\link{get_hospital_name_for_export}()},
 \code{\link{quarto_available}()}
 }

@@ -30,6 +30,7 @@ if (!is.null(spc_stats)) {
 \seealso{
 Other export_helpers: 
 \code{\link{generate_details_string}()},
+\code{\link{generate_pdf_preview}()},
 \code{\link{get_hospital_name_for_export}()},
 \code{\link{quarto_available}()}
 }
